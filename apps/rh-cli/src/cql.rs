@@ -1,16 +1,14 @@
 use anyhow::{bail, Context, Result};
 use clap::Subcommand;
 use glob::glob;
-use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use tracing::{error, info};
+use tracing::info;
 
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
+    compile, compile_to_elm_with_sourcemap, compile_with_libraries,
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
     explain_parse, get_default_packages_dir, validate, CompilationError, CompilerOptions,
     CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
@@ -172,7 +170,7 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
             show_info(&input)?;
         }
         CqlCommands::Repl { debug } => {
-            run_repl(debug).await?;
+            rh_cql::repl::run_repl(debug)?;
         }
         CqlCommands::Explain { mode } => {
             run_explain(mode)?;
@@ -1187,125 +1185,5 @@ fn show_info(input: &str) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// REPL service
+// (REPL moved to rh-cql::repl; see crates/rh-cql/src/repl.rs)
 // ---------------------------------------------------------------------------
-
-/// Run interactive REPL
-async fn run_repl(debug: bool) -> Result<()> {
-    println!("CQL Compiler REPL");
-    println!("Enter CQL source (multi-line supported, end with blank line)");
-    println!("Commands: :quit, :help, :debug, :compact");
-    println!();
-
-    let mut rl = DefaultEditor::new()?;
-    let mut compact_output = false;
-    let mut debug_mode = debug;
-
-    loop {
-        // Collect multi-line input
-        let mut source = String::new();
-        let mut line_num = 1;
-
-        loop {
-            let prompt = if source.is_empty() {
-                "cql> ".to_string()
-            } else {
-                format!("{line_num:3}> ")
-            };
-
-            match rl.readline(&prompt) {
-                Ok(line) => {
-                    // Check for commands on first line
-                    if source.is_empty() && line.starts_with(':') {
-                        match line.trim() {
-                            ":quit" | ":q" | ":exit" => {
-                                println!("Goodbye!");
-                                return Ok(());
-                            }
-                            ":help" | ":h" => {
-                                print_repl_help();
-                                break;
-                            }
-                            ":debug" => {
-                                debug_mode = !debug_mode;
-                                println!("Debug mode: {}", if debug_mode { "ON" } else { "OFF" });
-                                break;
-                            }
-                            ":compact" => {
-                                compact_output = !compact_output;
-                                println!(
-                                    "Compact output: {}",
-                                    if compact_output { "ON" } else { "OFF" }
-                                );
-                                break;
-                            }
-                            _ => {
-                                println!("Unknown command. Type :help for help.");
-                                break;
-                            }
-                        }
-                    }
-
-                    // Empty line ends input
-                    if line.is_empty() && !source.is_empty() {
-                        break;
-                    }
-
-                    if !line.is_empty() {
-                        if !source.is_empty() {
-                            source.push('\n');
-                        }
-                        source.push_str(&line);
-                        line_num += 1;
-                    }
-                }
-                Err(ReadlineError::Interrupted) => {
-                    println!("^C");
-                    source.clear();
-                    break;
-                }
-                Err(ReadlineError::Eof) => {
-                    println!("Goodbye!");
-                    return Ok(());
-                }
-                Err(err) => {
-                    error!("Error: {err}");
-                    return Err(err.into());
-                }
-            }
-        }
-
-        // Skip if empty or was a command
-        if source.is_empty() {
-            continue;
-        }
-
-        // Compile and display
-        let options = if debug_mode {
-            CompilerOptions::debug()
-        } else {
-            CompilerOptions::default()
-        };
-
-        match compile_to_json(&source, Some(options), !compact_output) {
-            Ok(json) => {
-                println!("\n{json}\n");
-            }
-            Err(e) => {
-                println!("\n✗ Error: {e}\n");
-            }
-        }
-    }
-}
-
-fn print_repl_help() {
-    println!("CQL REPL Commands:");
-    println!("  :quit, :q, :exit  Exit the REPL");
-    println!("  :help, :h         Show this help");
-    println!("  :debug            Toggle debug mode (annotations, locators)");
-    println!("  :compact          Toggle compact JSON output");
-    println!();
-    println!("Enter CQL source code (can be multi-line).");
-    println!("Press Enter twice to compile.");
-    println!();
-}

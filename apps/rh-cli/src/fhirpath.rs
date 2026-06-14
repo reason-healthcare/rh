@@ -1,7 +1,5 @@
 use anyhow::Result;
 use clap::Subcommand;
-use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
 use serde_json::Value;
 use std::fs;
 use std::io::{self, Write};
@@ -110,7 +108,7 @@ pub async fn handle_command(cmd: FhirpathCommands) -> Result<()> {
             eval_expression(&expression, data.as_deref(), &format)?;
         }
         FhirpathCommands::Repl { data } => {
-            run_repl(data.as_deref()).await?;
+            rh_fhirpath::repl::run_repl(data.as_deref())?;
         }
         FhirpathCommands::Test { file, data } => {
             run_tests(&file, data.as_deref()).await?;
@@ -225,160 +223,7 @@ fn eval_expression(
     Ok(())
 }
 
-/// Run an interactive REPL for FHIRPath expressions
-async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
-    println!("🔍 FHIRPath Interactive REPL");
-    println!("Type FHIRPath expressions to evaluate them.");
-    println!("Commands: .help, .data, .quit");
-    println!("Use ↑/↓ arrow keys to navigate command history (persistent across sessions).");
-    println!();
-
-    let parser = FhirPathParser::new();
-    let evaluator = FhirPathEvaluator::new();
-
-    // Load data if provided
-    let mut data = if let Some(path) = data_file {
-        info!("Loading FHIR data from: {}", path.display());
-        let content = fs::read_to_string(path)?;
-        serde_json::from_str::<Value>(&content)?
-    } else {
-        Value::Null
-    };
-
-    // Initialize rustyline editor with history
-    let mut rl = DefaultEditor::new()?;
-
-    // Try to load history from file
-    let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
-    let _ = rl.load_history(&history_file); // Ignore errors if file doesn't exist
-
-    loop {
-        let readline = rl.readline("fhirpath> ");
-
-        match readline {
-            Ok(line) => {
-                let input = line.trim();
-
-                if input.is_empty() {
-                    continue;
-                }
-
-                // Add non-empty lines to history
-                rl.add_history_entry(input)?;
-
-                match input {
-                    ".quit" | ".exit" => {
-                        println!("Goodbye!");
-                        break;
-                    }
-                    ".help" => {
-                        print_repl_help();
-                        continue;
-                    }
-                    ".data" => {
-                        if data == Value::Null {
-                            println!("No data loaded. Use .load <file> to load FHIR data.");
-                        } else {
-                            println!("Data: {}", serde_json::to_string_pretty(&data)?);
-                        }
-                        continue;
-                    }
-                    cmd if cmd.starts_with(".load ") => {
-                        let path = cmd.strip_prefix(".load ").unwrap().trim();
-                        match load_data_file(path) {
-                            Ok(new_data) => {
-                                data = new_data;
-                                println!("✅ Loaded data from: {path}");
-                            }
-                            Err(e) => {
-                                println!("❌ Failed to load data: {e}");
-                            }
-                        }
-                        continue;
-                    }
-                    cmd if cmd.starts_with(".") => {
-                        println!("❌ Unknown command: {cmd}. Type .help for available commands.");
-                        continue;
-                    }
-                    _ => {}
-                }
-
-                // Parse and evaluate the expression
-                match parser.parse(input) {
-                    Ok(ast) => {
-                        let context = EvaluationContext::new(data.clone());
-                        match evaluator.evaluate(&ast, &context) {
-                            Ok(result) => {
-                                // Display trace logs if any
-                                let trace_logs = context.get_trace_logs();
-                                if !trace_logs.is_empty() {
-                                    println!("\n📋 Trace logs:");
-                                    for log in trace_logs {
-                                        println!("  [TRACE:{}] {}", log.name, log.value);
-                                    }
-                                    println!();
-                                }
-                                println!("=> {result:?}");
-                            }
-                            Err(e) => {
-                                println!("❌ Evaluation error: {e}");
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        println!("❌ Parse error: {e}");
-                    }
-                }
-            }
-            Err(ReadlineError::Interrupted) => {
-                println!("^C");
-                continue;
-            }
-            Err(ReadlineError::Eof) => {
-                println!("^D");
-                break;
-            }
-            Err(err) => {
-                println!("Error: {err:?}");
-                break;
-            }
-        }
-    }
-
-    let _ = rl.save_history(&history_file);
-
-    Ok(())
-}
-
-/// Load data from a file
-fn load_data_file(path: &str) -> Result<Value> {
-    let content = fs::read_to_string(path)?;
-    let data = serde_json::from_str::<Value>(&content)?;
-    Ok(data)
-}
-
-/// Print REPL help
-fn print_repl_help() {
-    println!("FHIRPath REPL Commands:");
-    println!("  .help                Show this help");
-    println!("  .data                Show currently loaded data");
-    println!("  .load <file>         Load FHIR data from JSON file");
-    println!("  .quit, .exit         Exit the REPL");
-    println!();
-    println!("Navigation:");
-    println!("  ↑/↓ arrows           Navigate command history");
-    println!("  Ctrl+C               Interrupt current input");
-    println!("  Ctrl+D               Exit REPL");
-    println!();
-    println!("FHIRPath Examples:");
-    println!("  resourceType         Get the resource type");
-    println!("  name.family          Get family names");
-    println!("  name.where(use='official').given  Get official given names");
-    println!("  telecom.where(system='email').value  Get email addresses");
-    println!("  5 + 3 * 2            Arithmetic operations");
-    println!("  'hello'.upper()      String functions");
-    println!();
-}
+// (REPL moved to rh-fhirpath::repl; see crates/rh-fhirpath/src/repl.rs)
 
 /// Run test cases from a file
 async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Path>) -> Result<()> {

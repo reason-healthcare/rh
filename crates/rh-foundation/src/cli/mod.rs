@@ -5,6 +5,12 @@
 //! - Writing output to files or stdout
 //! - Formatting and printing results with different output formats
 //! - Error handling and exit codes
+//!
+//! The [`repl`] sub-module provides a shared REPL scaffold and is enabled
+//! via the `repl` crate feature.
+
+#[cfg(feature = "repl")]
+pub mod repl;
 
 use crate::error::{io_error_with_path, FoundationError, Result};
 use serde::de::DeserializeOwned;

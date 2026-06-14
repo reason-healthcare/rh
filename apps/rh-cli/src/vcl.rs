@@ -1,9 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Subcommand;
 use rh_foundation::cli;
-use rh_vcl::{parse_vcl, VclExplainer, VclExpression, VclTranslator};
-use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+use rh_vcl::{parse_vcl, VclExplainer, VclTranslator};
 use std::path::PathBuf;
 use tracing::error;
 
@@ -94,7 +92,7 @@ pub async fn handle_command(cmd: VclCommands) -> Result<()> {
             explain,
             default_system,
         } => {
-            run_repl(translate, explain, default_system)?;
+            rh_vcl::repl::run_repl(translate, explain, default_system)?;
         }
     }
     Ok(())
@@ -232,180 +230,9 @@ fn explain_expression(
     Ok(())
 }
 
-fn run_repl(
-    translate_mode: bool,
-    explain_mode: bool,
-    default_system: Option<String>,
-) -> Result<()> {
-    println!("🚀 VCL Interactive REPL");
-    let mode_description = match (translate_mode, explain_mode) {
-        (true, true) => ", translate, and explain",
-        (true, false) => " and translate",
-        (false, true) => " and explain",
-        (false, false) => "",
-    };
-    println!("Type VCL expressions to parse{mode_description}. Type 'exit' or 'quit' to exit.");
-    if let Some(ref system) = default_system {
-        println!("Default code system: {system}");
-    }
-    println!("Commands: .help, .exit, .quit");
-    println!();
+// (REPL moved to rh-vcl::repl; see crates/rh-vcl/src/repl.rs)
 
-    let mut rl = DefaultEditor::new()?;
-
-    loop {
-        let readline = rl.readline("vcl> ");
-        match readline {
-            Ok(line) => {
-                let line = line.trim();
-
-                if line.is_empty() {
-                    continue;
-                }
-
-                // Handle REPL commands
-                if line.starts_with('.') {
-                    match line {
-                        ".help" => {
-                            println!("VCL REPL Commands:");
-                            println!("  .help     - Show this help");
-                            println!("  .exit     - Exit the REPL");
-                            println!("  .quit     - Exit the REPL");
-                            println!();
-                            println!("Current REPL Mode:");
-                            println!("  Parse Mode: ✅ Always enabled");
-                            if translate_mode {
-                                println!(
-                                    "  Translation Mode: ✅ Enabled (shows FHIR ValueSet.compose)"
-                                );
-                            } else {
-                                println!(
-                                    "  Translation Mode: ❌ Disabled (use --translate to enable)"
-                                );
-                            }
-                            if explain_mode {
-                                println!("  Explanation Mode: ✅ Enabled (shows plain English explanations)");
-                            } else {
-                                println!(
-                                    "  Explanation Mode: ❌ Disabled (use --explain to enable)"
-                                );
-                            }
-                            println!();
-                            println!("VCL Syntax Examples:");
-                            if default_system.is_some() {
-                                println!("  123456     - Simple code (uses default system)");
-                                println!("  *          - Wildcard (uses default system)");
-                                println!("  status = \"active\"  - Filter (uses default system)");
-                            }
-                            println!("  (http://snomed.info/sct)123456");
-                            println!("  (http://snomed.info/sct)*");
-                            println!("  (http://snomed.info/sct)status = \"active\"");
-                            println!("  (http://snomed.info/sct)category << 123456");
-                            println!("  (http://snomed.info/sct)123456, 789012  - Multiple codes");
-                            println!("  123456; 789012; 345678  - Disjunction (OR)");
-                            println!("  * - inactive  - Exclusion (NOT)");
-                        }
-                        ".exit" | ".quit" => {
-                            println!("Goodbye! 👋");
-                            break;
-                        }
-                        _ => {
-                            println!(
-                                "Unknown command: {line}. Type '.help' for available commands."
-                            );
-                        }
-                    }
-                    continue;
-                }
-
-                if line == "exit" || line == "quit" {
-                    println!("Goodbye! 👋");
-                    break;
-                }
-
-                rl.add_history_entry(line)?;
-
-                // Parse the VCL expression
-                match parse_vcl(line) {
-                    Ok(ast) => {
-                        println!("✅ Parsed successfully:");
-                        print_ast_pretty(&ast, 1);
-
-                        if translate_mode {
-                            println!();
-                            let translator = if let Some(ref default_sys) = default_system {
-                                VclTranslator::with_default_system(default_sys.clone())
-                            } else {
-                                VclTranslator::new()
-                            };
-                            match translator.translate(&ast) {
-                                Ok(fhir_compose) => {
-                                    println!("🔄 FHIR Translation:");
-                                    let json = serde_json::to_string_pretty(&fhir_compose)?;
-                                    println!("{}", indent_json(&json, 1));
-                                }
-                                Err(e) => {
-                                    println!("❌ Translation error: {e}");
-                                }
-                            }
-                        }
-
-                        if explain_mode {
-                            println!();
-                            let explainer = VclExplainer::new();
-                            match explainer.explain_with_text(&ast, line) {
-                                Ok(explanation_result) => {
-                                    println!("💡 Explanation:");
-                                    println!("  {}", explanation_result.explanation);
-                                    println!("  Type: {:?}", explanation_result.expression_type);
-                                    println!(
-                                        "  Translatable to FHIR: {}",
-                                        explanation_result.translatable_to_fhir
-                                    );
-
-                                    if !explanation_result.components.is_empty() {
-                                        println!("  Components:");
-                                        for component in &explanation_result.components {
-                                            println!(
-                                                "    • {} ({}): {}",
-                                                component.component,
-                                                component.component_type,
-                                                component.meaning
-                                            );
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    println!("❌ Explanation error: {e}");
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        println!("❌ Parse error: {e}");
-                    }
-                }
-                println!();
-            }
-            Err(ReadlineError::Interrupted) => {
-                println!("CTRL-C");
-                break;
-            }
-            Err(ReadlineError::Eof) => {
-                println!("CTRL-D");
-                break;
-            }
-            Err(err) => {
-                error!("Error: {:?}", err);
-                break;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn print_ast_pretty(expr: &VclExpression, indent: usize) {
+fn print_ast_pretty(expr: &rh_vcl::VclExpression, indent: usize) {
     let indent_str = "  ".repeat(indent);
     println!("{indent_str}AST:");
     let json = serde_json::to_string_pretty(expr).unwrap_or_else(|_| format!("{expr:#?}"));

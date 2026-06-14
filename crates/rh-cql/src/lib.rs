@@ -81,6 +81,8 @@ pub mod output;
 pub mod parser;
 pub mod preprocessor;
 pub mod provider;
+#[cfg(feature = "repl")]
+pub mod repl;
 pub mod reporting;
 pub mod semantics;
 pub mod sourcemap;

@@ -23,6 +23,8 @@ pub mod error;
 pub mod evaluator;
 pub mod extensions;
 pub mod parser;
+#[cfg(feature = "repl")]
+pub mod repl;
 
 // WASM bindings - only compiled for wasm32 target
 #[cfg(target_arch = "wasm32")]
