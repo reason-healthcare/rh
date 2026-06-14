@@ -104,10 +104,7 @@ pub fn print_operation_outcome(result: &ValidationResult) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 /// Print batch results (keyed by line number) in human-readable text.
-pub fn print_batch_results_text(
-    results: &[(usize, Value, ValidationResult)],
-    summary_only: bool,
-) {
+pub fn print_batch_results_text(results: &[(usize, Value, ValidationResult)], summary_only: bool) {
     let total = results.len();
     let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
     let invalid_count = total - valid_count;

@@ -25,12 +25,7 @@ use output::{error_envelope, ColorMode, EnvelopeError, ExitCode, OutputContext, 
 #[clap(long_about = "RH CLI - A comprehensive command-line toolkit for working with FHIR")]
 struct Cli {
     /// Output format: human (default), json, ndjson
-    #[clap(
-        long,
-        global = true,
-        default_value = "human",
-        value_name = "FORMAT"
-    )]
+    #[clap(long, global = true, default_value = "human", value_name = "FORMAT")]
     format: String,
 
     /// Suppress informational output (stderr)
@@ -42,12 +37,7 @@ struct Cli {
     verbose: u8,
 
     /// Color output policy: auto (default), always, never
-    #[clap(
-        long,
-        global = true,
-        default_value = "auto",
-        value_name = "WHEN"
-    )]
+    #[clap(long, global = true, default_value = "auto", value_name = "WHEN")]
     color: String,
 
     #[clap(subcommand)]
@@ -95,14 +85,8 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let format: OutputFormat = cli
-        .format
-        .parse()
-        .map_err(|e: String| anyhow::anyhow!(e))?;
-    let color: ColorMode = cli
-        .color
-        .parse()
-        .map_err(|e: String| anyhow::anyhow!(e))?;
+    let format: OutputFormat = cli.format.parse().map_err(|e: String| anyhow::anyhow!(e))?;
+    let color: ColorMode = cli.color.parse().map_err(|e: String| anyhow::anyhow!(e))?;
 
     // Build output context from global flags
     let output_ctx = OutputContext::new(format, cli.quiet, color);

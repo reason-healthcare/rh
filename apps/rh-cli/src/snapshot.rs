@@ -167,7 +167,10 @@ async fn handle_generate(args: GenerateArgs, ctx: &OutputContext) -> Result<()> 
     }
 
     if ctx.is_json() {
-        print_envelope(ctx, &Envelope::ok(snapshot.as_ref().clone(), "snapshot generate"))?;
+        print_envelope(
+            ctx,
+            &Envelope::ok(snapshot.as_ref().clone(), "snapshot generate"),
+        )?;
     } else if args.output.is_none() {
         println!("{output}");
     }
@@ -200,10 +203,10 @@ async fn handle_info(args: InfoArgs, ctx: &OutputContext) -> Result<()> {
         profile: args.profile_url.clone(),
         elements: snapshot.element.len(),
         bindings: snapshot
-        .element
-        .iter()
-        .filter(|e| e.binding.is_some())
-        .count(),
+            .element
+            .iter()
+            .filter(|e| e.binding.is_some())
+            .count(),
         constraints: snapshot
             .element
             .iter()

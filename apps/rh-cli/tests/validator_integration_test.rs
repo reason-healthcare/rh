@@ -552,7 +552,12 @@ fn test_validate_resource_glob_output_order_is_stable() {
 
     let first = rh_cmd()
         .args([
-            "validate", "resource", "--input", &pattern, "--report-format", "json",
+            "validate",
+            "resource",
+            "--input",
+            &pattern,
+            "--report-format",
+            "json",
         ])
         .assert()
         .code(predicate::in_iter([0, 1, 3]))
@@ -562,7 +567,12 @@ fn test_validate_resource_glob_output_order_is_stable() {
 
     let second = rh_cmd()
         .args([
-            "validate", "resource", "--input", &pattern, "--report-format", "json",
+            "validate",
+            "resource",
+            "--input",
+            &pattern,
+            "--report-format",
+            "json",
         ])
         .assert()
         .code(predicate::in_iter([0, 1, 3]))

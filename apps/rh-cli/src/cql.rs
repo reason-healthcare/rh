@@ -11,11 +11,11 @@ use tracing::{error, info};
 use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_with_libraries,
-    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, get_default_packages_dir, validate, CompilationError, CompilerOptions,
-    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
+    compile, compile_to_elm_with_sourcemap, compile_with_libraries, elm::AccessModifier,
+    evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile, explain_parse,
+    get_default_packages_dir, validate, CompilationError, CompilerOptions, CqlDateTime, Diagnostic,
+    EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock, InMemoryDataProvider,
+    PackageLibrarySourceProvider, SignatureLevel, Value,
 };
 
 #[derive(Serialize)]
@@ -366,12 +366,17 @@ fn validate_cql_multi_json(
     }
 
     let paths = resolve_cql_paths(inputs)?;
-    paths.iter()
+    paths
+        .iter()
         .map(|path| validate_cql_collect(&path.display().to_string(), lib_paths, verbose))
         .collect()
 }
 
-fn validate_cql_collect(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<CqlDiagnostic> {
+fn validate_cql_collect(
+    input: &str,
+    lib_paths: &[PathBuf],
+    verbose: bool,
+) -> Result<CqlDiagnostic> {
     let source = read_source(input)?;
     let (errors, _warnings, valid) = if lib_paths.is_empty() {
         let result = validate(&source, None).context("Failed to validate CQL")?;

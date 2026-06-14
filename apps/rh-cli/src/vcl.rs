@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use clap::Subcommand;
 use rh_foundation::cli;
-use serde::Serialize;
 use rh_vcl::{parse_vcl, VclExplainer, VclTranslator};
+use serde::Serialize;
 use std::path::PathBuf;
 use tracing::error;
 
@@ -25,18 +25,18 @@ pub enum VclCommands {
         /// VCL expression to parse
         expression: String,
 
-        /// Output format: pretty, json, debug
-        #[clap(short, long, default_value = "pretty")]
-        format: String,
+        /// Display format: pretty, json, debug
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
     },
     /// Translate a VCL expression to FHIR ValueSet.compose
     Translate {
         /// VCL expression to translate
         expression: String,
 
-        /// Output format: json, pretty
-        #[clap(short, long, default_value = "json")]
-        format: String,
+        /// Display format: json, pretty
+        #[clap(long = "display-format", default_value = "json")]
+        display_format: String,
 
         /// Output file path (optional)
         #[clap(short, long)]
@@ -51,9 +51,9 @@ pub enum VclCommands {
         /// VCL expression to explain
         expression: String,
 
-        /// Output format: pretty, json
-        #[clap(short, long, default_value = "pretty")]
-        format: String,
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
 
         /// Output file path (optional)
         #[clap(short, long)]
@@ -81,24 +81,39 @@ pub enum VclCommands {
 
 pub async fn handle_command(cmd: VclCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
-        VclCommands::Parse { expression, format } => {
-            parse_expression(&expression, &format, ctx)?;
+        VclCommands::Parse {
+            expression,
+            display_format,
+        } => {
+            parse_expression(&expression, &display_format, ctx)?;
         }
         VclCommands::Translate {
             expression,
-            format,
+            display_format,
             output,
             default_system,
         } => {
-            translate_expression(&expression, &format, output.as_deref(), default_system, ctx)?;
+            translate_expression(
+                &expression,
+                &display_format,
+                output.as_deref(),
+                default_system,
+                ctx,
+            )?;
         }
         VclCommands::Explain {
             expression,
-            format,
+            display_format,
             output,
             default_system,
         } => {
-            explain_expression(&expression, &format, output.as_deref(), default_system, ctx)?;
+            explain_expression(
+                &expression,
+                &display_format,
+                output.as_deref(),
+                default_system,
+                ctx,
+            )?;
         }
         VclCommands::Repl {
             translate,
@@ -119,9 +134,9 @@ fn parse_expression(expression: &str, format: &str, ctx: &OutputContext) -> Resu
             }
             match format {
                 "pretty" => {
-                println!("✅ VCL Expression parsed successfully:");
-                print_ast_pretty(&ast, 0);
-            }
+                    println!("✅ VCL Expression parsed successfully:");
+                    print_ast_pretty(&ast, 0);
+                }
                 "json" => {
                     let json = serde_json::to_string_pretty(&ast)?;
                     println!("{json}");
@@ -167,7 +182,10 @@ fn translate_expression(
 
     if ctx.is_json() {
         if let Some(output_path) = output {
-            cli::write_output(Some(output_path), &serde_json::to_string_pretty(&fhir_compose)?)?;
+            cli::write_output(
+                Some(output_path),
+                &serde_json::to_string_pretty(&fhir_compose)?,
+            )?;
         }
         return print_envelope(ctx, &Envelope::ok(fhir_compose, "vcl translate"));
     }

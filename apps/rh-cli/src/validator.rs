@@ -5,7 +5,7 @@
 use anyhow::{bail, Context, Result};
 use clap::{Args, Subcommand};
 use glob::glob;
-use rh_validator::{report, FhirValidator, Severity, TerminologyConfig, ValidationOptions};
+use rh_validator::{report, FhirValidator, TerminologyConfig, ValidationOptions};
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
@@ -13,9 +13,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
-use crate::output::{
-    Envelope, ExitCode, OutputContext, OutputFormat as GlobalOutputFormat,
-};
+use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat as GlobalOutputFormat};
 
 #[derive(Serialize)]
 struct ValidationIssue {

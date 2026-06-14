@@ -168,7 +168,10 @@ pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result
             if ctx.is_json() {
                 let result = InitResult {
                     dir: dir.display().to_string(),
-                    files_created: created.iter().map(|path| path.display().to_string()).collect(),
+                    files_created: created
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect(),
                 };
                 print_envelope(ctx, &Envelope::ok(result, "package init"))?;
             } else {
@@ -219,7 +222,12 @@ pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result
                     unpinned: report
                         .unpinned
                         .iter()
-                        .map(|r| format!("{} (in: {}, field: {})", r.url, r.resource_key, r.field_path))
+                        .map(|r| {
+                            format!(
+                                "{} (in: {}, field: {})",
+                                r.url, r.resource_key, r.field_path
+                            )
+                        })
                         .collect(),
                 };
                 print_envelope(ctx, &Envelope::ok(result, "package lock-check"))?;

@@ -72,9 +72,9 @@ pub enum FhirpathCommands {
         /// FHIRPath expression to parse
         expression: String,
 
-        /// Output format: pretty, json, debug
-        #[clap(short, long, default_value = "pretty")]
-        format: String,
+        /// Display format: pretty, json, debug
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
     },
     /// Evaluate a FHIRPath expression against FHIR data
     Eval {
@@ -85,9 +85,9 @@ pub enum FhirpathCommands {
         #[clap(short, long)]
         data: Option<PathBuf>,
 
-        /// Output format: pretty, json, debug
-        #[clap(short, long, default_value = "pretty")]
-        format: String,
+        /// Display format: pretty, json, debug
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
     },
     /// Interactive REPL for FHIRPath expressions
     Repl {
@@ -109,15 +109,18 @@ pub enum FhirpathCommands {
 
 pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
-        FhirpathCommands::Parse { expression, format } => {
-            parse_expression(&expression, &format, ctx)?;
+        FhirpathCommands::Parse {
+            expression,
+            display_format,
+        } => {
+            parse_expression(&expression, &display_format, ctx)?;
         }
         FhirpathCommands::Eval {
             expression,
             data,
-            format,
+            display_format,
         } => {
-            eval_expression(&expression, data.as_deref(), &format, ctx)?;
+            eval_expression(&expression, data.as_deref(), &display_format, ctx)?;
         }
         FhirpathCommands::Repl { data } => {
             rh_fhirpath::repl::run_repl(data.as_deref())?;

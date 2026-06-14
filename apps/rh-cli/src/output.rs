@@ -292,10 +292,16 @@ mod tests {
 
     #[test]
     fn output_format_parsing() {
-        assert_eq!("human".parse::<OutputFormat>().unwrap(), OutputFormat::Human);
+        assert_eq!(
+            "human".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Human
+        );
         assert_eq!("text".parse::<OutputFormat>().unwrap(), OutputFormat::Human);
         assert_eq!("json".parse::<OutputFormat>().unwrap(), OutputFormat::Json);
-        assert_eq!("ndjson".parse::<OutputFormat>().unwrap(), OutputFormat::Ndjson);
+        assert_eq!(
+            "ndjson".parse::<OutputFormat>().unwrap(),
+            OutputFormat::Ndjson
+        );
         assert!("xml".parse::<OutputFormat>().is_err());
     }
 
