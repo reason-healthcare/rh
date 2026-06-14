@@ -14,7 +14,9 @@ use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPath
 fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
     match value {
         FhirPathValue::Boolean(b) => Value::Bool(*b),
-        FhirPathValue::String(s) => Value::String(s.clone()),
+        FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
+            Value::String(s.clone())
+        }
         FhirPathValue::Number(n) => {
             if let Some(json_num) = serde_json::Number::from_f64(*n) {
                 Value::Number(json_num)

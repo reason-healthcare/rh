@@ -551,6 +551,23 @@ impl UnitConverter {
         }
     }
 
+    pub fn multiply_quantities(
+        &self,
+        left_value: f64,
+        left_unit: &Option<String>,
+        right_value: f64,
+        right_unit: &Option<String>,
+    ) -> FhirPathResult<FhirPathValue> {
+        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
+        let (right_base, right_base_unit) = self.to_base_unit(right_value, right_unit)?;
+
+        let unit = compose_product_unit(&left_base_unit, &right_base_unit);
+        Ok(FhirPathValue::Quantity {
+            value: left_base * right_base,
+            unit,
+        })
+    }
+
     /// Divide a quantity by a scalar
     pub fn divide_by_scalar(
         &self,
@@ -615,26 +632,22 @@ impl UnitConverter {
             });
         }
 
-        if !self.are_units_compatible(left_unit, right_unit) {
-            return Err(FhirPathError::EvaluationError {
-                message: format!(
-                    "Cannot divide quantities with incompatible units: {left_unit:?} and {right_unit:?}"
-                ),
-            });
-        }
-
         // Convert both to base units
-        let (left_base, _) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, _) = self.to_base_unit(right_value, right_unit)?;
+        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
+        let (right_base, right_base_unit) = self.to_base_unit(right_value, right_unit)?;
 
         let result = left_base / right_base;
 
-        // Same-dimension division is dimensionless. Return a Quantity with
-        // unit "1" (the UCUM "no unit" code) per the FHIRPath/UCUM spec so
-        // `1 'm' / 1 'm' = 1 '1'` compares correctly.
+        if self.are_units_compatible(&left_base_unit, &right_base_unit) {
+            return Ok(FhirPathValue::Quantity {
+                value: result,
+                unit: Some("1".to_string()),
+            });
+        }
+
         Ok(FhirPathValue::Quantity {
             value: result,
-            unit: Some("1".to_string()),
+            unit: compose_quotient_unit(&left_base_unit, &right_base_unit),
         })
     }
 }
@@ -652,6 +665,25 @@ impl UnitEvaluator {
     /// Create a new UnitConverter instance
     pub fn new_converter() -> UnitConverter {
         UnitConverter::new()
+    }
+}
+
+fn compose_product_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
+    match (left.as_deref(), right.as_deref()) {
+        (None, None) => None,
+        (Some(unit), None) | (None, Some(unit)) => Some(unit.to_string()),
+        (Some(left), Some(right)) if left == right => Some(format!("{left}2")),
+        (Some(left), Some(right)) => Some(format!("{left}.{right}")),
+    }
+}
+
+fn compose_quotient_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
+    match (left.as_deref(), right.as_deref()) {
+        (None, None) => Some("1".to_string()),
+        (Some(unit), None) => Some(unit.to_string()),
+        (None, Some(unit)) => Some(format!("1/{unit}")),
+        (Some(left), Some(right)) if left == right => Some("1".to_string()),
+        (Some(left), Some(right)) => Some(format!("{left}/{right}")),
     }
 }
 
@@ -714,6 +746,36 @@ mod tests {
             assert_eq!(unit.as_deref(), Some("1"));
         } else {
             panic!("Expected Quantity result with unit '1', got {result:?}");
+        }
+    }
+
+    #[test]
+    fn test_multiply_quantities_compound_unit() {
+        let converter = UnitConverter::new();
+
+        let result = converter
+            .multiply_quantities(2.0, &Some("cm".to_string()), 2.0, &Some("m".to_string()))
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 0.04);
+            assert_eq!(unit.as_deref(), Some("m2"));
+        } else {
+            panic!("Expected Quantity result");
+        }
+    }
+
+    #[test]
+    fn test_divide_quantities_compound_unit() {
+        let converter = UnitConverter::new();
+
+        let result = converter
+            .divide_quantities(4.0, &Some("g".to_string()), 2.0, &Some("m".to_string()))
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("g/m"));
+        } else {
+            panic!("Expected Quantity result");
         }
     }
 

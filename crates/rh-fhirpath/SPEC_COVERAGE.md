@@ -1,68 +1,70 @@
 # rh-fhirpath Specification Coverage
 
-**Last updated**: 2026-06-12 (derived from the HL7 suite baseline run, see
+**Last updated**: 2026-06-14 (derived from the HL7 suite run at 909/935 pass; see
 [CONFORMANCE.md](CONFORMANCE.md))
 
-Status legend: ✅ implemented & passing suite cases · 🟡 implemented with known
-wrong answers · ❌ not implemented.
+Status legend: `✅` implemented and passing suite cases, `🟡` implemented with
+known remaining failures, `❌` not implemented.
 
 ## Syntax
 
 | Feature | Status | Notes |
 |---|---|---|
-| Path navigation, indexers | ✅ | |
-| Literals (boolean, string, integer, decimal, date, dateTime, time, quantity) | 🟡 | Partial-precision dates (`@2015`, `@2015-02`) and some quantity literals misbehave |
-| Comments `//`, `/* */` | ✅ | Stripped by preprocessor (2026-06-12) |
-| Backtick identifiers `` `given` `` | ✅ | (2026-06-12) |
-| String escapes | ✅ | Full escape set incl. `\uXXXX` (2026-06-12) |
-| Environment variables (`%resource`, `%context`) | 🟡 | `%vs-*`/`%ext-*` not supported |
+| Path navigation, indexers | ✅ | Core navigation is stable; `$index` invocation is still missing |
+| Literals (boolean, string, integer, decimal, date, dateTime, time, quantity) | 🟡 | Unary `+` prefix still fails (`+1 < +2`); decimal trailing-zero precision still limited by `f64` |
+| Comments `//`, `/* */` | ✅ | |
+| Backtick identifiers `` `given` `` | ✅ | |
+| String escapes | ✅ | |
+| Environment variables (`%resource`, `%context`, `%vs-*`) | 🟡 | `%ext-*` works as variables, but primitive `extension()` handling is incomplete |
 
 ## Operators
 
 | Feature | Status | Notes |
 |---|---|---|
-| Arithmetic (`+ - * / div mod`) | 🟡 | A few division/mod edge cases (empty propagation) |
-| Equality `=`, `!=` | 🟡 | Partial-precision date comparison must return empty, returns boolean |
-| Equivalence `~`, `!~` | 🟡 | ~9 wrong answers (decimal precision rounding, list order) |
-| Comparison `< <= > >=` | 🟡 | Quantity/calendar-duration comparisons partially wrong |
-| Boolean logic (`and or xor implies`) | 🟡 | 3-valued logic gaps with empty operands |
-| Union `\|` | 🟡 | Duplicate-elimination edge cases |
-| `is` / `as` (operators and functions) | 🟡 | FHIR type hierarchy + choice-element (`value[x]`) polymorphism gaps |
+| Arithmetic (`+ - * / div mod`) | 🟡 | Quantity multiplication/division unit algebra now handles `m2` and `g/m`; decimal-boundary precision gaps remain |
+| Equality `=`, `!=` | ✅ | Partial-precision temporal semantics are in place |
+| Equivalence `~`, `!~` | 🟡 | Remaining decimal-boundary precision cases need non-`f64` precision retention |
+| Comparison `< <= > >=` | 🟡 | One remaining period-boundary eval error depends on decimal boundary precision |
+| Boolean logic (`and or xor implies`) | ✅ | Three-valued logic implemented |
+| Union `\|` | ✅ | Distinctness semantics implemented |
+| `is` / `as` (operators and functions) | 🟡 | Non-string FHIR primitive provenance still missing (`Boolean`, etc.) |
 | String concatenation `&` | ✅ | |
 
 ## Functions
 
 | Group | Status | Notes |
 |---|---|---|
-| Existence (`empty exists all allTrue anyTrue allFalse anyFalse count distinct isDistinct subsetOf supersetOf`) | ✅ | minor edge cases |
-| Filtering/projection (`where select repeat ofType`) | 🟡 | `repeat()` ordering issues |
-| Subsetting (`single first last tail skip take intersect exclude`) | ✅ | |
-| Combining (`union combine`) | 🟡 | 1 wrong answer |
-| Conversion (`toBoolean toInteger toDecimal toString toQuantity toDate toDateTime toTime` + `convertsTo*`) | 🟡 | `convertsToDecimal` missing; partial-precision and quantity conversions wrong |
-| String (`indexOf substring startsWith endsWith contains upper lower replace matches replaceMatches length toChars trim split join`) | 🟡 | regex single-line mode, some empty-propagation cases |
-| String escapes (`encode decode escape unescape`) | ❌ | Not implemented (12 cases) |
-| Math (`abs ceiling exp floor ln log power round sqrt truncate`) | 🟡 | `exp`/`power` edge cases |
+| Existence (`empty exists all allTrue anyTrue allFalse anyFalse count distinct isDistinct subsetOf supersetOf`) | 🟡 | `combine().isDistinct()` still has one wrong answer |
+| Filtering/projection (`where select repeat ofType`) | 🟡 | `ofType(HumanName)` still has one complex-type resolution gap |
+| Subsetting (`single first last tail skip take intersect exclude`) | 🟡 | `children().skip(1)` ordering mismatch remains |
+| Combining (`union combine`) | 🟡 | `combine()` itself works; one downstream distinctness case remains |
+| Conversion (`toBoolean toInteger toDecimal toString toQuantity toDate toDateTime toTime` + `convertsTo*`) | ✅ | |
+| String (`indexOf substring startsWith endsWith contains upper lower replace matches replaceMatches length toChars trim split join`) | ✅ | |
+| String escapes (`encode decode escape unescape`) | ✅ | |
+| Math (`abs ceiling exp floor ln log power round sqrt truncate`) | ✅ | |
 | Tree navigation (`children descendants`) | ✅ | |
-| Utility (`trace now today timeOfDay`) | 🟡 | `now()` precision cases |
-| `iif` | 🟡 | short-circuit / criterion-type edge cases |
-| `aggregate` | ❌ | Not implemented |
-| `defineVariable` | ❌ | Not implemented |
-| `sort` | ❌ | Not implemented (10 cases; R5/2.0 addition) |
-| `lowBoundary` / `highBoundary` / `precision` | 🟡 | Implemented (2026-06-12); trailing-zero decimal literals limited by `f64` representation |
-| Type reflection (`type()`) | ❌ | Not implemented (13+ cases) |
-| `comparable` | ❌ | Not implemented |
-| `conformsTo` | ❌ | Not implemented (needs validator hook) |
-| `resolve()` | ❌ | Needs pluggable resolver trait (no network in core) |
+| Utility (`trace now today timeOfDay`) | ✅ | |
+| `iif` | ✅ | Lazy evaluation, type checks, and multi-item criterion handling are implemented |
+| `aggregate` | ✅ | |
+| `defineVariable` | 🟡 | Core support exists; one strict-ordering case remains |
+| `sort` | ✅ | |
+| `lowBoundary` / `highBoundary` / `precision` | 🟡 | 6 decimal precision failures remain because trailing zeros are lost in `f64` |
+| Type reflection (`type()`) | 🟡 | String-like FHIR primitive provenance implemented; boolean provenance still missing |
+| `comparable` | ✅ | |
+| `conformsTo` | ❌ | Needs validator hook |
+| `resolve()` | ❌ | Needs pluggable resolver trait |
 | `memberOf()` | ❌ | Needs pluggable terminology trait |
 
-## Implementation priority (refactor plan task 2.3)
+## Remaining implementation priority
 
-1. ~~Parser: comments, backtick identifiers, unicode escapes~~ ✅ done 2026-06-12.
-2. ~~`lowBoundary()`/`highBoundary()`/`precision()`~~ ✅ done 2026-06-12 (f64 caveat).
-3. ~~String `encode/decode/escape/unescape`, `convertsToDecimal`~~ ✅ done 2026-06-12.
-4. `aggregate()`, `defineVariable()`, `sort()`.
-4. String `encode/decode/escape/unescape`, `convertsToDecimal`.
-5. Choice-type polymorphism for `is`/`as`/`ofType` on FHIR resources.
-6. Partial-precision date/time semantics (empty-returning comparisons).
-7. `type()` reflection; `comparable()`.
-8. `resolve()` + `memberOf()` behind pluggable traits.
+1. Primitive extensions and primitive provenance beyond strings:
+   `extension()` on `_primitive` siblings, `TypedBoolean`, and the remaining
+   `is()/type()` failures.
+2. Decimal-precision retention beyond `f64`:
+   `lowBoundary()`, `highBoundary()`, `precision()`, and the remaining period
+   invariant error all depend on preserving trailing zeros exactly.
+3. Core evaluator semantics:
+   `$index`, `children()` ordering, `combine().isDistinct()`,
+   `ofType(HumanName)`, and the unary `+` parser case.
+4. Pluggable external hooks:
+   `conformsTo()`, `resolve()`, and `memberOf()`.

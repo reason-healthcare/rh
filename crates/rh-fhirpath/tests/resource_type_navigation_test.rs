@@ -66,7 +66,13 @@ fn test_resource_type_with_different_resources() {
 
     let expr = parser.parse("Observation.status").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::TypedString { value: "final".to_string(), fhir_type: FhirPrimitiveType::Code });
+    assert_eq!(
+        result,
+        FhirPathValue::TypedString {
+            value: "final".to_string(),
+            fhir_type: FhirPrimitiveType::Code
+        }
+    );
 
     // Test with Medication
     let medication = json!({

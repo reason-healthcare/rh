@@ -569,24 +569,28 @@ impl ArithmeticEvaluator {
                 Ok(FhirPathValue::Number(a * *b as f64))
             }
             // Quantity multiplication by scalars
-            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n)) |
-            (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
+            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n))
+            | (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
                 let converter = UnitConverter::new();
                 Ok(converter.multiply_by_scalar(*value, unit, *n))
             }
-            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) |
-            (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
+            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i))
+            | (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 let converter = UnitConverter::new();
                 Ok(converter.multiply_by_scalar(*value, unit, *i as f64))
             }
-            // Quantity * Quantity is more complex (unit multiplication) - for now, error
             (
-                FhirPathValue::Quantity { .. },
-                FhirPathValue::Quantity { .. },
+                FhirPathValue::Quantity {
+                    value: a,
+                    unit: unit_a,
+                },
+                FhirPathValue::Quantity {
+                    value: b,
+                    unit: unit_b,
+                },
             ) => {
-                Err(FhirPathError::EvaluationError {
-                    message: "Multiplication of two quantities is not yet supported (requires unit algebra)".to_string(),
-                })
+                let converter = UnitConverter::new();
+                converter.multiply_quantities(*a, unit_a, *b, unit_b)
             }
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot multiply {left:?} and {right:?}"),

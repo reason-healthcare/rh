@@ -157,10 +157,19 @@ impl ComparisonEvaluator {
                     }
                 }
                 EqualityOperator::Equivalent | EqualityOperator::NotEquivalent => {
-                    match (converter.to_base_unit(*v1, u1), converter.to_base_unit(*v2, u2)) {
+                    match (
+                        converter.to_base_unit(*v1, u1),
+                        converter.to_base_unit(*v2, u2),
+                    ) {
                         (Ok((base_a, _)), Ok((base_b, _))) => {
                             let equiv = quantity_equivalent(base_a, base_b);
-                            Ok(FhirPathValue::Boolean(if matches!(operator, EqualityOperator::Equivalent) { equiv } else { !equiv }))
+                            Ok(FhirPathValue::Boolean(
+                                if matches!(operator, EqualityOperator::Equivalent) {
+                                    equiv
+                                } else {
+                                    !equiv
+                                },
+                            ))
                         }
                         _ => Ok(FhirPathValue::Boolean(matches!(
                             operator,
@@ -168,7 +177,7 @@ impl ComparisonEvaluator {
                         ))),
                     }
                 }
-            }
+            };
         }
 
         let result = match operator {

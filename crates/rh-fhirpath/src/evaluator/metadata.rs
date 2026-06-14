@@ -327,18 +327,33 @@ mod tests {
     fn test_typed_string_primitives() {
         let string_type = FhirFieldType::Primitive(FhirPrimitiveType::String);
         let value = typed_value_from_string("hello".to_string(), &string_type);
-        assert_eq!(value, FhirPathValue::TypedString { value: "hello".to_string(), fhir_type: FhirPrimitiveType::String });
+        assert_eq!(
+            value,
+            FhirPathValue::TypedString {
+                value: "hello".to_string(),
+                fhir_type: FhirPrimitiveType::String
+            }
+        );
 
         let uri_type = FhirFieldType::Primitive(FhirPrimitiveType::Uri);
         let value = typed_value_from_string("http://example.org".to_string(), &uri_type);
         assert_eq!(
             value,
-            FhirPathValue::TypedString { value: "http://example.org".to_string(), fhir_type: FhirPrimitiveType::Uri }
+            FhirPathValue::TypedString {
+                value: "http://example.org".to_string(),
+                fhir_type: FhirPrimitiveType::Uri
+            }
         );
 
         let code_type = FhirFieldType::Primitive(FhirPrimitiveType::Code);
         let value = typed_value_from_string("active".to_string(), &code_type);
-        assert_eq!(value, FhirPathValue::TypedString { value: "active".to_string(), fhir_type: FhirPrimitiveType::Code });
+        assert_eq!(
+            value,
+            FhirPathValue::TypedString {
+                value: "active".to_string(),
+                fhir_type: FhirPrimitiveType::Code
+            }
+        );
     }
 
     #[test]

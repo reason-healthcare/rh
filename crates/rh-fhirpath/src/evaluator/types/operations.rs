@@ -180,7 +180,10 @@ impl TypeEvaluator {
                 // TypedString(Code|Id|Uri|...) IS-A String, plain String IS String
                 Ok(value.is_string_like())
             }
-            "integer" => Ok(matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_))),
+            "integer" => Ok(matches!(
+                value,
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
+            )),
             "number" | "decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
             "date" => Ok(matches!(value, FhirPathValue::Date(_))),
             "datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
@@ -205,7 +208,10 @@ impl TypeEvaluator {
             // System types
             "system.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
             "system.string" => Ok(value.is_string_like()),
-            "system.integer" => Ok(matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_))),
+            "system.integer" => Ok(matches!(
+                value,
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
+            )),
             "system.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
             "system.date" => Ok(matches!(value, FhirPathValue::Date(_))),
             "system.datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
@@ -214,9 +220,10 @@ impl TypeEvaluator {
 
             // FHIR-qualified types
             "fhir.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => {
-                Ok(matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_)))
-            }
+            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => Ok(matches!(
+                value,
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
+            )),
             "fhir.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
             "fhir.string" | "fhir.code" | "fhir.uri" | "fhir.url" | "fhir.canonical"
             | "fhir.oid" | "fhir.uuid" | "fhir.id" | "fhir.markdown" | "fhir.base64binary" => {
@@ -269,11 +276,16 @@ impl TypeEvaluator {
                 // Exact match: only plain String or TypedString with fhir_type=String
                 match value {
                     FhirPathValue::String(_) => Ok(true),
-                    FhirPathValue::TypedString { fhir_type, .. } => Ok(*fhir_type == FhirPrimitiveType::String),
+                    FhirPathValue::TypedString { fhir_type, .. } => {
+                        Ok(*fhir_type == FhirPrimitiveType::String)
+                    }
                     _ => Ok(false),
                 }
             }
-            "integer" => Ok(matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_))),
+            "integer" => Ok(matches!(
+                value,
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
+            )),
             "number" | "decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
             "date" => Ok(matches!(value, FhirPathValue::Date(_))),
             "datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
@@ -293,7 +305,10 @@ impl TypeEvaluator {
 
             "system.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
             "system.string" => Ok(value.is_string_like()),
-            "system.integer" => Ok(matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_))),
+            "system.integer" => Ok(matches!(
+                value,
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
+            )),
             "system.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
             "system.date" => Ok(matches!(value, FhirPathValue::Date(_))),
             "system.datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
@@ -301,9 +316,10 @@ impl TypeEvaluator {
             "system.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
 
             "fhir.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => {
-                Ok(matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_)))
-            }
+            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => Ok(matches!(
+                value,
+                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
+            )),
             "fhir.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
             "fhir.string" | "fhir.code" | "fhir.uri" | "fhir.url" | "fhir.canonical"
             | "fhir.oid" | "fhir.uuid" | "fhir.id" | "fhir.markdown" | "fhir.base64binary" => {

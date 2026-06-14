@@ -20,7 +20,10 @@ pub enum FhirPathValue {
     Date(String),
     DateTime(String),
     Time(String),
-    Quantity { value: f64, unit: Option<String> },
+    Quantity {
+        value: f64,
+        unit: Option<String>,
+    },
     DateTimePrecision(DateTimePrecision),
     Collection(Vec<FhirPathValue>),
     Object(Value),
@@ -48,17 +51,17 @@ impl FhirPathValue {
             FhirPathValue::DateTime(_) => Some(FhirPrimitiveType::DateTime),
             FhirPathValue::Time(_) => Some(FhirPrimitiveType::Time),
             FhirPathValue::Quantity { .. } => Some(FhirPrimitiveType::Decimal),
-            FhirPathValue::Object(obj) => obj
-                .get("resourceType")
-                .and_then(|v| v.as_str())
-                .and_then(|_| None),
+            FhirPathValue::Object(_) => None,
             _ => None,
         }
     }
 
     /// Check if this is a string-like value (String or TypedString)
     pub fn is_string_like(&self) -> bool {
-        matches!(self, FhirPathValue::String(_) | FhirPathValue::TypedString { .. })
+        matches!(
+            self,
+            FhirPathValue::String(_) | FhirPathValue::TypedString { .. }
+        )
     }
 
     /// Check if two values are equal (strict equality)
@@ -68,7 +71,10 @@ impl FhirPathValue {
             (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
             (FhirPathValue::String(a), FhirPathValue::TypedString { value: b, .. })
             | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::String(b))
-            | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::TypedString { value: b, .. }) => a == b,
+            | (
+                FhirPathValue::TypedString { value: a, .. },
+                FhirPathValue::TypedString { value: b, .. },
+            ) => a == b,
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => a == b,
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => a == b,
             (FhirPathValue::Long(a), FhirPathValue::Long(b)) => a == b,
@@ -192,7 +198,9 @@ impl FhirPathValue {
     pub fn to_json(&self) -> Value {
         match self {
             FhirPathValue::Boolean(b) => Value::Bool(*b),
-            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => Value::String(s.clone()),
+            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
+                Value::String(s.clone())
+            }
             FhirPathValue::Number(n) => Value::Number(
                 serde_json::Number::from_f64(*n).unwrap_or_else(|| serde_json::Number::from(0)),
             ),
@@ -218,11 +226,15 @@ impl FhirPathValue {
     pub fn compare_values(&self, other: &FhirPathValue) -> FhirPathResult<i32> {
         // Extract string content for comparison, handling both String and TypedString
         let left_str = match self {
-            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => Some(s.as_str()),
+            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
+                Some(s.as_str())
+            }
             _ => None,
         };
         let right_str = match other {
-            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => Some(s.as_str()),
+            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
+                Some(s.as_str())
+            }
             _ => None,
         };
 

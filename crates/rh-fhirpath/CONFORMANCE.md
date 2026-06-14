@@ -1,6 +1,6 @@
 # rh-fhirpath Conformance
 
-**Last updated**: 2026-06-14 (waves 26–29: quantity equivalence, FHIR type provenance, matches single-line, iif collection error)
+**Last updated**: 2026-06-14 (waves 26–30: quantity equivalence, FHIR type provenance, matches single-line, iif collection error, quantity unit algebra)
 **FHIRPath specification**: 2.0.0 (http://hl7.org/fhirpath)
 **Test suite source**: `tests-fhir-r4.xml` from
 https://github.com/FHIR/fhir-test-cases/blob/master/r4/fhirpath/ (R4 copy of
@@ -38,15 +38,15 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-14, waves 26–29)
+### 1.1 Current results (2026-06-14, waves 26–30)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 907 | 97.0% |
+| Pass | 909 | 97.2% |
 | Wrong answer | 19 | 2.0% |
 | Parse error | 1 | 0.1% |
-| Eval error | 7 | 0.7% |
+| Eval error | 5 | 0.5% |
 | Skipped | 1 | 0.1% |
 
 History:
@@ -66,6 +66,7 @@ History:
 | 2026-06-13 | 895 (95.7%) | 31 | 1 | 7 | Waves 21–25: UCUM month/year units, FHIRPath operator precedence fix, singleton equality, type check fixes, testWhere2/4/testIndexer2. |
 
 | 2026-06-14 | 907 (97.0%) | 19 | 1 | 7 | Waves 26–29: quantity `~` uses precision-aware equivalence; `FhirPathValue::TypedString` carries FHIR primitive type provenance (code/id/uri/url/canonical); `is()` follows FHIR type hierarchy; `as()`/`ofType()` use exact type match; `type()` returns FHIR namespace for TypedString; `matches()` uses single-line (dotall) mode; `iif()` errors on multi-element collections. 9 inheritance tests fixed, 2 misc tests fixed (testQuantity4, testMatchesSingleLineMode1, testIif10). |
+| 2026-06-14 | 909 (97.2%) | 19 | 1 | 5 | Wave 30: quantity unit algebra for `Quantity * Quantity` and cross-dimension `Quantity / Quantity`. Operands are normalized to base UCUM units before composing the result unit (`2.0 'cm' * 2.0 'm' -> 0.040 'm2'`, `4.0 'g' / 2.0 'm' -> 2 'g/m'`). `testQuantity9/10` flipped from eval-error to pass. |
 
 ### 1.2 Regression policy
 
@@ -104,4 +105,6 @@ successful **non-empty** result as a wrong answer.
 | `extension()` on primitives | 1 | Not yet implemented |
 | `combine().isDistinct()` | 1 | `isDistinct()` semantics |
 | `ofType(HumanName)` on collection | 1 | Complex type resolution |
+| `conformsTo()` | 2 | Validator-backed hook not implemented |
+| `$index` in projection | 1 | Index invocation remains unimplemented |
 | Remaining parse error | 1 | Unary `+` prefix not supported |
