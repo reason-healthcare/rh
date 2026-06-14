@@ -109,9 +109,11 @@ fn setup_tracing(cli: &Cli) {
         tracing::Level::INFO
     };
 
+    let no_color = std::env::var("NO_COLOR").is_ok();
     let subscriber = tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
         .with_max_level(level)
+        .with_ansi(!no_color)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).ok();
