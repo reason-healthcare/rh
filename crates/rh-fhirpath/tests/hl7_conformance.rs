@@ -41,16 +41,7 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testDollar::testDollarOrderNotAllowed",
     "testExtension::testExtension1",
     "testIif::testIif10",
-    "testInheritance::testFHIRPathAsFunction11",
-    "testInheritance::testFHIRPathAsFunction13",
-    "testInheritance::testFHIRPathAsFunction15",
-    "testInheritance::testFHIRPathAsFunction16",
-    "testInheritance::testFHIRPathAsFunction18",
-    "testInheritance::testFHIRPathAsFunction20",
     "testInheritance::testFHIRPathAsFunction22",
-    "testInheritance::testFHIRPathIsFunction3",
-    "testInheritance::testFHIRPathIsFunction5",
-    "testInheritance::testFHIRPathIsFunction7",
     "testInheritance::testFHIRPathIsFunction8",
     "testInheritance::testFHIRPathIsFunction9",
     "testMatches::testMatchesSingleLineMode1",
@@ -248,7 +239,7 @@ fn matches_expected(actual: &FhirPathValue, expected_type: &str, expected: &str)
             }
         }
         "string" | "code" | "id" | "uri" => match actual {
-            FhirPathValue::String(s) => s == expected,
+            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => s == expected,
             FhirPathValue::Object(serde_json::Value::String(s)) => s == expected,
             _ => false,
         },

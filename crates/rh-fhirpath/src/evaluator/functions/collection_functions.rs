@@ -372,13 +372,31 @@ fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering 
 }
 
 fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
+    use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
     match v {
         FhirPathValue::Object(json) => {
-            // FHIR resources carry their type in resourceType.
             if let Some(rt) = json.get("resourceType").and_then(|r| r.as_str()) {
                 return ("FHIR".to_string(), rt.to_string());
             }
             ("FHIR".to_string(), "Any".to_string())
+        }
+        FhirPathValue::TypedString { fhir_type, .. } => {
+            let name = match fhir_type {
+                FhirPrimitiveType::String => "string",
+                FhirPrimitiveType::Code => "code",
+                FhirPrimitiveType::Id => "id",
+                FhirPrimitiveType::Uri => "uri",
+                FhirPrimitiveType::Url => "url",
+                FhirPrimitiveType::Canonical => "canonical",
+                FhirPrimitiveType::Oid => "oid",
+                FhirPrimitiveType::Markdown => "markdown",
+                FhirPrimitiveType::Base64Binary => "base64Binary",
+                other => {
+                    let s = format!("{:?}", other);
+                    return ("FHIR".to_string(), s);
+                }
+            };
+            ("FHIR".to_string(), name.to_string())
         }
         other => {
             let name = match other {

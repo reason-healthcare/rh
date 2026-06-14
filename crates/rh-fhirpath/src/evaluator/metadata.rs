@@ -61,16 +61,43 @@ pub fn typed_value_from_string(value: String, field_type: &FhirFieldType) -> Fhi
                 FhirPathValue::DateTime(value)
             }
             FhirPrimitiveType::Time => FhirPathValue::Time(value),
-            // All other primitive types remain as strings
-            FhirPrimitiveType::String
-            | FhirPrimitiveType::Uri
-            | FhirPrimitiveType::Url
-            | FhirPrimitiveType::Canonical
-            | FhirPrimitiveType::Code
-            | FhirPrimitiveType::Oid
-            | FhirPrimitiveType::Id
-            | FhirPrimitiveType::Markdown
-            | FhirPrimitiveType::Base64Binary => FhirPathValue::String(value),
+            // String-based primitives: carry type provenance for is/as/ofType/type()
+            FhirPrimitiveType::String => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::String,
+            },
+            FhirPrimitiveType::Code => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Code,
+            },
+            FhirPrimitiveType::Id => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Id,
+            },
+            FhirPrimitiveType::Uri => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Uri,
+            },
+            FhirPrimitiveType::Url => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Url,
+            },
+            FhirPrimitiveType::Canonical => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Canonical,
+            },
+            FhirPrimitiveType::Oid => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Oid,
+            },
+            FhirPrimitiveType::Markdown => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Markdown,
+            },
+            FhirPrimitiveType::Base64Binary => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Base64Binary,
+            },
         },
         // Complex types and references remain as-is (already handled as Objects)
         FhirFieldType::Complex(_)
@@ -300,18 +327,18 @@ mod tests {
     fn test_typed_string_primitives() {
         let string_type = FhirFieldType::Primitive(FhirPrimitiveType::String);
         let value = typed_value_from_string("hello".to_string(), &string_type);
-        assert_eq!(value, FhirPathValue::String("hello".to_string()));
+        assert_eq!(value, FhirPathValue::TypedString { value: "hello".to_string(), fhir_type: FhirPrimitiveType::String });
 
         let uri_type = FhirFieldType::Primitive(FhirPrimitiveType::Uri);
         let value = typed_value_from_string("http://example.org".to_string(), &uri_type);
         assert_eq!(
             value,
-            FhirPathValue::String("http://example.org".to_string())
+            FhirPathValue::TypedString { value: "http://example.org".to_string(), fhir_type: FhirPrimitiveType::Uri }
         );
 
         let code_type = FhirFieldType::Primitive(FhirPrimitiveType::Code);
         let value = typed_value_from_string("active".to_string(), &code_type);
-        assert_eq!(value, FhirPathValue::String("active".to_string()));
+        assert_eq!(value, FhirPathValue::TypedString { value: "active".to_string(), fhir_type: FhirPrimitiveType::Code });
     }
 
     #[test]

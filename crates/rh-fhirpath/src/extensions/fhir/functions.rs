@@ -145,6 +145,7 @@ fn has_value_function(
         }
         // FHIR primitives that have values
         FhirPathValue::String(_)
+        | FhirPathValue::TypedString { .. }
         | FhirPathValue::Integer(_)
         | FhirPathValue::Number(_)
         | FhirPathValue::Boolean(_)

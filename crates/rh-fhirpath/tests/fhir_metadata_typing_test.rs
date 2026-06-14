@@ -5,6 +5,7 @@
 //! https://www.hl7.org/fhir/fhirpath.html
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
 use serde_json::json;
 
 #[test]
@@ -396,19 +397,25 @@ fn test_uri_and_code_types_remain_strings() {
 
     let context = EvaluationContext::new(patient_data);
 
-    // Code type should remain as String
+    // Code type should now carry FHIR type provenance
     let expr = parser.parse("Patient.language").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::String(s) => assert_eq!(s, "en-US"),
-        _ => panic!("Expected String type for code, got {result:?}"),
+        FhirPathValue::TypedString { value, fhir_type } => {
+            assert_eq!(value, "en-US");
+            assert_eq!(fhir_type, FhirPrimitiveType::Code);
+        }
+        _ => panic!("Expected TypedString type for code, got {result:?}"),
     }
 
-    // URI type should remain as String
+    // URI type should now carry FHIR type provenance
     let expr = parser.parse("Patient.implicitRules").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::String(s) => assert_eq!(s, "http://example.org/rules"),
-        _ => panic!("Expected String type for URI, got {result:?}"),
+        FhirPathValue::TypedString { value, fhir_type } => {
+            assert_eq!(value, "http://example.org/rules");
+            assert_eq!(fhir_type, FhirPrimitiveType::Uri);
+        }
+        _ => panic!("Expected TypedString type for URI, got {result:?}"),
     }
 }

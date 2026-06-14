@@ -348,7 +348,7 @@ impl MathEvaluator {
             FhirPathValue::Integer(_) => "Integer",
             FhirPathValue::Long(_) => "Long",
             FhirPathValue::Number(_) => "Number",
-            FhirPathValue::String(_) => "String",
+            FhirPathValue::String(_) | FhirPathValue::TypedString { .. } => "String",
             FhirPathValue::Date(_) => "Date",
             FhirPathValue::DateTime(_) => "DateTime",
             FhirPathValue::Time(_) => "Time",
