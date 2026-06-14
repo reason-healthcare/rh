@@ -45,10 +45,6 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testInheritance::testFHIRPathIsFunction9",
     "testObservations::testPolymorphismB",
     "testObservations::testPolymorphismIsA3",
-    "testType::testType10",
-    "testType::testType12",
-    "testType::testType14",
-    "testType::testType9",
 ];
 
 #[derive(Debug, Clone)]

@@ -354,6 +354,9 @@ fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering 
     }
     match (a, b) {
         (Boolean(x), Boolean(y)) => x.cmp(y),
+        (Boolean(x), TypedBoolean { value: y, .. })
+        | (TypedBoolean { value: x, .. }, Boolean(y))
+        | (TypedBoolean { value: x, .. }, TypedBoolean { value: y, .. }) => x.cmp(y),
         (Integer(x), Integer(y)) | (Long(x), Long(y)) => x.cmp(y),
         (Integer(x), Long(y)) | (Long(x), Integer(y)) => x.cmp(y),
         (Number(x), Number(y)) => x.partial_cmp(y).unwrap_or(Ordering::Equal),
@@ -367,6 +370,9 @@ fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering 
         | (Date(x), Date(y))
         | (DateTime(x), DateTime(y))
         | (Time(x), Time(y)) => x.cmp(y),
+        (DateTime(x), TypedDateTime { value: y, .. })
+        | (TypedDateTime { value: x, .. }, DateTime(y))
+        | (TypedDateTime { value: x, .. }, TypedDateTime { value: y, .. }) => x.cmp(y),
         _ => Ordering::Equal,
     }
 }
@@ -395,6 +401,14 @@ fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
                     let s = format!("{:?}", other);
                     return ("FHIR".to_string(), s);
                 }
+            };
+            ("FHIR".to_string(), name.to_string())
+        }
+        FhirPathValue::TypedBoolean { .. } => ("FHIR".to_string(), "boolean".to_string()),
+        FhirPathValue::TypedDateTime { fhir_type, .. } => {
+            let name = match fhir_type {
+                FhirPrimitiveType::Instant => "instant",
+                _ => "dateTime",
             };
             ("FHIR".to_string(), name.to_string())
         }

@@ -261,13 +261,13 @@ fn test_of_type_empty_collection() {
 }
 
 #[test]
-fn test_of_type_case_insensitive_resource_types() {
+fn test_of_type_explicit_fhir_resource_types() {
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
     let context = create_mixed_type_context();
 
-    // Test case insensitive matching for resource types
-    let expr = parser.parse("resources.ofType(patient)").unwrap();
+    // Resource filtering should keep working when the FHIR namespace is explicit.
+    let expr = parser.parse("resources.ofType(FHIR.Patient)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Collection(items) = result {

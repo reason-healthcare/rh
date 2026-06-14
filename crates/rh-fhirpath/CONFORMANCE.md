@@ -1,6 +1,6 @@
 # rh-fhirpath Conformance
 
-**Last updated**: 2026-06-14 (waves 26–30: quantity equivalence, FHIR type provenance, matches single-line, iif collection error, quantity unit algebra)
+**Last updated**: 2026-06-14 (waves 26–31: quantity equivalence, FHIR type provenance, matches single-line, iif collection error, quantity unit algebra, typed boolean/datetime provenance)
 **FHIRPath specification**: 2.0.0 (http://hl7.org/fhirpath)
 **Test suite source**: `tests-fhir-r4.xml` from
 https://github.com/FHIR/fhir-test-cases/blob/master/r4/fhirpath/ (R4 copy of
@@ -38,13 +38,13 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-14, waves 26–30)
+### 1.1 Current results (2026-06-14, waves 26–31)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 909 | 97.2% |
-| Wrong answer | 19 | 2.0% |
+| Pass | 913 | 97.6% |
+| Wrong answer | 15 | 1.6% |
 | Parse error | 1 | 0.1% |
 | Eval error | 5 | 0.5% |
 | Skipped | 1 | 0.1% |
@@ -67,6 +67,7 @@ History:
 
 | 2026-06-14 | 907 (97.0%) | 19 | 1 | 7 | Waves 26–29: quantity `~` uses precision-aware equivalence; `FhirPathValue::TypedString` carries FHIR primitive type provenance (code/id/uri/url/canonical); `is()` follows FHIR type hierarchy; `as()`/`ofType()` use exact type match; `type()` returns FHIR namespace for TypedString; `matches()` uses single-line (dotall) mode; `iif()` errors on multi-element collections. 9 inheritance tests fixed, 2 misc tests fixed (testQuantity4, testMatchesSingleLineMode1, testIif10). |
 | 2026-06-14 | 909 (97.2%) | 19 | 1 | 5 | Wave 30: quantity unit algebra for `Quantity * Quantity` and cross-dimension `Quantity / Quantity`. Operands are normalized to base UCUM units before composing the result unit (`2.0 'cm' * 2.0 'm' -> 0.040 'm2'`, `4.0 'g' / 2.0 'm' -> 2 'g/m'`). `testQuantity9/10` flipped from eval-error to pass. |
+| 2026-06-14 | 913 (97.6%) | 15 | 1 | 5 | Wave 31: `TypedBoolean` and `TypedDateTime` now preserve FHIR primitive provenance for JSON booleans and `dateTime`/`instant` values, choice-type primitive promotion returns typed FHIR values, `type()/is()/as()/ofType()` distinguish `boolean` vs `Boolean` and `FHIR.Patient` correctly, and `getValue()` / `iif()` accept the new typed primitives. Fixed HL7 `testType9/10/11/12/13/14/18/19/21/23/A1/A3/A4` plus the previous `Observation.issued is instant` type gap. |
 
 ### 1.2 Regression policy
 
@@ -99,8 +100,8 @@ successful **non-empty** result as a wrong answer.
 | Cluster | Cases | Notes |
 |---|---|---|
 | `highBoundary()`/`lowBoundary()`/`precision()` | 5 | Need decimal precision support |
-| Polymorphic choice-type access | 3 | `value[x]` semantic errors (valueQuantity, extension) |
-| FHIR `type()`/`is()` for non-string primitives | 4 | `Patient.active.type()` needs TypedBoolean (deferred) |
+| Polymorphic choice-type access | 2 | Strict semantic-error handling for explicit `valueQuantity` / `value.exists()` remains |
+| Primitive extensions / explicit primitive choice access | 2 | `_primitive` sibling navigation still missing |
 | `defineVariable`/`$this` ordering | 1 | Semantic error expected |
 | `extension()` on primitives | 1 | Not yet implemented |
 | `combine().isDistinct()` | 1 | `isDistinct()` semantics |

@@ -345,12 +345,14 @@ impl MathEvaluator {
     fn type_name(value: &FhirPathValue) -> &'static str {
         match value {
             FhirPathValue::Boolean(_) => "Boolean",
+            FhirPathValue::TypedBoolean { .. } => "Boolean",
             FhirPathValue::Integer(_) => "Integer",
             FhirPathValue::Long(_) => "Long",
             FhirPathValue::Number(_) => "Number",
             FhirPathValue::String(_) | FhirPathValue::TypedString { .. } => "String",
             FhirPathValue::Date(_) => "Date",
             FhirPathValue::DateTime(_) => "DateTime",
+            FhirPathValue::TypedDateTime { .. } => "DateTime",
             FhirPathValue::Time(_) => "Time",
             FhirPathValue::Quantity { .. } => "Quantity",
             FhirPathValue::Collection(_) => "Collection",

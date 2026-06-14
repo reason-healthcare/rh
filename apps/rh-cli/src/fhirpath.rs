@@ -14,6 +14,7 @@ use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPath
 fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
     match value {
         FhirPathValue::Boolean(b) => Value::Bool(*b),
+        FhirPathValue::TypedBoolean { value, .. } => Value::Bool(*value),
         FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
             Value::String(s.clone())
         }
@@ -29,6 +30,7 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
         FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => {
             Value::String(s.clone())
         }
+        FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
         FhirPathValue::Quantity { value, unit } => {
             let mut obj = serde_json::Map::new();
             obj.insert(

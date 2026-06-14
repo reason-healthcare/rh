@@ -14,11 +14,21 @@ pub enum FhirPathValue {
         value: String,
         fhir_type: FhirPrimitiveType,
     },
+    /// A boolean value with FHIR primitive type provenance.
+    TypedBoolean {
+        value: bool,
+        fhir_type: FhirPrimitiveType,
+    },
     Number(f64),
     Integer(i64),
     Long(i64),
     Date(String),
     DateTime(String),
+    /// A datetime-like value with FHIR primitive type provenance (dateTime, instant).
+    TypedDateTime {
+        value: String,
+        fhir_type: FhirPrimitiveType,
+    },
     Time(String),
     Quantity {
         value: f64,
@@ -44,11 +54,11 @@ impl FhirPathValue {
     pub fn fhir_primitive_type(&self) -> Option<FhirPrimitiveType> {
         match self {
             FhirPathValue::TypedString { fhir_type, .. } => Some(*fhir_type),
-            FhirPathValue::Boolean(_) => Some(FhirPrimitiveType::Boolean),
+            FhirPathValue::TypedBoolean { fhir_type, .. } => Some(*fhir_type),
             FhirPathValue::Integer(_) => Some(FhirPrimitiveType::Integer),
             FhirPathValue::Number(_) => Some(FhirPrimitiveType::Decimal),
             FhirPathValue::Date(_) => Some(FhirPrimitiveType::Date),
-            FhirPathValue::DateTime(_) => Some(FhirPrimitiveType::DateTime),
+            FhirPathValue::TypedDateTime { fhir_type, .. } => Some(*fhir_type),
             FhirPathValue::Time(_) => Some(FhirPrimitiveType::Time),
             FhirPathValue::Quantity { .. } => Some(FhirPrimitiveType::Decimal),
             FhirPathValue::Object(_) => None,
@@ -68,6 +78,12 @@ impl FhirPathValue {
     pub fn equals_static(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         match (left, right) {
             (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => a == b,
+            (FhirPathValue::Boolean(a), FhirPathValue::TypedBoolean { value: b, .. })
+            | (FhirPathValue::TypedBoolean { value: a, .. }, FhirPathValue::Boolean(b))
+            | (
+                FhirPathValue::TypedBoolean { value: a, .. },
+                FhirPathValue::TypedBoolean { value: b, .. },
+            ) => a == b,
             (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
             (FhirPathValue::String(a), FhirPathValue::TypedString { value: b, .. })
             | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::String(b))
@@ -86,6 +102,12 @@ impl FhirPathValue {
             | (FhirPathValue::Number(a), FhirPathValue::Long(b)) => *a == *b as f64,
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
+            (FhirPathValue::DateTime(a), FhirPathValue::TypedDateTime { value: b, .. })
+            | (FhirPathValue::TypedDateTime { value: a, .. }, FhirPathValue::DateTime(b))
+            | (
+                FhirPathValue::TypedDateTime { value: a, .. },
+                FhirPathValue::TypedDateTime { value: b, .. },
+            ) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
             (FhirPathValue::DateTimePrecision(a), FhirPathValue::DateTimePrecision(b)) => a == b,
             (FhirPathValue::Date(a), FhirPathValue::String(b))
@@ -93,9 +115,19 @@ impl FhirPathValue {
             (FhirPathValue::String(a), FhirPathValue::Date(b))
             | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::Date(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::String(b))
-            | (FhirPathValue::DateTime(a), FhirPathValue::TypedString { value: b, .. }) => a == b,
+            | (FhirPathValue::DateTime(a), FhirPathValue::TypedString { value: b, .. })
+            | (FhirPathValue::TypedDateTime { value: a, .. }, FhirPathValue::String(b))
+            | (
+                FhirPathValue::TypedDateTime { value: a, .. },
+                FhirPathValue::TypedString { value: b, .. },
+            ) => a == b,
             (FhirPathValue::String(a), FhirPathValue::DateTime(b))
-            | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::DateTime(b)) => a == b,
+            | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::DateTime(b))
+            | (FhirPathValue::String(a), FhirPathValue::TypedDateTime { value: b, .. })
+            | (
+                FhirPathValue::TypedString { value: a, .. },
+                FhirPathValue::TypedDateTime { value: b, .. },
+            ) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::String(b))
             | (FhirPathValue::Time(a), FhirPathValue::TypedString { value: b, .. }) => a == b,
             (FhirPathValue::String(a), FhirPathValue::Time(b))
@@ -134,6 +166,7 @@ impl FhirPathValue {
     pub fn is_truthy(&self) -> bool {
         match self {
             FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::TypedBoolean { value, .. } => *value,
             FhirPathValue::Empty => false,
             FhirPathValue::Collection(items) => !items.is_empty(),
             _ => true,
@@ -144,6 +177,7 @@ impl FhirPathValue {
     pub fn to_boolean(&self) -> bool {
         match self {
             FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::TypedBoolean { value, .. } => *value,
             FhirPathValue::Empty => false,
             FhirPathValue::Collection(items) => !items.is_empty(),
             _ => true,
@@ -157,8 +191,10 @@ impl FhirPathValue {
             FhirPathValue::Integer(i) => Ok(i.to_string()),
             FhirPathValue::Number(n) => Ok(n.to_string()),
             FhirPathValue::Boolean(b) => Ok(b.to_string()),
+            FhirPathValue::TypedBoolean { value, .. } => Ok(value.to_string()),
             FhirPathValue::Date(d) => Ok(d.clone()),
             FhirPathValue::DateTime(dt) => Ok(dt.clone()),
+            FhirPathValue::TypedDateTime { value, .. } => Ok(value.clone()),
             FhirPathValue::Time(t) => Ok(t.clone()),
             FhirPathValue::Empty => Ok("".to_string()),
             _ => Err(FhirPathError::EvaluationError {
@@ -198,6 +234,7 @@ impl FhirPathValue {
     pub fn to_json(&self) -> Value {
         match self {
             FhirPathValue::Boolean(b) => Value::Bool(*b),
+            FhirPathValue::TypedBoolean { value, .. } => Value::Bool(*value),
             FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
                 Value::String(s.clone())
             }
@@ -208,6 +245,7 @@ impl FhirPathValue {
             FhirPathValue::Long(l) => Value::Number(serde_json::Number::from(*l)),
             FhirPathValue::Date(s) => Value::String(s.clone()),
             FhirPathValue::DateTime(s) => Value::String(s.clone()),
+            FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
             FhirPathValue::Time(s) => Value::String(s.clone()),
             FhirPathValue::Quantity { value, unit: _ } => Value::Number(
                 serde_json::Number::from_f64(*value).unwrap_or_else(|| serde_json::Number::from(0)),
@@ -281,8 +319,20 @@ impl FhirPathValue {
             }
 
             (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::Boolean(a), FhirPathValue::TypedBoolean { value: b, .. })
+            | (FhirPathValue::TypedBoolean { value: a, .. }, FhirPathValue::Boolean(b))
+            | (
+                FhirPathValue::TypedBoolean { value: a, .. },
+                FhirPathValue::TypedBoolean { value: b, .. },
+            ) => Ok(a.cmp(b) as i32),
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => Ok(a.cmp(b) as i32),
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::DateTime(a), FhirPathValue::TypedDateTime { value: b, .. })
+            | (FhirPathValue::TypedDateTime { value: a, .. }, FhirPathValue::DateTime(b))
+            | (
+                FhirPathValue::TypedDateTime { value: a, .. },
+                FhirPathValue::TypedDateTime { value: b, .. },
+            ) => Ok(a.cmp(b) as i32),
             (FhirPathValue::Time(a), FhirPathValue::Time(b)) => Ok(a.cmp(b) as i32),
 
             // Date/Time comparisons with implicit string conversion
@@ -297,6 +347,12 @@ impl FhirPathValue {
             }
             (_, FhirPathValue::DateTime(b)) if left_str.is_some() => {
                 Ok(left_str.unwrap().cmp(b.as_str()) as i32)
+            }
+            (FhirPathValue::TypedDateTime { value, .. }, _) if right_str.is_some() => {
+                Ok(value.as_str().cmp(right_str.unwrap()) as i32)
+            }
+            (_, FhirPathValue::TypedDateTime { value, .. }) if left_str.is_some() => {
+                Ok(left_str.unwrap().cmp(value.as_str()) as i32)
             }
             (FhirPathValue::Time(a), _) if right_str.is_some() => {
                 Ok(a.as_str().cmp(right_str.unwrap()) as i32)

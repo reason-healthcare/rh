@@ -1,6 +1,6 @@
 # rh-fhirpath Specification Coverage
 
-**Last updated**: 2026-06-14 (derived from the HL7 suite run at 909/935 pass; see
+**Last updated**: 2026-06-14 (derived from the HL7 suite run at 913/935 pass; see
 [CONFORMANCE.md](CONFORMANCE.md))
 
 Status legend: `✅` implemented and passing suite cases, `🟡` implemented with
@@ -27,7 +27,7 @@ known remaining failures, `❌` not implemented.
 | Comparison `< <= > >=` | 🟡 | One remaining period-boundary eval error depends on decimal boundary precision |
 | Boolean logic (`and or xor implies`) | ✅ | Three-valued logic implemented |
 | Union `\|` | ✅ | Distinctness semantics implemented |
-| `is` / `as` (operators and functions) | 🟡 | Non-string FHIR primitive provenance still missing (`Boolean`, etc.) |
+| `is` / `as` (operators and functions) | 🟡 | Boolean/dateTime/instant provenance is implemented; remaining gaps are strict polymorphic semantics and one complex-type `ofType(HumanName)` case |
 | String concatenation `&` | ✅ | |
 
 ## Functions
@@ -49,7 +49,7 @@ known remaining failures, `❌` not implemented.
 | `defineVariable` | 🟡 | Core support exists; one strict-ordering case remains |
 | `sort` | ✅ | |
 | `lowBoundary` / `highBoundary` / `precision` | 🟡 | 6 decimal precision failures remain because trailing zeros are lost in `f64` |
-| Type reflection (`type()`) | 🟡 | String-like FHIR primitive provenance implemented; boolean provenance still missing |
+| Type reflection (`type()`) | 🟡 | FHIR provenance for string/boolean/dateTime/instant is implemented; primitive-extension siblings still block full coverage |
 | `comparable` | ✅ | |
 | `conformsTo` | ❌ | Needs validator hook |
 | `resolve()` | ❌ | Needs pluggable resolver trait |
@@ -57,9 +57,9 @@ known remaining failures, `❌` not implemented.
 
 ## Remaining implementation priority
 
-1. Primitive extensions and primitive provenance beyond strings:
-   `extension()` on `_primitive` siblings, `TypedBoolean`, and the remaining
-   `is()/type()` failures.
+1. Primitive extensions and strict polymorphic semantics:
+   `extension()` on `_primitive` siblings plus the remaining strict-invalid
+   `value[x]` cases.
 2. Decimal-precision retention beyond `f64`:
    `lowBoundary()`, `highBoundary()`, `precision()`, and the remaining period
    invariant error all depend on preserving trailing zeros exactly.

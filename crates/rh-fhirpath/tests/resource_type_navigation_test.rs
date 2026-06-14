@@ -42,7 +42,13 @@ fn test_resource_type_as_root_path() {
     // Test 3: Patient.active should work
     let expr5 = parser.parse("Patient.active").unwrap();
     let result5 = evaluator.evaluate(&expr5, &context).unwrap();
-    assert_eq!(result5, FhirPathValue::Boolean(true));
+    assert_eq!(
+        result5,
+        FhirPathValue::TypedBoolean {
+            value: true,
+            fhir_type: FhirPrimitiveType::Boolean
+        }
+    );
 
     // Test 4: Non-matching resourceType should return empty
     let expr6 = parser.parse("Observation.id").unwrap();

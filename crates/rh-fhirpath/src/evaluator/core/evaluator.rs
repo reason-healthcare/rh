@@ -478,6 +478,7 @@ impl FhirPathEvaluator {
 
         let is_truthy = match effective {
             FhirPathValue::Boolean(b) => b,
+            FhirPathValue::TypedBoolean { value, .. } => value,
             FhirPathValue::Empty => false,
             other => {
                 return Err(FhirPathError::TypeError {
@@ -1012,15 +1013,57 @@ fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Opti
                 .map(str::to_string);
             Some(FhirPathValue::Quantity { value: num, unit })
         }
-        "Boolean" => value.as_bool().map(FhirPathValue::Boolean),
+        "Boolean" => value.as_bool().map(|b| FhirPathValue::TypedBoolean {
+            value: b,
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean,
+        }),
         "Integer" | "UnsignedInt" | "PositiveInt" => value.as_i64().map(FhirPathValue::Integer),
         "Decimal" => value.as_f64().map(FhirPathValue::Number),
-        "String" | "Code" | "Uri" | "Url" | "Canonical" | "Oid" | "Id" | "Markdown"
-        | "Base64Binary" => value.as_str().map(|s| FhirPathValue::String(s.to_string())),
+        "String" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::String,
+        }),
+        "Code" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Code,
+        }),
+        "Uri" | "Uuid" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Uri,
+        }),
+        "Url" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Url,
+        }),
+        "Canonical" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Canonical,
+        }),
+        "Oid" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Oid,
+        }),
+        "Id" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Id,
+        }),
+        "Markdown" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Markdown,
+        }),
+        "Base64Binary" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Base64Binary,
+        }),
         "Date" => value.as_str().map(|s| FhirPathValue::Date(s.to_string())),
-        "DateTime" | "Instant" => value
-            .as_str()
-            .map(|s| FhirPathValue::DateTime(s.to_string())),
+        "DateTime" | "Instant" => value.as_str().map(|s| FhirPathValue::TypedDateTime {
+            value: s.to_string(),
+            fhir_type: if suffix == "Instant" {
+                rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Instant
+            } else {
+                rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::DateTime
+            },
+        }),
         "Time" => value.as_str().map(|s| FhirPathValue::Time(s.to_string())),
         // Complex types not yet modelled: CodeableConcept, Coding, Reference,
         // Identifier, etc. Caller falls back to metadata/JSON-object handling.

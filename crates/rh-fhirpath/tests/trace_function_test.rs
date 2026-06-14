@@ -255,6 +255,13 @@ fn test_trace_preserves_type() {
     let expr = parser.parse("Patient.active.trace('active-flag')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
+        FhirPathValue::TypedBoolean { value, fhir_type } => {
+            assert!(value);
+            assert_eq!(
+                fhir_type,
+                rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean
+            );
+        }
         FhirPathValue::Boolean(b) => assert!(b),
         _ => panic!("Expected Boolean, got {result:?}"),
     }

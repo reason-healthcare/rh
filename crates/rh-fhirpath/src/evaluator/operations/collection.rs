@@ -789,6 +789,7 @@ impl CollectionEvaluator {
 
         let is_truthy = match effective_criterion {
             FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::TypedBoolean { value, .. } => *value,
             FhirPathValue::Empty => false,
             other => {
                 return Err(FhirPathError::TypeError {

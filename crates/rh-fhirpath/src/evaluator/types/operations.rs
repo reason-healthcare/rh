@@ -78,6 +78,93 @@ fn is_subtype_of(declared: FhirPrimitiveType, target: FhirPrimitiveType) -> bool
     false
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TypeNamespace {
+    System,
+    Fhir,
+    Unqualified,
+}
+
+fn split_type_name(type_name: &str) -> (TypeNamespace, &str, String) {
+    if let Some(name) = type_name.strip_prefix("System.") {
+        return (TypeNamespace::System, name, name.to_ascii_lowercase());
+    }
+    if let Some(name) = type_name.strip_prefix("FHIR.") {
+        return (TypeNamespace::Fhir, name, name.to_ascii_lowercase());
+    }
+    if let Some(name) = type_name.strip_prefix("system.") {
+        return (TypeNamespace::System, name, name.to_ascii_lowercase());
+    }
+    if let Some(name) = type_name.strip_prefix("fhir.") {
+        return (TypeNamespace::Fhir, name, name.to_ascii_lowercase());
+    }
+    (
+        TypeNamespace::Unqualified,
+        type_name,
+        type_name.to_ascii_lowercase(),
+    )
+}
+
+fn matches_system_type(value: &FhirPathValue, lower_name: &str, exact: bool) -> bool {
+    match lower_name {
+        "boolean" => matches!(value, FhirPathValue::Boolean(_)),
+        "string" => match value {
+            FhirPathValue::String(_) => true,
+            FhirPathValue::TypedString { fhir_type, .. } => {
+                !exact || *fhir_type == FhirPrimitiveType::String
+            }
+            _ => false,
+        },
+        "integer" => matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_)),
+        "decimal" | "number" => matches!(value, FhirPathValue::Number(_)),
+        "date" => matches!(value, FhirPathValue::Date(_)),
+        "datetime" => matches!(value, FhirPathValue::DateTime(_)),
+        "time" => matches!(value, FhirPathValue::Time(_)),
+        "quantity" => matches!(value, FhirPathValue::Quantity { .. }),
+        "collection" => matches!(value, FhirPathValue::Collection(_)),
+        "object" | "resource" => matches!(value, FhirPathValue::Object(_)),
+        _ => false,
+    }
+}
+
+fn matches_fhir_type(value: &FhirPathValue, lower_name: &str, exact: bool) -> bool {
+    match lower_name {
+        "boolean" => matches!(
+            value,
+            FhirPathValue::TypedBoolean {
+                fhir_type: FhirPrimitiveType::Boolean,
+                ..
+            }
+        ),
+        "uuid" => matches!(
+            value,
+            FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Uri,
+            } if value.starts_with("urn:uuid:")
+        ),
+        "integer" => value.fhir_primitive_type() == Some(FhirPrimitiveType::Integer),
+        "unsignedint" => value.fhir_primitive_type() == Some(FhirPrimitiveType::UnsignedInt),
+        "positiveint" => value.fhir_primitive_type() == Some(FhirPrimitiveType::PositiveInt),
+        "decimal" => value.fhir_primitive_type() == Some(FhirPrimitiveType::Decimal),
+        "string" | "code" | "id" | "uri" | "url" | "canonical" | "oid" | "markdown"
+        | "base64binary" | "datetime" | "instant" | "date" | "time" => {
+            if let Some(target_type) = fhir_type_from_name(lower_name) {
+                if let Some(declared) = value.fhir_primitive_type() {
+                    return if exact {
+                        declared == target_type
+                    } else {
+                        is_subtype_of(declared, target_type)
+                    };
+                }
+            }
+            false
+        }
+        "quantity" => matches!(value, FhirPathValue::Quantity { .. }),
+        _ => false,
+    }
+}
+
 impl TypeEvaluator {
     /// Evaluate type operation (is, as)
     pub fn evaluate_type_operation(
@@ -173,70 +260,45 @@ impl TypeEvaluator {
     /// Check if a value's type `is` the specified type, following FHIR
     /// type hierarchy (inheritance-aware). E.g. `code IS-A string` = true.
     fn value_is_type(value: &FhirPathValue, type_name: &str) -> FhirPathResult<bool> {
-        let lookup = type_name.to_lowercase();
-        match lookup.as_str() {
-            "boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "string" => {
-                // TypedString(Code|Id|Uri|...) IS-A String, plain String IS String
-                Ok(value.is_string_like())
-            }
-            "integer" => Ok(matches!(
-                value,
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
-            )),
-            "number" | "decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
-            "date" => Ok(matches!(value, FhirPathValue::Date(_))),
-            "datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
-            "time" => Ok(matches!(value, FhirPathValue::Time(_))),
-            "quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
-
-            // FHIR primitive string subtypes — must have matching provenance
-            "code" | "id" | "uri" | "url" | "canonical" | "oid" | "markdown" | "base64binary" => {
-                if let Some(target_type) = fhir_type_from_name(&lookup) {
-                    if let Some(declared) = value.fhir_primitive_type() {
-                        return Ok(is_subtype_of(declared, target_type));
-                    }
-                    // Untyped string value: only matches 'string', not subtypes
-                    return Ok(false);
+        let (namespace, raw_name, lower_name) = split_type_name(type_name);
+        match namespace {
+            TypeNamespace::System => return Ok(matches_system_type(value, &lower_name, false)),
+            TypeNamespace::Fhir => {
+                if matches_fhir_type(value, &lower_name, false) {
+                    return Ok(true);
                 }
-                Ok(false)
+                if let FhirPathValue::Object(obj) = value {
+                    if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        return Ok(resource_type.eq_ignore_ascii_case(raw_name));
+                    }
+                }
+                return Ok(false);
             }
+            TypeNamespace::Unqualified => {}
+        }
 
-            "collection" => Ok(matches!(value, FhirPathValue::Collection(_))),
-            "object" | "resource" => Ok(matches!(value, FhirPathValue::Object(_))),
-
-            // System types
-            "system.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "system.string" => Ok(value.is_string_like()),
-            "system.integer" => Ok(matches!(
-                value,
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
-            )),
-            "system.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
-            "system.date" => Ok(matches!(value, FhirPathValue::Date(_))),
-            "system.datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
-            "system.time" => Ok(matches!(value, FhirPathValue::Time(_))),
-            "system.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
-
-            // FHIR-qualified types
-            "fhir.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => Ok(matches!(
-                value,
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
-            )),
-            "fhir.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
-            "fhir.string" | "fhir.code" | "fhir.uri" | "fhir.url" | "fhir.canonical"
-            | "fhir.oid" | "fhir.uuid" | "fhir.id" | "fhir.markdown" | "fhir.base64binary" => {
-                Ok(value.is_string_like())
+        match raw_name {
+            // Lowercase primitives are FHIR primitives.
+            name if name.chars().next().is_some_and(char::is_lowercase) => {
+                if lower_name.ends_with("[]") {
+                    let element_type = &raw_name[..raw_name.len() - 2];
+                    return match value {
+                        FhirPathValue::Collection(items) => {
+                            for item in items {
+                                if !Self::value_is_type(item, element_type)? {
+                                    return Ok(false);
+                                }
+                            }
+                            Ok(true)
+                        }
+                        _ => Ok(false),
+                    };
+                }
+                Ok(matches_fhir_type(value, &lower_name, false))
             }
-            "fhir.date" => Ok(matches!(value, FhirPathValue::Date(_))),
-            "fhir.datetime" | "fhir.instant" => Ok(matches!(value, FhirPathValue::DateTime(_))),
-            "fhir.time" => Ok(matches!(value, FhirPathValue::Time(_))),
-            "fhir.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
-
-            // Handle collections recursively
-            lookup if lookup.ends_with("[]") => {
-                let element_type = &lookup[..lookup.len() - 2];
+            // Handle collections recursively.
+            _ if lower_name.ends_with("[]") => {
+                let element_type = &raw_name[..raw_name.len() - 2];
                 match value {
                     FhirPathValue::Collection(items) => {
                         for item in items {
@@ -249,10 +311,11 @@ impl TypeEvaluator {
                     _ => Ok(false),
                 }
             }
-
-            // Fallback: FHIR resource types
             _ => {
-                let resource_name = lookup.strip_prefix("fhir.").unwrap_or(&lookup);
+                if matches_system_type(value, &lower_name, false) {
+                    return Ok(true);
+                }
+                let resource_name = raw_name;
                 if let FhirPathValue::Object(obj) = value {
                     if let Some(resource_type) = obj.get("resourceType") {
                         if let Some(resource_type_str) = resource_type.as_str() {
@@ -269,69 +332,43 @@ impl TypeEvaluator {
     /// Unlike `is`, this does NOT follow the type hierarchy: a `code` value
     /// does NOT match `string` — only `code` matches.
     fn value_is_exact_type(value: &FhirPathValue, type_name: &str) -> FhirPathResult<bool> {
-        let lookup = type_name.to_lowercase();
-        match lookup.as_str() {
-            "boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "string" => {
-                // Exact match: only plain String or TypedString with fhir_type=String
-                match value {
-                    FhirPathValue::String(_) => Ok(true),
-                    FhirPathValue::TypedString { fhir_type, .. } => {
-                        Ok(*fhir_type == FhirPrimitiveType::String)
+        let (namespace, raw_name, lower_name) = split_type_name(type_name);
+        match namespace {
+            TypeNamespace::System => return Ok(matches_system_type(value, &lower_name, true)),
+            TypeNamespace::Fhir => {
+                if matches_fhir_type(value, &lower_name, true) {
+                    return Ok(true);
+                }
+                if let FhirPathValue::Object(obj) = value {
+                    if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        return Ok(resource_type.eq_ignore_ascii_case(raw_name));
                     }
-                    _ => Ok(false),
                 }
+                return Ok(false);
             }
-            "integer" => Ok(matches!(
-                value,
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
-            )),
-            "number" | "decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
-            "date" => Ok(matches!(value, FhirPathValue::Date(_))),
-            "datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
-            "time" => Ok(matches!(value, FhirPathValue::Time(_))),
-            "quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
+            TypeNamespace::Unqualified => {}
+        }
 
-            // FHIR primitive string subtypes — exact provenance match
-            "code" | "id" | "uri" | "url" | "canonical" | "oid" | "markdown" | "base64binary" => {
-                if let Some(target_type) = fhir_type_from_name(&lookup) {
-                    return Ok(value.fhir_primitive_type() == Some(target_type));
+        match raw_name {
+            name if name.chars().next().is_some_and(char::is_lowercase) => {
+                if lower_name.ends_with("[]") {
+                    let element_type = &raw_name[..raw_name.len() - 2];
+                    return match value {
+                        FhirPathValue::Collection(items) => {
+                            for item in items {
+                                if !Self::value_is_exact_type(item, element_type)? {
+                                    return Ok(false);
+                                }
+                            }
+                            Ok(true)
+                        }
+                        _ => Ok(false),
+                    };
                 }
-                Ok(false)
+                Ok(matches_fhir_type(value, &lower_name, true))
             }
-
-            "collection" => Ok(matches!(value, FhirPathValue::Collection(_))),
-            "object" | "resource" => Ok(matches!(value, FhirPathValue::Object(_))),
-
-            "system.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "system.string" => Ok(value.is_string_like()),
-            "system.integer" => Ok(matches!(
-                value,
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
-            )),
-            "system.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
-            "system.date" => Ok(matches!(value, FhirPathValue::Date(_))),
-            "system.datetime" => Ok(matches!(value, FhirPathValue::DateTime(_))),
-            "system.time" => Ok(matches!(value, FhirPathValue::Time(_))),
-            "system.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
-
-            "fhir.boolean" => Ok(matches!(value, FhirPathValue::Boolean(_))),
-            "fhir.integer" | "fhir.unsignedint" | "fhir.positiveint" => Ok(matches!(
-                value,
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_)
-            )),
-            "fhir.decimal" => Ok(matches!(value, FhirPathValue::Number(_))),
-            "fhir.string" | "fhir.code" | "fhir.uri" | "fhir.url" | "fhir.canonical"
-            | "fhir.oid" | "fhir.uuid" | "fhir.id" | "fhir.markdown" | "fhir.base64binary" => {
-                Ok(value.is_string_like())
-            }
-            "fhir.date" => Ok(matches!(value, FhirPathValue::Date(_))),
-            "fhir.datetime" | "fhir.instant" => Ok(matches!(value, FhirPathValue::DateTime(_))),
-            "fhir.time" => Ok(matches!(value, FhirPathValue::Time(_))),
-            "fhir.quantity" => Ok(matches!(value, FhirPathValue::Quantity { .. })),
-
-            lookup if lookup.ends_with("[]") => {
-                let element_type = &lookup[..lookup.len() - 2];
+            _ if lower_name.ends_with("[]") => {
+                let element_type = &raw_name[..raw_name.len() - 2];
                 match value {
                     FhirPathValue::Collection(items) => {
                         for item in items {
@@ -344,9 +381,11 @@ impl TypeEvaluator {
                     _ => Ok(false),
                 }
             }
-
             _ => {
-                let resource_name = lookup.strip_prefix("fhir.").unwrap_or(&lookup);
+                if matches_system_type(value, &lower_name, true) {
+                    return Ok(true);
+                }
+                let resource_name = raw_name;
                 if let FhirPathValue::Object(obj) = value {
                     if let Some(resource_type) = obj.get("resourceType") {
                         if let Some(resource_type_str) = resource_type.as_str() {
@@ -402,21 +441,21 @@ mod tests {
             fhir_type: FhirPrimitiveType::Code,
         };
         let string_type = TypeSpecifier {
-            qualified_name: vec!["String".to_string()],
+            qualified_name: vec!["string".to_string()],
         };
         let result = TypeEvaluator::evaluate_is(&code_val, &string_type).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
 
         // code IS code = true (exact match)
         let code_type = TypeSpecifier {
-            qualified_name: vec!["Code".to_string()],
+            qualified_name: vec!["code".to_string()],
         };
         let result = TypeEvaluator::evaluate_is(&code_val, &code_type).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
 
         // code IS id = false (no inheritance)
         let id_type = TypeSpecifier {
-            qualified_name: vec!["Id".to_string()],
+            qualified_name: vec!["id".to_string()],
         };
         let result = TypeEvaluator::evaluate_is(&code_val, &id_type).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(false));
@@ -432,7 +471,7 @@ mod tests {
             fhir_type: FhirPrimitiveType::Url,
         };
         let uri_type = TypeSpecifier {
-            qualified_name: vec!["Uri".to_string()],
+            qualified_name: vec!["uri".to_string()],
         };
         let result = TypeEvaluator::evaluate_is(&url_val, &uri_type).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(true));
@@ -450,21 +489,21 @@ mod tests {
             fhir_type: FhirPrimitiveType::Code,
         };
         let code_type = TypeSpecifier {
-            qualified_name: vec!["Code".to_string()],
+            qualified_name: vec!["code".to_string()],
         };
         let result = TypeEvaluator::evaluate_as(&code_val, &code_type).unwrap();
         assert_eq!(result, code_val);
 
         // code.as(string) = empty (exact type mismatch)
         let string_type = TypeSpecifier {
-            qualified_name: vec!["String".to_string()],
+            qualified_name: vec!["string".to_string()],
         };
         let result = TypeEvaluator::evaluate_as(&code_val, &string_type).unwrap();
         assert_eq!(result, FhirPathValue::Empty);
 
         // code.as(id) = empty
         let id_type = TypeSpecifier {
-            qualified_name: vec!["Id".to_string()],
+            qualified_name: vec!["id".to_string()],
         };
         let result = TypeEvaluator::evaluate_as(&code_val, &id_type).unwrap();
         assert_eq!(result, FhirPathValue::Empty);
