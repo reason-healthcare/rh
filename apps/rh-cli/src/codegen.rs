@@ -1,11 +1,8 @@
-use std::fs;
-use std::path::{Path, PathBuf};
-
 use anyhow::Result;
 use clap::Args;
-use tracing::{info, warn};
+use serde_json::json;
 
-use crate::output::OutputContext;
+use crate::output::{Format, OutputContext};
 
 use rh_codegen::quality::run_quality_checks;
 use rh_codegen::{
@@ -13,6 +10,9 @@ use rh_codegen::{
     CodegenConfig, CrateGenerationParams, QualityConfig,
 };
 use rh_foundation::loader::{LoaderConfig, PackageLoader};
+use std::fs;
+use std::path::{Path, PathBuf};
+use tracing::{info, warn};
 
 /// Check if a directory exists and is not empty
 fn is_directory_non_empty(path: &Path) -> Result<bool> {
@@ -61,7 +61,7 @@ pub struct CodegenArgs {
     pub crate_name: Option<String>,
 }
 
-pub async fn handle_command(args: CodegenArgs, _ctx: &OutputContext) -> Result<()> {
+pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()> {
     // Set up loader configuration first to resolve version if needed
     let token = std::env::var("RH_REGISTRY_TOKEN").ok();
     let loader_config = LoaderConfig {
@@ -222,10 +222,21 @@ pub async fn handle_command(args: CodegenArgs, _ctx: &OutputContext) -> Result<(
     // Process JSON files using organized structure (includes enum generation and Phase 3)
     process_json_files_organized(&mut generator, effective_package_dir, output_path)?;
 
-    info!(
-        "Successfully generated complete crate at: {}",
-        output_path.display()
-    );
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            ctx.write_success(json!({
+                "package": args.package,
+                "version": version,
+                "output": args.output,
+            }))?;
+        }
+        Format::Human => {
+            info!(
+                "Successfully generated complete crate at: {}",
+                output_path.display()
+            );
+        }
+    }
 
     Ok(())
 }
