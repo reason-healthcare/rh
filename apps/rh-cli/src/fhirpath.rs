@@ -94,7 +94,7 @@ pub enum FhirpathCommands {
     },
 }
 
-pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Result<()> {
+pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Result<ExitCode> {
     match cmd {
         FhirpathCommands::Parse { expression, format } => {
             parse_expression(&expression, &format, ctx)?;
@@ -110,11 +110,12 @@ pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Resul
             run_repl(data.as_deref()).await?;
         }
         FhirpathCommands::Test { file, data } => {
-            run_tests(&file, data.as_deref(), ctx).await?;
+            let code = run_tests(&file, data.as_deref(), ctx).await?;
+            return Ok(code);
         }
     }
 
-    Ok(())
+    Ok(ExitCode::Success)
 }
 
 fn parse_expression(expression: &str, format: &str, ctx: &OutputContext) -> Result<()> {
@@ -366,7 +367,7 @@ async fn run_tests(
     test_file: &std::path::Path,
     data_file: Option<&std::path::Path>,
     ctx: &OutputContext,
-) -> Result<()> {
+) -> Result<ExitCode> {
     info!("Running FHIRPath tests from: {}", test_file.display());
 
     let test_content = fs::read_to_string(test_file)?;
@@ -512,10 +513,10 @@ async fn run_tests(
     }
 
     if failed > 0 {
-        std::process::exit(ExitCode::ValidationError as i32);
+        return Ok(ExitCode::ValidationError);
     }
 
-    Ok(())
+    Ok(ExitCode::Success)
 }
 
 #[derive(serde::Deserialize)]

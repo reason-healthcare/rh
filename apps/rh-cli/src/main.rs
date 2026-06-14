@@ -134,7 +134,7 @@ fn run(cli: Cli) -> ExitCode {
     let color = cli.color;
     let pretty = cli.pretty;
 
-    let result = match cli.command {
+    let result: anyhow::Result<ExitCode> = match cli.command {
         Commands::Codegen(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "codegen");
             ctx.pretty = pretty;
@@ -143,6 +143,7 @@ fn run(cli: Cli) -> ExitCode {
                 .build()
                 .unwrap()
                 .block_on(codegen::handle_command(cmd, &ctx))
+                .map(|()| ExitCode::Success)
         }
         Commands::Cql(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "cql");
@@ -152,6 +153,7 @@ fn run(cli: Cli) -> ExitCode {
                 .build()
                 .unwrap()
                 .block_on(cql::handle_command(cmd, &ctx))
+                .map(|()| ExitCode::Success)
         }
         Commands::Download(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "download");
@@ -161,6 +163,7 @@ fn run(cli: Cli) -> ExitCode {
                 .build()
                 .unwrap()
                 .block_on(download::handle_command(cmd, &ctx))
+                .map(|()| ExitCode::Success)
         }
         Commands::Fhirpath(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "fhirpath");
@@ -179,6 +182,7 @@ fn run(cli: Cli) -> ExitCode {
                 .build()
                 .unwrap()
                 .block_on(vcl::handle_command(cmd, &ctx))
+                .map(|()| ExitCode::Success)
         }
         Commands::Fsh(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "fsh");
@@ -188,6 +192,7 @@ fn run(cli: Cli) -> ExitCode {
                 .build()
                 .unwrap()
                 .block_on(fsh::handle_command(cmd, &ctx))
+                .map(|()| ExitCode::Success)
         }
         Commands::Snapshot(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "snapshot");
@@ -206,6 +211,7 @@ fn run(cli: Cli) -> ExitCode {
                 .build()
                 .unwrap()
                 .block_on(package::handle_command(cmd, &ctx))
+                .map(|()| ExitCode::Success)
         }
         Commands::Validate(cmd) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "validate");
@@ -220,12 +226,12 @@ fn run(cli: Cli) -> ExitCode {
             let mut app = Cli::command();
             let bin_name = "rh".to_string();
             clap_complete::generate(shell, &mut app, bin_name, &mut std::io::stdout());
-            Ok(())
+            Ok(ExitCode::Success)
         }
     };
 
     match result {
-        Ok(()) => ExitCode::Success,
+        Ok(code) => code,
         Err(e) => {
             let mut ctx = OutputContext::new(format, quiet, verbose, color, "rh");
             ctx.pretty = pretty;

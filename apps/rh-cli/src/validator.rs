@@ -157,14 +157,14 @@ impl From<&OutputContext> for CliCtx {
     }
 }
 
-pub async fn handle_command(cmd: ValidatorCommands, ctx: &OutputContext) -> Result<()> {
+pub async fn handle_command(cmd: ValidatorCommands, ctx: &OutputContext) -> Result<ExitCode> {
     match cmd {
         ValidatorCommands::Resource(args) => handle_resource_validation(args, ctx).await,
         ValidatorCommands::Batch(args) => handle_batch_validation(args, ctx).await,
     }
 }
 
-async fn handle_resource_validation(args: ResourceArgs, ctx: &OutputContext) -> Result<()> {
+async fn handle_resource_validation(args: ResourceArgs, ctx: &OutputContext) -> Result<ExitCode> {
     let cli = CliCtx::from(ctx);
     tokio::task::spawn_blocking(move || {
         if args.skip_invariants {
@@ -205,7 +205,7 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: &OutputContext) -> 
                 if args.strict {
                     return Err(anyhow::anyhow!("Empty input with --strict"));
                 }
-                return Ok(());
+                return Ok(ExitCode::Success);
             }
 
             let has_errors = results.iter().any(|(_, _, r)| !r.valid);
@@ -214,10 +214,10 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: &OutputContext) -> 
             output_labeled_batch_results(&results, &args.format, &cli)?;
 
             if has_errors || has_issues {
-                std::process::exit(i32::from(ExitCode::ValidationError));
+                return Ok(ExitCode::ValidationError);
             }
 
-            return Ok(());
+            return Ok(ExitCode::Success);
         }
 
         let content = read_input_from_stdin().context("Failed to read input")?;
@@ -227,7 +227,7 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: &OutputContext) -> 
             if args.strict {
                 return Err(anyhow::anyhow!("Empty input with --strict"));
             }
-            return Ok(());
+            return Ok(ExitCode::Success);
         }
 
         let resource: serde_json::Value =
@@ -243,16 +243,16 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: &OutputContext) -> 
         output_single_result(&result, &resource, &args.format, &cli)?;
 
         if has_errors || has_issues {
-            std::process::exit(i32::from(ExitCode::ValidationError));
+            return Ok(ExitCode::ValidationError);
         }
 
-        Ok(())
+        Ok(ExitCode::Success)
     })
     .await
     .context("Resource validation task failed")?
 }
 
-async fn handle_batch_validation(args: BatchArgs, ctx: &OutputContext) -> Result<()> {
+async fn handle_batch_validation(args: BatchArgs, ctx: &OutputContext) -> Result<ExitCode> {
     let cli = CliCtx::from(ctx);
     tokio::task::spawn_blocking(move || {
         if args.skip_invariants {
@@ -313,7 +313,7 @@ async fn handle_batch_validation(args: BatchArgs, ctx: &OutputContext) -> Result
                 if args.strict {
                     return Err(anyhow::anyhow!("Empty input with --strict"));
                 }
-                return Ok(());
+                return Ok(ExitCode::Success);
             }
 
             let has_errors = results.iter().any(|(_, _, r)| !r.valid);
@@ -322,10 +322,10 @@ async fn handle_batch_validation(args: BatchArgs, ctx: &OutputContext) -> Result
             output_labeled_batch_results(&results, &args.format, &cli)?;
 
             if has_errors || has_issues {
-                std::process::exit(i32::from(ExitCode::ValidationError));
+                return Ok(ExitCode::ValidationError);
             }
 
-            return Ok(());
+            return Ok(ExitCode::Success);
         }
 
         let content = read_input_from_stdin().context("Failed to read input")?;
@@ -335,7 +335,7 @@ async fn handle_batch_validation(args: BatchArgs, ctx: &OutputContext) -> Result
             if args.strict {
                 return Err(anyhow::anyhow!("Empty input with --strict"));
             }
-            return Ok(());
+            return Ok(ExitCode::Success);
         }
 
         let mut results = Vec::new();
@@ -357,10 +357,10 @@ async fn handle_batch_validation(args: BatchArgs, ctx: &OutputContext) -> Result
         output_batch_results(&results, &args.format, args.summary_only, &cli)?;
 
         if has_errors || has_issues {
-            std::process::exit(i32::from(ExitCode::ValidationError));
+            return Ok(ExitCode::ValidationError);
         }
 
-        Ok(())
+        Ok(ExitCode::Success)
     })
     .await
     .context("Batch validation task failed")?

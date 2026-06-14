@@ -4,7 +4,7 @@ use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinitionLoader};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
-use crate::output::{Format, OutputContext};
+use crate::output::{ExitCode, Format, OutputContext};
 
 #[derive(Subcommand)]
 pub enum SnapshotCommands {
@@ -96,7 +96,7 @@ pub struct ValidateArgs {
     pub file: PathBuf,
 }
 
-pub async fn handle_command(cmd: SnapshotCommands, ctx: &OutputContext) -> Result<()> {
+pub async fn handle_command(cmd: SnapshotCommands, ctx: &OutputContext) -> Result<ExitCode> {
     match cmd {
         SnapshotCommands::Generate(args) => handle_generate(args, ctx).await,
         SnapshotCommands::Info(args) => handle_info(args, ctx).await,
@@ -105,7 +105,7 @@ pub async fn handle_command(cmd: SnapshotCommands, ctx: &OutputContext) -> Resul
     }
 }
 
-async fn handle_generate(args: GenerateArgs, ctx: &OutputContext) -> Result<()> {
+async fn handle_generate(args: GenerateArgs, ctx: &OutputContext) -> Result<ExitCode> {
     info!("Generating snapshot for profile: {}", args.profile_url);
 
     let packages_dir = expand_home_dir(&args.packages_dir)?;
@@ -157,10 +157,10 @@ async fn handle_generate(args: GenerateArgs, ctx: &OutputContext) -> Result<()> 
         }
     }
 
-    Ok(())
+    Ok(ExitCode::Success)
 }
 
-async fn handle_info(args: InfoArgs, ctx: &OutputContext) -> Result<()> {
+async fn handle_info(args: InfoArgs, ctx: &OutputContext) -> Result<ExitCode> {
     info!("Getting info for profile: {}", args.profile_url);
 
     let packages_dir = expand_home_dir(&args.packages_dir)?;
@@ -213,10 +213,10 @@ async fn handle_info(args: InfoArgs, ctx: &OutputContext) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(ExitCode::Success)
 }
 
-async fn handle_diff(_args: DiffArgs, ctx: &OutputContext) -> Result<()> {
+async fn handle_diff(_args: DiffArgs, ctx: &OutputContext) -> Result<ExitCode> {
     error!("Diff command not yet implemented");
     match ctx.format {
         Format::Json | Format::Ndjson => {
@@ -231,10 +231,10 @@ async fn handle_diff(_args: DiffArgs, ctx: &OutputContext) -> Result<()> {
             eprintln!("Error: Diff command not yet implemented");
         }
     }
-    std::process::exit(i32::from(crate::output::ExitCode::OperationalError));
+    Ok(ExitCode::OperationalError)
 }
 
-async fn handle_validate(_args: ValidateArgs, ctx: &OutputContext) -> Result<()> {
+async fn handle_validate(_args: ValidateArgs, ctx: &OutputContext) -> Result<ExitCode> {
     error!("Validate command not yet implemented");
     match ctx.format {
         Format::Json | Format::Ndjson => {
@@ -249,7 +249,7 @@ async fn handle_validate(_args: ValidateArgs, ctx: &OutputContext) -> Result<()>
             eprintln!("Error: Validate command not yet implemented");
         }
     }
-    std::process::exit(i32::from(crate::output::ExitCode::OperationalError));
+    Ok(ExitCode::OperationalError)
 }
 
 fn parse_package_spec(spec: &str) -> Result<(String, String)> {
