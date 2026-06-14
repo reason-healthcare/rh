@@ -8,11 +8,10 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use tracing::{error, info};
 
-use crate::output::OutputContext;
+use crate::output::{ExitCode, Format, OutputContext};
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 
-/// Convert FhirPathValue to JSON Value for serialization
 fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
     match value {
         FhirPathValue::Boolean(b) => Value::Bool(*b),
@@ -95,55 +94,56 @@ pub enum FhirpathCommands {
     },
 }
 
-pub async fn handle_command(cmd: FhirpathCommands, _ctx: &OutputContext) -> Result<()> {
+pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         FhirpathCommands::Parse { expression, format } => {
-            parse_expression(&expression, &format)?;
+            parse_expression(&expression, &format, ctx)?;
         }
         FhirpathCommands::Eval {
             expression,
             data,
             format,
         } => {
-            eval_expression(&expression, data.as_deref(), &format)?;
+            eval_expression(&expression, data.as_deref(), &format, ctx)?;
         }
         FhirpathCommands::Repl { data } => {
             run_repl(data.as_deref()).await?;
         }
         FhirpathCommands::Test { file, data } => {
-            run_tests(&file, data.as_deref()).await?;
+            run_tests(&file, data.as_deref(), ctx).await?;
         }
     }
 
     Ok(())
 }
 
-/// Parse a FHIRPath expression and display the AST
-fn parse_expression(expression: &str, format: &str) -> Result<()> {
+fn parse_expression(expression: &str, format: &str, ctx: &OutputContext) -> Result<()> {
     info!("Parsing FHIRPath expression: {}", expression);
 
     let parser = FhirPathParser::new();
 
     match parser.parse(expression) {
-        Ok(ast) => match format {
-            "json" => {
-                let json = serde_json::to_string_pretty(&ast)?;
-                println!("{json}");
+        Ok(ast) => match ctx.format {
+            Format::Json | Format::Ndjson => {
+                let result = serde_json::to_value(&ast)?;
+                ctx.write_success(result)?;
             }
-            "debug" => {
-                println!("{ast:#?}");
-            }
-            "pretty" => {
-                println!("✅ Successfully parsed: {expression}");
-                println!("AST: {ast}");
-            }
-            _ => {
-                println!("✅ Successfully parsed: {expression}");
-                println!("AST: {ast}");
-            }
+            Format::Human => match format {
+                "json" => {
+                    let json = serde_json::to_string_pretty(&ast)?;
+                    println!("{json}");
+                }
+                "debug" => {
+                    println!("{ast:#?}");
+                }
+                _ => {
+                    println!("OK: {}", expression);
+                    println!("AST: {ast}");
+                }
+            },
         },
         Err(e) => {
-            error!("❌ Parse error: {}", e);
+            error!("Parse error: {}", e);
             return Err(e.into());
         }
     }
@@ -151,24 +151,22 @@ fn parse_expression(expression: &str, format: &str) -> Result<()> {
     Ok(())
 }
 
-/// Evaluate a FHIRPath expression against FHIR data
 fn eval_expression(
     expression: &str,
     data_file: Option<&std::path::Path>,
     format: &str,
+    ctx: &OutputContext,
 ) -> Result<()> {
     info!("Evaluating FHIRPath expression: {}", expression);
 
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
 
-    // Parse the expression
     let ast = parser.parse(expression).map_err(|e| {
-        error!("❌ Parse error: {}", e);
+        error!("Parse error: {}", e);
         e
     })?;
 
-    // Load data if provided
     let data = if let Some(path) = data_file {
         info!("Loading FHIR data from: {}", path.display());
         let content = fs::read_to_string(path)?;
@@ -178,44 +176,40 @@ fn eval_expression(
         Value::Null
     };
 
-    // Create evaluation context
     let context = EvaluationContext::new(data);
 
-    // Evaluate the expression
     match evaluator.evaluate(&ast, &context) {
         Ok(result) => {
-            // Display trace logs if any
             let trace_logs = context.get_trace_logs();
             if !trace_logs.is_empty() {
-                eprintln!("\n📋 Trace logs:");
+                eprintln!("Trace logs:");
                 for log in trace_logs {
                     eprintln!("  [TRACE:{}] {}", log.name, log.value);
                 }
-                eprintln!();
             }
 
-            match format {
-                "json" => {
-                    // Convert FhirPathValue to JSON-compatible format
+            match ctx.format {
+                Format::Json | Format::Ndjson => {
                     let json_value = fhirpath_value_to_json(&result);
-                    let json = serde_json::to_string_pretty(&json_value)?;
-                    println!("{json}");
+                    ctx.write_success(json_value)?;
                 }
-                "debug" => {
-                    println!("{result:#?}");
-                }
-                "pretty" => {
-                    println!("✅ Expression: {expression}");
-                    println!("Result: {result:?}");
-                }
-                _ => {
-                    println!("✅ Expression: {expression}");
-                    println!("Result: {result:?}");
-                }
+                Format::Human => match format {
+                    "json" => {
+                        let json_value = fhirpath_value_to_json(&result);
+                        let json = serde_json::to_string_pretty(&json_value)?;
+                        println!("{json}");
+                    }
+                    "debug" => {
+                        println!("{result:#?}");
+                    }
+                    _ => {
+                        println!("Result: {result:?}");
+                    }
+                },
             }
         }
         Err(e) => {
-            error!("❌ Evaluation error: {}", e);
+            error!("Evaluation error: {}", e);
             return Err(e.into());
         }
     }
@@ -223,18 +217,16 @@ fn eval_expression(
     Ok(())
 }
 
-/// Run an interactive REPL for FHIRPath expressions
 async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
-    println!("🔍 FHIRPath Interactive REPL");
+    println!("FHIRPath Interactive REPL");
     println!("Type FHIRPath expressions to evaluate them.");
     println!("Commands: .help, .data, .quit");
-    println!("Use ↑/↓ arrow keys to navigate command history (persistent across sessions).");
+    println!("Use arrow keys to navigate command history (persistent across sessions).");
     println!();
 
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
 
-    // Load data if provided
     let mut data = if let Some(path) = data_file {
         info!("Loading FHIR data from: {}", path.display());
         let content = fs::read_to_string(path)?;
@@ -243,12 +235,10 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
         Value::Null
     };
 
-    // Initialize rustyline editor with history
     let mut rl = DefaultEditor::new()?;
 
-    // Try to load history from file
     let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
-    let _ = rl.load_history(&history_file); // Ignore errors if file doesn't exist
+    let _ = rl.load_history(&history_file);
 
     loop {
         let readline = rl.readline("fhirpath> ");
@@ -261,7 +251,6 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
                     continue;
                 }
 
-                // Add non-empty lines to history
                 rl.add_history_entry(input)?;
 
                 match input {
@@ -286,45 +275,42 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
                         match load_data_file(path) {
                             Ok(new_data) => {
                                 data = new_data;
-                                println!("✅ Loaded data from: {path}");
+                                println!("Loaded data from: {path}");
                             }
                             Err(e) => {
-                                println!("❌ Failed to load data: {e}");
+                                println!("Failed to load data: {e}");
                             }
                         }
                         continue;
                     }
                     cmd if cmd.starts_with(".") => {
-                        println!("❌ Unknown command: {cmd}. Type .help for available commands.");
+                        println!("Unknown command: {cmd}. Type .help for available commands.");
                         continue;
                     }
                     _ => {}
                 }
 
-                // Parse and evaluate the expression
                 match parser.parse(input) {
                     Ok(ast) => {
                         let context = EvaluationContext::new(data.clone());
                         match evaluator.evaluate(&ast, &context) {
                             Ok(result) => {
-                                // Display trace logs if any
                                 let trace_logs = context.get_trace_logs();
                                 if !trace_logs.is_empty() {
-                                    println!("\n📋 Trace logs:");
+                                    println!("Trace logs:");
                                     for log in trace_logs {
                                         println!("  [TRACE:{}] {}", log.name, log.value);
                                     }
-                                    println!();
                                 }
                                 println!("=> {result:?}");
                             }
                             Err(e) => {
-                                println!("❌ Evaluation error: {e}");
+                                println!("Evaluation error: {e}");
                             }
                         }
                     }
                     Err(e) => {
-                        println!("❌ Parse error: {e}");
+                        println!("Parse error: {e}");
                     }
                 }
             }
@@ -348,14 +334,12 @@ async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
     Ok(())
 }
 
-/// Load data from a file
 fn load_data_file(path: &str) -> Result<Value> {
     let content = fs::read_to_string(path)?;
     let data = serde_json::from_str::<Value>(&content)?;
     Ok(data)
 }
 
-/// Print REPL help
 fn print_repl_help() {
     println!("FHIRPath REPL Commands:");
     println!("  .help                Show this help");
@@ -364,7 +348,7 @@ fn print_repl_help() {
     println!("  .quit, .exit         Exit the REPL");
     println!();
     println!("Navigation:");
-    println!("  ↑/↓ arrows           Navigate command history");
+    println!("  Up/Down arrows       Navigate command history");
     println!("  Ctrl+C               Interrupt current input");
     println!("  Ctrl+D               Exit REPL");
     println!();
@@ -378,14 +362,16 @@ fn print_repl_help() {
     println!();
 }
 
-/// Run test cases from a file
-async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Path>) -> Result<()> {
+async fn run_tests(
+    test_file: &std::path::Path,
+    data_file: Option<&std::path::Path>,
+    ctx: &OutputContext,
+) -> Result<()> {
     info!("Running FHIRPath tests from: {}", test_file.display());
 
     let test_content = fs::read_to_string(test_file)?;
     let test_cases: Vec<TestCase> = serde_json::from_str(&test_content)?;
 
-    // Load data if provided
     let data = if let Some(path) = data_file {
         info!("Loading FHIR data from: {}", path.display());
         let content = fs::read_to_string(path)?;
@@ -400,60 +386,133 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
 
     let mut passed = 0;
     let mut failed = 0;
+    let mut results = Vec::new();
 
     for (i, test_case) in test_cases.iter().enumerate() {
-        print!("Test {}: {} ... ", i + 1, test_case.expression);
-        io::stdout().flush()?;
+        let _label = format!("Test {}: {}", i + 1, test_case.expression);
 
         match parser.parse(&test_case.expression) {
             Ok(ast) => match evaluator.evaluate(&ast, &context) {
                 Ok(result) => {
                     let result_json = fhirpath_value_to_json(&result);
                     if result_json == test_case.expected {
-                        println!("✅ PASS");
                         passed += 1;
+                        results.push(serde_json::json!({
+                            "test": i + 1,
+                            "expression": test_case.expression,
+                            "status": "pass",
+                        }));
+                        if ctx.format == Format::Human {
+                            print!("Test {}: {} ... ", i + 1, test_case.expression);
+                            io::stdout().flush()?;
+                            println!("PASS");
+                        }
                     } else {
-                        println!("❌ FAIL");
-                        println!(
-                            "  Expected: {}",
-                            serde_json::to_string_pretty(&test_case.expected)?
-                        );
-                        println!(
-                            "  Got:      {}",
-                            serde_json::to_string_pretty(&result_json)?
-                        );
                         failed += 1;
+                        results.push(serde_json::json!({
+                            "test": i + 1,
+                            "expression": test_case.expression,
+                            "status": "fail",
+                            "expected": test_case.expected,
+                            "actual": result_json,
+                        }));
+                        if ctx.format == Format::Human {
+                            print!("Test {}: {} ... ", i + 1, test_case.expression);
+                            io::stdout().flush()?;
+                            println!("FAIL");
+                            eprintln!(
+                                "  Expected: {}",
+                                serde_json::to_string_pretty(&test_case.expected)?
+                            );
+                            eprintln!(
+                                "  Got:      {}",
+                                serde_json::to_string_pretty(&result_json)?
+                            );
+                        }
                     }
                 }
                 Err(e) => {
                     if test_case.expected.is_null() && test_case.should_error.unwrap_or(false) {
-                        println!("✅ PASS (expected error)");
                         passed += 1;
+                        results.push(serde_json::json!({
+                            "test": i + 1,
+                            "expression": test_case.expression,
+                            "status": "pass",
+                            "note": "expected error",
+                        }));
+                        if ctx.format == Format::Human {
+                            print!("Test {}: {} ... ", i + 1, test_case.expression);
+                            io::stdout().flush()?;
+                            println!("PASS (expected error)");
+                        }
                     } else {
-                        println!("❌ FAIL (evaluation error)");
-                        println!("  Error: {e}");
                         failed += 1;
+                        results.push(serde_json::json!({
+                            "test": i + 1,
+                            "expression": test_case.expression,
+                            "status": "fail",
+                            "error": format!("evaluation error: {e}"),
+                        }));
+                        if ctx.format == Format::Human {
+                            print!("Test {}: {} ... ", i + 1, test_case.expression);
+                            io::stdout().flush()?;
+                            println!("FAIL (evaluation error)");
+                            eprintln!("  Error: {e}");
+                        }
                     }
                 }
             },
             Err(e) => {
                 if test_case.should_error.unwrap_or(false) {
-                    println!("✅ PASS (expected parse error)");
                     passed += 1;
+                    results.push(serde_json::json!({
+                        "test": i + 1,
+                        "expression": test_case.expression,
+                        "status": "pass",
+                        "note": "expected parse error",
+                    }));
+                    if ctx.format == Format::Human {
+                        print!("Test {}: {} ... ", i + 1, test_case.expression);
+                        io::stdout().flush()?;
+                        println!("PASS (expected parse error)");
+                    }
                 } else {
-                    println!("❌ FAIL (parse error)");
-                    println!("  Error: {e}");
                     failed += 1;
+                    results.push(serde_json::json!({
+                        "test": i + 1,
+                        "expression": test_case.expression,
+                        "status": "fail",
+                        "error": format!("parse error: {e}"),
+                    }));
+                    if ctx.format == Format::Human {
+                        print!("Test {}: {} ... ", i + 1, test_case.expression);
+                        io::stdout().flush()?;
+                        println!("FAIL (parse error)");
+                        eprintln!("  Error: {e}");
+                    }
                 }
             }
         }
     }
 
-    println!();
-    println!("Test Results: {passed} passed, {failed} failed");
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let result = serde_json::json!({
+                "passed": passed,
+                "failed": failed,
+                "total": passed + failed,
+                "results": results,
+            });
+            ctx.write_success(result)?;
+        }
+        Format::Human => {
+            println!();
+            println!("Test Results: {passed} passed, {failed} failed");
+        }
+    }
 
     if failed > 0 {
-        std::process::exit(1);
+        std::process::exit(ExitCode::ValidationError as i32);
     }
 
     Ok(())
