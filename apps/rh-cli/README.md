@@ -134,12 +134,61 @@ See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including th
 
 ## Global Options
 
+- `--output-format <FORMAT>` — Output format: `human` (default), `json`, `ndjson`
+- `--pretty` — Pretty-print JSON output
+- `-q, --quiet` — Suppress all non-error output on stderr
 - `-v, --verbose` — Enable verbose logging
+- `--debug` — Enable debug-level logging (overrides `--verbose`)
+- `--color <WHEN>` — Color output: `auto` (default), `always`, `never`
 - `--help` — Print help for any command or subcommand
+- `--version` — Print version (includes git SHA)
+
+### Output Format
+
+When `--output-format json` is set, output is a stable JSON envelope:
+
+```json
+{
+  "ok": true,
+  "result": { ... },
+  "meta": { "version": "0.2.0-beta.2", "command": "validate" }
+}
+```
+
+On error, the envelope contains an `errors` array instead of `result`:
+
+```json
+{
+  "ok": false,
+  "errors": [{ "code": "ValidationError", "message": "..." }],
+  "meta": { "version": "0.2.0-beta.2", "command": "rh" }
+}
+```
+
+Result data goes to **stdout**; diagnostics and error messages go to **stderr**.
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Operational error (network, file I/O, etc.) |
+| 2 | Usage error (invalid CLI arguments) |
+| 3 | Validation/conformance failure |
+| 4 | Parse error (invalid input) |
+
+### Shell Completions
+
+```bash
+rh completions bash > ~/.local/share/bash-completion/completions/rh
+rh completions zsh  > ~/.zfunc/_rh
+rh completions fish > ~/.config/fish/completions/rh.fish
+```
 
 ## Environment Variables
 
 - `RH_REGISTRY_TOKEN` — Authentication token for private FHIR package registries
+- `NO_COLOR` — Disable color output (equivalent to `--color never`)
 - `RUST_LOG` — Logging level (e.g., `info`, `debug`, `trace`)
 
 ## Related Documentation
