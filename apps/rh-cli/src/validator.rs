@@ -466,47 +466,73 @@ fn output_single_result(
             let sym_fail = symbol_fail(cli);
             let sym_warn = symbol_warn(cli);
 
-            if result.valid {
-                println!("{sym_ok} FHIR resource is valid ({resource_type})");
-                let warnings = result.warning_count();
-                let info_count = result.info_count();
-                if warnings > 0 {
-                    println!("{sym_warn}  {warnings} warning(s)");
+            match cli.format {
+                Format::Json | Format::Ndjson => {
+                    let issues: Vec<serde_json::Value> = result
+                        .issues
+                        .iter()
+                        .map(|issue| {
+                            serde_json::json!({
+                                "severity": issue.severity.to_string(),
+                                "code": issue.code.to_string(),
+                                "message": issue.message,
+                                "path": issue.path,
+                            })
+                        })
+                        .collect();
+                    let output = serde_json::json!({
+                        "resourceType": resource_type,
+                        "valid": result.valid,
+                        "errors": result.error_count(),
+                        "warnings": result.warning_count(),
+                        "issues": issues,
+                    });
+                    cli.write_success(output)?;
                 }
-                if info_count > 0 {
-                    println!("{sym_warn}  {info_count} informational message(s)");
-                }
-            } else {
-                println!("{sym_fail} FHIR validation failed ({resource_type})");
-                println!("  Errors: {}", result.error_count());
-                let warnings = result.warning_count();
-                if warnings > 0 {
-                    println!("  Warnings: {warnings}");
-                }
-                let info_count = result.info_count();
-                if info_count > 0 {
-                    println!("  Info: {info_count}");
-                }
-            }
-
-            if !result.issues.is_empty() {
-                eprintln!();
-                eprintln!("Issues:");
-                for (i, issue) in result.issues.iter().enumerate() {
-                    let icon = match issue.severity {
-                        Severity::Error => "ERROR",
-                        Severity::Warning => "WARN",
-                        Severity::Information => "INFO",
-                    };
-                    eprintln!("  {}. [{}] {}", i + 1, icon, issue.message);
-                    if let Some(path) = &issue.path {
-                        eprintln!("     Path: {path}");
+                Format::Human => {
+                    if result.valid {
+                        println!("{sym_ok} FHIR resource is valid ({resource_type})");
+                        let warnings = result.warning_count();
+                        let info_count = result.info_count();
+                        if warnings > 0 {
+                            println!("{sym_warn}  {warnings} warning(s)");
+                        }
+                        if info_count > 0 {
+                            println!("{sym_warn}  {info_count} informational message(s)");
+                        }
+                    } else {
+                        println!("{sym_fail} FHIR validation failed ({resource_type})");
+                        println!("  Errors: {}", result.error_count());
+                        let warnings = result.warning_count();
+                        if warnings > 0 {
+                            println!("  Warnings: {warnings}");
+                        }
+                        let info_count = result.info_count();
+                        if info_count > 0 {
+                            println!("  Info: {info_count}");
+                        }
                     }
-                    if let Some(location) = &issue.location {
-                        eprintln!(
-                            "     Location: line {}, column {}",
-                            location.line, location.column
-                        );
+
+                    if !result.issues.is_empty() {
+                        eprintln!();
+                        eprintln!("Issues:");
+                        for (i, issue) in result.issues.iter().enumerate() {
+                            let icon = match issue.severity {
+                                Severity::Error => "ERROR",
+                                Severity::Warning => "WARN",
+                                Severity::Information => "INFO",
+                            };
+                            eprintln!("  {}. [{}] {}", i + 1, icon, issue.message);
+                            if let Some(path) = &issue.path {
+                                eprintln!("     Path: {path}");
+                            }
+                            if let Some(location) = &issue.location {
+                                eprintln!(
+                                    "     Location: line {}, column {}",
+                                    location.line, location.column
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -592,46 +618,90 @@ fn output_labeled_batch_results(
                 }
             }
         }
-        ValidatorFormat::Human => {
-            let sym_ok = symbol_ok(cli);
-            let sym_fail = symbol_fail(cli);
+        ValidatorFormat::Human => match cli.format {
+            Format::Json | Format::Ndjson => {
+                let total = results.len();
+                let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
+                let json_results: Vec<serde_json::Value> = results
+                    .iter()
+                    .map(|(source, resource, result)| {
+                        let resource_type = resource
+                            .get("resourceType")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Unknown");
+                        let issues: Vec<serde_json::Value> = result
+                            .issues
+                            .iter()
+                            .map(|issue| {
+                                serde_json::json!({
+                                    "severity": issue.severity.to_string(),
+                                    "code": issue.code.to_string(),
+                                    "message": issue.message,
+                                    "path": issue.path,
+                                })
+                            })
+                            .collect();
+                        serde_json::json!({
+                            "source": source,
+                            "resourceType": resource_type,
+                            "valid": result.valid,
+                            "errors": result.error_count(),
+                            "warnings": result.warning_count(),
+                            "issues": issues,
+                        })
+                    })
+                    .collect();
+                let output = serde_json::json!({
+                    "summary": {
+                        "total": total,
+                        "valid": valid_count,
+                        "invalid": total - valid_count,
+                    },
+                    "results": json_results,
+                });
+                cli.write_success(output)?;
+            }
+            Format::Human => {
+                let sym_ok = symbol_ok(cli);
+                let sym_fail = symbol_fail(cli);
 
-            let total = results.len();
-            let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
-            let invalid_count = total - valid_count;
-            let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
-            let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
+                let total = results.len();
+                let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
+                let invalid_count = total - valid_count;
+                let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
+                let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
 
-            println!("Batch Validation Summary:");
-            println!("  Total resources: {total}");
-            println!("  {sym_ok} Valid: {valid_count}");
-            println!("  {sym_fail} Invalid: {invalid_count}");
-            println!("  Total errors: {total_errors}");
-            println!("  Total warnings: {total_warnings}");
-            for (source, resource, result) in results.iter() {
-                let resource_type = resource
-                    .get("resourceType")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown");
-                if result.valid {
-                    println!("  {sym_ok} {source} ({resource_type})");
-                } else {
-                    println!(
-                        "  {sym_fail} {source} ({resource_type}): {} error(s), {} warning(s)",
-                        result.error_count(),
-                        result.warning_count()
-                    );
-                    for issue in &result.issues {
-                        if issue.severity == Severity::Error {
-                            eprintln!("    ERROR: {}", issue.message);
-                            if let Some(path) = &issue.path {
-                                eprintln!("       at {path}");
+                println!("Batch Validation Summary:");
+                println!("  Total resources: {total}");
+                println!("  {sym_ok} Valid: {valid_count}");
+                println!("  {sym_fail} Invalid: {invalid_count}");
+                println!("  Total errors: {total_errors}");
+                println!("  Total warnings: {total_warnings}");
+                for (source, resource, result) in results.iter() {
+                    let resource_type = resource
+                        .get("resourceType")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Unknown");
+                    if result.valid {
+                        println!("  {sym_ok} {source} ({resource_type})");
+                    } else {
+                        println!(
+                            "  {sym_fail} {source} ({resource_type}): {} error(s), {} warning(s)",
+                            result.error_count(),
+                            result.warning_count()
+                        );
+                        for issue in &result.issues {
+                            if issue.severity == Severity::Error {
+                                eprintln!("    ERROR: {}", issue.message);
+                                if let Some(path) = &issue.path {
+                                    eprintln!("       at {path}");
+                                }
                             }
                         }
                     }
                 }
             }
-        }
+        },
     }
 
     Ok(())
@@ -714,54 +784,98 @@ fn output_batch_results(
                 }
             }
         }
-        ValidatorFormat::Human => {
-            let sym_ok = symbol_ok(cli);
-            let sym_fail = symbol_fail(cli);
+        ValidatorFormat::Human => match cli.format {
+            Format::Json | Format::Ndjson => {
+                let total = results.len();
+                let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
+                let json_results: Vec<serde_json::Value> = results
+                    .iter()
+                    .map(|(line_num, resource, result)| {
+                        let resource_type = resource
+                            .get("resourceType")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Unknown");
+                        let issues: Vec<serde_json::Value> = result
+                            .issues
+                            .iter()
+                            .map(|issue| {
+                                serde_json::json!({
+                                    "severity": issue.severity.to_string(),
+                                    "code": issue.code.to_string(),
+                                    "message": issue.message,
+                                    "path": issue.path,
+                                })
+                            })
+                            .collect();
+                        serde_json::json!({
+                            "line": line_num + 1,
+                            "resourceType": resource_type,
+                            "valid": result.valid,
+                            "errors": result.error_count(),
+                            "warnings": result.warning_count(),
+                            "issues": issues,
+                        })
+                    })
+                    .collect();
+                let output = serde_json::json!({
+                    "summary": {
+                        "total": total,
+                        "valid": valid_count,
+                        "invalid": total - valid_count,
+                    },
+                    "results": json_results,
+                });
+                cli.write_success(output)?;
+            }
+            Format::Human => {
+                let sym_ok = symbol_ok(cli);
+                let sym_fail = symbol_fail(cli);
 
-            let total = results.len();
-            let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
-            let invalid_count = total - valid_count;
-            let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
-            let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
+                let total = results.len();
+                let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
+                let invalid_count = total - valid_count;
+                let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
+                let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
 
-            println!("Batch Validation Summary:");
-            println!("  Total resources: {total}");
-            println!("  {sym_ok} Valid: {valid_count}");
-            println!("  {sym_fail} Invalid: {invalid_count}");
-            println!("  Total errors: {total_errors}");
-            println!("  Total warnings: {total_warnings}");
-            println!();
+                println!("Batch Validation Summary:");
+                println!("  Total resources: {total}");
+                println!("  {sym_ok} Valid: {valid_count}");
+                println!("  {sym_fail} Invalid: {invalid_count}");
+                println!("  Total errors: {total_errors}");
+                println!("  Total warnings: {total_warnings}");
+                println!();
 
-            if !summary_only {
-                for (line_num, resource, result) in results.iter() {
-                    let resource_type = resource
-                        .get("resourceType")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("Unknown");
-                    if result.valid {
-                        println!("  Line {} ({}): valid", line_num + 1, resource_type);
-                    } else {
-                        let errors = result.error_count();
-                        let warnings = result.warning_count();
-                        println!(
-                            "  Line {} ({}): {} error(s), {} warning(s)",
-                            line_num + 1,
-                            resource_type,
-                            errors,
-                            warnings
-                        );
-                        for issue in &result.issues {
-                            if issue.severity == Severity::Error {
-                                eprintln!("    ERROR: {}", issue.message);
-                                if let Some(path) = &issue.path {
-                                    eprintln!("       at {path}");
+                if !summary_only {
+                    for (line_num, resource, result) in results.iter() {
+                        let resource_type = resource
+                            .get("resourceType")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Unknown");
+                        if result.valid {
+                            println!("  Line {} ({}): valid", line_num + 1, resource_type);
+                        } else {
+                            let errors = result.error_count();
+                            let warnings = result.warning_count();
+                            println!(
+                                "  Line {} ({}): {} error(s), {} warning(s)",
+                                line_num + 1,
+                                resource_type,
+                                errors,
+                                warnings
+                            );
+                            for issue in &result.issues {
+                                if issue.severity == Severity::Error {
+                                    eprintln!("    ERROR: {}", issue.message);
+                                    if let Some(path) = &issue.path {
+                                        eprintln!("       at {path}");
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
+        },
     }
 
     Ok(())

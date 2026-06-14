@@ -122,14 +122,7 @@ fn handle_parse(input: String, ctx: &OutputContext) -> Result<()> {
 
     match ctx.format {
         Format::Json | Format::Ndjson => {
-            let envelope =
-                crate::output::OutputEnvelope::success(serde_json::to_value(&doc)?, "fsh parse");
-            let json = if ctx.pretty {
-                serde_json::to_string_pretty(&envelope)?
-            } else {
-                serde_json::to_string(&envelope)?
-            };
-            println!("{json}");
+            ctx.write_success(serde_json::to_value(&doc)?)?;
         }
         Format::Human => {
             println!("{}", serde_json::to_string_pretty(&doc)?);
