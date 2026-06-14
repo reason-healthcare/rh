@@ -5,7 +5,9 @@ use rh_vcl::{parse_vcl, VclExplainer, VclExpression, VclTranslator};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use std::path::PathBuf;
-use tracing::error;
+use tracing::{error, info};
+
+use crate::output::{Format, OutputContext};
 
 #[derive(Subcommand)]
 pub enum VclCommands {
@@ -68,10 +70,10 @@ pub enum VclCommands {
     },
 }
 
-pub async fn handle_command(cmd: VclCommands) -> Result<()> {
+pub async fn handle_command(cmd: VclCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         VclCommands::Parse { expression, format } => {
-            parse_expression(&expression, &format)?;
+            parse_expression(&expression, &format, ctx)?;
         }
         VclCommands::Translate {
             expression,
@@ -79,7 +81,7 @@ pub async fn handle_command(cmd: VclCommands) -> Result<()> {
             output,
             default_system,
         } => {
-            translate_expression(&expression, &format, output.as_deref(), default_system)?;
+            translate_expression(&expression, &format, output.as_deref(), default_system, ctx)?;
         }
         VclCommands::Explain {
             expression,
@@ -87,7 +89,7 @@ pub async fn handle_command(cmd: VclCommands) -> Result<()> {
             output,
             default_system,
         } => {
-            explain_expression(&expression, &format, output.as_deref(), default_system)?;
+            explain_expression(&expression, &format, output.as_deref(), default_system, ctx)?;
         }
         VclCommands::Repl {
             translate,
@@ -100,28 +102,47 @@ pub async fn handle_command(cmd: VclCommands) -> Result<()> {
     Ok(())
 }
 
-fn parse_expression(expression: &str, format: &str) -> Result<()> {
+fn parse_expression(expression: &str, format: &str, ctx: &OutputContext) -> Result<()> {
     match parse_vcl(expression) {
-        Ok(ast) => match format {
-            "pretty" => {
-                println!("✅ VCL Expression parsed successfully:");
-                print_ast_pretty(&ast, 0);
-            }
-            "json" => {
-                let json = serde_json::to_string_pretty(&ast)?;
-                println!("{json}");
-            }
-            "debug" => {
-                println!("{ast:#?}");
-            }
-            _ => {
-                return Err(anyhow!(
-                    "Invalid format: {format}. Use 'pretty', 'json', or 'debug'"
-                ));
-            }
-        },
+        Ok(ast) => {
+            let output = match ctx.format {
+                Format::Json => {
+                    let _json = serde_json::to_string_pretty(&ast)?;
+                    let envelope = crate::output::OutputEnvelope::success(
+                        serde_json::json!({"ast": ast}),
+                        "vcl parse",
+                    );
+                    serde_json::to_string_pretty(&envelope)?
+                }
+                Format::Ndjson => {
+                    let envelope = crate::output::OutputEnvelope::success(
+                        serde_json::json!({"ast": ast}),
+                        "vcl parse",
+                    );
+                    serde_json::to_string(&envelope)?
+                }
+                Format::Human => match format {
+                    "pretty" => {
+                        let sym = crate::output::symbol_success(ctx);
+                        eprintln!("{sym} VCL Expression parsed successfully");
+                        let mut result = String::new();
+                        result.push_str("AST:\n");
+                        result.push_str(&indent_json(&serde_json::to_string_pretty(&ast)?, 1));
+                        result
+                    }
+                    "json" => serde_json::to_string_pretty(&ast)?,
+                    "debug" => format!("{ast:#?}"),
+                    _ => {
+                        return Err(anyhow!(
+                            "Invalid format: {format}. Use 'pretty', 'json', or 'debug'"
+                        ))
+                    }
+                },
+            };
+            println!("{output}");
+        }
         Err(e) => {
-            error!("❌ Failed to parse VCL expression: {}", e);
+            error!("Failed to parse VCL expression: {}", e);
             return Err(anyhow!("Parse error: {e}"));
         }
     }
@@ -133,14 +154,12 @@ fn translate_expression(
     format: &str,
     output: Option<&std::path::Path>,
     default_system: Option<String>,
+    ctx: &OutputContext,
 ) -> Result<()> {
-    // First parse the expression
     let ast = parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {e}"))?;
 
-    // Then translate to FHIR
-    // Use default system if provided - translator will handle mixed expressions correctly
-    let translator = if let Some(system) = default_system {
-        VclTranslator::with_default_system(system)
+    let translator = if let Some(system) = &default_system {
+        VclTranslator::with_default_system(system.clone())
     } else {
         VclTranslator::new()
     };
@@ -148,27 +167,46 @@ fn translate_expression(
         .translate(&ast)
         .map_err(|e| anyhow!("Failed to translate to FHIR: {e}"))?;
 
-    let output_content = match format {
-        "json" => serde_json::to_string_pretty(&fhir_compose)?,
-        "pretty" => {
-            let mut result = String::new();
-            result.push_str("✅ VCL Translation successful:\n\n");
-            result.push_str("Original VCL:\n");
-            result.push_str(&format!("  {expression}\n\n"));
-            result.push_str("FHIR ValueSet.compose:\n");
-            result.push_str(&serde_json::to_string_pretty(&fhir_compose)?);
-            result
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let envelope = crate::output::OutputEnvelope::success(
+                serde_json::json!({"translation": fhir_compose, "expression": expression}),
+                "vcl translate",
+            );
+            let json = if ctx.pretty {
+                serde_json::to_string_pretty(&envelope)?
+            } else {
+                serde_json::to_string(&envelope)?
+            };
+            if let Some(output_path) = output {
+                cli::write_output(Some(output_path), &json)?;
+                info!("Translation written to: {}", output_path.display());
+            } else {
+                println!("{json}");
+            }
         }
-        _ => {
-            return Err(anyhow!("Invalid format: {format}. Use 'json' or 'pretty'"));
+        Format::Human => {
+            let output_content = match format {
+                "json" => serde_json::to_string_pretty(&fhir_compose)?,
+                "pretty" => {
+                    let sym = crate::output::symbol_success(ctx);
+                    let mut result = String::new();
+                    result.push_str(&format!("{sym} VCL Translation successful:\n\n"));
+                    result.push_str("Original VCL:\n");
+                    result.push_str(&format!("  {expression}\n\n"));
+                    result.push_str("FHIR ValueSet.compose:\n");
+                    result.push_str(&serde_json::to_string_pretty(&fhir_compose)?);
+                    result
+                }
+                _ => return Err(anyhow!("Invalid format: {format}. Use 'json' or 'pretty'")),
+            };
+            if let Some(output_path) = output {
+                cli::write_output(Some(output_path), &output_content)?;
+                info!("Translation written to: {}", output_path.display());
+            } else {
+                println!("{output_content}");
+            }
         }
-    };
-
-    if let Some(output_path) = output {
-        cli::write_output(Some(output_path), &output_content)?;
-        println!("✅ Translation written to: {}", output_path.display());
-    } else {
-        println!("{output_content}");
     }
 
     Ok(())
@@ -179,54 +217,71 @@ fn explain_expression(
     format: &str,
     output: Option<&std::path::Path>,
     _default_system: Option<String>,
+    ctx: &OutputContext,
 ) -> Result<()> {
-    // First parse the expression
     let ast = parse_vcl(expression).map_err(|e| anyhow!("Failed to parse VCL expression: {e}"))?;
 
-    // Create explainer and explain the expression
     let explainer = VclExplainer::new();
     let explanation_result = explainer
         .explain_with_text(&ast, expression)
         .map_err(|e| anyhow!("Failed to explain VCL expression: {e}"))?;
 
-    let output_content = match format {
-        "json" => serde_json::to_string_pretty(&explanation_result)?,
-        "pretty" => {
-            let mut result = String::new();
-            result.push_str("✅ VCL Expression Explanation:\n\n");
-            result.push_str("Original VCL:\n");
-            result.push_str(&format!("  {expression}\n\n"));
-            result.push_str("Explanation:\n");
-            result.push_str(&format!("  {}\n\n", explanation_result.explanation));
-            result.push_str("Expression Type:\n");
-            result.push_str(&format!("  {:?}\n\n", explanation_result.expression_type));
-            result.push_str("Translatable to FHIR:\n");
-            result.push_str(&format!("  {}\n", explanation_result.translatable_to_fhir));
-
-            if !explanation_result.components.is_empty() {
-                result.push_str("\nComponents:\n");
-                for component in &explanation_result.components {
-                    // Create indentation based on nesting level
-                    let indent = "  ".repeat(component.nesting_level + 1);
-                    result.push_str(&format!(
-                        "{}• {} ({}): {}\n",
-                        indent, component.component, component.component_type, component.meaning
-                    ));
-                }
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let envelope = crate::output::OutputEnvelope::success(
+                serde_json::to_string_pretty(&explanation_result).map(serde_json::Value::String)?,
+                "vcl explain",
+            );
+            let json = if ctx.pretty {
+                serde_json::to_string_pretty(&envelope)?
+            } else {
+                serde_json::to_string(&envelope)?
+            };
+            if let Some(output_path) = output {
+                cli::write_output(Some(output_path), &json)?;
+                info!("Explanation written to: {}", output_path.display());
+            } else {
+                println!("{json}");
             }
-
-            result
         }
-        _ => {
-            return Err(anyhow!("Invalid format: {format}. Use 'json' or 'pretty'"));
-        }
-    };
+        Format::Human => {
+            let output_content = match format {
+                "json" => serde_json::to_string_pretty(&explanation_result)?,
+                "pretty" => {
+                    let sym = crate::output::symbol_success(ctx);
+                    let mut result = String::new();
+                    result.push_str(&format!("{sym} VCL Expression Explanation:\n\n"));
+                    result.push_str("Original VCL:\n");
+                    result.push_str(&format!("  {expression}\n\n"));
+                    result.push_str("Explanation:\n");
+                    result.push_str(&format!("  {}\n\n", explanation_result.explanation));
+                    result.push_str("Expression Type:\n");
+                    result.push_str(&format!("  {:?}\n\n", explanation_result.expression_type));
+                    result.push_str("Translatable to FHIR:\n");
+                    result.push_str(&format!("  {}\n", explanation_result.translatable_to_fhir));
 
-    if let Some(output_path) = output {
-        cli::write_output(Some(output_path), &output_content)?;
-        println!("✅ Explanation written to: {}", output_path.display());
-    } else {
-        println!("{output_content}");
+                    if !explanation_result.components.is_empty() {
+                        result.push_str("\nComponents:\n");
+                        for component in &explanation_result.components {
+                            let indent = "  ".repeat(component.nesting_level + 1);
+                            result.push_str(&format!(
+                                "{indent}\u{2022} {} ({}): {}\n",
+                                component.component, component.component_type, component.meaning
+                            ));
+                        }
+                    }
+
+                    result
+                }
+                _ => return Err(anyhow!("Invalid format: {format}. Use 'json' or 'pretty'")),
+            };
+            if let Some(output_path) = output {
+                cli::write_output(Some(output_path), &output_content)?;
+                info!("Explanation written to: {}", output_path.display());
+            } else {
+                println!("{output_content}");
+            }
+        }
     }
 
     Ok(())
@@ -237,14 +292,14 @@ fn run_repl(
     explain_mode: bool,
     default_system: Option<String>,
 ) -> Result<()> {
-    println!("🚀 VCL Interactive REPL");
+    println!("VCL Interactive REPL");
     let mode_description = match (translate_mode, explain_mode) {
         (true, true) => ", translate, and explain",
         (true, false) => " and translate",
         (false, true) => " and explain",
         (false, false) => "",
     };
-    println!("Type VCL expressions to parse{mode_description}. Type 'exit' or 'quit' to exit.");
+    println!("Type VCL expressions to parse{mode_description}.");
     if let Some(ref system) = default_system {
         println!("Default code system: {system}");
     }
@@ -263,7 +318,6 @@ fn run_repl(
                     continue;
                 }
 
-                // Handle REPL commands
                 if line.starts_with('.') {
                     match line {
                         ".help" => {
@@ -272,41 +326,9 @@ fn run_repl(
                             println!("  .exit     - Exit the REPL");
                             println!("  .quit     - Exit the REPL");
                             println!();
-                            println!("Current REPL Mode:");
-                            println!("  Parse Mode: ✅ Always enabled");
-                            if translate_mode {
-                                println!(
-                                    "  Translation Mode: ✅ Enabled (shows FHIR ValueSet.compose)"
-                                );
-                            } else {
-                                println!(
-                                    "  Translation Mode: ❌ Disabled (use --translate to enable)"
-                                );
-                            }
-                            if explain_mode {
-                                println!("  Explanation Mode: ✅ Enabled (shows plain English explanations)");
-                            } else {
-                                println!(
-                                    "  Explanation Mode: ❌ Disabled (use --explain to enable)"
-                                );
-                            }
-                            println!();
-                            println!("VCL Syntax Examples:");
-                            if default_system.is_some() {
-                                println!("  123456     - Simple code (uses default system)");
-                                println!("  *          - Wildcard (uses default system)");
-                                println!("  status = \"active\"  - Filter (uses default system)");
-                            }
-                            println!("  (http://snomed.info/sct)123456");
-                            println!("  (http://snomed.info/sct)*");
-                            println!("  (http://snomed.info/sct)status = \"active\"");
-                            println!("  (http://snomed.info/sct)category << 123456");
-                            println!("  (http://snomed.info/sct)123456, 789012  - Multiple codes");
-                            println!("  123456; 789012; 345678  - Disjunction (OR)");
-                            println!("  * - inactive  - Exclusion (NOT)");
                         }
                         ".exit" | ".quit" => {
-                            println!("Goodbye! 👋");
+                            println!("Goodbye!");
                             break;
                         }
                         _ => {
@@ -319,16 +341,15 @@ fn run_repl(
                 }
 
                 if line == "exit" || line == "quit" {
-                    println!("Goodbye! 👋");
+                    println!("Goodbye!");
                     break;
                 }
 
                 rl.add_history_entry(line)?;
 
-                // Parse the VCL expression
                 match parse_vcl(line) {
                     Ok(ast) => {
-                        println!("✅ Parsed successfully:");
+                        println!("Parsed successfully:");
                         print_ast_pretty(&ast, 1);
 
                         if translate_mode {
@@ -340,12 +361,12 @@ fn run_repl(
                             };
                             match translator.translate(&ast) {
                                 Ok(fhir_compose) => {
-                                    println!("🔄 FHIR Translation:");
+                                    println!("FHIR Translation:");
                                     let json = serde_json::to_string_pretty(&fhir_compose)?;
                                     println!("{}", indent_json(&json, 1));
                                 }
                                 Err(e) => {
-                                    println!("❌ Translation error: {e}");
+                                    println!("Translation error: {e}");
                                 }
                             }
                         }
@@ -355,7 +376,7 @@ fn run_repl(
                             let explainer = VclExplainer::new();
                             match explainer.explain_with_text(&ast, line) {
                                 Ok(explanation_result) => {
-                                    println!("💡 Explanation:");
+                                    println!("Explanation:");
                                     println!("  {}", explanation_result.explanation);
                                     println!("  Type: {:?}", explanation_result.expression_type);
                                     println!(
@@ -367,7 +388,7 @@ fn run_repl(
                                         println!("  Components:");
                                         for component in &explanation_result.components {
                                             println!(
-                                                "    • {} ({}): {}",
+                                                "    - {} ({}): {}",
                                                 component.component,
                                                 component.component_type,
                                                 component.meaning
@@ -376,13 +397,13 @@ fn run_repl(
                                     }
                                 }
                                 Err(e) => {
-                                    println!("❌ Explanation error: {e}");
+                                    println!("Explanation error: {e}");
                                 }
                             }
                         }
                     }
                     Err(e) => {
-                        println!("❌ Parse error: {e}");
+                        println!("Parse error: {e}");
                     }
                 }
                 println!();

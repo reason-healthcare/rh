@@ -8,6 +8,8 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use tracing::{error, info};
 
+use crate::output::OutputContext;
+
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 
 /// Convert FhirPathValue to JSON Value for serialization
@@ -93,7 +95,7 @@ pub enum FhirpathCommands {
     },
 }
 
-pub async fn handle_command(cmd: FhirpathCommands) -> Result<()> {
+pub async fn handle_command(cmd: FhirpathCommands, _ctx: &OutputContext) -> Result<()> {
     match cmd {
         FhirpathCommands::Parse { expression, format } => {
             parse_expression(&expression, &format)?;

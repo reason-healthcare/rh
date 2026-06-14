@@ -66,6 +66,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # REPL and command line interfaces
 rustyline = "13.0"
 
+# Terminal / color
+anstream = "0.6"
+is-terminal = "0.4"
+
+# Completions
+clap_complete = "4.0"
+
+# Build metadata
+vergen = { version = "8.0", features = ["build", "git", "gitcl"] }
+
 # Development dependencies
 criterion = "0.5"
 walkdir = "2"

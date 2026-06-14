@@ -3,6 +3,8 @@ use clap::Subcommand;
 use rh_fsh::{compile_fsh_files, FshParser, FshTank};
 use std::path::PathBuf;
 
+use crate::output::OutputContext;
+
 #[derive(Subcommand)]
 pub enum FshCommands {
     /// Compile FSH source to FHIR JSON
@@ -28,7 +30,7 @@ pub enum FshCommands {
     },
 }
 
-pub async fn handle_command(cmd: FshCommands) -> Result<()> {
+pub async fn handle_command(cmd: FshCommands, _ctx: &OutputContext) -> Result<()> {
     match cmd {
         FshCommands::Compile {
             inputs,

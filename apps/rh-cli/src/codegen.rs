@@ -5,6 +5,8 @@ use anyhow::Result;
 use clap::Args;
 use tracing::{info, warn};
 
+use crate::output::OutputContext;
+
 use rh_codegen::quality::run_quality_checks;
 use rh_codegen::{
     generate_crate_structure, generate_module_files, parse_package_metadata, CodeGenerator,
@@ -59,7 +61,7 @@ pub struct CodegenArgs {
     pub crate_name: Option<String>,
 }
 
-pub async fn handle_command(args: CodegenArgs) -> Result<()> {
+pub async fn handle_command(args: CodegenArgs, _ctx: &OutputContext) -> Result<()> {
     // Set up loader configuration first to resolve version if needed
     let token = std::env::var("RH_REGISTRY_TOKEN").ok();
     let loader_config = LoaderConfig {

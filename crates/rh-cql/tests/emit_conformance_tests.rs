@@ -544,10 +544,7 @@ define "HER2Obs": [Observation: "HER2"]
         .as_deref()
         .expect("Retrieve.codes should be set");
     let code_ref = match codes_expr {
-        elm::Expression::List(list) => list
-            .elements
-            .first()
-            .expect("List should have one element"),
+        elm::Expression::List(list) => list.elements.first().expect("List should have one element"),
         other => panic!("Expected List wrapper around CodeRef, got {other:?}"),
     };
     assert!(

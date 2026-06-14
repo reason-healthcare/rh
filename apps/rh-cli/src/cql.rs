@@ -9,6 +9,8 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
+use crate::output::OutputContext;
+
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
@@ -138,7 +140,7 @@ pub enum CqlCommands {
 // Command dispatcher
 // ---------------------------------------------------------------------------
 
-pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
+pub async fn handle_command(cmd: CqlCommands, _ctx: &OutputContext) -> Result<()> {
     match cmd {
         CqlCommands::Compile {
             input,

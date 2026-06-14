@@ -4,6 +4,8 @@ use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinitionLoader};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
+use crate::output::{Format, OutputContext};
+
 #[derive(Subcommand)]
 pub enum SnapshotCommands {
     /// Generate snapshot for a StructureDefinition
@@ -12,10 +14,10 @@ pub enum SnapshotCommands {
     /// Display information about a snapshot
     Info(InfoArgs),
 
-    /// Show differences between two snapshots
+    /// Show differences between two snapshots (not yet implemented)
     Diff(DiffArgs),
 
-    /// Validate a snapshot
+    /// Validate a snapshot (not yet implemented)
     Validate(ValidateArgs),
 }
 
@@ -41,10 +43,6 @@ pub struct GenerateArgs {
     /// Output file path (defaults to stdout)
     #[clap(short, long, value_name = "FILE")]
     pub output: Option<PathBuf>,
-
-    /// Enable verbose output
-    #[clap(short, long)]
-    pub verbose: bool,
 }
 
 #[derive(Args)]
@@ -98,16 +96,16 @@ pub struct ValidateArgs {
     pub file: PathBuf,
 }
 
-pub async fn handle_command(cmd: SnapshotCommands) -> Result<()> {
+pub async fn handle_command(cmd: SnapshotCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
-        SnapshotCommands::Generate(args) => handle_generate(args).await,
-        SnapshotCommands::Info(args) => handle_info(args).await,
-        SnapshotCommands::Diff(args) => handle_diff(args).await,
-        SnapshotCommands::Validate(args) => handle_validate(args).await,
+        SnapshotCommands::Generate(args) => handle_generate(args, ctx).await,
+        SnapshotCommands::Info(args) => handle_info(args, ctx).await,
+        SnapshotCommands::Diff(args) => handle_diff(args, ctx).await,
+        SnapshotCommands::Validate(args) => handle_validate(args, ctx).await,
     }
 }
 
-async fn handle_generate(args: GenerateArgs) -> Result<()> {
+async fn handle_generate(args: GenerateArgs, ctx: &OutputContext) -> Result<()> {
     info!("Generating snapshot for profile: {}", args.profile_url);
 
     let packages_dir = expand_home_dir(&args.packages_dir)?;
@@ -127,9 +125,6 @@ async fn handle_generate(args: GenerateArgs) -> Result<()> {
         );
 
         for sd in structure_defs {
-            if args.verbose {
-                info!("  - {} ({})", sd.name, sd.url);
-            }
             generator.load_structure_definition(sd);
         }
     }
@@ -137,19 +132,35 @@ async fn handle_generate(args: GenerateArgs) -> Result<()> {
     info!("Generating snapshot...");
     let snapshot = generator.generate_snapshot(&args.profile_url)?;
 
-    let output = serde_json::to_string_pretty(&snapshot)?;
+    let json = serde_json::to_string_pretty(&snapshot)?;
 
-    if let Some(output_path) = args.output {
-        std::fs::write(&output_path, output)?;
-        info!("Snapshot written to: {}", output_path.display());
-    } else {
-        println!("{output}");
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let result = serde_json::json!({
+                "profile_url": args.profile_url,
+                "snapshot": snapshot,
+            });
+            if let Some(output_path) = args.output {
+                std::fs::write(&output_path, serde_json::to_string_pretty(&result)?)?;
+                info!("Snapshot written to: {}", output_path.display());
+            } else {
+                ctx.write_success(result)?;
+            }
+        }
+        Format::Human => {
+            if let Some(output_path) = args.output {
+                std::fs::write(&output_path, &json)?;
+                info!("Snapshot written to: {}", output_path.display());
+            } else {
+                println!("{json}");
+            }
+        }
     }
 
     Ok(())
 }
 
-async fn handle_info(args: InfoArgs) -> Result<()> {
+async fn handle_info(args: InfoArgs, ctx: &OutputContext) -> Result<()> {
     info!("Getting info for profile: {}", args.profile_url);
 
     let packages_dir = expand_home_dir(&args.packages_dir)?;
@@ -172,35 +183,73 @@ async fn handle_info(args: InfoArgs) -> Result<()> {
 
     let profile_url = &args.profile_url;
     let elements_count = snapshot.element.len();
-    println!("Profile: {profile_url}");
-    println!("Elements: {elements_count}");
-
     let bindings_count = snapshot
         .element
         .iter()
         .filter(|e| e.binding.is_some())
         .count();
-    println!("Bindings: {bindings_count}");
-
     let constraints_count: usize = snapshot
         .element
         .iter()
         .filter_map(|e| e.constraint.as_ref())
         .map(|c| c.len())
         .sum();
-    println!("Constraints: {constraints_count}");
+
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let result = serde_json::json!({
+                "profile_url": profile_url,
+                "elements": elements_count,
+                "bindings": bindings_count,
+                "constraints": constraints_count,
+            });
+            ctx.write_success(result)?;
+        }
+        Format::Human => {
+            println!("Profile: {profile_url}");
+            println!("Elements: {elements_count}");
+            println!("Bindings: {bindings_count}");
+            println!("Constraints: {constraints_count}");
+        }
+    }
 
     Ok(())
 }
 
-async fn handle_diff(_args: DiffArgs) -> Result<()> {
+async fn handle_diff(_args: DiffArgs, ctx: &OutputContext) -> Result<()> {
     error!("Diff command not yet implemented");
-    Ok(())
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let errors = vec![crate::output::ErrorInfo {
+                code: "NotImplemented".to_string(),
+                message: "Diff command not yet implemented".to_string(),
+                span: None,
+            }];
+            ctx.write_errors(errors)?;
+        }
+        Format::Human => {
+            eprintln!("Error: Diff command not yet implemented");
+        }
+    }
+    std::process::exit(i32::from(crate::output::ExitCode::OperationalError));
 }
 
-async fn handle_validate(_args: ValidateArgs) -> Result<()> {
+async fn handle_validate(_args: ValidateArgs, ctx: &OutputContext) -> Result<()> {
     error!("Validate command not yet implemented");
-    Ok(())
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let errors = vec![crate::output::ErrorInfo {
+                code: "NotImplemented".to_string(),
+                message: "Validate command not yet implemented".to_string(),
+                span: None,
+            }];
+            ctx.write_errors(errors)?;
+        }
+        Format::Human => {
+            eprintln!("Error: Validate command not yet implemented");
+        }
+    }
+    std::process::exit(i32::from(crate::output::ExitCode::OperationalError));
 }
 
 fn parse_package_spec(spec: &str) -> Result<(String, String)> {

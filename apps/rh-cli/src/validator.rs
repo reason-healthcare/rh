@@ -12,6 +12,8 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
+use crate::output::OutputContext;
+
 #[derive(Subcommand)]
 pub enum ValidatorCommands {
     /// Validate a single FHIR resource
@@ -113,7 +115,7 @@ impl std::str::FromStr for OutputFormat {
 }
 
 /// Handle validator commands
-pub async fn handle_command(cmd: ValidatorCommands) -> Result<()> {
+pub async fn handle_command(cmd: ValidatorCommands, _ctx: &OutputContext) -> Result<()> {
     match cmd {
         ValidatorCommands::Resource(args) => handle_resource_validation(args).await,
         ValidatorCommands::Batch(args) => handle_batch_validation(args).await,

@@ -4,12 +4,12 @@ use rh_foundation::loader::{LoaderConfig, PackageLoader};
 use std::path::{Path, PathBuf};
 use tracing::info;
 
+use crate::output::{Format, OutputContext};
+
 /// Download FHIR packages from npm-style registries
 ///
 /// Authentication is handled via the RH_REGISTRY_TOKEN environment variable.
-/// Set this variable to your bearer token for private registries:
-///
-/// export RH_REGISTRY_TOKEN="your-token-here"
+/// Set this variable to your bearer token for private registries.
 #[derive(Subcommand)]
 pub enum DownloadCommands {
     /// Download a FHIR package from registry
@@ -47,8 +47,7 @@ pub enum DownloadCommands {
     },
 }
 
-pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
-    // Get token from environment variable
+pub async fn handle_command(cmd: DownloadCommands, ctx: &OutputContext) -> Result<()> {
     let token = std::env::var("RH_REGISTRY_TOKEN").ok();
 
     match cmd {
@@ -72,6 +71,7 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
                 &registry,
                 token.as_deref(),
                 overwrite,
+                ctx,
             )
             .await?;
         }
@@ -80,7 +80,7 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
             registry,
             latest,
         } => {
-            list_package_versions(&package, &registry, token.as_deref(), latest).await?;
+            list_package_versions(&package, &registry, token.as_deref(), latest, ctx).await?;
         }
     }
 
@@ -94,6 +94,7 @@ async fn download_package(
     registry: &str,
     token: Option<&str>,
     overwrite: bool,
+    ctx: &OutputContext,
 ) -> Result<()> {
     info!(
         "Downloading package {}@{} from {}",
@@ -112,12 +113,31 @@ async fn download_package(
     let loader = PackageLoader::new(loader_config)?;
     let manifest = loader.download_package(package, version, output).await?;
 
-    info!(
-        "Successfully downloaded {} v{} to {}",
-        manifest.name,
-        manifest.version,
-        output.display()
-    );
+    match ctx.format {
+        Format::Json | Format::Ndjson => {
+            let result = serde_json::json!({
+                "name": manifest.name,
+                "version": manifest.version,
+                "output": output.display().to_string(),
+            });
+            ctx.write_success(result)?;
+        }
+        Format::Human => {
+            info!(
+                "Successfully downloaded {} v{} to {}",
+                manifest.name,
+                manifest.version,
+                output.display()
+            );
+            println!(
+                "Successfully downloaded {} v{} to {}",
+                manifest.name,
+                manifest.version,
+                output.display()
+            );
+        }
+    }
+
     Ok(())
 }
 
@@ -126,6 +146,7 @@ async fn list_package_versions(
     registry: &str,
     token: Option<&str>,
     latest_only: bool,
+    ctx: &OutputContext,
 ) -> Result<()> {
     let loader_config = LoaderConfig {
         registry_url: registry.to_string(),
@@ -140,15 +161,37 @@ async fn list_package_versions(
 
     if latest_only {
         let latest = loader.get_latest_version(package).await?;
-        println!("{latest}");
+        match ctx.format {
+            Format::Json | Format::Ndjson => {
+                let result = serde_json::json!({
+                    "package": package,
+                    "latest_version": latest,
+                });
+                ctx.write_success(result)?;
+            }
+            Format::Human => {
+                println!("{latest}");
+            }
+        }
     } else {
         let versions = loader.list_versions(package).await?;
-        if versions.is_empty() {
-            println!("No versions found for package: {package}");
-        } else {
-            println!("Available versions for {package}:");
-            for version in versions {
-                println!("  {version}");
+        match ctx.format {
+            Format::Json | Format::Ndjson => {
+                let result = serde_json::json!({
+                    "package": package,
+                    "versions": versions,
+                });
+                ctx.write_success(result)?;
+            }
+            Format::Human => {
+                if versions.is_empty() {
+                    println!("No versions found for package: {package}");
+                } else {
+                    println!("Available versions for {package}:");
+                    for version in &versions {
+                        println!("  {version}");
+                    }
+                }
             }
         }
     }
