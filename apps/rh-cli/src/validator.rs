@@ -26,9 +26,9 @@ pub struct ResourceArgs {
     #[clap(short, long)]
     input: Vec<String>,
 
-    /// Output format (text, json)
-    #[clap(short, long, default_value = "text")]
-    format: OutputFormat,
+    /// Output format for validation report (text, json, operationoutcome)
+    #[clap(long = "report-format", default_value = "text")]
+    report_format: OutputFormat,
 
     /// Skip invariant validation (structural validation only)
     #[clap(long)]
@@ -57,9 +57,9 @@ pub struct BatchArgs {
     #[clap(short, long)]
     input: Vec<String>,
 
-    /// Output format (text, json)
-    #[clap(short, long, default_value = "text")]
-    format: OutputFormat,
+    /// Output format for validation report (text, json, operationoutcome)
+    #[clap(long = "report-format", default_value = "text")]
+    report_format: OutputFormat,
 
     /// Number of threads for parallel validation
     #[clap(long, default_value = "4")]
@@ -166,13 +166,13 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
 
             if results.len() == 1 {
                 let (_, resource, result) = &results[0];
-                match args.format {
+                match args.report_format {
                     OutputFormat::Text => print_single_result_text(result, resource),
                     OutputFormat::Json => print_single_result_json(result, resource)?,
                     OutputFormat::OperationOutcome => print_operation_outcome(result)?,
                 }
             } else {
-                match args.format {
+                match args.report_format {
                     OutputFormat::Text => print_labeled_batch_results_text(&results, false),
                     OutputFormat::Json => print_labeled_batch_results_json(&results)?,
                     OutputFormat::OperationOutcome => {
@@ -208,7 +208,7 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
             .validate_auto(&resource)
             .context("Failed to validate FHIR resource")?;
 
-        match args.format {
+        match args.report_format {
             OutputFormat::Text => print_single_result_text(&result, &resource),
             OutputFormat::Json => print_single_result_json(&result, &resource)?,
             OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
@@ -291,7 +291,7 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
                 return Ok(());
             }
 
-            match args.format {
+            match args.report_format {
                 OutputFormat::Text => print_labeled_batch_results_text(&results, args.summary_only),
                 OutputFormat::Json => print_labeled_batch_results_json(&results)?,
                 OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
@@ -330,7 +330,7 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
             results.push((line_num, resource, result));
         }
 
-        match args.format {
+        match args.report_format {
             OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
             OutputFormat::Json => print_batch_results_json(&results)?,
             OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,

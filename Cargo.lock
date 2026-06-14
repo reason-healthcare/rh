@@ -1900,6 +1900,7 @@ dependencies = [
  "chrono",
  "clap",
  "glob",
+ "is-terminal",
  "openssl",
  "predicates",
  "rh-codegen",

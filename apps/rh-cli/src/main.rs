@@ -7,10 +7,13 @@ mod cql;
 mod download;
 mod fhirpath;
 mod fsh;
+mod output;
 mod package;
 mod snapshot;
 mod validator;
 mod vcl;
+
+use output::{ColorMode, ExitCode, OutputContext, OutputFormat};
 
 /// rh - Unified CLI for FHIR processing tools
 ///
@@ -22,9 +25,21 @@ mod vcl;
 #[clap(version)]
 #[clap(long_about = "RH CLI - A comprehensive command-line toolkit for working with FHIR")]
 struct Cli {
-    /// Enable verbose logging
+    /// Output format: human (default), json, ndjson
+    #[clap(long, global = true, default_value = "human", value_name = "FORMAT")]
+    format: OutputFormat,
+
+    /// Suppress informational output (stderr)
     #[clap(short, long, global = true)]
-    verbose: bool,
+    quiet: bool,
+
+    /// Increase verbosity (-v info, -vv debug, -vvv trace)
+    #[clap(short, long, action = clap::ArgAction::Count, global = true)]
+    verbose: u8,
+
+    /// Color output policy: auto (default), always, never
+    #[clap(long, global = true, default_value = "auto", value_name = "WHEN")]
+    color: ColorMode,
 
     #[clap(subcommand)]
     command: Commands,
@@ -72,76 +87,43 @@ enum Commands {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Initialize tracing
-    let subscriber = if cli.verbose {
-        tracing_subscriber::fmt()
-            .with_writer(std::io::stderr)
-            .with_max_level(tracing::Level::DEBUG)
-            .finish()
+    // Build output context from global flags
+    let _output_ctx = OutputContext::new(cli.format, cli.quiet, cli.color);
+
+    // Initialize tracing subscriber
+    // verbose: 0=INFO (or WARN when quiet), 1=DEBUG, 2+=TRACE
+    let max_level = if cli.quiet {
+        tracing::Level::WARN
     } else {
-        tracing_subscriber::fmt()
-            .with_writer(std::io::stderr)
-            .with_max_level(tracing::Level::INFO)
-            .finish()
+        match cli.verbose {
+            0 => tracing::Level::INFO,
+            1 => tracing::Level::DEBUG,
+            _ => tracing::Level::TRACE,
+        }
     };
+    let subscriber = tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_max_level(max_level)
+        .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    match cli.command {
-        Commands::Codegen(cmd) => {
-            if let Err(e) = codegen::handle_command(cmd).await {
-                error!("Codegen error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Cql(cmd) => {
-            if let Err(e) = cql::handle_command(cmd).await {
-                error!("CQL error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Download(cmd) => {
-            if let Err(e) = download::handle_command(cmd).await {
-                error!("Download error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Fhirpath(cmd) => {
-            if let Err(e) = fhirpath::handle_command(cmd).await {
-                error!("FHIRPath error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Vcl(cmd) => {
-            if let Err(e) = vcl::handle_command(cmd).await {
-                error!("VCL error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Fsh(cmd) => {
-            if let Err(e) = fsh::handle_command(cmd).await {
-                error!("FSH error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Snapshot(cmd) => {
-            if let Err(e) = snapshot::handle_command(cmd).await {
-                error!("Snapshot error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Validate(cmd) => {
-            if let Err(e) = validator::handle_command(cmd).await {
-                error!("Validator error: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Commands::Package(cmd) => {
-            if let Err(e) = package::handle_command(cmd).await {
-                error!("Package error: {}", e);
-                std::process::exit(1);
-            }
-        }
+    let result = match cli.command {
+        Commands::Codegen(cmd) => codegen::handle_command(cmd).await,
+        Commands::Cql(cmd) => cql::handle_command(cmd).await,
+        Commands::Download(cmd) => download::handle_command(cmd).await,
+        Commands::Fhirpath(cmd) => fhirpath::handle_command(cmd).await,
+        Commands::Vcl(cmd) => vcl::handle_command(cmd).await,
+        Commands::Fsh(cmd) => fsh::handle_command(cmd).await,
+        Commands::Snapshot(cmd) => snapshot::handle_command(cmd).await,
+        Commands::Validate(cmd) => validator::handle_command(cmd).await,
+        Commands::Package(cmd) => package::handle_command(cmd).await,
+    };
+
+    if let Err(e) = result {
+        error!("{e}");
+        ExitCode::OperationalError.exit();
     }
 
     Ok(())
 }
+

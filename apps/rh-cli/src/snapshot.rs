@@ -42,9 +42,9 @@ pub struct GenerateArgs {
     #[clap(short, long, value_name = "FILE")]
     pub output: Option<PathBuf>,
 
-    /// Enable verbose output
+    /// Show detailed output
     #[clap(short, long)]
-    pub verbose: bool,
+    pub details: bool,
 }
 
 #[derive(Args)]
@@ -127,7 +127,7 @@ async fn handle_generate(args: GenerateArgs) -> Result<()> {
         );
 
         for sd in structure_defs {
-            if args.verbose {
+            if args.details {
                 info!("  - {} ({})", sd.name, sd.url);
             }
             generator.load_structure_definition(sd);

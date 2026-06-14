@@ -80,9 +80,9 @@ pub enum CqlCommands {
         #[clap(long, value_name = "DIR", num_args = 1)]
         lib_path: Vec<PathBuf>,
 
-        /// Show detailed error information
+        /// Show detailed error information (error locations and annotations)
         #[clap(long)]
-        verbose: bool,
+        details: bool,
     },
 
     /// Parse CQL and show library info
@@ -162,9 +162,9 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
         CqlCommands::Validate {
             inputs,
             lib_path,
-            verbose,
+            details,
         } => {
-            validate_cql_multi(&inputs, &lib_path, verbose)?;
+            validate_cql_multi(&inputs, &lib_path, details)?;
         }
         CqlCommands::Info { input } => {
             show_info(&input)?;

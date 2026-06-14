@@ -29,6 +29,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 glob = "0.3"
+is-terminal = "0.4"
 
 # Local workspace crates
 rh-foundation = { path = "../../crates/rh-foundation", version = "0.2.0-beta.2", features = ["http"] }

@@ -70,7 +70,7 @@ fn test_validate_resource_json_output() {
     }"#;
 
     rh_cmd()
-        .args(["validate", "resource", "--format", "json"])
+        .args(["validate", "resource", "--report-format", "json"])
         .write_stdin(patient)
         .assert()
         .code(predicate::in_iter([0, 1]))
@@ -196,7 +196,7 @@ fn test_resource_validation_operationoutcome_format() {
     let output = rh_cmd()
         .arg("validate")
         .arg("resource")
-        .arg("--format")
+        .arg("--report-format")
         .arg("operationoutcome")
         .write_stdin(patient)
         .assert()
@@ -214,7 +214,7 @@ fn test_operationoutcome_has_severity() {
     let output = rh_cmd()
         .arg("validate")
         .arg("resource")
-        .arg("--format")
+        .arg("--report-format")
         .arg("operationoutcome")
         .write_stdin(patient)
         .assert()
@@ -236,7 +236,7 @@ fn test_operationoutcome_has_code() {
     let output = rh_cmd()
         .arg("validate")
         .arg("resource")
-        .arg("--format")
+        .arg("--report-format")
         .arg("operationoutcome")
         .write_stdin(patient)
         .assert()
@@ -253,7 +253,7 @@ fn test_operationoutcome_has_diagnostics() {
     let output = rh_cmd()
         .arg("validate")
         .arg("resource")
-        .arg("--format")
+        .arg("--report-format")
         .arg("operationoutcome")
         .write_stdin(patient)
         .assert()
@@ -270,7 +270,7 @@ fn test_operationoutcome_missing_field() {
     let output = rh_cmd()
         .arg("validate")
         .arg("resource")
-        .arg("--format")
+        .arg("--report-format")
         .arg("operationoutcome")
         .write_stdin(missing_resource_type)
         .assert()
@@ -298,7 +298,7 @@ fn test_batch_validation_operationoutcome_format() {
         .arg("batch")
         .arg("--input")
         .arg(&batch_file)
-        .arg("--format")
+        .arg("--report-format")
         .arg("operationoutcome")
         .assert()
         .failure();
@@ -320,7 +320,7 @@ fn test_operationoutcome_uppercase_format() {
     let output = rh_cmd()
         .arg("validate")
         .arg("resource")
-        .arg("--format")
+        .arg("--report-format")
         .arg("OPERATIONOUTCOME")
         .write_stdin(patient)
         .assert()
@@ -363,7 +363,7 @@ fn test_validate_batch_json_output() {
 {"resourceType": "Organization", "id": "2", "name": "Test Org"}"#;
 
     rh_cmd()
-        .args(["validate", "batch", "--format", "json"])
+        .args(["validate", "batch", "--report-format", "json"])
         .write_stdin(ndjson)
         .assert()
         .code(predicate::in_iter([0, 1]))
@@ -552,7 +552,7 @@ fn test_validate_resource_glob_output_order_is_stable() {
 
     let first = rh_cmd()
         .args([
-            "validate", "resource", "--input", &pattern, "--format", "json",
+            "validate", "resource", "--input", &pattern, "--report-format", "json",
         ])
         .assert()
         .code(predicate::in_iter([0, 1]))
@@ -562,7 +562,7 @@ fn test_validate_resource_glob_output_order_is_stable() {
 
     let second = rh_cmd()
         .args([
-            "validate", "resource", "--input", &pattern, "--format", "json",
+            "validate", "resource", "--input", &pattern, "--report-format", "json",
         ])
         .assert()
         .code(predicate::in_iter([0, 1]))

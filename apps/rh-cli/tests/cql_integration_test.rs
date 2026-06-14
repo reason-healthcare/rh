@@ -306,7 +306,7 @@ fn test_validate_exits_nonzero_on_semantic_error() {
 #[test]
 fn test_validate_verbose_shows_location_on_error() {
     rh_cmd()
-        .args(["cql", "validate", "-", "--verbose"])
+        .args(["cql", "validate", "-", "--details"])
         .write_stdin(SEMANTIC_ERROR_CQL)
         .assert()
         .failure()
