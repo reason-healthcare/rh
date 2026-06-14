@@ -58,14 +58,8 @@ const KNOWN_WRONG_ANSWERS: &[&str] = &[
     "testObservations::testPolymorphismIsA3",
     "testType::testType10",
     "testType::testType12",
-    // Patient.active.is(System.Boolean).not() expects FHIR.boolean to be
-    // distinct from System.Boolean. Both currently map to FhirPathValue::Boolean
-    // because the engine doesn't track FHIR vs System primitive provenance —
-    // unblocked by the typed-primitive variant refactor.
     "testType::testType14",
     "testType::testType9",
-    "testTypes::testStringQuantityMonthLiteralToQuantity",
-    "testTypes::testStringQuantityYearLiteralToQuantity",
 ];
 
 #[derive(Debug, Clone)]

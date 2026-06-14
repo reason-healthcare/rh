@@ -126,8 +126,9 @@ impl ComparisonEvaluator {
             return Ok(FhirPathValue::Empty);
         }
 
-        // Quantities with incompatible units: `=`/`!=` return empty (undefined),
-        // `~`/`!~` return false/true (not equivalent).
+        // Quantities: `=`/`!=` use exact comparison (returns Empty for incompatible
+        // units); `~`/`!~` use precision-aware equivalence (returns false/true for
+        // incompatible units).
         if let (
             FhirPathValue::Quantity {
                 value: v1,
@@ -141,27 +142,31 @@ impl ComparisonEvaluator {
         {
             use crate::evaluator::operations::units::UnitConverter;
             let converter = UnitConverter::new();
-            match converter.compare_quantities(*v1, u1, *v2, u2) {
-                Ok(0) => {
-                    return Ok(FhirPathValue::Boolean(matches!(
-                        operator,
-                        EqualityOperator::Equal | EqualityOperator::Equivalent
-                    )))
+            return match operator {
+                EqualityOperator::Equal | EqualityOperator::NotEqual => {
+                    match converter.compare_quantities(*v1, u1, *v2, u2) {
+                        Ok(0) => Ok(FhirPathValue::Boolean(matches!(
+                            operator,
+                            EqualityOperator::Equal
+                        ))),
+                        Ok(_) => Ok(FhirPathValue::Boolean(matches!(
+                            operator,
+                            EqualityOperator::NotEqual
+                        ))),
+                        Err(_) => Ok(FhirPathValue::Empty),
+                    }
                 }
-                Ok(_) => {
-                    return Ok(FhirPathValue::Boolean(matches!(
-                        operator,
-                        EqualityOperator::NotEqual | EqualityOperator::NotEquivalent
-                    )))
-                }
-                Err(_) => {
-                    return Ok(match operator {
-                        EqualityOperator::Equal | EqualityOperator::NotEqual => {
-                            FhirPathValue::Empty
+                EqualityOperator::Equivalent | EqualityOperator::NotEquivalent => {
+                    match (converter.to_base_unit(*v1, u1), converter.to_base_unit(*v2, u2)) {
+                        (Ok((base_a, _)), Ok((base_b, _))) => {
+                            let equiv = quantity_equivalent(base_a, base_b);
+                            Ok(FhirPathValue::Boolean(if matches!(operator, EqualityOperator::Equivalent) { equiv } else { !equiv }))
                         }
-                        EqualityOperator::Equivalent => FhirPathValue::Boolean(false),
-                        EqualityOperator::NotEquivalent => FhirPathValue::Boolean(true),
-                    })
+                        _ => Ok(FhirPathValue::Boolean(matches!(
+                            operator,
+                            EqualityOperator::NotEquivalent
+                        ))),
+                    }
                 }
             }
         }
