@@ -1,6 +1,6 @@
 # rh-cql Conformance
 
-**Last updated**: 2026-03-23 (post-wave-2, test counts verified)
+**Last updated**: 2026-06-14 (post-WS2 task 2.7 fidelity-report wave)
 **CQL specification**: 1.5.3 (https://cql.hl7.org)
 **Test suite source**: https://cql.hl7.org/tests.html (`tests.zip`)
 
@@ -204,17 +204,37 @@ reference translator (cqframework/clinical_quality_language v4.2.0) via
 | System function emission parity | `Abs`/`Ceiling`/`Floor`/`Truncate`/`Round`/`Ln`/`Exp`/`Log`/`Power` emit native ELM nodes (not `FunctionRef`) |
 | Negative numeric literal shape | `-n` emits `Negate(Literal("n"))` |
 
-### 2.2 Remaining semantic differences
+### 2.2 Fixed-corpus fidelity report
 
-No high-priority emitter mismatches from the previous wave remain in this category.
+`tests/pipeline_comparison_tests.rs` now includes a fixed-corpus metadata report that
+checks four representative libraries:
+
+| Corpus item | What is checked |
+|---|---|
+| `SimpleTest.cql` | Direct metadata diff against checked-in Java reference ELM (`conformance/test-cases/simple/SimpleTest.json`) |
+| `test-0-input` | Retrieve + temporal query structure preserved; translator metadata present |
+| `test-2-input` | Retrieve + `First` query structure preserved; translator metadata present |
+| `ArithmeticTests.cql` | Native arithmetic node emission (`Add`, `Divide`, `Power`) plus metadata presence |
+
+For the `SimpleTest` Java-vs-Rust comparison corpus, the test suite now verifies:
+
+- The user-authored `TestExpression` statement is preserved in both outputs
+- The checked-in Java reference still carries the synthetic `Patient` statement
+- Arithmetic expression shape is preserved (`Add`)
+- Both outputs emit one top-level translator metadata annotation
+- Rust emits more `localId` metadata than the non-debug Java reference
+- Rust emits locators where the non-debug Java reference does not
+- Rust omits empty `annotation: []` arrays that the Java output includes
+
+No high-priority emitter mismatches remain in this category.
 
 ### 2.3 Intentional / low-priority differences
 
 | Item | Java | rh-cql | Notes |
 |---|---|---|---|
-| `localId` emission | Only with `--debug` | Always when annotations enabled | Provides richer traceability |
+| `localId` emission | Only with `--debug` | Always when annotations enabled | Verified by `simple_test_metadata_diff_matches_java_reference` |
 | Locator format | `"line:col-line:col"` (range) | `"line:col"` (start only) | Would need parser end-position tracking |
-| Empty arrays | `annotation: []` included | Omitted | Acceptable per project decision |
+| Empty arrays | `annotation: []` included | Omitted | Verified by `simple_test_metadata_diff_matches_java_reference` |
 
 ---
 
@@ -312,7 +332,7 @@ All tests run via `cargo test -p rh-cql`.
 | Unit tests (lib) | 788 | ✅ all pass |
 | golden_elm_tests | 3 | ✅ all pass |
 | emit_conformance_tests | 14 | ✅ all pass |
-| pipeline_comparison_tests | 11 | ✅ all pass |
+| pipeline_comparison_tests | 13 | ✅ all pass |
 | hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 515 pass / 1 406 total expressions evaluated |
 | semantic_tests | 8 | ✅ all pass |
 | eval_integration_tests | 68 | ✅ all pass |
