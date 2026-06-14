@@ -73,6 +73,8 @@ impl FhirPathParser {
 
     /// Parse a FHIRPath expression from a string
     pub fn parse(&self, input: &str) -> FhirPathResult<FhirPathExpression> {
+        let stripped = strip_comments(input)?;
+        let input = stripped.as_str();
         match parse_expression(input.trim()) {
             Ok((remaining, expr)) => {
                 let remaining = remaining.trim();
@@ -99,6 +101,63 @@ impl Default for FhirPathParser {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Remove `//` line comments and `/* */` block comments, preserving the
+/// contents of string literals (`'…'`) and delimited identifiers (`` `…` ``).
+fn strip_comments(input: &str) -> FhirPathResult<String> {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        match c {
+            '\'' | '`' => {
+                let delim = c;
+                out.push(c);
+                let mut escaped = false;
+                for (_, sc) in chars.by_ref() {
+                    out.push(sc);
+                    if escaped {
+                        escaped = false;
+                    } else if sc == '\\' && delim == '\'' {
+                        escaped = true;
+                    } else if sc == delim {
+                        break;
+                    }
+                }
+            }
+            '/' if matches!(chars.peek(), Some((_, '/'))) => {
+                // line comment — skip to end of line (keep the newline)
+                for (_, sc) in chars.by_ref() {
+                    if sc == '\n' {
+                        out.push('\n');
+                        break;
+                    }
+                }
+            }
+            '/' if matches!(chars.peek(), Some((_, '*'))) => {
+                chars.next(); // consume '*'
+                let mut closed = false;
+                let mut prev_star = false;
+                for (_, sc) in chars.by_ref() {
+                    if prev_star && sc == '/' {
+                        closed = true;
+                        break;
+                    }
+                    prev_star = sc == '*';
+                }
+                if !closed {
+                    return Err(FhirPathError::SyntaxError {
+                        line: 1,
+                        column: i,
+                        message: "Unterminated block comment".to_string(),
+                    });
+                }
+                out.push(' ');
+            }
+            _ => out.push(c),
+        }
+    }
+    Ok(out)
 }
 
 // Whitespace handling
@@ -156,8 +215,8 @@ fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse AND expressions
 fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_type_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("and")), parse_type_expression))(input)?;
+    let (input, first) = parse_equality_expression(input)?;
+    let (input, rest) = many0(preceded(ws(tag("and")), parse_equality_expression))(input)?;
 
     Ok((
         input,
@@ -168,9 +227,9 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
     ))
 }
 
-// Parse type expressions (is, as)
+// Parse type expressions (is, as) — binds tighter than *, between unary and *
 fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_equality_expression(input)?;
+    let (input, first) = parse_unary_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("is"), tag("as")))),
         parse_type_specifier,
@@ -258,10 +317,10 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse inequality expressions (<, <=, >, >=)
 fn parse_inequality_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_additive_expression(input)?;
+    let (input, first) = parse_union_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("<="), tag(">="), tag("<"), tag(">")))),
-        parse_additive_expression,
+        parse_union_expression,
     )))(input)?;
 
     Ok((
@@ -311,10 +370,10 @@ fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse multiplicative expressions (*, /, div, mod)
 fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_unary_expression(input)?;
+    let (input, first) = parse_type_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("div"), tag("mod"), tag("*"), tag("/")))),
-        parse_unary_expression,
+        parse_type_expression,
     )))(input)?;
 
     Ok((
@@ -345,14 +404,14 @@ fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
                 operand: Box::new(expr),
             }
         }),
-        parse_union_expression,
+        parse_invocation_expression,
     ))(input)
 }
 
-// Parse union expressions
+// Parse union expressions — binds tighter than < but looser than +
 fn parse_union_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_invocation_expression(input)?;
-    let (input, rest) = many0(preceded(ws(char('|')), parse_invocation_expression))(input)?;
+    let (input, first) = parse_additive_expression(input)?;
+    let (input, rest) = many0(preceded(ws(char('|')), parse_additive_expression))(input)?;
 
     Ok((
         input,
@@ -465,9 +524,60 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
 // Parse string literal
 fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('\'')(input)?;
-    let (input, content) = take_while(|c| c != '\'')(input)?;
-    let (input, _) = char('\'')(input)?;
-    Ok((input, Literal::String(content.to_string())))
+    let mut out = String::new();
+    let mut chars = input.char_indices();
+    loop {
+        match chars.next() {
+            Some((end, '\'')) => {
+                return Ok((&input[end + 1..], Literal::String(out)));
+            }
+            Some((_, '\\')) => match chars.next() {
+                Some((_, 'n')) => out.push('\n'),
+                Some((_, 'r')) => out.push('\r'),
+                Some((_, 't')) => out.push('\t'),
+                Some((_, 'f')) => out.push('\u{c}'),
+                Some((_, '\\')) => out.push('\\'),
+                Some((_, '/')) => out.push('/'),
+                Some((_, '\'')) => out.push('\''),
+                Some((_, '"')) => out.push('"'),
+                Some((_, '`')) => out.push('`'),
+                Some((start, 'u')) => {
+                    // \uXXXX — exactly four hex digits
+                    let hex: String = input[start + 1..].chars().take(4).collect();
+                    if hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                        if let Some(c) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32)
+                        {
+                            out.push(c);
+                            for _ in 0..4 {
+                                chars.next();
+                            }
+                            continue;
+                        }
+                    }
+                    // Not a valid unicode escape — keep verbatim.
+                    out.push('\\');
+                    out.push('u');
+                }
+                Some((_, other)) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        nom::error::ErrorKind::Char,
+                    )))
+                }
+            },
+            Some((_, c)) => out.push(c),
+            None => {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    nom::error::ErrorKind::Char,
+                )))
+            }
+        }
+    }
 }
 
 // Parse number literal
@@ -547,53 +657,155 @@ fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
     Ok((input, Literal::Date(date_str)))
 }
 
-// Parse datetime literal (@YYYY-MM-DDTHH:mm:ss or @YYYY-MM-DDTHH:mm:ssZ or @YYYY-MM-DDTHH:mm:ss+HH:mm)
+// Parse datetime literal — partial-precision per FHIRPath spec:
+//   DATETIME: '@' DATE 'T' (TIME TZ?)?
+//   DATE:     YYYY ('-' MM ('-' DD)?)?
+//   TIME:     hh (':' mm (':' ss ('.' fff)?)?)?
+//   TZ:       'Z' | ('+'|'-') HH ':' MM
+// Examples accepted: @2015T, @2015-02T, @2015-02-04T, @2014-01-01T08,
+// @2018-03-01T10:30, @2012-04-15T15:30:31.0, @1973-12-25T00:00:00.000+10:00
 fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('@')(input)?;
     let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('-')(input)?;
-    let (input, month) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('-')(input)?;
-    let (input, day) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char('T')(input)?;
-    let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, second) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
 
-    // Optional timezone information
-    let (input, timezone) = opt(alt((
-        recognize(char('Z')),
-        recognize(tuple((
-            alt((char('+'), char('-'))),
+    // Optional month, then optional day (only after month).
+    let (input, month) = opt(preceded(
+        char('-'),
+        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+    ))(input)?;
+    let (input, day) = if month.is_some() {
+        opt(preceded(
+            char('-'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-            char(':'),
-            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))),
-    )))(input)?;
-
-    let datetime_str = if let Some(tz) = timezone {
-        format!("{year}-{month}-{day}T{hour}:{minute}:{second}{tz}")
+        ))(input)?
     } else {
-        format!("{year}-{month}-{day}T{hour}:{minute}:{second}")
+        (input, None)
     };
 
-    Ok((input, Literal::DateTime(datetime_str)))
+    // The 'T' is what distinguishes a DateTime from a Date literal.
+    let (input, _) = char('T')(input)?;
+
+    // Optional time: hh, optional :mm, optional :ss, optional .fff (each gated on its predecessor).
+    let (input, hour) = opt(take_while_m_n(2, 2, |c: char| c.is_ascii_digit()))(input)?;
+    let (input, minute) = if hour.is_some() {
+        opt(preceded(
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+    let (input, second) = if minute.is_some() {
+        opt(preceded(
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+    let (input, fraction) = if second.is_some() {
+        opt(preceded(
+            char('.'),
+            take_while1(|c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+
+    // Optional timezone — only valid once we have at least an hour.
+    let (input, timezone) = if hour.is_some() {
+        opt(alt((
+            recognize(char('Z')),
+            recognize(tuple((
+                alt((char('+'), char('-'))),
+                take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+                char(':'),
+                take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+            ))),
+        )))(input)?
+    } else {
+        (input, None)
+    };
+
+    let mut s = String::with_capacity(32);
+    s.push_str(year);
+    if let Some(m) = month {
+        s.push('-');
+        s.push_str(m);
+    }
+    if let Some(d) = day {
+        s.push('-');
+        s.push_str(d);
+    }
+    s.push('T');
+    if let Some(h) = hour {
+        s.push_str(h);
+    }
+    if let Some(m) = minute {
+        s.push(':');
+        s.push_str(m);
+    }
+    if let Some(sec) = second {
+        s.push(':');
+        s.push_str(sec);
+    }
+    if let Some(f) = fraction {
+        s.push('.');
+        s.push_str(f);
+    }
+    if let Some(tz) = timezone {
+        s.push_str(tz);
+    }
+
+    Ok((input, Literal::DateTime(s)))
 }
 
-// Parse time literal (@Thh:mm:ss)
+// Parse time literal — partial-precision per FHIRPath spec:
+//   TIME_LITERAL: '@' 'T' TIME
+//   TIME:         hh (':' mm (':' ss ('.' fff)?)?)?
+// Examples accepted: @T14, @T10:30, @T10:30:00, @T10:30:00.000
 fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('@')(input)?;
     let (input, _) = char('T')(input)?;
     let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, second) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
+    let (input, minute) = opt(preceded(
+        char(':'),
+        take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+    ))(input)?;
+    let (input, second) = if minute.is_some() {
+        opt(preceded(
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
+    let (input, fraction) = if second.is_some() {
+        opt(preceded(
+            char('.'),
+            take_while1(|c: char| c.is_ascii_digit()),
+        ))(input)?
+    } else {
+        (input, None)
+    };
 
-    let time_str = format!("T{hour}:{minute}:{second}");
-    Ok((input, Literal::Time(time_str)))
+    let mut s = String::with_capacity(16);
+    s.push('T');
+    s.push_str(hour);
+    if let Some(m) = minute {
+        s.push(':');
+        s.push_str(m);
+    }
+    if let Some(sec) = second {
+        s.push(':');
+        s.push_str(sec);
+    }
+    if let Some(f) = fraction {
+        s.push('.');
+        s.push_str(f);
+    }
+
+    Ok((input, Literal::Time(s)))
 }
 
 // Parse quantity literal (number followed by single-quoted unit)
@@ -692,6 +904,16 @@ fn parse_datetime_precision_literal(input: &str) -> IResult<&str, Literal> {
 
 // Parse identifier - simplified version
 fn parse_identifier(input: &str) -> IResult<&str, String> {
+    // Delimited identifier: `div`, `name with spaces`
+    if let Some(rest) = input.strip_prefix('`') {
+        if let Some(end) = rest.find('`') {
+            return Ok((&rest[end + 1..], rest[..end].to_string()));
+        }
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Char,
+        )));
+    }
     let (input, ident) = recognize(tuple((
         alt((alpha1, recognize(char('_')))),
         opt(take_while1(|c: char| c.is_alphanumeric() || c == '_')),

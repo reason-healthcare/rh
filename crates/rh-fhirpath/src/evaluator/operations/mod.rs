@@ -15,6 +15,7 @@ pub mod comparison;
 pub mod datetime;
 pub mod math;
 pub mod strings;
+pub mod temporal;
 pub mod units;
 
 // Re-export the main evaluator types

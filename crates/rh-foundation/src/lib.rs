@@ -14,10 +14,13 @@
 //! # Features
 //! - `http`: Enables HTTP client utilities (requires `reqwest` and `tokio`)
 //! - `wasm`: Enables WebAssembly utilities (requires `wasm-bindgen`)
+#![cfg_attr(not(test), warn(clippy::unwrap_used))]
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
 pub mod config;
 pub mod error;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod io;
 pub mod json;
 pub mod memory;

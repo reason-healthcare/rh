@@ -23,7 +23,9 @@ mod state;
 mod stats;
 
 use std::hash::Hash;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use parking_lot::RwLock;
 
 use state::StoreState;
 pub use stats::MemoryStoreStats;
@@ -117,7 +119,7 @@ where
     /// If the store has a maximum entry limit and is at capacity,
     /// an arbitrary entry will be evicted to make room.
     pub fn insert(&self, key: K, value: V) {
-        let outcome = self.state.write().unwrap().insert(key, value);
+        let outcome = self.state.write().insert(key, value);
         if outcome.evicted {
             self.stats.record_eviction();
         }
@@ -128,7 +130,7 @@ where
     ///
     /// Returns `Some(value)` if the key exists, `None` otherwise.
     pub fn get(&self, key: &K) -> Option<V> {
-        let result = self.state.read().unwrap().get_cloned(key);
+        let result = self.state.read().get_cloned(key);
 
         if result.is_some() {
             self.stats.record_hit();
@@ -141,14 +143,14 @@ where
 
     /// Check if a key exists in the store.
     pub fn contains(&self, key: &K) -> bool {
-        self.state.read().unwrap().contains(key)
+        self.state.read().contains(key)
     }
 
     /// Remove a value from the store.
     ///
     /// Returns the removed value if the key existed.
     pub fn remove(&self, key: &K) -> Option<V> {
-        let result = self.state.write().unwrap().remove(key);
+        let result = self.state.write().remove(key);
         if result.is_some() {
             self.stats.record_removal();
         }
@@ -157,22 +159,22 @@ where
 
     /// Clear all entries from the store.
     pub fn clear(&self) {
-        self.state.write().unwrap().clear();
+        self.state.write().clear();
     }
 
     /// Get the number of entries in the store.
     pub fn len(&self) -> usize {
-        self.state.read().unwrap().len()
+        self.state.read().len()
     }
 
     /// Check if the store is empty.
     pub fn is_empty(&self) -> bool {
-        self.state.read().unwrap().is_empty()
+        self.state.read().is_empty()
     }
 
     /// Get all keys in the store.
     pub fn keys(&self) -> Vec<K> {
-        self.state.read().unwrap().keys()
+        self.state.read().keys()
     }
 
     /// Get statistics for the store.
@@ -196,12 +198,12 @@ where
     where
         F: FnOnce() -> V,
     {
-        if let Some(value) = self.state.read().unwrap().get_cloned(&key) {
+        if let Some(value) = self.state.read().get_cloned(&key) {
             self.stats.record_hit();
             return value;
         }
 
-        let outcome = self.state.write().unwrap().get_or_insert_with(key, factory);
+        let outcome = self.state.write().get_or_insert_with(key, factory);
 
         if outcome.inserted {
             self.stats.record_miss();

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use tracing::debug;
@@ -9,9 +10,54 @@ use crate::snapshot::merge_validation::{
 use crate::snapshot::path::ElementPath;
 use crate::snapshot::types::ElementDefinition;
 
+/// Key identifying an element within a StructureDefinition: its dotted path
+/// plus an optional slice name (slices share a path with their slicing root).
+type ElementKey<'a> = (&'a str, Option<&'a str>);
+
+/// Merges a base StructureDefinition snapshot with a profile differential to
+/// produce the profile's snapshot element list.
 pub struct ElementMerger;
 
 impl ElementMerger {
+    /// Merge a base snapshot's elements with a differential, producing the
+    /// derived profile's full snapshot element list.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. **Index** every base element by `(path, sliceName)`. Base elements
+    ///    are borrowed, not cloned; only elements actually touched by the
+    ///    differential are materialized as new values.
+    /// 2. **Apply the differential** element by element:
+    ///    - A differential element whose `(path, sliceName)` matches a base
+    ///      element is merged onto it field-by-field (see *Merge semantics*).
+    ///    - A differential element introducing a **new slice** (`sliceName`
+    ///      set, no matching base entry) is merged onto the *unsliced* base
+    ///      element at the same path, inheriting its definition; if no such
+    ///      base element exists, the differential element is taken as-is.
+    ///    - Any other unmatched differential element is taken as-is (it
+    ///      introduces a new element, e.g. under an extension).
+    /// 3. **Expand slice children** (reslicing support): for every slice
+    ///    root, base child elements beneath the sliced path are copied into
+    ///    the slice (tagged with its `sliceName`) unless the differential
+    ///    already constrained that child within the slice.
+    /// 4. **Sort** the result by path, with unsliced elements ordered before
+    ///    their slices, and slices ordered by name.
+    ///
+    /// # Merge semantics
+    ///
+    /// For a matched element, constrained facets are validated and combined
+    /// by the `merge_validation` module: cardinality may only narrow
+    /// (`min` may rise, `max` may fall), types may only be restricted to a
+    /// subset of the base types, binding strength may only become stricter,
+    /// and constraints are additive. All other descriptive fields
+    /// (`definition`, `short`, `comment`, …) take the differential's value
+    /// when present, falling back to the base.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SnapshotError::MergeError`] when the differential attempts
+    /// to widen cardinality, add types not present in the base, or weaken a
+    /// required binding.
     pub fn merge_elements(
         base: &[ElementDefinition],
         differential: &[ElementDefinition],
@@ -26,46 +72,51 @@ impl ElementMerger {
         Self::apply_differential(&mut element_map, differential)?;
         Self::expand_slice_children(&mut element_map);
 
-        let mut result: Vec<ElementDefinition> = element_map.into_values().collect();
+        let mut result: Vec<ElementDefinition> =
+            element_map.into_values().map(Cow::into_owned).collect();
         Self::sort_elements_by_path(&mut result);
 
         debug!("Merge complete: {} elements in result", result.len());
         Ok(result)
     }
 
+    /// Index base elements by `(path, sliceName)` without cloning them.
     fn create_element_map(
         base: &[ElementDefinition],
-    ) -> HashMap<(String, Option<String>), ElementDefinition> {
+    ) -> HashMap<ElementKey<'_>, Cow<'_, ElementDefinition>> {
         base.iter()
             .map(|element| {
                 (
-                    (element.path.clone(), element.slice_name.clone()),
-                    element.clone(),
+                    (element.path.as_str(), element.slice_name.as_deref()),
+                    Cow::Borrowed(element),
                 )
             })
             .collect()
     }
 
-    fn apply_differential(
-        element_map: &mut HashMap<(String, Option<String>), ElementDefinition>,
-        differential: &[ElementDefinition],
+    fn apply_differential<'a>(
+        element_map: &mut HashMap<ElementKey<'a>, Cow<'a, ElementDefinition>>,
+        differential: &'a [ElementDefinition],
     ) -> SnapshotResult<()> {
         for diff_element in differential {
-            let key = (diff_element.path.clone(), diff_element.slice_name.clone());
+            let key = (
+                diff_element.path.as_str(),
+                diff_element.slice_name.as_deref(),
+            );
 
             if let Some(existing) = element_map.get(&key) {
                 let merged = Self::merge_element(existing, diff_element)?;
-                element_map.insert(key, merged);
+                element_map.insert(key, Cow::Owned(merged));
             } else if diff_element.slice_name.is_some() {
-                let base_key = (diff_element.path.clone(), None);
+                let base_key = (diff_element.path.as_str(), None);
                 if let Some(base_element) = element_map.get(&base_key) {
                     let merged = Self::merge_element(base_element, diff_element)?;
-                    element_map.insert(key, merged);
+                    element_map.insert(key, Cow::Owned(merged));
                 } else {
-                    element_map.insert(key, diff_element.clone());
+                    element_map.insert(key, Cow::Borrowed(diff_element));
                 }
             } else {
-                element_map.insert(key, diff_element.clone());
+                element_map.insert(key, Cow::Borrowed(diff_element));
             }
         }
         Ok(())
@@ -83,42 +134,42 @@ impl ElementMerger {
         });
     }
 
-    fn expand_slice_children(
-        element_map: &mut HashMap<(String, Option<String>), ElementDefinition>,
+    fn expand_slice_children<'a>(
+        element_map: &mut HashMap<ElementKey<'a>, Cow<'a, ElementDefinition>>,
     ) {
-        let mut new_elements = Vec::new();
+        let mut new_elements: Vec<(ElementKey<'a>, ElementDefinition)> = Vec::new();
 
-        let base_elements: Vec<(&String, ElementPath, &ElementDefinition)> = element_map
-            .iter()
-            .filter(|((_, slice_name), _)| slice_name.is_none())
-            .map(|((path, _), element)| (path, ElementPath::new(path), element))
+        let base_paths: Vec<(&'a str, ElementPath)> = element_map
+            .keys()
+            .filter(|(_, slice_name)| slice_name.is_none())
+            .map(|(path, _)| (*path, ElementPath::new(path)))
             .collect();
 
-        let slice_roots: Vec<(String, String)> = element_map
+        let slice_roots: Vec<(&'a str, &'a str)> = element_map
             .keys()
-            .filter_map(|(path, slice_name)| {
-                slice_name.as_ref().map(|name| (path.clone(), name.clone()))
-            })
+            .filter_map(|(path, slice_name)| slice_name.map(|name| (*path, name)))
             .collect();
 
         for (slice_path_str, slice_name) in slice_roots {
-            let slice_base_path = ElementPath::new(&slice_path_str);
+            let slice_base_path = ElementPath::new(slice_path_str);
 
-            for (path, element_path, element) in &base_elements {
+            for (path, element_path) in &base_paths {
                 if element_path.is_child_of(&slice_base_path) {
-                    let slice_child_key = ((*path).clone(), Some(slice_name.clone()));
+                    let slice_child_key = (*path, Some(slice_name));
 
                     if !element_map.contains_key(&slice_child_key) {
-                        let mut new_element = (*element).clone();
-                        new_element.slice_name = Some(slice_name.clone());
-                        new_elements.push((slice_child_key, new_element));
+                        if let Some(element) = element_map.get(&(*path, None)) {
+                            let mut new_element = element.as_ref().clone();
+                            new_element.slice_name = Some(slice_name.to_string());
+                            new_elements.push((slice_child_key, new_element));
+                        }
                     }
                 }
             }
         }
 
         for (key, element) in new_elements {
-            element_map.insert(key, element);
+            element_map.insert(key, Cow::Owned(element));
         }
     }
 
@@ -213,27 +264,18 @@ mod tests {
         let base_root = create_element("Patient.identifier", None);
         let base_child = create_element("Patient.identifier.system", None);
 
-        map.insert(("Patient.identifier".to_string(), None), base_root);
-        map.insert(("Patient.identifier.system".to_string(), None), base_child);
+        map.insert(("Patient.identifier", None), Cow::Owned(base_root));
+        map.insert(("Patient.identifier.system", None), Cow::Owned(base_child));
 
         let slice_root = create_element("Patient.identifier", Some("MRN"));
-        map.insert(
-            ("Patient.identifier".to_string(), Some("MRN".to_string())),
-            slice_root,
-        );
+        map.insert(("Patient.identifier", Some("MRN")), Cow::Owned(slice_root));
 
         ElementMerger::expand_slice_children(&mut map);
 
-        assert!(map.contains_key(&(
-            "Patient.identifier.system".to_string(),
-            Some("MRN".to_string())
-        )));
+        assert!(map.contains_key(&("Patient.identifier.system", Some("MRN"))));
 
         let slice_child = map
-            .get(&(
-                "Patient.identifier.system".to_string(),
-                Some("MRN".to_string()),
-            ))
+            .get(&("Patient.identifier.system", Some("MRN")))
             .unwrap();
         assert_eq!(slice_child.slice_name.as_deref(), Some("MRN"));
     }

@@ -1,21 +1,51 @@
 use anyhow::{bail, Context, Result};
 use clap::Subcommand;
 use glob::glob;
-use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
+use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
+
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_to_json, compile_with_libraries,
-    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, get_default_packages_dir, validate, CompilationError, CompilerOptions,
-    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
+    compile, compile_to_elm_with_sourcemap, compile_with_libraries, elm::AccessModifier,
+    evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile, explain_parse,
+    get_default_packages_dir, validate, CompilationError, CompilerOptions, CqlDateTime, Diagnostic,
+    EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock, InMemoryDataProvider,
+    PackageLibrarySourceProvider, SignatureLevel, Value,
 };
+
+#[derive(Serialize)]
+struct CqlDiagnostic {
+    file: String,
+    valid: bool,
+    errors: Vec<String>,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
+
+fn format_diagnostic_message(item: &Diagnostic, with_location: bool) -> String {
+    if with_location {
+        if let Some(span) = &item.span {
+            return format!(
+                "{} (line {}, col {})",
+                item.message, span.start.line, span.start.column
+            );
+        }
+    }
+    item.message.clone()
+}
 
 #[derive(Subcommand)]
 pub enum ExplainMode {
@@ -82,9 +112,9 @@ pub enum CqlCommands {
         #[clap(long, value_name = "DIR", num_args = 1)]
         lib_path: Vec<PathBuf>,
 
-        /// Show detailed error information
+        /// Show detailed error information (error locations and annotations)
         #[clap(long)]
-        verbose: bool,
+        details: bool,
     },
 
     /// Parse CQL and show library info
@@ -138,7 +168,7 @@ pub enum CqlCommands {
 // Command dispatcher
 // ---------------------------------------------------------------------------
 
-pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
+pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         CqlCommands::Compile {
             input,
@@ -159,20 +189,31 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
                 signatures,
                 source_map,
                 source_map_output.as_deref(),
+                ctx,
             )?;
         }
         CqlCommands::Validate {
             inputs,
             lib_path,
-            verbose,
+            details,
         } => {
-            validate_cql_multi(&inputs, &lib_path, verbose)?;
+            if ctx.is_json() {
+                let diagnostics = validate_cql_multi_json(&inputs, &lib_path, details)?;
+                let has_errors = diagnostics.iter().any(|diagnostic| !diagnostic.valid);
+                print_envelope(ctx, &Envelope::ok(diagnostics, "cql validate"))?;
+                if has_errors {
+                    ExitCode::ValidationFailure.exit();
+                }
+            } else if let Err(e) = validate_cql_multi(&inputs, &lib_path, details) {
+                error!("{e}");
+                ExitCode::ValidationFailure.exit();
+            }
         }
         CqlCommands::Info { input } => {
             show_info(&input)?;
         }
         CqlCommands::Repl { debug } => {
-            run_repl(debug).await?;
+            rh_cql::repl::run_repl(debug)?;
         }
         CqlCommands::Explain { mode } => {
             run_explain(mode)?;
@@ -311,6 +352,52 @@ fn validate_cql_multi(inputs: &[String], lib_paths: &[PathBuf], verbose: bool) -
     Ok(())
 }
 
+fn validate_cql_multi_json(
+    inputs: &[String],
+    lib_paths: &[PathBuf],
+    verbose: bool,
+) -> Result<Vec<CqlDiagnostic>> {
+    if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
+        return Ok(vec![validate_cql_collect(
+            inputs.first().map_or("-", |s| s.as_str()),
+            lib_paths,
+            verbose,
+        )?]);
+    }
+
+    let paths = resolve_cql_paths(inputs)?;
+    paths
+        .iter()
+        .map(|path| validate_cql_collect(&path.display().to_string(), lib_paths, verbose))
+        .collect()
+}
+
+fn validate_cql_collect(
+    input: &str,
+    lib_paths: &[PathBuf],
+    verbose: bool,
+) -> Result<CqlDiagnostic> {
+    let source = read_source(input)?;
+    let (errors, _warnings, valid) = if lib_paths.is_empty() {
+        let result = validate(&source, None).context("Failed to validate CQL")?;
+        let valid = result.is_valid();
+        (result.errors, result.warnings, valid)
+    } else {
+        let out = compile_with_search_dirs(&source, input, lib_paths)?;
+        let valid = out.result.is_success();
+        (out.result.errors, out.result.warnings, valid)
+    };
+
+    Ok(CqlDiagnostic {
+        file: input.to_string(),
+        valid,
+        errors: errors
+            .iter()
+            .map(|item| format_diagnostic_message(item, verbose))
+            .collect(),
+    })
+}
+
 /// Read CQL source from file or stdin
 fn read_source(input: &str) -> Result<String> {
     if input == "-" {
@@ -339,6 +426,7 @@ fn compile_cql(
     signatures: bool,
     emit_source_map: bool,
     source_map_output: Option<&Path>,
+    ctx: &OutputContext,
 ) -> Result<()> {
     let source = read_source(input)?;
 
@@ -367,12 +455,14 @@ fn compile_cql(
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
-                anyhow::bail!("CQL compilation failed");
+                ExitCode::ParseError.exit();
             }
         };
 
         if !result.is_success() {
-            return Err(report_compile_failure(&result.errors, &result.warnings));
+            let err = report_compile_failure(&result.errors, &result.warnings);
+            error!("{err}");
+            ExitCode::ParseError.exit();
         }
 
         let json = if compact {
@@ -390,12 +480,14 @@ fn compile_cql(
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
-                anyhow::bail!("CQL compilation failed");
+                ExitCode::ParseError.exit();
             }
         };
 
         if !result.is_success() {
-            return Err(report_compile_failure(&result.errors, &result.warnings));
+            let err = report_compile_failure(&result.errors, &result.warnings);
+            error!("{err}");
+            ExitCode::ParseError.exit();
         }
 
         let json = if compact {
@@ -411,7 +503,11 @@ fn compile_cql(
     if let Some(path) = output {
         fs::write(path, &json).with_context(|| format!("Failed to write to {}", path.display()))?;
         info!("✓ Compiled to {}", path.display());
-    } else {
+    }
+    if ctx.is_json() {
+        let elm_value = serde_json::from_str::<serde_json::Value>(&json)?;
+        print_envelope(ctx, &Envelope::ok(elm_value, "cql compile"))?;
+    } else if output.is_none() {
         println!("{json}");
     }
 
@@ -1187,125 +1283,5 @@ fn show_info(input: &str) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// REPL service
+// (REPL moved to rh-cql::repl; see crates/rh-cql/src/repl.rs)
 // ---------------------------------------------------------------------------
-
-/// Run interactive REPL
-async fn run_repl(debug: bool) -> Result<()> {
-    println!("CQL Compiler REPL");
-    println!("Enter CQL source (multi-line supported, end with blank line)");
-    println!("Commands: :quit, :help, :debug, :compact");
-    println!();
-
-    let mut rl = DefaultEditor::new()?;
-    let mut compact_output = false;
-    let mut debug_mode = debug;
-
-    loop {
-        // Collect multi-line input
-        let mut source = String::new();
-        let mut line_num = 1;
-
-        loop {
-            let prompt = if source.is_empty() {
-                "cql> ".to_string()
-            } else {
-                format!("{line_num:3}> ")
-            };
-
-            match rl.readline(&prompt) {
-                Ok(line) => {
-                    // Check for commands on first line
-                    if source.is_empty() && line.starts_with(':') {
-                        match line.trim() {
-                            ":quit" | ":q" | ":exit" => {
-                                println!("Goodbye!");
-                                return Ok(());
-                            }
-                            ":help" | ":h" => {
-                                print_repl_help();
-                                break;
-                            }
-                            ":debug" => {
-                                debug_mode = !debug_mode;
-                                println!("Debug mode: {}", if debug_mode { "ON" } else { "OFF" });
-                                break;
-                            }
-                            ":compact" => {
-                                compact_output = !compact_output;
-                                println!(
-                                    "Compact output: {}",
-                                    if compact_output { "ON" } else { "OFF" }
-                                );
-                                break;
-                            }
-                            _ => {
-                                println!("Unknown command. Type :help for help.");
-                                break;
-                            }
-                        }
-                    }
-
-                    // Empty line ends input
-                    if line.is_empty() && !source.is_empty() {
-                        break;
-                    }
-
-                    if !line.is_empty() {
-                        if !source.is_empty() {
-                            source.push('\n');
-                        }
-                        source.push_str(&line);
-                        line_num += 1;
-                    }
-                }
-                Err(ReadlineError::Interrupted) => {
-                    println!("^C");
-                    source.clear();
-                    break;
-                }
-                Err(ReadlineError::Eof) => {
-                    println!("Goodbye!");
-                    return Ok(());
-                }
-                Err(err) => {
-                    error!("Error: {err}");
-                    return Err(err.into());
-                }
-            }
-        }
-
-        // Skip if empty or was a command
-        if source.is_empty() {
-            continue;
-        }
-
-        // Compile and display
-        let options = if debug_mode {
-            CompilerOptions::debug()
-        } else {
-            CompilerOptions::default()
-        };
-
-        match compile_to_json(&source, Some(options), !compact_output) {
-            Ok(json) => {
-                println!("\n{json}\n");
-            }
-            Err(e) => {
-                println!("\n✗ Error: {e}\n");
-            }
-        }
-    }
-}
-
-fn print_repl_help() {
-    println!("CQL REPL Commands:");
-    println!("  :quit, :q, :exit  Exit the REPL");
-    println!("  :help, :h         Show this help");
-    println!("  :debug            Toggle debug mode (annotations, locators)");
-    println!("  :compact          Toggle compact JSON output");
-    println!();
-    println!("Enter CQL source code (can be multi-line).");
-    println!("Press Enter twice to compile.");
-    println!();
-}

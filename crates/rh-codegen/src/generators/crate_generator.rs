@@ -143,7 +143,7 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
 fn generate_cargo_toml(
     package: &str,
     version: &str,
-    _output_dir: &Path,
+    output_dir: &Path,
     crate_name_override: Option<&str>,
 ) -> String {
     // Derive the package name: use override if provided, else convert FHIR package name
@@ -152,47 +152,87 @@ fn generate_cargo_toml(
     // Lib name must be a valid Rust identifier (no hyphens)
     let lib_name = crate_name.replace('-', "_");
 
-    // Try to find rh-foundation crate path relative to output directory
-    let rh_foundation_path = if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-        // We're in the rh-codegen crate, so rh-foundation is at ../rh-foundation
-        let workspace_root = Path::new(&manifest_dir).parent().and_then(|p| p.parent());
-        if let Some(root) = workspace_root {
-            let foundation_path = root.join("crates/rh-foundation");
-            if foundation_path.exists() {
-                // Use absolute path for reliability
-                foundation_path.display().to_string()
-            } else {
-                // Fallback to relative path assumption
-                "../../rh/crates/rh-foundation".to_string()
-            }
-        } else {
-            "../../rh/crates/rh-foundation".to_string()
-        }
-    } else {
-        "../../rh/crates/rh-foundation".to_string()
-    };
+    let rh_foundation_path = foundation_relative_path(output_dir);
+    let rh_foundation_version = env!("CARGO_PKG_VERSION");
+
+    // Derive a release-keyword (e.g. "fhir-r4") from package segments like "r4"/"r5"
+    let release_keyword = package
+        .split('.')
+        .find(|seg| {
+            seg.len() >= 2 && seg.starts_with('r') && seg[1..].chars().all(|c| c.is_ascii_digit())
+        })
+        .map(|seg| format!("\"fhir-{seg}\", "))
+        .unwrap_or_default();
 
     format!(
         r#"[package]
 name = "{crate_name}"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 description = "Generated FHIR types from {package} package version {version}"
-authors = ["FHIR Code Generator"]
-license = "MIT OR Apache-2.0"
+authors.workspace = true
+keywords = ["fhir", {release_keyword}"healthcare", "hl7", "types"]
+categories = ["api-bindings", "data-structures"]
+readme = "README.md"
 
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
 phf = {{ version = "0.11", features = ["macros"] }}
 once_cell = "1.19"
-rh-foundation = {{ path = "{rh_foundation_path}" }}
+rh-foundation = {{ path = "{rh_foundation_path}", version = "{rh_foundation_version}" }}
 
 [lib]
 name = "{lib_name}"
 path = "src/lib.rs"
+
+[lints]
+workspace = true
 "#
     )
+}
+
+/// Compute the path to `rh-foundation` relative to the generated crate's directory.
+///
+/// Generated crates conventionally live as siblings of `rh-foundation` under
+/// `crates/`, so the default is `../rh-foundation`. When the output directory
+/// resolves to somewhere else inside this workspace, a correct relative path is
+/// computed instead. Absolute paths are never emitted (see refactor plan C1).
+fn foundation_relative_path(output_dir: &Path) -> String {
+    let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") else {
+        return "../rh-foundation".to_string();
+    };
+    let Some(workspace_root) = Path::new(&manifest_dir).parent().and_then(|p| p.parent()) else {
+        return "../rh-foundation".to_string();
+    };
+    let foundation = workspace_root.join("crates/rh-foundation");
+    let (Ok(foundation), Ok(output)) = (foundation.canonicalize(), output_dir.canonicalize())
+    else {
+        return "../rh-foundation".to_string();
+    };
+
+    let from: Vec<_> = output.components().collect();
+    let to: Vec<_> = foundation.components().collect();
+    let common = from
+        .iter()
+        .zip(to.iter())
+        .take_while(|(a, b)| a == b)
+        .count();
+    let mut parts: Vec<String> = vec!["..".to_string(); from.len() - common];
+    parts.extend(
+        to[common..]
+            .iter()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned()),
+    );
+    if parts.is_empty() {
+        ".".to_string()
+    } else {
+        parts.join("/")
+    }
 }
 
 /// Generate lib.rs content with idiomatic module structure
@@ -687,4 +727,58 @@ pub fn parse_package_metadata(package_json_path: &Path) -> Result<(String, Strin
         .to_string();
 
     Ok((canonical, author, description))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cargo_toml_uses_relative_foundation_path_for_sibling_crates() {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let output = Path::new(&manifest_dir)
+            .parent()
+            .unwrap()
+            .join("rh-hl7_fhir_r4_core");
+        let toml = generate_cargo_toml(
+            "hl7.fhir.r4.core",
+            "4.0.1",
+            &output,
+            Some("rh-hl7-fhir-r4-core"),
+        );
+        assert!(toml.contains(r#"rh-foundation = { path = "../rh-foundation""#));
+    }
+
+    #[test]
+    fn cargo_toml_never_contains_absolute_paths() {
+        let toml = generate_cargo_toml(
+            "hl7.fhir.r5.core",
+            "5.0.0",
+            Path::new("/nonexistent/output/dir"),
+            Some("rh-hl7-fhir-r5-core"),
+        );
+        assert!(toml.contains(r#"path = "../rh-foundation""#));
+        for line in toml.lines() {
+            assert!(
+                !line.contains("path = \"/"),
+                "absolute path emitted: {line}"
+            );
+        }
+    }
+
+    #[test]
+    fn cargo_toml_inherits_workspace_metadata() {
+        let toml = generate_cargo_toml("hl7.fhir.r4.core", "4.0.1", Path::new("."), None);
+        for key in [
+            "version.workspace = true",
+            "edition.workspace = true",
+            "license.workspace = true",
+            "repository.workspace = true",
+            "rust-version.workspace = true",
+            "authors.workspace = true",
+        ] {
+            assert!(toml.contains(key), "missing workspace inheritance: {key}");
+        }
+        assert!(toml.contains(r#""fhir-r4""#));
+    }
 }

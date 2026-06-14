@@ -208,4 +208,152 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
             StringEvaluator::to_chars(target)
         }),
     );
+
+    // encode(format) / decode(format) — base64, urlbase64, hex
+    functions.insert(
+        "encode".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            with_string_arg(target, params, "encode", encode_string)
+        }),
+    );
+    functions.insert(
+        "decode".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            with_string_arg(target, params, "decode", decode_string)
+        }),
+    );
+
+    // escape(target) / unescape(target) — html, json
+    functions.insert(
+        "escape".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            with_string_arg(target, params, "escape", escape_string)
+        }),
+    );
+    functions.insert(
+        "unescape".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            with_string_arg(target, params, "unescape", unescape_string)
+        }),
+    );
+}
+
+/// Helper: apply a (string, format) -> string transformation, propagating
+/// empty and validating argument shape.
+fn with_string_arg(
+    target: &FhirPathValue,
+    params: &[FhirPathValue],
+    name: &str,
+    apply: fn(&str, &str) -> FhirPathResult<Option<String>>,
+) -> FhirPathResult<FhirPathValue> {
+    let value = match target {
+        FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) if items.is_empty() => return Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) if items.len() == 1 => &items[0],
+        other => other,
+    };
+    let FhirPathValue::String(s) = value else {
+        return Err(FhirPathError::FunctionError {
+            message: format!("{name}() requires a string input"),
+        });
+    };
+    let Some(FhirPathValue::String(format)) = params.first() else {
+        return Err(FhirPathError::FunctionError {
+            message: format!("{name}() requires a string format parameter"),
+        });
+    };
+    match apply(s, format)? {
+        Some(out) => Ok(FhirPathValue::String(out)),
+        None => Ok(FhirPathValue::Empty),
+    }
+}
+
+fn encode_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
+    use base64::Engine as _;
+    Ok(match format {
+        "base64" => Some(base64::engine::general_purpose::STANDARD.encode(s.as_bytes())),
+        "urlbase64" => Some(base64::engine::general_purpose::URL_SAFE.encode(s.as_bytes())),
+        "hex" => Some(s.as_bytes().iter().map(|b| format!("{b:02x}")).collect()),
+        _ => {
+            return Err(FhirPathError::FunctionError {
+                message: format!("encode(): unsupported format '{format}'"),
+            })
+        }
+    })
+}
+
+fn decode_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
+    use base64::Engine as _;
+    let bytes = match format {
+        "base64" => base64::engine::general_purpose::STANDARD
+            .decode(s.as_bytes())
+            .ok(),
+        "urlbase64" => base64::engine::general_purpose::URL_SAFE
+            .decode(s.as_bytes())
+            .ok(),
+        "hex" => {
+            if !s.len().is_multiple_of(2) {
+                None
+            } else {
+                (0..s.len())
+                    .step_by(2)
+                    .map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok())
+                    .collect::<Option<Vec<u8>>>()
+            }
+        }
+        _ => {
+            return Err(FhirPathError::FunctionError {
+                message: format!("decode(): unsupported format '{format}'"),
+            })
+        }
+    };
+    Ok(bytes.and_then(|b| String::from_utf8(b).ok()))
+}
+
+fn escape_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
+    Ok(match format {
+        "html" => Some(
+            s.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+                .replace('"', "&quot;")
+                .replace('\'', "&#39;"),
+        ),
+        "json" => Some(
+            s.replace('\\', "\\\\")
+                .replace('"', "\\\"")
+                .replace('\n', "\\n")
+                .replace('\r', "\\r")
+                .replace('\t', "\\t"),
+        ),
+        _ => {
+            return Err(FhirPathError::FunctionError {
+                message: format!("escape(): unsupported format '{format}'"),
+            })
+        }
+    })
+}
+
+fn unescape_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
+    Ok(match format {
+        "html" => Some(
+            s.replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&amp;", "&"),
+        ),
+        "json" => Some(
+            s.replace("\\\"", "\"")
+                .replace("\\n", "\n")
+                .replace("\\r", "\r")
+                .replace("\\t", "\t")
+                .replace("\\\\", "\\"),
+        ),
+        _ => {
+            return Err(FhirPathError::FunctionError {
+                message: format!("unescape(): unsupported format '{format}'"),
+            })
+        }
+    })
 }

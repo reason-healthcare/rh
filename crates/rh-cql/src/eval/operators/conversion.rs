@@ -141,7 +141,10 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
         Value::Date(d) => Ok(Value::String(d.to_string())),
         Value::DateTime(dt) => Ok(Value::String(dt.to_string())),
         Value::Time(t) => Ok(Value::String(t.to_string())),
-        Value::Quantity(q) => Ok(Value::String(q.to_string())),
+        // HL7 suite (CqlStringOperatorsTest/QuantityToString) expects
+        // `ToString(125 'cm')` to yield `'125cm'` — value directly followed
+        // by the unit, no space or quotes.
+        Value::Quantity(q) => Ok(Value::String(format!("{}{}", q.value, q.unit))),
         _ => Err(err("ToString", "cannot convert to String")),
     }
 }
@@ -333,6 +336,23 @@ pub fn to_time(v: &Value) -> Result<Value, EvalError> {
         Value::Time(t) => Ok(Value::Time(t.clone())),
         Value::String(s) => {
             let s = s.trim().trim_start_matches('T');
+            // Strip trailing timezone (Z or ±HH:MM) before parsing
+            let s = if let Some(stripped) = s.strip_suffix('Z') {
+                stripped
+            } else if s.len() > 6 {
+                if let Some(pos) = s[1..].rfind(['+', '-']) {
+                    let pos = pos + 1;
+                    if s.len() - pos >= 5 {
+                        &s[..pos]
+                    } else {
+                        s
+                    }
+                } else {
+                    s
+                }
+            } else {
+                s
+            };
             if let Some(t) = parse_time_str(s) {
                 Ok(Value::Time(t))
             } else {
@@ -357,10 +377,13 @@ fn parse_time_str(s: &str) -> Option<CqlTime> {
     let (second, millisecond) = if parts.len() >= 3 {
         let sec_str = parts[2];
         if let Some(dot) = sec_str.find('.') {
-            (
-                sec_str[..dot].parse::<u8>().ok(),
-                sec_str[dot + 1..].parse::<u32>().ok(),
-            )
+            let ms_raw = &sec_str[dot + 1..];
+            // Right-pad to 3 digits: "9" → 900ms, "99" → 990ms, "999" → 999ms
+            let ms_val = {
+                let padded = format!("{:0<3}", ms_raw);
+                padded.get(..3).and_then(|p| p.parse::<u32>().ok())
+            };
+            (sec_str[..dot].parse::<u8>().ok(), ms_val)
         } else {
             (sec_str.parse::<u8>().ok(), None)
         }
@@ -416,6 +439,32 @@ pub fn to_quantity(v: &Value) -> Result<Value, EvalError> {
             Ok(Value::Null)
         }
         _ => Err(err("ToQuantity", "cannot convert to Quantity")),
+    }
+}
+
+/// `ToRatio` — converts a String of the form `"<quantity>:<quantity>"`
+/// (e.g. `"1.0 'mg':2.0 'mL'"`) to a `Ratio`. Returns null for malformed input.
+pub fn to_ratio(v: &Value) -> Result<Value, EvalError> {
+    null1!(v);
+    match v {
+        Value::Ratio { .. } => Ok(v.clone()),
+        Value::String(s) => {
+            // Split on the ':' that separates the two quantities. A ':' can
+            // not appear inside a quantity literal, so a plain split is safe.
+            let Some((num_str, den_str)) = s.split_once(':') else {
+                return Ok(Value::Null);
+            };
+            let num = to_quantity(&Value::String(num_str.trim().to_string()))?;
+            let den = to_quantity(&Value::String(den_str.trim().to_string()))?;
+            match (num, den) {
+                (Value::Quantity(numerator), Value::Quantity(denominator)) => Ok(Value::Ratio {
+                    numerator,
+                    denominator,
+                }),
+                _ => Ok(Value::Null),
+            }
+        }
+        _ => Err(err("ToRatio", "cannot convert to Ratio")),
     }
 }
 

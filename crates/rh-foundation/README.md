@@ -248,7 +248,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     generator.load_structure_definition(my_profile);
     
-    // Generate snapshot with full element tree
+    // Generate snapshot with full element tree.
+    // Returns Arc<Snapshot>; repeated calls for the same URL are cache hits
+    // that share the allocation instead of cloning the element list.
     let snapshot = generator.generate_snapshot(
         "http://example.org/StructureDefinition/MyPatient"
     )?;

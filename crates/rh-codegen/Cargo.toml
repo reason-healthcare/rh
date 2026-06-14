@@ -36,3 +36,6 @@ rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2", features 
 tempfile = "3.0"
 tokio-test = "0.4"
 serial_test = "3.0"
+
+[lints]
+workspace = true

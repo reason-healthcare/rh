@@ -17,6 +17,7 @@ crate-type = ["rlib"]
 
 [features]
 wasm = ["dep:wasm-bindgen", "dep:js-sys", "dep:console_error_panic_hook"]
+repl = ["rh-foundation/repl"]
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-O4"]
@@ -30,6 +31,7 @@ serde_json = { workspace = true }
 nom = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true }
+base64 = { workspace = true }
 
 # FHIR type metadata
 rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.0-beta.2" }
@@ -52,3 +54,7 @@ wasm-bindgen-test = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"
+quick-xml = { workspace = true }
+
+[lints]
+workspace = true

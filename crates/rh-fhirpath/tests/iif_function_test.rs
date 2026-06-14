@@ -59,7 +59,7 @@ fn test_iif_basic_boolean_conditions() {
 
     // Test with true boolean - should return true-result
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.success, results.failure)")
+        .parse("iif(testValues.trueBool, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -70,7 +70,7 @@ fn test_iif_basic_boolean_conditions() {
 
     // Test with false boolean - should return otherwise-result
     let expr = parser
-        .parse("''.iif(testValues.falseBool, results.success, results.failure)")
+        .parse("iif(testValues.falseBool, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -88,7 +88,7 @@ fn test_iif_without_otherwise_result() {
 
     // Test with true condition and no otherwise-result
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.success)")
+        .parse("iif(testValues.trueBool, results.success)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -99,7 +99,7 @@ fn test_iif_without_otherwise_result() {
 
     // Test with false condition and no otherwise-result - should return empty
     let expr = parser
-        .parse("''.iif(testValues.falseBool, results.success)")
+        .parse("iif(testValues.falseBool, results.success)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Empty));
@@ -111,46 +111,44 @@ fn test_iif_with_non_boolean_conditions() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_iif_test_context();
 
-    // Test with non-zero integer (truthy)
+    // Per the FHIRPath spec, iif() criterion must be Boolean or empty.
+    // Non-boolean scalar inputs are TypeError.
+
+    // Integer criterion → TypeError
     let expr = parser
-        .parse("''.iif(testValues.nonZeroInt, results.success, results.failure)")
+        .parse("iif(testValues.nonZeroInt, results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for integer criterion");
+
+    // Zero integer criterion → TypeError
+    let expr = parser
+        .parse("iif(testValues.zeroInt, results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for integer criterion");
+
+    // String criterion → TypeError
+    let expr = parser
+        .parse("iif(testValues.nonEmptyString, results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for string criterion");
+
+    // Empty string criterion → TypeError
+    let expr = parser
+        .parse("iif(testValues.emptyString, results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected TypeError for string criterion");
+
+    // Boolean-returning expression → fine
+    let expr = parser
+        .parse("iif(testValues.nonZeroInt > 0, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
-    }
-
-    // Test with zero integer (truthy in FHIRPath)
-    let expr = parser
-        .parse("''.iif(testValues.zeroInt, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS"); // Zero is truthy in FHIRPath
-    } else {
-        panic!("Expected string result");
-    }
-
-    // Test with non-empty string (truthy)
-    let expr = parser
-        .parse("''.iif(testValues.nonEmptyString, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
-    }
-
-    // Test with empty string (truthy in FHIRPath)
-    let expr = parser
-        .parse("''.iif(testValues.emptyString, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS"); // Empty string is truthy in FHIRPath
     } else {
         panic!("Expected string result");
     }
@@ -162,24 +160,35 @@ fn test_iif_with_collection_conditions() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_iif_test_context();
 
-    // Test with non-empty array (truthy)
+    // Per the FHIRPath spec, iif() criterion must be a single Boolean or empty.
+    // Multi-item collection criterion is an EvaluationError.
     let expr = parser
-        .parse("''.iif(testValues.nonEmptyArray, results.success, results.failure)")
+        .parse("iif(testValues.nonEmptyArray, results.success, results.failure)")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
-    }
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(
+        result.is_err(),
+        "Expected EvaluationError for multi-item collection criterion"
+    );
 
-    // Test with empty array (falsy)
+    // Empty array → treated as empty → false → returns otherwise-result
     let expr = parser
-        .parse("''.iif(testValues.emptyArray, results.success, results.failure)")
+        .parse("iif(testValues.emptyArray, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "FAILURE");
+    } else {
+        panic!("Expected string result");
+    }
+
+    // exists() on a non-empty array → Boolean(true) → fine
+    let expr = parser
+        .parse("iif(testValues.nonEmptyArray.exists(), results.success, results.failure)")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::String(s) = result {
+        assert_eq!(s, "SUCCESS");
     } else {
         panic!("Expected string result");
     }
@@ -193,7 +202,7 @@ fn test_iif_with_collection_results() {
 
     // Test returning collection as true-result
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.numbers, results.strings)")
+        .parse("iif(testValues.trueBool, results.numbers, results.strings)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(items) = result {
@@ -207,7 +216,7 @@ fn test_iif_with_collection_results() {
 
     // Test returning collection as otherwise-result
     let expr = parser
-        .parse("''.iif(testValues.falseBool, results.numbers, results.strings)")
+        .parse("iif(testValues.falseBool, results.numbers, results.strings)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(items) = result {
@@ -228,7 +237,7 @@ fn test_iif_with_complex_expressions() {
 
     // Test with comparison expression as criterion
     let expr = parser
-        .parse("''.iif(patient.active = true, 'Active Patient', 'Inactive Patient')")
+        .parse("iif(patient.active = true, 'Active Patient', 'Inactive Patient')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -239,7 +248,7 @@ fn test_iif_with_complex_expressions() {
 
     // Test with exists() expression as criterion
     let expr = parser
-        .parse("''.iif(patient.name.exists(), patient.name.family, 'No Name')")
+        .parse("iif(patient.name.exists(), patient.name.family, 'No Name')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -250,7 +259,7 @@ fn test_iif_with_complex_expressions() {
 
     // Test with count() expression as criterion
     let expr = parser
-        .parse("''.iif(patient.telecom.count() > 1, 'Multiple Contacts', 'Single Contact')")
+        .parse("iif(patient.telecom.count() > 1, 'Multiple Contacts', 'Single Contact')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -267,7 +276,7 @@ fn test_iif_nested_conditions() {
     let context = create_iif_test_context();
 
     // Test nested iif calls
-    let expr = parser.parse("''.iif(patient.active, ''.iif(patient.name.exists(), 'Active with Name', 'Active without Name'), 'Inactive')").unwrap();
+    let expr = parser.parse("iif(patient.active, iif(patient.name.exists(), 'Active with Name', 'Active without Name'), 'Inactive')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "Active with Name");
@@ -276,7 +285,7 @@ fn test_iif_nested_conditions() {
     }
 
     // Test nested iif with false outer condition
-    let expr = parser.parse("''.iif(testValues.falseBool, ''.iif(testValues.trueBool, 'Inner True', 'Inner False'), 'Outer False')").unwrap();
+    let expr = parser.parse("iif(testValues.falseBool, iif(testValues.trueBool, 'Inner True', 'Inner False'), 'Outer False')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
         assert_eq!(s, "Outer False");
@@ -293,7 +302,7 @@ fn test_iif_with_empty_and_null_values() {
 
     // Test with null value as criterion (should be falsy)
     let expr = parser
-        .parse("''.iif(testValues.nullValue, results.success, results.failure)")
+        .parse("iif(testValues.nullValue, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -304,7 +313,7 @@ fn test_iif_with_empty_and_null_values() {
 
     // Test with non-existent field as criterion (should be falsy/empty)
     let expr = parser
-        .parse("''.iif(patient.nonExistentField, results.success, results.failure)")
+        .parse("iif(patient.nonExistentField, results.success, results.failure)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -322,21 +331,21 @@ fn test_iif_return_types() {
 
     // Test returning boolean
     let expr = parser
-        .parse("''.iif(testValues.trueBool, testValues.trueBool, testValues.falseBool)")
+        .parse("iif(testValues.trueBool, testValues.trueBool, testValues.falseBool)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     // Test returning integer
     let expr = parser
-        .parse("''.iif(testValues.trueBool, testValues.nonZeroInt, testValues.zeroInt)")
+        .parse("iif(testValues.trueBool, testValues.nonZeroInt, testValues.zeroInt)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Integer(42)));
 
     // Test returning object
     let expr = parser
-        .parse("''.iif(testValues.trueBool, patient, observation)")
+        .parse("iif(testValues.trueBool, patient, observation)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Object(obj) = result {
@@ -358,21 +367,21 @@ fn test_iif_chained_with_other_functions() {
 
     // Test chaining iif result with count()
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.numbers, results.strings).count()")
+        .parse("iif(testValues.trueBool, results.numbers, results.strings).count()")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Integer(3)));
 
     // Test chaining iif result with first()
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.numbers, results.strings).first()")
+        .parse("iif(testValues.trueBool, results.numbers, results.strings).first()")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Integer(1)));
 
     // Test chaining iif result with string function
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.success, results.failure).upper()")
+        .parse("iif(testValues.trueBool, results.success, results.failure).upper()")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -389,7 +398,7 @@ fn test_iif_parameter_validation() {
     let context = create_iif_test_context();
 
     // Test with too few parameters (only 1 parameter)
-    let expr = parser.parse("''.iif(testValues.trueBool)").unwrap();
+    let expr = parser.parse("iif(testValues.trueBool)").unwrap();
     let result = evaluator.evaluate(&expr, &context);
     assert!(result.is_err());
     assert!(result
@@ -399,7 +408,7 @@ fn test_iif_parameter_validation() {
 
     // Test with too many parameters (4 parameters)
     let expr = parser
-        .parse("''.iif(testValues.trueBool, results.success, results.failure, 'extra')")
+        .parse("iif(testValues.trueBool, results.success, results.failure, 'extra')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context);
     assert!(result.is_err());
@@ -417,7 +426,7 @@ fn test_iif_real_world_scenarios() {
 
     // Scenario 1: Simple contact method selection (simplified without where clause)
     let expr = parser
-        .parse("''.iif(patient.telecom.exists(), patient.telecom[0].value, 'No contact')")
+        .parse("iif(patient.telecom.exists(), patient.telecom[0].value, 'No contact')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -428,7 +437,7 @@ fn test_iif_real_world_scenarios() {
 
     // Scenario 2: Age-based categorization (simulated)
     let expr = parser
-        .parse("''.iif(patient.birthDate = '1990-01-01', 'Adult', 'Other')")
+        .parse("iif(patient.birthDate = '1990-01-01', 'Adult', 'Other')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {
@@ -439,7 +448,7 @@ fn test_iif_real_world_scenarios() {
 
     // Scenario 3: Status-based result interpretation
     let expr = parser
-        .parse("''.iif(observation.status = 'final', observation.valueQuantity.value, 'Pending')")
+        .parse("iif(observation.status = 'final', observation.valueQuantity.value, 'Pending')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Integer(120)));

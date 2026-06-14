@@ -216,6 +216,15 @@ mod quantity_tests {
         } else {
             panic!("Expected Quantity result, got: {result:?}");
         }
+
+        let expr = parser.parse("2.0 'cm' * 2.0 'm'").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 0.04);
+            assert_eq!(unit.as_deref(), Some("m2"));
+        } else {
+            panic!("Expected Quantity result, got: {result:?}");
+        }
     }
 
     #[test]
@@ -234,13 +243,24 @@ mod quantity_tests {
             panic!("Expected Quantity result, got: {result:?}");
         }
 
-        // Same units divide to dimensionless number
+        // Same units divide to a dimensionless Quantity with unit "1"
+        // per the UCUM spec, which FHIRPath inherits.
         let expr = parser.parse("10'kg' / 5'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        if let FhirPathValue::Number(ratio) = result {
-            assert_eq!(ratio, 2.0);
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("1"));
         } else {
-            panic!("Expected Number result, got: {result:?}");
+            panic!("Expected Quantity{{1.0, '1'}}, got: {result:?}");
+        }
+
+        let expr = parser.parse("4.0 'g' / 2.0 'm'").unwrap();
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("g/m"));
+        } else {
+            panic!("Expected Quantity result, got: {result:?}");
         }
 
         // Division by zero

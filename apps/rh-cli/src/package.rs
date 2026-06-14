@@ -1,6 +1,32 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use serde::Serialize;
 use std::path::PathBuf;
+use tracing::info;
+
+use crate::output::{Envelope, OutputContext, OutputFormat};
+
+#[derive(Serialize)]
+struct InitResult {
+    dir: String,
+    files_created: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct LockCheckResult {
+    pinned: Vec<String>,
+    unpinned: Vec<String>,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
 
 #[derive(Subcommand)]
 pub enum PackageCommands {
@@ -104,7 +130,7 @@ pub struct PackArgs {
     pub out: Option<PathBuf>,
 }
 
-pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
+pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         PackageCommands::Init(args) => {
             let dir = args
@@ -122,7 +148,7 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
                                 &args.canonical
                             )
                         })?;
-                    println!("  Name derived from canonical: {derived}");
+                    info!("Name derived from canonical: {derived}");
                     derived
                 }
             };
@@ -139,19 +165,36 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
                 status: args.status,
             };
             let created = rh_packager::init_package(&dir, opts)?;
-            for path in &created {
-                println!("  Created: {}", path.display());
+            if ctx.is_json() {
+                let result = InitResult {
+                    dir: dir.display().to_string(),
+                    files_created: created
+                        .iter()
+                        .map(|path| path.display().to_string())
+                        .collect(),
+                };
+                print_envelope(ctx, &Envelope::ok(result, "package init"))?;
+            } else {
+                for path in &created {
+                    println!("  Created: {}", path.display());
+                }
+                println!("\nPackage initialised at {}", dir.display());
+                println!(
+                    "Next: edit packager.toml, then run `rh package build {}`",
+                    dir.display()
+                );
             }
-            println!("\nPackage initialised at {}", dir.display());
-            println!(
-                "Next: edit packager.toml, then run `rh package build {}`",
-                dir.display()
-            );
             Ok(())
         }
         PackageCommands::Build(args) => {
             let output_dir = args.out.unwrap_or_else(|| args.dir.join("output"));
             rh_packager::build(&args.dir, &output_dir)?;
+            if ctx.is_json() {
+                print_envelope(
+                    ctx,
+                    &Envelope::ok(serde_json::json!({ "ok": true }), "package build"),
+                )?;
+            }
             Ok(())
         }
         PackageCommands::Lock(args) => {
@@ -161,31 +204,59 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
         }
         PackageCommands::LockCheck(args) => {
             let report = rh_packager::check_lock(&args.dir)?;
+            if ctx.is_json() {
+                let result = LockCheckResult {
+                    pinned: report
+                        .pinned
+                        .iter()
+                        .map(|r| {
+                            format!(
+                                "{}|{} (in: {}, field: {})",
+                                r.url,
+                                r.pinned_version.as_deref().unwrap_or("?"),
+                                r.resource_key,
+                                r.field_path
+                            )
+                        })
+                        .collect(),
+                    unpinned: report
+                        .unpinned
+                        .iter()
+                        .map(|r| {
+                            format!(
+                                "{} (in: {}, field: {})",
+                                r.url, r.resource_key, r.field_path
+                            )
+                        })
+                        .collect(),
+                };
+                print_envelope(ctx, &Envelope::ok(result, "package lock-check"))?;
+            } else {
+                println!("PINNED ({}):", report.pinned.len());
+                for r in &report.pinned {
+                    println!(
+                        "  {}|{} (in: {}, field: {})",
+                        r.url,
+                        r.pinned_version.as_deref().unwrap_or("?"),
+                        r.resource_key,
+                        r.field_path
+                    );
+                }
 
-            println!("PINNED ({}):", report.pinned.len());
-            for r in &report.pinned {
-                println!(
-                    "  {}|{} (in: {}, field: {})",
-                    r.url,
-                    r.pinned_version.as_deref().unwrap_or("?"),
-                    r.resource_key,
-                    r.field_path
-                );
-            }
+                println!("\nUNPINNED ({}):", report.unpinned.len());
+                for r in &report.unpinned {
+                    println!(
+                        "  {} (in: {}, field: {})",
+                        r.url, r.resource_key, r.field_path
+                    );
+                }
 
-            println!("\nUNPINNED ({}):", report.unpinned.len());
-            for r in &report.unpinned {
-                println!(
-                    "  {} (in: {}, field: {})",
-                    r.url, r.resource_key, r.field_path
-                );
-            }
-
-            if !report.unpinned.is_empty() {
-                println!(
-                    "\nRun `rh package lock {}` to pin all unversioned references.",
-                    args.dir.display()
-                );
+                if !report.unpinned.is_empty() {
+                    println!(
+                        "\nRun `rh package lock {}` to pin all unversioned references.",
+                        args.dir.display()
+                    );
+                }
             }
             Ok(())
         }
@@ -195,7 +266,17 @@ pub async fn handle_command(cmd: PackageCommands) -> Result<()> {
         }
         PackageCommands::Pack(args) => {
             let tgz = rh_packager::pack_dir(&args.dir)?;
-            println!("Packed: {}", tgz.display());
+            if ctx.is_json() {
+                print_envelope(
+                    ctx,
+                    &Envelope::ok(
+                        serde_json::json!({ "path": tgz.to_string_lossy() }),
+                        "package pack",
+                    ),
+                )?;
+            } else {
+                println!("Packed: {}", tgz.display());
+            }
             Ok(())
         }
     }

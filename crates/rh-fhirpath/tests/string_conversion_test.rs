@@ -42,9 +42,11 @@ fn test_to_string_function() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::String("3.14".to_string()));
 
+    // Decimal preserves the decimal point per FHIRPath spec, so 42.0
+    // stringifies as "42.0" — distinguishing Decimal from Integer.
     let expr = parser.parse("42.0.toString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::String("42".to_string()));
+    assert_eq!(result, FhirPathValue::String("42.0".to_string()));
 
     // Test Date to String
     let expr = parser.parse("@2023-01-15.toString()").unwrap();
@@ -166,10 +168,11 @@ fn test_string_conversion_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // Test number formatting edge cases
+    // Test number formatting edge cases — Decimal preserves the decimal
+    // point so 0.0 → "0.0", distinguishing it from the Integer 0.
     let expr = parser.parse("0.0.toString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::String("0".to_string()));
+    assert_eq!(result, FhirPathValue::String("0.0".to_string()));
 
     let expr = parser.parse("123.450.toString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
@@ -191,7 +194,8 @@ fn test_string_conversion_comprehensive() {
         ("42L", "42"),
         ("3.14", "3.14"),
         ("0", "0"),
-        ("0.0", "0"),
+        // Decimal preserves the decimal point per FHIRPath spec.
+        ("0.0", "0.0"),
         ("@2023-01-15", "2023-01-15"),
         ("@2023-01-15T10:30:45", "2023-01-15T10:30:45"),
         ("@T10:30:45", "10:30:45"),

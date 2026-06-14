@@ -7,6 +7,7 @@ pub struct StructureDefinition {
     pub name: String,
     #[serde(rename = "type")]
     pub type_: String,
+    #[serde(rename = "baseDefinition")]
     pub base_definition: Option<String>,
     pub differential: Option<Differential>,
     pub snapshot: Option<Snapshot>,

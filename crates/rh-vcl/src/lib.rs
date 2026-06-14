@@ -20,6 +20,8 @@ pub mod error;
 pub mod explainer;
 pub mod fhir;
 pub mod parser;
+#[cfg(feature = "repl")]
+pub mod repl;
 pub mod translator;
 
 #[cfg(target_arch = "wasm32")]

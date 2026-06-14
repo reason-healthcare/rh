@@ -199,7 +199,7 @@ fn parse_vs_from_clause(
         } else if inp.fragment().starts_with("valueset") {
             let (inp, _) = tag("valueset")(inp)?;
             let (inp, _) = ws(inp)?;
-            let (inp, vs) = alt((quoted_string, identifier))(inp)?;
+            let (inp, vs) = alt((quoted_string, name_or_url))(inp)?;
             from_vs.push(vs);
             remaining = inp;
         } else if inp.fragment().starts_with("and") {
@@ -418,7 +418,7 @@ fn parse_binding_rule_inner(input: Span<'_>) -> IResult<Span<'_>, BindingRule> {
     let (input, _) = ws(input)?;
     let (input, _) = tag("from")(input)?;
     let (input, _) = ws(input)?;
-    let (input, vs) = alt((quoted_string, identifier))(input)?;
+    let (input, vs) = alt((quoted_string, name_or_url))(input)?;
     let (input, _) = ws(input)?;
     // Optional strength in parentheses: (required), (extensible), etc.
     let (input, strength) = opt(parse_binding_strength)(input)?;
@@ -481,7 +481,7 @@ fn parse_contains_rule_inner(input: Span<'_>) -> IResult<Span<'_>, ContainsRule>
 }
 
 fn parse_contains_item(input: Span<'_>) -> IResult<Span<'_>, ContainsItem> {
-    let (input, name) = identifier(input)?;
+    let (input, name) = name_or_url(input)?;
     let (input, _) = ws(input)?;
 
     // Optional "named X"

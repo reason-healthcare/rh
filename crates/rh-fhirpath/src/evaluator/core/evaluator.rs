@@ -211,6 +211,17 @@ impl FhirPathEvaluator {
                     "is" => self.evaluate_is_function(target, parameters, context),
                     "as" => self.evaluate_as_function(target, parameters, context),
                     "trace" => self.evaluate_trace_function(target, parameters, context),
+                    "aggregate" => self.evaluate_aggregate_function(target, parameters, context),
+                    "iif" => self.evaluate_iif_lazy(target, parameters, context),
+                    "sort" if !parameters.is_empty() => {
+                        self.evaluate_sort_by_expression(target, parameters, context)
+                    }
+                    "exists" if !parameters.is_empty() => {
+                        self.evaluate_exists_with_criterion(target, parameters, context)
+                    }
+                    "all" if !parameters.is_empty() => {
+                        self.evaluate_all_with_criterion(target, parameters, context)
+                    }
                     _ => {
                         // Regular functions: evaluate parameters first
                         let param_values: Result<Vec<_>, _> = parameters
@@ -233,9 +244,13 @@ impl FhirPathEvaluator {
             Invocation::Index => Err(FhirPathError::EvaluationError {
                 message: "$index not implemented yet".to_string(),
             }),
-            Invocation::Total => Err(FhirPathError::EvaluationError {
-                message: "$total not implemented yet".to_string(),
-            }),
+            Invocation::Total => {
+                if let Some(total) = &context.total_value {
+                    Ok(total.clone())
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
         }
     }
 
@@ -274,24 +289,30 @@ impl FhirPathEvaluator {
                 } else {
                     // Check for FHIR choice type polymorphic access (e.g., value[x])
                     if let Some(obj_map) = obj.as_object() {
-                        // Look for fields that start with the member name (e.g., "value" matches "valueBoolean")
                         for (key, value) in obj_map {
-                            if key.starts_with(member) && key.len() > member.len() {
-                                // Check if the next character after the member name is uppercase
-                                // This ensures "value" matches "valueBoolean" but not "valueFoo" with lowercase
-                                if let Some(next_char) = key.chars().nth(member.len()) {
-                                    if next_char.is_uppercase() {
-                                        // Apply metadata typing for choice types too
-                                        if let Some(ref rt) = resource_type {
-                                            return Ok(
-                                                crate::evaluator::metadata::apply_fhir_typing(
-                                                    value, rt, key,
-                                                ),
-                                            );
-                                        }
-                                        return Ok(FhirPathValue::from_json(value));
-                                    }
+                            // "value" matches "valueBoolean" / "valueQuantity" etc.,
+                            // but not "valueFoo" with lowercase next char.
+                            if key.starts_with(member)
+                                && key.len() > member.len()
+                                && key
+                                    .chars()
+                                    .nth(member.len())
+                                    .is_some_and(|c| c.is_uppercase())
+                            {
+                                let suffix = &key[member.len()..];
+                                // For complex-type suffixes (Quantity, etc.) build the
+                                // matching FhirPathValue variant directly so downstream
+                                // `is(Quantity)`/`as(Quantity)`/`.unit` work. For
+                                // primitive suffixes the metadata-typing path handles it.
+                                if let Some(typed) = construct_typed_choice_value(suffix, value) {
+                                    return Ok(typed);
                                 }
+                                if let Some(ref rt) = resource_type {
+                                    return Ok(crate::evaluator::metadata::apply_fhir_typing(
+                                        value, rt, key,
+                                    ));
+                                }
+                                return Ok(FhirPathValue::from_json(value));
                             }
                         }
                     }
@@ -323,6 +344,17 @@ impl FhirPathEvaluator {
                     Ok(FhirPathValue::Collection(result_items))
                 }
             }
+            // `Quantity.value` / `.unit` member access per FHIR data model —
+            // matches what the suite expects after choice-type access
+            // promotes `valueQuantity` to a typed Quantity.
+            FhirPathValue::Quantity { value, unit } => match member {
+                "value" => Ok(FhirPathValue::Number(*value)),
+                "unit" => Ok(unit
+                    .as_ref()
+                    .map(|u| FhirPathValue::String(u.clone()))
+                    .unwrap_or(FhirPathValue::Empty)),
+                _ => Ok(FhirPathValue::Empty),
+            },
             _ => Ok(FhirPathValue::Empty),
         }
     }
@@ -396,6 +428,191 @@ impl FhirPathEvaluator {
                 }
             }
         }
+    }
+
+    /// iif(criterion, true-result[, otherwise-result]) with lazy evaluation.
+    /// Evaluates criterion first; only evaluates the selected branch.
+    fn evaluate_iif_lazy(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() < 2 || parameters.len() > 3 {
+            return Err(FhirPathError::FunctionError {
+                message: "iif() requires 2 or 3 parameters".to_string(),
+            });
+        }
+
+        // iif() on a multi-element collection is an error per FHIRPath spec.
+        // Single-element collections are unwrapped; empty collections become Empty.
+        // However, non-collection values (objects, booleans, etc.) are fine.
+        if let FhirPathValue::Collection(items) = target {
+            if items.len() > 1 {
+                return Err(FhirPathError::EvaluationError {
+                    message: "iif() can only be called on a singleton or empty collection"
+                        .to_string(),
+                });
+            }
+        }
+
+        // Set the receiver as the evaluation focus (both $this and current).
+        // This matches FHIRPath semantics: x.iif(criterion, t, f) evaluates
+        // criterion/t/f with x as the focus. When iif has no explicit receiver
+        // the target is the root context object, so focus = root (correct).
+        let iif_ctx = context.with_this_value(target.clone());
+        let criterion_val = self.evaluate_expression(&parameters[0], &iif_ctx)?;
+
+        let effective = match &criterion_val {
+            FhirPathValue::Collection(items) if items.len() == 1 => items[0].clone(),
+            FhirPathValue::Collection(items) if items.is_empty() => FhirPathValue::Empty,
+            FhirPathValue::Collection(_) => {
+                return Err(FhirPathError::EvaluationError {
+                    message:
+                        "iif() criterion must be a single Boolean; got a multi-item collection"
+                            .to_string(),
+                });
+            }
+            other => other.clone(),
+        };
+
+        let is_truthy = match effective {
+            FhirPathValue::Boolean(b) => b,
+            FhirPathValue::TypedBoolean { value, .. } => value,
+            FhirPathValue::Empty => false,
+            other => {
+                return Err(FhirPathError::TypeError {
+                    message: format!("iif() criterion must be Boolean, got {other:?}"),
+                });
+            }
+        };
+
+        // Lazy: only evaluate the selected branch.
+        if is_truthy {
+            self.evaluate_expression(&parameters[1], &iif_ctx)
+        } else if let Some(otherwise) = parameters.get(2) {
+            self.evaluate_expression(otherwise, &iif_ctx)
+        } else {
+            Ok(FhirPathValue::Empty)
+        }
+    }
+
+    /// sort(key-expression...) — sort by one or more key expressions.
+    /// A key expression wrapped in unary `-` means sort DESCENDING by the inner
+    /// expression (rather than actually negating the value). This allows
+    /// `sort(-$this)` for descending numeric sorts and `sort(-family)` for
+    /// descending string sorts without raising a type error.
+    fn evaluate_sort_by_expression(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        let items: Vec<FhirPathValue> = match target {
+            FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(v) => v.clone(),
+            other => return Ok(other.clone()),
+        };
+
+        // For each key expression, determine direction and the inner expression.
+        let key_specs: Vec<(bool, &Expression)> = parameters
+            .iter()
+            .map(|p| match p {
+                Expression::Polarity {
+                    operator: PolarityOperator::Minus,
+                    operand,
+                } => (true, operand.as_ref()),
+                other => (false, other),
+            })
+            .collect();
+
+        // Build (item, key_tuple) pairs
+        let mut keyed: Vec<(FhirPathValue, Vec<(bool, FhirPathValue)>)> = Vec::new();
+        for item in &items {
+            let item_ctx = context.with_this_value(item.clone());
+            let mut keys = Vec::new();
+            for (descending, expr) in &key_specs {
+                let key = self.evaluate_expression(expr, &item_ctx)?;
+                keys.push((*descending, key));
+            }
+            keyed.push((item.clone(), keys));
+        }
+
+        keyed.sort_by(|(_, ka), (_, kb)| {
+            for ((desc, a), (_, b)) in ka.iter().zip(kb.iter()) {
+                let ord =
+                    crate::evaluator::functions::collection_functions::compare_for_sort_pub(a, b);
+                if ord != std::cmp::Ordering::Equal {
+                    return if *desc { ord.reverse() } else { ord };
+                }
+            }
+            std::cmp::Ordering::Equal
+        });
+
+        let sorted: Vec<FhirPathValue> = keyed.into_iter().map(|(item, _)| item).collect();
+        if sorted.is_empty() {
+            Ok(FhirPathValue::Empty)
+        } else if sorted.len() == 1 {
+            Ok(sorted.into_iter().next().unwrap())
+        } else {
+            Ok(FhirPathValue::Collection(sorted))
+        }
+    }
+
+    /// exists(criterion) — returns true if any element satisfies the criterion.
+    fn evaluate_exists_with_criterion(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "exists() accepts at most one parameter (criterion)".to_string(),
+            });
+        }
+        let criterion = &parameters[0];
+        let items: Vec<&FhirPathValue> = match target {
+            FhirPathValue::Collection(items) => items.iter().collect(),
+            FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(false)),
+            v => vec![v],
+        };
+        for item in items {
+            let item_ctx = context.with_this_value(item.clone());
+            let result = self.evaluate_expression(criterion, &item_ctx)?;
+            if result.is_truthy() {
+                return Ok(FhirPathValue::Boolean(true));
+            }
+        }
+        Ok(FhirPathValue::Boolean(false))
+    }
+
+    /// all(criterion) — returns true if every element satisfies the criterion.
+    fn evaluate_all_with_criterion(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.len() != 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "all() requires exactly one parameter (criterion)".to_string(),
+            });
+        }
+        let criterion = &parameters[0];
+        let items: Vec<&FhirPathValue> = match target {
+            FhirPathValue::Collection(items) => items.iter().collect(),
+            FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(true)),
+            v => vec![v],
+        };
+        for item in items {
+            let item_ctx = context.with_this_value(item.clone());
+            let result = self.evaluate_expression(criterion, &item_ctx)?;
+            if !result.is_truthy() {
+                return Ok(FhirPathValue::Boolean(false));
+            }
+        }
+        Ok(FhirPathValue::Boolean(true))
     }
 
     /// Evaluate select function that transforms collection items using projection expressions
@@ -567,8 +784,10 @@ impl FhirPathEvaluator {
             }
         }
 
-        // Add the initial collection to results
-        all_results.extend(current_collection.clone());
+        // Per FHIRPath spec, repeat() returns only the projected items (not the
+        // initial input). We keep the initial collection in `current_collection`
+        // to start projecting, but `all_results` starts empty.
+        let mut seen: Vec<FhirPathValue> = current_collection.clone();
 
         loop {
             let mut next_collection = Vec::new();
@@ -584,25 +803,20 @@ impl FhirPathEvaluator {
                 match projection_result {
                     FhirPathValue::Collection(items) => {
                         for new_item in items {
-                            // Only add items that haven't been seen before
-                            if !all_results
+                            if !seen
                                 .iter()
-                                .any(|existing| FhirPathValue::equals_static(existing, &new_item))
+                                .any(|e| FhirPathValue::equals_static(e, &new_item))
                             {
+                                seen.push(new_item.clone());
                                 next_collection.push(new_item.clone());
                                 all_results.push(new_item);
                             }
                         }
                     }
-                    FhirPathValue::Empty => {
-                        // Don't add empty values
-                    }
+                    FhirPathValue::Empty => {}
                     value => {
-                        // Only add items that haven't been seen before
-                        if !all_results
-                            .iter()
-                            .any(|existing| FhirPathValue::equals_static(existing, &value))
-                        {
+                        if !seen.iter().any(|e| FhirPathValue::equals_static(e, &value)) {
+                            seen.push(value.clone());
                             next_collection.push(value.clone());
                             all_results.push(value);
                         }
@@ -641,29 +855,10 @@ impl FhirPathEvaluator {
             });
         }
 
-        // Extract type name from the parameter expression
-        let type_name = match &parameters[0] {
-            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
-            _ => {
-                // Try to evaluate the parameter and extract the type name
-                let param_result = self.evaluate_expression(&parameters[0], context)?;
-                match param_result {
-                    FhirPathValue::String(type_str) => type_str,
-                    _ => {
-                        return Err(FhirPathError::FunctionError {
-                            message: "ofType() function requires a type specifier as parameter"
-                                .to_string(),
-                        });
-                    }
-                }
-            }
-        };
-
-        // Create a simple TypeSpecifier from the type name
+        let type_name = self.resolve_type_argument(&parameters[0], context, "ofType")?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
-
         TypeEvaluator::evaluate_of_type(target, &type_specifier)
     }
 
@@ -679,30 +874,10 @@ impl FhirPathEvaluator {
                     .to_string(),
             });
         }
-
-        // Extract type name from the parameter expression
-        let type_name = match &parameters[0] {
-            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
-            _ => {
-                // Try to evaluate the parameter and extract the type name
-                let param_result = self.evaluate_expression(&parameters[0], context)?;
-                match param_result {
-                    FhirPathValue::String(type_str) => type_str,
-                    _ => {
-                        return Err(FhirPathError::FunctionError {
-                            message: "is() function requires a type specifier as parameter"
-                                .to_string(),
-                        });
-                    }
-                }
-            }
-        };
-
-        // Create a simple TypeSpecifier from the type name
+        let type_name = self.resolve_type_argument(&parameters[0], context, "is")?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
-
         TypeEvaluator::evaluate_type_operation(target, &TypeOperator::Is, &type_specifier)
     }
 
@@ -718,37 +893,181 @@ impl FhirPathEvaluator {
                     .to_string(),
             });
         }
-
-        // Extract type name from the parameter expression
-        let type_name = match &parameters[0] {
-            Expression::Term(Term::Invocation(Invocation::Member(name))) => name.clone(),
-            _ => {
-                // Try to evaluate the parameter and extract the type name
-                let param_result = self.evaluate_expression(&parameters[0], context)?;
-                match param_result {
-                    FhirPathValue::String(type_str) => type_str,
-                    _ => {
-                        return Err(FhirPathError::FunctionError {
-                            message: "as() function requires a type specifier as parameter"
-                                .to_string(),
-                        });
-                    }
-                }
-            }
-        };
-
-        // Create a simple TypeSpecifier from the type name
+        let type_name = self.resolve_type_argument(&parameters[0], context, "as")?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
-
         TypeEvaluator::evaluate_type_operation(target, &TypeOperator::As, &type_specifier)
+    }
+
+    /// Resolve the type-name argument for `is()` / `as()` / `ofType()`.
+    /// Accepts a simple identifier, a qualified chain like `System.Boolean`,
+    /// or a String literal.
+    fn resolve_type_argument(
+        &self,
+        param: &Expression,
+        context: &EvaluationContext,
+        fn_name: &str,
+    ) -> FhirPathResult<String> {
+        if let Some(qualified) = extract_qualified_type_name(param) {
+            return Ok(qualified);
+        }
+        match self.evaluate_expression(param, context)? {
+            FhirPathValue::String(s) => Ok(s),
+            _ => Err(FhirPathError::FunctionError {
+                message: format!("{fn_name}() function requires a type specifier as parameter"),
+            }),
+        }
+    }
+
+    /// `aggregate(expression [, init])` — fold a collection using `$this`
+    /// (current item) and `$total` (accumulator).
+    fn evaluate_aggregate_function(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.is_empty() || parameters.len() > 2 {
+            return Err(FhirPathError::FunctionError {
+                message: "aggregate() requires 1–2 parameters: expression [, init]".to_string(),
+            });
+        }
+        let expr = &parameters[0];
+        let init = if parameters.len() == 2 {
+            self.evaluate_expression(&parameters[1], context)?
+        } else {
+            FhirPathValue::Empty
+        };
+
+        let items: Vec<FhirPathValue> = match target {
+            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Empty => return Ok(init),
+            other => vec![other.clone()],
+        };
+
+        let mut total = init;
+        for item in items {
+            let iter_ctx = context.with_aggregate_vars(item, total);
+            total = self.evaluate_expression(expr, &iter_ctx)?;
+        }
+        Ok(total)
     }
 }
 
 impl Default for FhirPathEvaluator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Extract a qualified type name (e.g. "System.Boolean", "FHIR.Patient") from
+/// the parameter expression of `is()` / `as()` / `ofType()`.
+///
+/// Matches a simple member chain like `System.Boolean`, `FHIR.Patient`, or
+/// `FHIR.\`Patient\`` (delimited identifier). Returns the joined name —
+/// "System.Boolean" — which downstream `TypeEvaluator::value_matches_type`
+/// can compare case-insensitively.
+fn extract_qualified_type_name(expr: &Expression) -> Option<String> {
+    let mut parts = Vec::new();
+    collect_member_chain(expr, &mut parts)?;
+    Some(parts.join("."))
+}
+
+fn collect_member_chain(expr: &Expression, out: &mut Vec<String>) -> Option<()> {
+    match expr {
+        Expression::Term(Term::Invocation(Invocation::Member(name))) => {
+            out.push(name.clone());
+            Some(())
+        }
+        Expression::Invocation { left, invocation } => {
+            collect_member_chain(left, out)?;
+            match invocation {
+                Invocation::Member(name) => {
+                    out.push(name.clone());
+                    Some(())
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Build a typed `FhirPathValue` for a FHIR choice-type field based on the
+/// type suffix of its JSON key (e.g. `valueQuantity` → suffix "Quantity").
+///
+/// Returns `Some(typed)` for suffixes that map onto a concrete FhirPathValue
+/// variant and whose JSON shape matches; `None` to let the caller fall back
+/// to metadata-driven typing.
+fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Option<FhirPathValue> {
+    use serde_json::Value;
+    match suffix {
+        "Quantity" | "Age" | "Distance" | "Duration" | "Count" | "Money" => {
+            let obj = value.as_object()?;
+            let num = obj.get("value")?.as_f64()?;
+            let unit = obj
+                .get("unit")
+                .and_then(Value::as_str)
+                .or_else(|| obj.get("code").and_then(Value::as_str))
+                .map(str::to_string);
+            Some(FhirPathValue::Quantity { value: num, unit })
+        }
+        "Boolean" => value.as_bool().map(|b| FhirPathValue::TypedBoolean {
+            value: b,
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean,
+        }),
+        "Integer" | "UnsignedInt" | "PositiveInt" => value.as_i64().map(FhirPathValue::Integer),
+        "Decimal" => value.as_f64().map(FhirPathValue::Number),
+        "String" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::String,
+        }),
+        "Code" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Code,
+        }),
+        "Uri" | "Uuid" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Uri,
+        }),
+        "Url" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Url,
+        }),
+        "Canonical" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Canonical,
+        }),
+        "Oid" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Oid,
+        }),
+        "Id" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Id,
+        }),
+        "Markdown" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Markdown,
+        }),
+        "Base64Binary" => value.as_str().map(|s| FhirPathValue::TypedString {
+            value: s.to_string(),
+            fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Base64Binary,
+        }),
+        "Date" => value.as_str().map(|s| FhirPathValue::Date(s.to_string())),
+        "DateTime" | "Instant" => value.as_str().map(|s| FhirPathValue::TypedDateTime {
+            value: s.to_string(),
+            fhir_type: if suffix == "Instant" {
+                rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Instant
+            } else {
+                rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::DateTime
+            },
+        }),
+        "Time" => value.as_str().map(|s| FhirPathValue::Time(s.to_string())),
+        // Complex types not yet modelled: CodeableConcept, Coding, Reference,
+        // Identifier, etc. Caller falls back to metadata/JSON-object handling.
+        _ => None,
     }
 }
 

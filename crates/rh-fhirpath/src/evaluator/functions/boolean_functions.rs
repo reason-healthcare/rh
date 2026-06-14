@@ -40,8 +40,9 @@ fn not_function(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         // Boolean values: negate them
         FhirPathValue::Boolean(b) => Ok(FhirPathValue::Boolean(!b)),
 
-        // All other types return empty (cannot negate non-boolean values)
-        _ => Ok(FhirPathValue::Empty),
+        // Non-boolean scalars: per FHIRPath any existing (non-empty, non-null)
+        // value is truthy, so not() returns false.
+        _ => Ok(FhirPathValue::Boolean(false)),
     }
 }
 
@@ -86,10 +87,11 @@ mod tests {
 
     #[test]
     fn test_not_function_with_non_boolean() {
+        // Non-boolean scalars are truthy; not(truthy) = false
         let result = not_function(&FhirPathValue::String("hello".to_string())).unwrap();
-        assert_eq!(result, FhirPathValue::Empty);
+        assert_eq!(result, FhirPathValue::Boolean(false));
 
         let result = not_function(&FhirPathValue::Integer(42)).unwrap();
-        assert_eq!(result, FhirPathValue::Empty);
+        assert_eq!(result, FhirPathValue::Boolean(false));
     }
 }

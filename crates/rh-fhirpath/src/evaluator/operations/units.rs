@@ -89,6 +89,18 @@ impl UnitConverter {
                 from_base_factor: 1.0 / 453.592,
             },
         );
+        // UCUM avoirdupois pound and common display aliases
+        for alias in ["[lb_av]", "lbs", "lbs."] {
+            unit_mappings.insert(
+                alias.to_string(),
+                UnitMapping {
+                    quantity_type: QuantityType::Mass,
+                    base_unit: "g".to_string(),
+                    to_base_factor: 453.592,
+                    from_base_factor: 1.0 / 453.592,
+                },
+            );
+        }
 
         // Length units (base: meter)
         unit_mappings.insert(
@@ -239,24 +251,43 @@ impl UnitConverter {
                 from_base_factor: 1.0 / 604800.0,
             },
         );
-        unit_mappings.insert(
-            "mo".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 2629746.0, // Average month in seconds
-                from_base_factor: 1.0 / 2629746.0,
-            },
-        );
-        unit_mappings.insert(
-            "a".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 31556952.0, // Average year in seconds
-                from_base_factor: 1.0 / 31556952.0,
-            },
-        );
+        // UCUM 'mo' (mean month = 30.44 days) and 'a' (mean year = 365.25 days)
+        // are intentionally NOT registered here. FHIRPath treats them as
+        // incompatible with the calendar durations 'month'/'year' — comparing
+        // `1 'mo' = 1 month` is undefined (empty) per the HL7 conformance suite.
+
+        // FHIRPath calendar-duration names — same factors as their UCUM
+        // counterparts so `7 days = 1 week`, `7 days = 1 'wk'`, etc. work.
+        let cal_pairs: &[(&str, f64)] = &[
+            ("millisecond", 0.001),
+            ("milliseconds", 0.001),
+            ("second", 1.0),
+            ("seconds", 1.0),
+            ("minute", 60.0),
+            ("minutes", 60.0),
+            ("hour", 3600.0),
+            ("hours", 3600.0),
+            ("day", 86400.0),
+            ("days", 86400.0),
+            ("week", 604800.0),
+            ("weeks", 604800.0),
+            // month/year use UCUM mean values for comparison purposes only.
+            ("month", 2629746.0),
+            ("months", 2629746.0),
+            ("year", 31556952.0),
+            ("years", 31556952.0),
+        ];
+        for (name, factor) in cal_pairs {
+            unit_mappings.insert(
+                name.to_string(),
+                UnitMapping {
+                    quantity_type: QuantityType::Time,
+                    base_unit: "s".to_string(),
+                    to_base_factor: *factor,
+                    from_base_factor: 1.0 / factor,
+                },
+            );
+        }
 
         // Pressure units (base: Pascal)
         unit_mappings.insert(
@@ -520,6 +551,23 @@ impl UnitConverter {
         }
     }
 
+    pub fn multiply_quantities(
+        &self,
+        left_value: f64,
+        left_unit: &Option<String>,
+        right_value: f64,
+        right_unit: &Option<String>,
+    ) -> FhirPathResult<FhirPathValue> {
+        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
+        let (right_base, right_base_unit) = self.to_base_unit(right_value, right_unit)?;
+
+        let unit = compose_product_unit(&left_base_unit, &right_base_unit);
+        Ok(FhirPathValue::Quantity {
+            value: left_base * right_base,
+            unit,
+        })
+    }
+
     /// Divide a quantity by a scalar
     pub fn divide_by_scalar(
         &self,
@@ -584,22 +632,23 @@ impl UnitConverter {
             });
         }
 
-        if !self.are_units_compatible(left_unit, right_unit) {
-            return Err(FhirPathError::EvaluationError {
-                message: format!(
-                    "Cannot divide quantities with incompatible units: {left_unit:?} and {right_unit:?}"
-                ),
+        // Convert both to base units
+        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
+        let (right_base, right_base_unit) = self.to_base_unit(right_value, right_unit)?;
+
+        let result = left_base / right_base;
+
+        if self.are_units_compatible(&left_base_unit, &right_base_unit) {
+            return Ok(FhirPathValue::Quantity {
+                value: result,
+                unit: Some("1".to_string()),
             });
         }
 
-        // Convert both to base units
-        let (left_base, _) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, _) = self.to_base_unit(right_value, right_unit)?;
-
-        // Divide the base values - result is dimensionless when same units
-        let result = left_base / right_base;
-
-        Ok(FhirPathValue::Number(result))
+        Ok(FhirPathValue::Quantity {
+            value: result,
+            unit: compose_quotient_unit(&left_base_unit, &right_base_unit),
+        })
     }
 }
 
@@ -616,6 +665,25 @@ impl UnitEvaluator {
     /// Create a new UnitConverter instance
     pub fn new_converter() -> UnitConverter {
         UnitConverter::new()
+    }
+}
+
+fn compose_product_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
+    match (left.as_deref(), right.as_deref()) {
+        (None, None) => None,
+        (Some(unit), None) | (None, Some(unit)) => Some(unit.to_string()),
+        (Some(left), Some(right)) if left == right => Some(format!("{left}2")),
+        (Some(left), Some(right)) => Some(format!("{left}.{right}")),
+    }
+}
+
+fn compose_quotient_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
+    match (left.as_deref(), right.as_deref()) {
+        (None, None) => Some("1".to_string()),
+        (Some(unit), None) => Some(unit.to_string()),
+        (None, Some(unit)) => Some(format!("1/{unit}")),
+        (Some(left), Some(right)) if left == right => Some("1".to_string()),
+        (Some(left), Some(right)) => Some(format!("{left}/{right}")),
     }
 }
 
@@ -669,14 +737,45 @@ mod tests {
     fn test_division() {
         let converter = UnitConverter::new();
 
-        // Test same units division (should result in dimensionless)
+        // Test same units division — result is dimensionless with unit "1".
         let result = converter
             .divide_quantities(10.0, &Some("kg".to_string()), 5.0, &Some("kg".to_string()))
             .unwrap();
-        if let FhirPathValue::Number(ratio) = result {
-            assert_eq!(ratio, 2.0);
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("1"));
         } else {
-            panic!("Expected Number result");
+            panic!("Expected Quantity result with unit '1', got {result:?}");
+        }
+    }
+
+    #[test]
+    fn test_multiply_quantities_compound_unit() {
+        let converter = UnitConverter::new();
+
+        let result = converter
+            .multiply_quantities(2.0, &Some("cm".to_string()), 2.0, &Some("m".to_string()))
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 0.04);
+            assert_eq!(unit.as_deref(), Some("m2"));
+        } else {
+            panic!("Expected Quantity result");
+        }
+    }
+
+    #[test]
+    fn test_divide_quantities_compound_unit() {
+        let converter = UnitConverter::new();
+
+        let result = converter
+            .divide_quantities(4.0, &Some("g".to_string()), 2.0, &Some("m".to_string()))
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert_eq!(value, 2.0);
+            assert_eq!(unit.as_deref(), Some("g/m"));
+        } else {
+            panic!("Expected Quantity result");
         }
     }
 

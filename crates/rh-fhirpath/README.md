@@ -15,6 +15,11 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 [See implementation status](implementation.md)
 
+**Conformance**: the official HL7 FHIRPath test suite (937 cases) runs in CI
+via `cargo test -p rh-fhirpath --test hl7_conformance`. Current pass rate:
+**74.2%** (694/935), with a shrink-only wrong-answer gate. See
+[CONFORMANCE.md](CONFORMANCE.md) and [SPEC_COVERAGE.md](SPEC_COVERAGE.md).
+
 ## Usage
 
 ### CLI

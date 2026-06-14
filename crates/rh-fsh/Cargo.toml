@@ -28,3 +28,6 @@ walkdir = { workspace = true }
 [[bench]]
 name = "compile"
 harness = false
+
+[lints]
+workspace = true

@@ -76,10 +76,13 @@ rh --help
 # Download a FHIR package
 rh download package hl7.fhir.r4.core 4.0.1
 
+# List available versions for a package
+rh download list hl7.fhir.r4.core
+
 # Generate a Rust crate from a FHIR package
 rh codegen hl7.fhir.r4.core 4.0.1 --output crates/rh-hl7_fhir_r4_core
 
-# Evaluate a FHIRPath expression
+# Evaluate a FHIRPath expression (--data is optional; omit for context-free eval)
 rh fhirpath eval "Patient.name.family" --data patient.json
 
 # Validate a FHIR resource
@@ -90,6 +93,19 @@ rh cql compile library.cql --output library.elm.json
 
 # Compile FSH to FHIR JSON
 rh fsh compile profiles/*.fsh --output output/
+
+# Parse FSH and inspect the AST
+rh fsh parse profiles/MyProfile.fsh
+
+# Show FSH Tank summary (profiles, extensions, instances, …)
+rh fsh tank profiles/MyProfile.fsh
+
+# Generate a StructureDefinition snapshot
+rh snapshot generate http://hl7.org/fhir/StructureDefinition/Patient \
+  --package hl7.fhir.r4.core@4.0.1
+
+# Scaffold a new FHIR Package
+rh package init --canonical https://example.org/fhir --name com.example.fhir
 ```
 
 ## Command Reference
@@ -134,13 +150,76 @@ See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including th
 
 ## Global Options
 
-- `-v, --verbose` — Enable verbose logging
-- `--help` — Print help for any command or subcommand
+These options apply to every `rh` subcommand:
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--format <FORMAT>` | | Output format: `human` (default), `json`, `ndjson` |
+| `--quiet` | `-q` | Suppress informational output on stderr |
+| `--verbose` | `-v` | Increase verbosity; repeat for more detail (`-v` debug, `-vv` trace) |
+| `--color <WHEN>` | | Color output: `auto` (default), `always`, `never` |
+| `--help` | `-h` | Print help for any command or subcommand |
+| `--version` | `-V` | Print version |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Operational error (I/O failure, network error, missing file) |
+| `2` | Usage error (invalid arguments — set by clap) |
+| `3` | Validation / conformance failure (resource invalid, tests failed) |
+| `4` | Parse error of user input (FHIRPath / CQL / FSH / VCL syntax) |
 
 ## Environment Variables
 
-- `RH_REGISTRY_TOKEN` — Authentication token for private FHIR package registries
-- `RUST_LOG` — Logging level (e.g., `info`, `debug`, `trace`)
+| Variable | Description |
+|----------|-------------|
+| `NO_COLOR` | Disable ANSI color output (see <https://no-color.org>) |
+| `RUST_LOG` | Override log level filter (e.g. `debug`, `rh=trace`) |
+| `RH_REGISTRY_TOKEN` | Bearer token for private FHIR package registries |
+
+## Agent / Scripting Usage
+
+Use `--format json` to get machine-readable output. Every command emits a
+stable envelope `{"ok": bool, "result": ..., "errors": [...], "meta": {...}}`.
+
+```bash
+# Evaluate a FHIRPath expression and extract the result with jq
+rh fhirpath eval 'name.given' --format json | jq '.result'
+
+# Compile CQL and check whether compilation succeeded
+rh cql compile patient.cql --format json | jq '.ok'
+
+# Validate a resource — exit 3 on failure, pipe issues to jq
+rh validate resource --input patient.json --format json \
+  | jq '.result[].issues[] | select(.severity=="error") | .message'
+
+# Download package versions as a JSON array
+rh download list hl7.fhir.r4.core --format json | jq '.result[]'
+
+# Translate a VCL expression and extract the FHIR ValueSet compose
+rh vcl translate '(http://snomed.info/sct)123456' --format json \
+  | jq '.result'
+
+# Check output is ok=true in a script
+if rh fhirpath eval 'true' --format json | jq -e '.ok' > /dev/null; then
+  echo "success"
+fi
+```
+
+### Error envelopes
+
+When an error occurs and `--format json` is active, `rh` always emits a
+parseable error envelope on stdout _and_ prints `error: <message>` on stderr:
+
+```json
+{
+  "ok": false,
+  "errors": [{ "code": "operational_error", "message": "..." }],
+  "meta": { "version": "0.2.0-beta.2", "command": "rh" }
+}
+```
 
 ## Related Documentation
 

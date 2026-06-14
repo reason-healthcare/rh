@@ -6,6 +6,46 @@ use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
 
+/// Round the result of decimal arithmetic to the number of fractional digits
+/// of the less-precise input. This compensates for f64 rounding artefacts
+/// when both inputs have a small, well-defined precision (e.g. `1.8 - 1.2 →
+/// 0.5999…` rounds to `0.6` because both inputs have 1 decimal place).
+fn round_to_decimal_precision(result: f64, a: f64, b: f64) -> f64 {
+    let prec = decimal_places(a).min(decimal_places(b));
+    if prec == 0 {
+        return result;
+    }
+    let scale = 10f64.powi(prec as i32);
+    (result * scale).round() / scale
+}
+
+fn decimal_places(n: f64) -> u8 {
+    let s = format!("{n}");
+    match s.split_once('.') {
+        Some((_, frac)) => frac.trim_end_matches('0').len().min(15) as u8,
+        None => 0,
+    }
+}
+
+/// Split a datetime literal into its `(base, tz_suffix)` components.
+///
+/// Recognises `Z`, `+HH:MM`, and `-HH:MM` suffixes; everything else is treated
+/// as the base. Used to preserve the original timezone marker through datetime
+/// arithmetic without losing sub-second precision.
+fn split_datetime_tz(s: &str) -> (&str, &str) {
+    if let Some(base) = s.strip_suffix('Z') {
+        return (base, "Z");
+    }
+    if s.len() >= 6 {
+        let tail = &s[s.len() - 6..];
+        let head = tail.as_bytes()[0];
+        if (head == b'+' || head == b'-') && tail.as_bytes()[3] == b':' {
+            return (&s[..s.len() - 6], tail);
+        }
+    }
+    (s, "")
+}
+
 /// Arithmetic operations handler
 pub struct ArithmeticEvaluator;
 
@@ -135,7 +175,16 @@ impl ArithmeticEvaluator {
                     unit: Some(unit_str),
                 },
             ) => {
-                if let Ok(precision) = Self::parse_precision_unit(unit_str) {
+                // Per FHIRPath spec, UCUM `mo` and `a` (mean month/year — 30.44 and
+                // 365.25 days) are ambiguous for calendar Date arithmetic and must
+                // produce an execution error.
+                if matches!(unit_str.as_str(), "mo" | "a") {
+                    Err(FhirPathError::EvaluationError {
+                        message: format!(
+                            "UCUM duration '{unit_str}' is ambiguous for Date arithmetic"
+                        ),
+                    })
+                } else if let Ok(precision) = Self::parse_precision_unit(unit_str) {
                     Self::add_precision_to_date(date_str, &precision, *value as i64)
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -150,7 +199,16 @@ impl ArithmeticEvaluator {
                 },
                 FhirPathValue::Date(date_str),
             ) => {
-                if let Ok(precision) = Self::parse_precision_unit(unit_str) {
+                // Per FHIRPath spec, UCUM `mo` and `a` (mean month/year — 30.44 and
+                // 365.25 days) are ambiguous for calendar Date arithmetic and must
+                // produce an execution error.
+                if matches!(unit_str.as_str(), "mo" | "a") {
+                    Err(FhirPathError::EvaluationError {
+                        message: format!(
+                            "UCUM duration '{unit_str}' is ambiguous for Date arithmetic"
+                        ),
+                    })
+                } else if let Ok(precision) = Self::parse_precision_unit(unit_str) {
                     Self::add_precision_to_date(date_str, &precision, *value as i64)
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -319,9 +377,9 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 Ok(FhirPathValue::Integer(a - b))
             }
-            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
-                Ok(FhirPathValue::Number(a - b))
-            }
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => Ok(FhirPathValue::Number(
+                round_to_decimal_precision(a - b, *a, *b),
+            )),
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 Ok(FhirPathValue::Number(*a as f64 - b))
             }
@@ -511,24 +569,28 @@ impl ArithmeticEvaluator {
                 Ok(FhirPathValue::Number(a * *b as f64))
             }
             // Quantity multiplication by scalars
-            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n)) |
-            (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
+            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n))
+            | (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
                 let converter = UnitConverter::new();
                 Ok(converter.multiply_by_scalar(*value, unit, *n))
             }
-            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) |
-            (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
+            (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i))
+            | (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 let converter = UnitConverter::new();
                 Ok(converter.multiply_by_scalar(*value, unit, *i as f64))
             }
-            // Quantity * Quantity is more complex (unit multiplication) - for now, error
             (
-                FhirPathValue::Quantity { .. },
-                FhirPathValue::Quantity { .. },
+                FhirPathValue::Quantity {
+                    value: a,
+                    unit: unit_a,
+                },
+                FhirPathValue::Quantity {
+                    value: b,
+                    unit: unit_b,
+                },
             ) => {
-                Err(FhirPathError::EvaluationError {
-                    message: "Multiplication of two quantities is not yet supported (requires unit algebra)".to_string(),
-                })
+                let converter = UnitConverter::new();
+                converter.multiply_quantities(*a, unit_a, *b, unit_b)
             }
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot multiply {left:?} and {right:?}"),
@@ -544,9 +606,7 @@ impl ArithmeticEvaluator {
         match (left, right) {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     // Division always returns a Number (float) in FHIRPath
                     Ok(FhirPathValue::Number(*a as f64 / *b as f64))
@@ -554,27 +614,21 @@ impl ArithmeticEvaluator {
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a / b))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(*a as f64 / b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a / *b as f64))
                 }
@@ -591,11 +645,8 @@ impl ArithmeticEvaluator {
             // Number/Integer divided by Quantity (result is different unit)
             (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
                 if *value == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else if unit.is_none() {
-                    // Dividing by dimensionless quantity
                     Ok(FhirPathValue::Number(n / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -606,11 +657,8 @@ impl ArithmeticEvaluator {
             }
             (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 if *value == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else if unit.is_none() {
-                    // Dividing by dimensionless quantity
                     Ok(FhirPathValue::Number((*i as f64) / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
@@ -647,36 +695,28 @@ impl ArithmeticEvaluator {
         match (left, right) {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer(a / b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer((a / b).trunc() as i64))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer((*a as f64 / b).trunc() as i64))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Division by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer((a / *b as f64).trunc() as i64))
                 }
@@ -695,36 +735,32 @@ impl ArithmeticEvaluator {
         match (left, right) {
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Integer(a % b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(a % b))
+                    Ok(FhirPathValue::Number(round_to_decimal_precision(
+                        a % b,
+                        *a,
+                        *b,
+                    )))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
                 if *b == 0.0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(*a as f64 % b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "Modulo by zero".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a % *b as f64))
                 }
@@ -886,33 +922,20 @@ impl ArithmeticEvaluator {
         precision: &DateTimePrecision,
         count: i64,
     ) -> FhirPathResult<FhirPathValue> {
-        // Parse datetime - handle timezone
-        let datetime = if let Some(base_str) = datetime_str.strip_suffix('Z') {
-            // Try parsing with milliseconds first, then fall back to seconds only
-            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.3f")
-                .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
-                .map_err(|_| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime format: {datetime_str}"),
-                })?
-        } else if datetime_str.contains('+')
-            || datetime_str.len() > 19 && datetime_str.chars().nth(19) == Some('-')
-        {
-            // Has timezone offset - extract base datetime part
-            let base_str = &datetime_str[..19];
-            // Try parsing with milliseconds first, then fall back to seconds only
-            NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.3f")
-                .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
-                .map_err(|_| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime format: {datetime_str}"),
-                })?
-        } else {
-            // No timezone - try parsing with milliseconds first, then fall back
-            NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S%.3f")
-                .or_else(|_| NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S"))
-                .map_err(|_| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime format: {datetime_str}"),
-                })?
-        };
+        // Split off the timezone marker (Z, +HH:MM, or -HH:MM) so the base
+        // string starts with `YYYY-MM-DDTHH:MM:SS[.fff]` and nothing more.
+        let (base_str, tz_str) = split_datetime_tz(datetime_str);
+        let has_fraction = base_str
+            .find('T')
+            .is_some_and(|t| base_str[t..].contains('.'));
+
+        // %.f accepts any number of fractional digits; if absent, we fall back
+        // to second-precision parse. Either way the input is fully consumed.
+        let datetime = NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S%.f")
+            .or_else(|_| NaiveDateTime::parse_from_str(base_str, "%Y-%m-%dT%H:%M:%S"))
+            .map_err(|_| FhirPathError::EvaluationError {
+                message: format!("Invalid datetime format: {datetime_str}"),
+            })?;
 
         let new_datetime = match precision {
             DateTimePrecision::Year => {
@@ -979,33 +1002,31 @@ impl ArithmeticEvaluator {
                 })?,
         };
 
-        // Preserve timezone if present
-        let result_str = if datetime_str.ends_with('Z') {
-            format!("{}Z", new_datetime.format("%Y-%m-%dT%H:%M:%S"))
-        } else if datetime_str.contains('+') {
-            let tz_part = &datetime_str[datetime_str.find('+').unwrap()..];
-            format!("{}{}", new_datetime.format("%Y-%m-%dT%H:%M:%S"), tz_part)
-        } else if datetime_str.len() > 19 && datetime_str.chars().nth(19) == Some('-') {
-            let tz_part = &datetime_str[19..];
-            format!("{}{}", new_datetime.format("%Y-%m-%dT%H:%M:%S"), tz_part)
+        // Preserve original sub-second precision (3-digit millisecond format
+        // when input had any fractional component) and the timezone marker.
+        let body = if has_fraction {
+            new_datetime.format("%Y-%m-%dT%H:%M:%S%.3f").to_string()
         } else {
             new_datetime.format("%Y-%m-%dT%H:%M:%S").to_string()
         };
-
+        let result_str = format!("{body}{tz_str}");
         Ok(FhirPathValue::DateTime(result_str))
     }
 
-    /// Parse a precision unit from a string
+    /// Parse a precision unit from a string. Accepts both FHIRPath calendar-
+    /// duration names (`year`, `months`, etc.) and the UCUM abbreviations
+    /// used in quoted-unit quantity literals (`a`, `mo`, `wk`, `d`, `h`,
+    /// `min`, `s`, `ms`).
     fn parse_precision_unit(unit_str: &str) -> Result<DateTimePrecision, FhirPathError> {
         match unit_str {
-            "year" | "years" => Ok(DateTimePrecision::Year),
-            "month" | "months" => Ok(DateTimePrecision::Month),
-            "week" | "weeks" => Ok(DateTimePrecision::Week),
-            "day" | "days" => Ok(DateTimePrecision::Day),
-            "hour" | "hours" => Ok(DateTimePrecision::Hour),
-            "minute" | "minutes" => Ok(DateTimePrecision::Minute),
-            "second" | "seconds" => Ok(DateTimePrecision::Second),
-            "millisecond" | "milliseconds" => Ok(DateTimePrecision::Millisecond),
+            "year" | "years" | "a" => Ok(DateTimePrecision::Year),
+            "month" | "months" | "mo" => Ok(DateTimePrecision::Month),
+            "week" | "weeks" | "wk" => Ok(DateTimePrecision::Week),
+            "day" | "days" | "d" => Ok(DateTimePrecision::Day),
+            "hour" | "hours" | "h" => Ok(DateTimePrecision::Hour),
+            "minute" | "minutes" | "min" => Ok(DateTimePrecision::Minute),
+            "second" | "seconds" | "s" => Ok(DateTimePrecision::Second),
+            "millisecond" | "milliseconds" | "ms" => Ok(DateTimePrecision::Millisecond),
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Unknown precision unit: {unit_str}"),
             }),

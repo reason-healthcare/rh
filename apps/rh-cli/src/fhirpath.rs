@@ -1,20 +1,33 @@
 use anyhow::Result;
 use clap::Subcommand;
-use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+use serde::Serialize;
 use serde_json::Value;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use tracing::{error, info};
 
+use crate::output::{Envelope, OutputContext, OutputFormat};
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
 
 /// Convert FhirPathValue to JSON Value for serialization
 fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
     match value {
         FhirPathValue::Boolean(b) => Value::Bool(*b),
-        FhirPathValue::String(s) => Value::String(s.clone()),
+        FhirPathValue::TypedBoolean { value, .. } => Value::Bool(*value),
+        FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
+            Value::String(s.clone())
+        }
         FhirPathValue::Number(n) => {
             if let Some(json_num) = serde_json::Number::from_f64(*n) {
                 Value::Number(json_num)
@@ -27,6 +40,7 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
         FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => {
             Value::String(s.clone())
         }
+        FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
         FhirPathValue::Quantity { value, unit } => {
             let mut obj = serde_json::Map::new();
             obj.insert(
@@ -58,9 +72,9 @@ pub enum FhirpathCommands {
         /// FHIRPath expression to parse
         expression: String,
 
-        /// Output format: pretty, json, debug
-        #[clap(short, long, default_value = "pretty")]
-        format: String,
+        /// Display format: pretty, json, debug
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
     },
     /// Evaluate a FHIRPath expression against FHIR data
     Eval {
@@ -71,9 +85,9 @@ pub enum FhirpathCommands {
         #[clap(short, long)]
         data: Option<PathBuf>,
 
-        /// Output format: pretty, json, debug
-        #[clap(short, long, default_value = "pretty")]
-        format: String,
+        /// Display format: pretty, json, debug
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
     },
     /// Interactive REPL for FHIRPath expressions
     Repl {
@@ -93,20 +107,23 @@ pub enum FhirpathCommands {
     },
 }
 
-pub async fn handle_command(cmd: FhirpathCommands) -> Result<()> {
+pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
-        FhirpathCommands::Parse { expression, format } => {
-            parse_expression(&expression, &format)?;
+        FhirpathCommands::Parse {
+            expression,
+            display_format,
+        } => {
+            parse_expression(&expression, &display_format, ctx)?;
         }
         FhirpathCommands::Eval {
             expression,
             data,
-            format,
+            display_format,
         } => {
-            eval_expression(&expression, data.as_deref(), &format)?;
+            eval_expression(&expression, data.as_deref(), &display_format, ctx)?;
         }
         FhirpathCommands::Repl { data } => {
-            run_repl(data.as_deref()).await?;
+            rh_fhirpath::repl::run_repl(data.as_deref())?;
         }
         FhirpathCommands::Test { file, data } => {
             run_tests(&file, data.as_deref()).await?;
@@ -117,29 +134,34 @@ pub async fn handle_command(cmd: FhirpathCommands) -> Result<()> {
 }
 
 /// Parse a FHIRPath expression and display the AST
-fn parse_expression(expression: &str, format: &str) -> Result<()> {
+fn parse_expression(expression: &str, format: &str, ctx: &OutputContext) -> Result<()> {
     info!("Parsing FHIRPath expression: {}", expression);
 
     let parser = FhirPathParser::new();
 
     match parser.parse(expression) {
-        Ok(ast) => match format {
-            "json" => {
-                let json = serde_json::to_string_pretty(&ast)?;
-                println!("{json}");
+        Ok(ast) => {
+            if ctx.is_json() {
+                return print_envelope(ctx, &Envelope::ok(ast, "fhirpath parse"));
             }
-            "debug" => {
-                println!("{ast:#?}");
+            match format {
+                "json" => {
+                    let json = serde_json::to_string_pretty(&ast)?;
+                    println!("{json}");
+                }
+                "debug" => {
+                    println!("{ast:#?}");
+                }
+                "pretty" => {
+                    println!("✅ Successfully parsed: {expression}");
+                    println!("AST: {ast}");
+                }
+                _ => {
+                    println!("✅ Successfully parsed: {expression}");
+                    println!("AST: {ast}");
+                }
             }
-            "pretty" => {
-                println!("✅ Successfully parsed: {expression}");
-                println!("AST: {ast}");
-            }
-            _ => {
-                println!("✅ Successfully parsed: {expression}");
-                println!("AST: {ast}");
-            }
-        },
+        }
         Err(e) => {
             error!("❌ Parse error: {}", e);
             return Err(e.into());
@@ -154,6 +176,7 @@ fn eval_expression(
     expression: &str,
     data_file: Option<&std::path::Path>,
     format: &str,
+    ctx: &OutputContext,
 ) -> Result<()> {
     info!("Evaluating FHIRPath expression: {}", expression);
 
@@ -194,21 +217,39 @@ fn eval_expression(
 
             match format {
                 "json" => {
-                    // Convert FhirPathValue to JSON-compatible format
                     let json_value = fhirpath_value_to_json(&result);
-                    let json = serde_json::to_string_pretty(&json_value)?;
-                    println!("{json}");
+                    if ctx.is_json() {
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        let json = serde_json::to_string_pretty(&json_value)?;
+                        println!("{json}");
+                    }
                 }
                 "debug" => {
-                    println!("{result:#?}");
+                    if ctx.is_json() {
+                        let json_value = fhirpath_value_to_json(&result);
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        println!("{result:#?}");
+                    }
                 }
                 "pretty" => {
-                    println!("✅ Expression: {expression}");
-                    println!("Result: {result:?}");
+                    if ctx.is_json() {
+                        let json_value = fhirpath_value_to_json(&result);
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        println!("✅ Expression: {expression}");
+                        println!("Result: {result:?}");
+                    }
                 }
                 _ => {
-                    println!("✅ Expression: {expression}");
-                    println!("Result: {result:?}");
+                    if ctx.is_json() {
+                        let json_value = fhirpath_value_to_json(&result);
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        println!("✅ Expression: {expression}");
+                        println!("Result: {result:?}");
+                    }
                 }
             }
         }
@@ -221,160 +262,7 @@ fn eval_expression(
     Ok(())
 }
 
-/// Run an interactive REPL for FHIRPath expressions
-async fn run_repl(data_file: Option<&std::path::Path>) -> Result<()> {
-    println!("🔍 FHIRPath Interactive REPL");
-    println!("Type FHIRPath expressions to evaluate them.");
-    println!("Commands: .help, .data, .quit");
-    println!("Use ↑/↓ arrow keys to navigate command history (persistent across sessions).");
-    println!();
-
-    let parser = FhirPathParser::new();
-    let evaluator = FhirPathEvaluator::new();
-
-    // Load data if provided
-    let mut data = if let Some(path) = data_file {
-        info!("Loading FHIR data from: {}", path.display());
-        let content = fs::read_to_string(path)?;
-        serde_json::from_str::<Value>(&content)?
-    } else {
-        Value::Null
-    };
-
-    // Initialize rustyline editor with history
-    let mut rl = DefaultEditor::new()?;
-
-    // Try to load history from file
-    let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
-    let _ = rl.load_history(&history_file); // Ignore errors if file doesn't exist
-
-    loop {
-        let readline = rl.readline("fhirpath> ");
-
-        match readline {
-            Ok(line) => {
-                let input = line.trim();
-
-                if input.is_empty() {
-                    continue;
-                }
-
-                // Add non-empty lines to history
-                rl.add_history_entry(input)?;
-
-                match input {
-                    ".quit" | ".exit" => {
-                        println!("Goodbye!");
-                        break;
-                    }
-                    ".help" => {
-                        print_repl_help();
-                        continue;
-                    }
-                    ".data" => {
-                        if data == Value::Null {
-                            println!("No data loaded. Use .load <file> to load FHIR data.");
-                        } else {
-                            println!("Data: {}", serde_json::to_string_pretty(&data)?);
-                        }
-                        continue;
-                    }
-                    cmd if cmd.starts_with(".load ") => {
-                        let path = cmd.strip_prefix(".load ").unwrap().trim();
-                        match load_data_file(path) {
-                            Ok(new_data) => {
-                                data = new_data;
-                                println!("✅ Loaded data from: {path}");
-                            }
-                            Err(e) => {
-                                println!("❌ Failed to load data: {e}");
-                            }
-                        }
-                        continue;
-                    }
-                    cmd if cmd.starts_with(".") => {
-                        println!("❌ Unknown command: {cmd}. Type .help for available commands.");
-                        continue;
-                    }
-                    _ => {}
-                }
-
-                // Parse and evaluate the expression
-                match parser.parse(input) {
-                    Ok(ast) => {
-                        let context = EvaluationContext::new(data.clone());
-                        match evaluator.evaluate(&ast, &context) {
-                            Ok(result) => {
-                                // Display trace logs if any
-                                let trace_logs = context.get_trace_logs();
-                                if !trace_logs.is_empty() {
-                                    println!("\n📋 Trace logs:");
-                                    for log in trace_logs {
-                                        println!("  [TRACE:{}] {}", log.name, log.value);
-                                    }
-                                    println!();
-                                }
-                                println!("=> {result:?}");
-                            }
-                            Err(e) => {
-                                println!("❌ Evaluation error: {e}");
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        println!("❌ Parse error: {e}");
-                    }
-                }
-            }
-            Err(ReadlineError::Interrupted) => {
-                println!("^C");
-                continue;
-            }
-            Err(ReadlineError::Eof) => {
-                println!("^D");
-                break;
-            }
-            Err(err) => {
-                println!("Error: {err:?}");
-                break;
-            }
-        }
-    }
-
-    let _ = rl.save_history(&history_file);
-
-    Ok(())
-}
-
-/// Load data from a file
-fn load_data_file(path: &str) -> Result<Value> {
-    let content = fs::read_to_string(path)?;
-    let data = serde_json::from_str::<Value>(&content)?;
-    Ok(data)
-}
-
-/// Print REPL help
-fn print_repl_help() {
-    println!("FHIRPath REPL Commands:");
-    println!("  .help                Show this help");
-    println!("  .data                Show currently loaded data");
-    println!("  .load <file>         Load FHIR data from JSON file");
-    println!("  .quit, .exit         Exit the REPL");
-    println!();
-    println!("Navigation:");
-    println!("  ↑/↓ arrows           Navigate command history");
-    println!("  Ctrl+C               Interrupt current input");
-    println!("  Ctrl+D               Exit REPL");
-    println!();
-    println!("FHIRPath Examples:");
-    println!("  resourceType         Get the resource type");
-    println!("  name.family          Get family names");
-    println!("  name.where(use='official').given  Get official given names");
-    println!("  telecom.where(system='email').value  Get email addresses");
-    println!("  5 + 3 * 2            Arithmetic operations");
-    println!("  'hello'.upper()      String functions");
-    println!();
-}
+// (REPL moved to rh-fhirpath::repl; see crates/rh-fhirpath/src/repl.rs)
 
 /// Run test cases from a file
 async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Path>) -> Result<()> {
@@ -451,7 +339,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
     println!("Test Results: {passed} passed, {failed} failed");
 
     if failed > 0 {
-        std::process::exit(1);
+        crate::output::ExitCode::ValidationFailure.exit();
     }
 
     Ok(())

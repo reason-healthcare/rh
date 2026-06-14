@@ -8,7 +8,7 @@
 use phf::{phf_map, Map};
 
 /// FHIR primitive types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum FhirPrimitiveType {
     Boolean,
     Integer,

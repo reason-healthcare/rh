@@ -1,8 +1,30 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use rh_foundation::cli::{expand_home_dir, parse_package_spec};
 use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinitionLoader};
-use std::path::{Path, PathBuf};
-use tracing::{error, info};
+use serde::Serialize;
+use std::path::PathBuf;
+use tracing::info;
+
+use crate::output::{Envelope, OutputContext, OutputFormat};
+
+#[derive(Serialize)]
+struct SnapshotInfo {
+    profile: String,
+    elements: usize,
+    bindings: usize,
+    constraints: usize,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
 
 #[derive(Subcommand)]
 pub enum SnapshotCommands {
@@ -42,9 +64,9 @@ pub struct GenerateArgs {
     #[clap(short, long, value_name = "FILE")]
     pub output: Option<PathBuf>,
 
-    /// Enable verbose output
+    /// Show detailed output
     #[clap(short, long)]
-    pub verbose: bool,
+    pub details: bool,
 }
 
 #[derive(Args)]
@@ -98,16 +120,16 @@ pub struct ValidateArgs {
     pub file: PathBuf,
 }
 
-pub async fn handle_command(cmd: SnapshotCommands) -> Result<()> {
+pub async fn handle_command(cmd: SnapshotCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
-        SnapshotCommands::Generate(args) => handle_generate(args).await,
-        SnapshotCommands::Info(args) => handle_info(args).await,
+        SnapshotCommands::Generate(args) => handle_generate(args, ctx).await,
+        SnapshotCommands::Info(args) => handle_info(args, ctx).await,
         SnapshotCommands::Diff(args) => handle_diff(args).await,
         SnapshotCommands::Validate(args) => handle_validate(args).await,
     }
 }
 
-async fn handle_generate(args: GenerateArgs) -> Result<()> {
+async fn handle_generate(args: GenerateArgs, ctx: &OutputContext) -> Result<()> {
     info!("Generating snapshot for profile: {}", args.profile_url);
 
     let packages_dir = expand_home_dir(&args.packages_dir)?;
@@ -127,7 +149,7 @@ async fn handle_generate(args: GenerateArgs) -> Result<()> {
         );
 
         for sd in structure_defs {
-            if args.verbose {
+            if args.details {
                 info!("  - {} ({})", sd.name, sd.url);
             }
             generator.load_structure_definition(sd);
@@ -137,19 +159,26 @@ async fn handle_generate(args: GenerateArgs) -> Result<()> {
     info!("Generating snapshot...");
     let snapshot = generator.generate_snapshot(&args.profile_url)?;
 
-    let output = serde_json::to_string_pretty(&snapshot)?;
+    let output = serde_json::to_string_pretty(&*snapshot)?;
 
-    if let Some(output_path) = args.output {
-        std::fs::write(&output_path, output)?;
+    if let Some(ref output_path) = args.output {
+        std::fs::write(output_path, &output)?;
         info!("Snapshot written to: {}", output_path.display());
-    } else {
+    }
+
+    if ctx.is_json() {
+        print_envelope(
+            ctx,
+            &Envelope::ok(snapshot.as_ref().clone(), "snapshot generate"),
+        )?;
+    } else if args.output.is_none() {
         println!("{output}");
     }
 
     Ok(())
 }
 
-async fn handle_info(args: InfoArgs) -> Result<()> {
+async fn handle_info(args: InfoArgs, ctx: &OutputContext) -> Result<()> {
     info!("Getting info for profile: {}", args.profile_url);
 
     let packages_dir = expand_home_dir(&args.packages_dir)?;
@@ -170,55 +199,38 @@ async fn handle_info(args: InfoArgs) -> Result<()> {
 
     let snapshot = generator.generate_snapshot(&args.profile_url)?;
 
-    let profile_url = &args.profile_url;
-    let elements_count = snapshot.element.len();
-    println!("Profile: {profile_url}");
-    println!("Elements: {elements_count}");
+    let info = SnapshotInfo {
+        profile: args.profile_url.clone(),
+        elements: snapshot.element.len(),
+        bindings: snapshot
+            .element
+            .iter()
+            .filter(|e| e.binding.is_some())
+            .count(),
+        constraints: snapshot
+            .element
+            .iter()
+            .filter_map(|e| e.constraint.as_ref())
+            .map(|c| c.len())
+            .sum(),
+    };
 
-    let bindings_count = snapshot
-        .element
-        .iter()
-        .filter(|e| e.binding.is_some())
-        .count();
-    println!("Bindings: {bindings_count}");
-
-    let constraints_count: usize = snapshot
-        .element
-        .iter()
-        .filter_map(|e| e.constraint.as_ref())
-        .map(|c| c.len())
-        .sum();
-    println!("Constraints: {constraints_count}");
+    if ctx.is_json() {
+        print_envelope(ctx, &Envelope::ok(info, "snapshot info"))?;
+    } else {
+        println!("Profile: {}", info.profile);
+        println!("Elements: {}", info.elements);
+        println!("Bindings: {}", info.bindings);
+        println!("Constraints: {}", info.constraints);
+    }
 
     Ok(())
 }
 
 async fn handle_diff(_args: DiffArgs) -> Result<()> {
-    error!("Diff command not yet implemented");
-    Ok(())
+    anyhow::bail!("not yet implemented")
 }
 
 async fn handle_validate(_args: ValidateArgs) -> Result<()> {
-    error!("Validate command not yet implemented");
-    Ok(())
-}
-
-fn parse_package_spec(spec: &str) -> Result<(String, String)> {
-    let parts: Vec<&str> = spec.split('@').collect();
-    if parts.len() != 2 {
-        anyhow::bail!("Invalid package specification: {spec}. Expected format: package@version");
-    }
-    Ok((parts[0].to_string(), parts[1].to_string()))
-}
-
-fn expand_home_dir(path: &Path) -> Result<PathBuf> {
-    let path_str = path.to_string_lossy();
-    if let Some(stripped) = path_str.strip_prefix("~/") {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .map_err(|_| anyhow::anyhow!("Could not determine home directory"))?;
-        Ok(PathBuf::from(home).join(stripped))
-    } else {
-        Ok(path.to_path_buf())
-    }
+    anyhow::bail!("not yet implemented")
 }

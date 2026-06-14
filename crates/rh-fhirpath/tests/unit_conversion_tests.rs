@@ -90,10 +90,13 @@ fn test_division_same_units() {
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
-    if let FhirPathValue::Number(ratio) = &result {
-        assert!((ratio - 5.0).abs() < 0.001);
+    // Same-unit and compatible-unit division now returns Quantity{ratio, "1"}
+    // per UCUM — the dimensionless unit is '1', not a bare Number.
+    if let FhirPathValue::Quantity { value, unit } = &result {
+        assert!((value - 5.0).abs() < 0.001);
+        assert_eq!(unit.as_deref(), Some("1"));
     } else {
-        panic!("Expected number result, got {result:?}");
+        panic!("Expected Quantity with unit '1', got {result:?}");
     }
 }
 
@@ -103,15 +106,16 @@ fn test_division_compatible_units() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test dividing quantities with compatible units (kg/g) should give dimensionless result
+    // Dividing compatible units (kg/g) should give a dimensionless Quantity{ratio, "1"}.
     let expr_str = "1.0'kg' / 500.0'g'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
-    if let FhirPathValue::Number(ratio) = &result {
-        assert!((ratio - 2.0).abs() < 0.001);
+    if let FhirPathValue::Quantity { value, unit } = &result {
+        assert!((value - 2.0).abs() < 0.001);
+        assert_eq!(unit.as_deref(), Some("1"));
     } else {
-        panic!("Expected number result, got {result:?}");
+        panic!("Expected Quantity with unit '1', got {result:?}");
     }
 }
 

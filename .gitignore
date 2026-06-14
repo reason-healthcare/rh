@@ -82,3 +82,6 @@ temp/
 crates/rh-loader/packages
 
 prompts/
+
+# Claude Code session state
+.claude/scheduled_tasks.lock

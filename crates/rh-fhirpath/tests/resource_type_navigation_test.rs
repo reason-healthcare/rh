@@ -1,4 +1,5 @@
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
 use serde_json::json;
 
 #[test]
@@ -41,7 +42,13 @@ fn test_resource_type_as_root_path() {
     // Test 3: Patient.active should work
     let expr5 = parser.parse("Patient.active").unwrap();
     let result5 = evaluator.evaluate(&expr5, &context).unwrap();
-    assert_eq!(result5, FhirPathValue::Boolean(true));
+    assert_eq!(
+        result5,
+        FhirPathValue::TypedBoolean {
+            value: true,
+            fhir_type: FhirPrimitiveType::Boolean
+        }
+    );
 
     // Test 4: Non-matching resourceType should return empty
     let expr6 = parser.parse("Observation.id").unwrap();
@@ -65,7 +72,13 @@ fn test_resource_type_with_different_resources() {
 
     let expr = parser.parse("Observation.status").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::String("final".to_string()));
+    assert_eq!(
+        result,
+        FhirPathValue::TypedString {
+            value: "final".to_string(),
+            fhir_type: FhirPrimitiveType::Code
+        }
+    );
 
     // Test with Medication
     let medication = json!({

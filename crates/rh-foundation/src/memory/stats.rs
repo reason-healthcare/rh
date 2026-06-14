@@ -1,4 +1,6 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+
+use parking_lot::RwLock;
 
 /// Statistics for a memory store.
 #[derive(Debug, Clone, Default)]
@@ -42,11 +44,11 @@ impl StatsRecorder {
     }
 
     pub(super) fn snapshot(&self) -> MemoryStoreStats {
-        self.stats.read().unwrap().clone()
+        self.stats.read().clone()
     }
 
     pub(super) fn reset(&self) {
-        *self.stats.write().unwrap() = MemoryStoreStats::default();
+        *self.stats.write() = MemoryStoreStats::default();
     }
 
     pub(super) fn record_hit(&self) {
@@ -74,7 +76,7 @@ impl StatsRecorder {
             return;
         }
 
-        let mut stats = self.stats.write().unwrap();
+        let mut stats = self.stats.write();
         apply(&mut stats);
     }
 }

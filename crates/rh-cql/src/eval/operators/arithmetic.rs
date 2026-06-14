@@ -6,6 +6,7 @@
 
 use super::super::context::EvalError;
 use super::super::value::{CqlQuantity, Value};
+use super::temporal::{date_time_add, date_time_subtract};
 use super::utils::{err, null1, null2};
 
 fn numeric_as_f64(v: &Value) -> Option<f64> {
@@ -37,6 +38,10 @@ pub fn add(a: &Value, b: &Value) -> Result<Value, EvalError> {
         }
         // CQL String concatenation: 'a' + 'b' = 'ab'
         (Value::String(x), Value::String(y)) => Ok(Value::String(format!("{x}{y}"))),
+        // Date/DateTime/Time arithmetic: temporal + quantity
+        (Value::Date(_) | Value::DateTime(_) | Value::Time(_), Value::Quantity(_)) => {
+            date_time_add(a, b)
+        }
         _ => Err(err(
             "Add",
             &format!("unsupported operand types: {a:?} + {b:?}"),
@@ -56,6 +61,10 @@ pub fn subtract(a: &Value, b: &Value) -> Result<Value, EvalError> {
                 value: x.value - y.value,
                 unit: x.unit.clone(),
             }))
+        }
+        // Date/DateTime/Time arithmetic: temporal - quantity
+        (Value::Date(_) | Value::DateTime(_) | Value::Time(_), Value::Quantity(_)) => {
+            date_time_subtract(a, b)
         }
         _ => Err(err(
             "Subtract",

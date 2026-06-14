@@ -145,11 +145,14 @@ fn has_value_function(
         }
         // FHIR primitives that have values
         FhirPathValue::String(_)
+        | FhirPathValue::TypedString { .. }
         | FhirPathValue::Integer(_)
         | FhirPathValue::Number(_)
         | FhirPathValue::Boolean(_)
+        | FhirPathValue::TypedBoolean { .. }
         | FhirPathValue::Date(_)
         | FhirPathValue::DateTime(_)
+        | FhirPathValue::TypedDateTime { .. }
         | FhirPathValue::Time(_)
         | FhirPathValue::Long(_) => Ok(FhirPathValue::Boolean(true)),
         // FHIR complex types (like extensions) - check for value[x] fields
@@ -215,13 +218,29 @@ fn get_value_function(
         | FhirPathValue::Time(_)
         | FhirPathValue::Long(_)
         | FhirPathValue::Quantity { .. } => Ok(target.clone()),
+        FhirPathValue::TypedString { value, .. } => Ok(FhirPathValue::String(value.clone())),
+        FhirPathValue::TypedBoolean { value, .. } => Ok(FhirPathValue::Boolean(*value)),
+        FhirPathValue::TypedDateTime { value, .. } => Ok(FhirPathValue::DateTime(value.clone())),
         // FHIR complex types (like extensions) - check for value[x] fields
         FhirPathValue::Object(obj) => {
             // Look for value[x] fields and return the first one found
             if let Some(obj_map) = obj.as_object() {
                 for (key, value) in obj_map {
                     if key.starts_with("value") {
-                        return Ok(FhirPathValue::from_json(value));
+                        let typed = match value {
+                            serde_json::Value::String(_) => {
+                                crate::evaluator::metadata::apply_fhir_typing(value, "", key)
+                            }
+                            serde_json::Value::Bool(b) if key.ends_with("Boolean") => {
+                                FhirPathValue::TypedBoolean {
+                                    value: *b,
+                                    fhir_type:
+                                        rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean,
+                                }
+                            }
+                            _ => FhirPathValue::from_json(value),
+                        };
+                        return get_value_function(&typed, params);
                     }
                 }
             }

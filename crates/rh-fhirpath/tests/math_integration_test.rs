@@ -188,10 +188,10 @@ mod math_integration_tests {
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(json!({}));
 
-        // sqrt of negative number should error
+        // sqrt of negative number → empty per FHIRPath spec (undefined result)
         let expr = parser.parse("(-1).sqrt()").unwrap();
-        let result = evaluator.evaluate(&expr, &context);
-        assert!(result.is_err());
+        let result = evaluator.evaluate(&expr, &context).unwrap();
+        assert!(matches!(result, FhirPathValue::Empty));
 
         // ln of negative number should error
         let expr = parser.parse("(-1).ln()").unwrap();

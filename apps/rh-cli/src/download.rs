@@ -1,8 +1,28 @@
 use anyhow::Result;
 use clap::Subcommand;
 use rh_foundation::loader::{LoaderConfig, PackageLoader};
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tracing::info;
+
+use crate::output::{Envelope, OutputContext, OutputFormat};
+
+#[derive(Serialize)]
+struct DownloadResult {
+    name: String,
+    version: String,
+    path: String,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
 
 /// Download FHIR packages from npm-style registries
 ///
@@ -47,7 +67,7 @@ pub enum DownloadCommands {
     },
 }
 
-pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
+pub async fn handle_command(cmd: DownloadCommands, ctx: &OutputContext) -> Result<()> {
     // Get token from environment variable
     let token = std::env::var("RH_REGISTRY_TOKEN").ok();
 
@@ -65,7 +85,7 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
                     anyhow::anyhow!("Failed to get default packages directory: {e}")
                 })?,
             };
-            download_package(
+            let result = download_package(
                 &package,
                 &version,
                 &output_dir,
@@ -74,13 +94,26 @@ pub async fn handle_command(cmd: DownloadCommands) -> Result<()> {
                 overwrite,
             )
             .await?;
+            if ctx.is_json() {
+                print_envelope(ctx, &Envelope::ok(result, "download package"))?;
+            }
         }
         DownloadCommands::List {
             package,
             registry,
             latest,
         } => {
-            list_package_versions(&package, &registry, token.as_deref(), latest).await?;
+            let versions = list_package_versions(
+                &package,
+                &registry,
+                token.as_deref(),
+                latest,
+                !ctx.is_json(),
+            )
+            .await?;
+            if ctx.is_json() {
+                print_envelope(ctx, &Envelope::ok(versions, "download list"))?;
+            }
         }
     }
 
@@ -94,7 +127,7 @@ async fn download_package(
     registry: &str,
     token: Option<&str>,
     overwrite: bool,
-) -> Result<()> {
+) -> Result<DownloadResult> {
     info!(
         "Downloading package {}@{} from {}",
         package, version, registry
@@ -111,6 +144,7 @@ async fn download_package(
 
     let loader = PackageLoader::new(loader_config)?;
     let manifest = loader.download_package(package, version, output).await?;
+    let path = output.join(format!("{}#{}", manifest.name, manifest.version));
 
     info!(
         "Successfully downloaded {} v{} to {}",
@@ -118,7 +152,11 @@ async fn download_package(
         manifest.version,
         output.display()
     );
-    Ok(())
+    Ok(DownloadResult {
+        name: manifest.name,
+        version: manifest.version,
+        path: path.display().to_string(),
+    })
 }
 
 async fn list_package_versions(
@@ -126,7 +164,8 @@ async fn list_package_versions(
     registry: &str,
     token: Option<&str>,
     latest_only: bool,
-) -> Result<()> {
+    human_output: bool,
+) -> Result<Vec<String>> {
     let loader_config = LoaderConfig {
         registry_url: registry.to_string(),
         auth_token: token.map(|t| t.to_string()),
@@ -140,18 +179,20 @@ async fn list_package_versions(
 
     if latest_only {
         let latest = loader.get_latest_version(package).await?;
-        println!("{latest}");
+        if human_output {
+            println!("{latest}");
+        }
+        Ok(vec![latest])
     } else {
         let versions = loader.list_versions(package).await?;
-        if versions.is_empty() {
+        if human_output && versions.is_empty() {
             println!("No versions found for package: {package}");
-        } else {
+        } else if human_output {
             println!("Available versions for {package}:");
-            for version in versions {
+            for version in &versions {
                 println!("  {version}");
             }
         }
+        Ok(versions)
     }
-
-    Ok(())
 }

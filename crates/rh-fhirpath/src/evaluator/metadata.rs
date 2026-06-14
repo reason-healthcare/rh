@@ -35,8 +35,14 @@ pub fn typed_value_from_string(value: String, field_type: &FhirFieldType) -> Fhi
             FhirPrimitiveType::Boolean => {
                 // Try to parse as boolean
                 match value.to_lowercase().as_str() {
-                    "true" => FhirPathValue::Boolean(true),
-                    "false" => FhirPathValue::Boolean(false),
+                    "true" => FhirPathValue::TypedBoolean {
+                        value: true,
+                        fhir_type: FhirPrimitiveType::Boolean,
+                    },
+                    "false" => FhirPathValue::TypedBoolean {
+                        value: false,
+                        fhir_type: FhirPrimitiveType::Boolean,
+                    },
                     _ => FhirPathValue::String(value),
                 }
             }
@@ -58,19 +64,49 @@ pub fn typed_value_from_string(value: String, field_type: &FhirFieldType) -> Fhi
             }
             FhirPrimitiveType::Date => FhirPathValue::Date(value),
             FhirPrimitiveType::DateTime | FhirPrimitiveType::Instant => {
-                FhirPathValue::DateTime(value)
+                FhirPathValue::TypedDateTime {
+                    value,
+                    fhir_type: *primitive_type,
+                }
             }
             FhirPrimitiveType::Time => FhirPathValue::Time(value),
-            // All other primitive types remain as strings
-            FhirPrimitiveType::String
-            | FhirPrimitiveType::Uri
-            | FhirPrimitiveType::Url
-            | FhirPrimitiveType::Canonical
-            | FhirPrimitiveType::Code
-            | FhirPrimitiveType::Oid
-            | FhirPrimitiveType::Id
-            | FhirPrimitiveType::Markdown
-            | FhirPrimitiveType::Base64Binary => FhirPathValue::String(value),
+            // String-based primitives: carry type provenance for is/as/ofType/type()
+            FhirPrimitiveType::String => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::String,
+            },
+            FhirPrimitiveType::Code => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Code,
+            },
+            FhirPrimitiveType::Id => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Id,
+            },
+            FhirPrimitiveType::Uri => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Uri,
+            },
+            FhirPrimitiveType::Url => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Url,
+            },
+            FhirPrimitiveType::Canonical => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Canonical,
+            },
+            FhirPrimitiveType::Oid => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Oid,
+            },
+            FhirPrimitiveType::Markdown => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Markdown,
+            },
+            FhirPrimitiveType::Base64Binary => FhirPathValue::TypedString {
+                value,
+                fhir_type: FhirPrimitiveType::Base64Binary,
+            },
         },
         // Complex types and references remain as-is (already handled as Objects)
         FhirFieldType::Complex(_)
@@ -98,9 +134,17 @@ pub fn apply_fhir_typing(
 ) -> FhirPathValue {
     // Get the field type from metadata
     if let Some(field_type) = get_field_type(resource_type, field_name) {
-        // If it's a string value and we have primitive type info, convert it
-        if let serde_json::Value::String(s) = value {
-            return typed_value_from_string(s.clone(), field_type);
+        match (value, field_type) {
+            (serde_json::Value::String(s), _) => {
+                return typed_value_from_string(s.clone(), field_type);
+            }
+            (serde_json::Value::Bool(b), FhirFieldType::Primitive(FhirPrimitiveType::Boolean)) => {
+                return FhirPathValue::TypedBoolean {
+                    value: *b,
+                    fhir_type: FhirPrimitiveType::Boolean,
+                };
+            }
+            _ => {}
         }
     } else {
         // Fallback: Try to infer type from field name patterns (for choice types and missing metadata)
@@ -124,15 +168,28 @@ pub fn apply_fhir_typing(
 fn infer_type_from_field_name(value: String, field_name: &str) -> FhirPathValue {
     // Check for common suffixes in field names
     if field_name.ends_with("DateTime") || field_name.ends_with("Instant") {
-        FhirPathValue::DateTime(value)
+        FhirPathValue::TypedDateTime {
+            value,
+            fhir_type: if field_name.ends_with("Instant") {
+                FhirPrimitiveType::Instant
+            } else {
+                FhirPrimitiveType::DateTime
+            },
+        }
     } else if field_name.ends_with("Date") {
         FhirPathValue::Date(value)
     } else if field_name.ends_with("Time") {
         FhirPathValue::Time(value)
     } else if field_name.ends_with("Boolean") {
         match value.to_lowercase().as_str() {
-            "true" => FhirPathValue::Boolean(true),
-            "false" => FhirPathValue::Boolean(false),
+            "true" => FhirPathValue::TypedBoolean {
+                value: true,
+                fhir_type: FhirPrimitiveType::Boolean,
+            },
+            "false" => FhirPathValue::TypedBoolean {
+                value: false,
+                fhir_type: FhirPrimitiveType::Boolean,
+            },
             _ => FhirPathValue::String(value),
         }
     } else if field_name.ends_with("Integer") {
@@ -140,6 +197,16 @@ fn infer_type_from_field_name(value: String, field_name: &str) -> FhirPathValue 
             .parse::<i64>()
             .map(FhirPathValue::Integer)
             .unwrap_or_else(|_| FhirPathValue::String(value))
+    } else if field_name.ends_with("String") {
+        FhirPathValue::TypedString {
+            value,
+            fhir_type: FhirPrimitiveType::String,
+        }
+    } else if field_name.ends_with("Uuid") {
+        FhirPathValue::TypedString {
+            value,
+            fhir_type: FhirPrimitiveType::Uri,
+        }
     } else {
         // Default to string
         FhirPathValue::String(value)
@@ -178,10 +245,22 @@ mod tests {
         let field_type = FhirFieldType::Primitive(FhirPrimitiveType::Boolean);
 
         let value = typed_value_from_string("true".to_string(), &field_type);
-        assert_eq!(value, FhirPathValue::Boolean(true));
+        assert_eq!(
+            value,
+            FhirPathValue::TypedBoolean {
+                value: true,
+                fhir_type: FhirPrimitiveType::Boolean
+            }
+        );
 
         let value = typed_value_from_string("false".to_string(), &field_type);
-        assert_eq!(value, FhirPathValue::Boolean(false));
+        assert_eq!(
+            value,
+            FhirPathValue::TypedBoolean {
+                value: false,
+                fhir_type: FhirPrimitiveType::Boolean
+            }
+        );
     }
 
     #[test]
@@ -212,7 +291,10 @@ mod tests {
             infer_type_from_field_name("2023-10-22T14:30:00Z".to_string(), "effectiveDateTime");
 
         match result {
-            FhirPathValue::DateTime(dt) => assert_eq!(dt, "2023-10-22T14:30:00Z"),
+            FhirPathValue::TypedDateTime { value, fhir_type } => {
+                assert_eq!(value, "2023-10-22T14:30:00Z");
+                assert_eq!(fhir_type, FhirPrimitiveType::DateTime);
+            }
             _ => panic!("Expected DateTime value for field ending in DateTime"),
         }
     }
@@ -240,10 +322,22 @@ mod tests {
     #[test]
     fn test_infer_boolean_from_field_name() {
         let result = infer_type_from_field_name("true".to_string(), "completedBoolean");
-        assert_eq!(result, FhirPathValue::Boolean(true));
+        assert_eq!(
+            result,
+            FhirPathValue::TypedBoolean {
+                value: true,
+                fhir_type: FhirPrimitiveType::Boolean
+            }
+        );
 
         let result = infer_type_from_field_name("false".to_string(), "activeBoolean");
-        assert_eq!(result, FhirPathValue::Boolean(false));
+        assert_eq!(
+            result,
+            FhirPathValue::TypedBoolean {
+                value: false,
+                fhir_type: FhirPrimitiveType::Boolean
+            }
+        );
     }
 
     #[test]
@@ -261,7 +355,10 @@ mod tests {
         let result = infer_type_from_field_name("2023-10-22T14:30:00Z".to_string(), "someInstant");
 
         match result {
-            FhirPathValue::DateTime(dt) => assert_eq!(dt, "2023-10-22T14:30:00Z"),
+            FhirPathValue::TypedDateTime { value, fhir_type } => {
+                assert_eq!(value, "2023-10-22T14:30:00Z");
+                assert_eq!(fhir_type, FhirPrimitiveType::Instant);
+            }
             _ => panic!("Expected DateTime value for field ending in Instant"),
         }
     }
@@ -272,7 +369,10 @@ mod tests {
         let value = typed_value_from_string("2023-10-22T14:30:00Z".to_string(), &datetime_type);
 
         match value {
-            FhirPathValue::DateTime(dt) => assert_eq!(dt, "2023-10-22T14:30:00Z"),
+            FhirPathValue::TypedDateTime { value, fhir_type } => {
+                assert_eq!(value, "2023-10-22T14:30:00Z");
+                assert_eq!(fhir_type, FhirPrimitiveType::DateTime);
+            }
             _ => panic!("Expected DateTime value"),
         }
 
@@ -280,7 +380,10 @@ mod tests {
         let value = typed_value_from_string("2023-10-22T14:30:00Z".to_string(), &instant_type);
 
         match value {
-            FhirPathValue::DateTime(dt) => assert_eq!(dt, "2023-10-22T14:30:00Z"),
+            FhirPathValue::TypedDateTime { value, fhir_type } => {
+                assert_eq!(value, "2023-10-22T14:30:00Z");
+                assert_eq!(fhir_type, FhirPrimitiveType::Instant);
+            }
             _ => panic!("Expected DateTime value for Instant"),
         }
     }
@@ -300,18 +403,33 @@ mod tests {
     fn test_typed_string_primitives() {
         let string_type = FhirFieldType::Primitive(FhirPrimitiveType::String);
         let value = typed_value_from_string("hello".to_string(), &string_type);
-        assert_eq!(value, FhirPathValue::String("hello".to_string()));
+        assert_eq!(
+            value,
+            FhirPathValue::TypedString {
+                value: "hello".to_string(),
+                fhir_type: FhirPrimitiveType::String
+            }
+        );
 
         let uri_type = FhirFieldType::Primitive(FhirPrimitiveType::Uri);
         let value = typed_value_from_string("http://example.org".to_string(), &uri_type);
         assert_eq!(
             value,
-            FhirPathValue::String("http://example.org".to_string())
+            FhirPathValue::TypedString {
+                value: "http://example.org".to_string(),
+                fhir_type: FhirPrimitiveType::Uri
+            }
         );
 
         let code_type = FhirFieldType::Primitive(FhirPrimitiveType::Code);
         let value = typed_value_from_string("active".to_string(), &code_type);
-        assert_eq!(value, FhirPathValue::String("active".to_string()));
+        assert_eq!(
+            value,
+            FhirPathValue::TypedString {
+                value: "active".to_string(),
+                fhir_type: FhirPrimitiveType::Code
+            }
+        );
     }
 
     #[test]

@@ -15,7 +15,8 @@ fn test_to_quantity_basic_conversions() {
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, 42.0);
-            assert_eq!(unit, None);
+            // FHIRPath spec: toQuantity defaults to UCUM unit "1".
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -26,7 +27,8 @@ fn test_to_quantity_basic_conversions() {
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, 2.5);
-            assert_eq!(unit, None);
+            // FHIRPath spec: toQuantity defaults to UCUM unit "1".
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -37,7 +39,8 @@ fn test_to_quantity_basic_conversions() {
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, 42.0);
-            assert_eq!(unit, None);
+            // FHIRPath spec: toQuantity defaults to UCUM unit "1".
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -96,7 +99,8 @@ fn test_to_quantity_string_conversions() {
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, 42.7);
-            assert_eq!(unit, None);
+            // FHIRPath spec: toQuantity defaults to UCUM unit "1".
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -175,10 +179,16 @@ fn test_to_quantity_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Empty);
 
-    // Test boolean (should be empty)
+    // Boolean toQuantity per spec: true → 1 '1', false → 0 '1'.
     let expr = parser.parse("true.toQuantity()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Empty);
+    assert_eq!(
+        result,
+        FhirPathValue::Quantity {
+            value: 1.0,
+            unit: Some("1".to_string()),
+        }
+    );
 
     // Test empty collection
     let expr = parser.parse("{}.toQuantity()").unwrap();
@@ -207,7 +217,8 @@ fn test_to_quantity_edge_cases() {
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, 42.0);
-            assert_eq!(unit, None); // Invalid unit parameter ignored
+            // FHIRPath spec: toQuantity defaults to UCUM unit "1".
+            assert_eq!(unit.as_deref(), Some("1")); // Invalid unit parameter ignored
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -282,10 +293,11 @@ fn test_converts_to_quantity_other_types() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // Test non-convertible types
+    // Booleans convert to Quantity per spec (true → 1 '1', false → 0 '1');
+    // temporals and multi-item / empty collections do not.
     let test_cases = [
-        ("true.convertsToQuantity()", false),
-        ("false.convertsToQuantity()", false),
+        ("true.convertsToQuantity()", true),
+        ("false.convertsToQuantity()", true),
         ("@2023-01-15.convertsToQuantity()", false),
         ("@2023-01-15T10:30:45.convertsToQuantity()", false),
         ("@T10:30:45.convertsToQuantity()", false),

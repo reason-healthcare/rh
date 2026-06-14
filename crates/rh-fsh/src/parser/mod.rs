@@ -6,6 +6,9 @@ pub mod lexer;
 pub mod rules;
 pub mod span;
 
+#[cfg(test)]
+mod tests;
+
 pub use ast::*;
 pub use span::{SourceLocation, SourceRange, Span};
 

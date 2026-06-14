@@ -5,6 +5,7 @@
 //! https://www.hl7.org/fhir/fhirpath.html
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
 use serde_json::json;
 
 #[test]
@@ -35,7 +36,10 @@ fn test_patient_primitive_types() {
     let expr = parser.parse("Patient.active").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::Boolean(b) => assert!(b),
+        FhirPathValue::TypedBoolean { value, fhir_type } => {
+            assert!(value);
+            assert_eq!(fhir_type, FhirPrimitiveType::Boolean);
+        }
         _ => panic!("Expected Boolean type for active, got {result:?}"),
     }
 
@@ -44,6 +48,10 @@ fn test_patient_primitive_types() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Boolean(b) => assert!(!b),
+        FhirPathValue::TypedBoolean { value, fhir_type } => {
+            assert!(!value);
+            assert_eq!(fhir_type, FhirPrimitiveType::Boolean);
+        }
         _ => panic!("Expected Boolean type for deceasedBoolean, got {result:?}"),
     }
 
@@ -75,19 +83,22 @@ fn test_observation_datetime_types() {
     let expr = parser.parse("Observation.effectiveDateTime").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::DateTime(dt) => assert_eq!(dt, "2023-10-22T14:30:00Z"),
+        FhirPathValue::TypedDateTime { value, fhir_type } => {
+            assert_eq!(value, "2023-10-22T14:30:00Z");
+            assert_eq!(fhir_type, FhirPrimitiveType::DateTime);
+        }
         _ => panic!("Expected DateTime type for effectiveDateTime, got {result:?}"),
     }
 
-    // Test issued field - without metadata, it remains a String
-    // (issued doesn't match any fallback pattern, and Observation metadata is empty)
+    // Test issued field - metadata marks this as FHIR.instant.
     let expr = parser.parse("Observation.issued").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::String(s) | FhirPathValue::DateTime(s) => {
-            assert_eq!(s, "2023-10-22T15:00:00Z")
+        FhirPathValue::TypedDateTime { value, fhir_type } => {
+            assert_eq!(value, "2023-10-22T15:00:00Z");
+            assert_eq!(fhir_type, FhirPrimitiveType::Instant);
         }
-        _ => panic!("Expected String or DateTime type for issued, got {result:?}"),
+        _ => panic!("Expected typed DateTime type for issued, got {result:?}"),
     }
 }
 
@@ -172,6 +183,10 @@ fn test_choice_type_fields() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Boolean(b) => assert!(!b),
+        FhirPathValue::TypedBoolean { value, fhir_type } => {
+            assert!(!value);
+            assert_eq!(fhir_type, FhirPrimitiveType::Boolean);
+        }
         _ => panic!("Expected Boolean type for multipleBirthBoolean, got {result:?}"),
     }
 
@@ -221,7 +236,10 @@ fn test_fallback_type_inference() {
     let expr = parser.parse("TestResource.performedDateTime").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::DateTime(dt) => assert_eq!(dt, "2023-10-22T10:00:00Z"),
+        FhirPathValue::TypedDateTime { value, fhir_type } => {
+            assert_eq!(value, "2023-10-22T10:00:00Z");
+            assert_eq!(fhir_type, FhirPrimitiveType::DateTime);
+        }
         _ => panic!("Expected DateTime type from fallback inference, got {result:?}"),
     }
 
@@ -238,6 +256,10 @@ fn test_fallback_type_inference() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Boolean(b) => assert!(b),
+        FhirPathValue::TypedBoolean { value, fhir_type } => {
+            assert!(value);
+            assert_eq!(fhir_type, FhirPrimitiveType::Boolean);
+        }
         _ => panic!("Expected Boolean type from fallback inference, got {result:?}"),
     }
 
@@ -277,6 +299,7 @@ fn test_nested_field_access_with_typing() {
     // The result might be a collection, so handle that
     match result {
         FhirPathValue::DateTime(dt) => assert_eq!(dt, "2020-01-01"),
+        FhirPathValue::TypedDateTime { value, .. } => assert_eq!(value, "2020-01-01"),
         FhirPathValue::Date(d) => assert_eq!(d, "2020-01-01"),
         FhirPathValue::String(s) => assert_eq!(s, "2020-01-01"),
         _ => panic!("Expected date type for nested field, got {result:?}"),
@@ -396,19 +419,25 @@ fn test_uri_and_code_types_remain_strings() {
 
     let context = EvaluationContext::new(patient_data);
 
-    // Code type should remain as String
+    // Code type should now carry FHIR type provenance
     let expr = parser.parse("Patient.language").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::String(s) => assert_eq!(s, "en-US"),
-        _ => panic!("Expected String type for code, got {result:?}"),
+        FhirPathValue::TypedString { value, fhir_type } => {
+            assert_eq!(value, "en-US");
+            assert_eq!(fhir_type, FhirPrimitiveType::Code);
+        }
+        _ => panic!("Expected TypedString type for code, got {result:?}"),
     }
 
-    // URI type should remain as String
+    // URI type should now carry FHIR type provenance
     let expr = parser.parse("Patient.implicitRules").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::String(s) => assert_eq!(s, "http://example.org/rules"),
-        _ => panic!("Expected String type for URI, got {result:?}"),
+        FhirPathValue::TypedString { value, fhir_type } => {
+            assert_eq!(value, "http://example.org/rules");
+            assert_eq!(fhir_type, FhirPrimitiveType::Uri);
+        }
+        _ => panic!("Expected TypedString type for URI, got {result:?}"),
     }
 }

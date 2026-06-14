@@ -256,6 +256,47 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 Ok(val)
             }
 
+            Expression::Quantity(q) => Ok(match q.value {
+                Some(value) => Value::Quantity(crate::eval::value::CqlQuantity {
+                    value,
+                    unit: q.unit.clone().unwrap_or_else(|| "1".to_string()),
+                }),
+                None => Value::Null,
+            }),
+
+            Expression::Ratio(r) => {
+                let num = self.eval_expr_opt(r.numerator.as_deref())?;
+                let den = self.eval_expr_opt(r.denominator.as_deref())?;
+                let to_q = |v: Value| match v {
+                    Value::Quantity(q) => Some(q),
+                    Value::Integer(i) => Some(crate::eval::value::CqlQuantity {
+                        value: i as f64,
+                        unit: "1".to_string(),
+                    }),
+                    Value::Long(i) => Some(crate::eval::value::CqlQuantity {
+                        value: i as f64,
+                        unit: "1".to_string(),
+                    }),
+                    Value::Decimal(d) => Some(crate::eval::value::CqlQuantity {
+                        value: d,
+                        unit: "1".to_string(),
+                    }),
+                    _ => None,
+                };
+                if matches!(num, Value::Null) || matches!(den, Value::Null) {
+                    return Ok(Value::Null);
+                }
+                match (to_q(num), to_q(den)) {
+                    (Some(numerator), Some(denominator)) => Ok(Value::Ratio {
+                        numerator,
+                        denominator,
+                    }),
+                    _ => Err(EvalError::General(
+                        "Ratio: operands must be quantities".to_string(),
+                    )),
+                }
+            }
+
             // ----- References -----
             Expression::ExpressionRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
@@ -1158,6 +1199,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
                 super::operators::same_or_after(&a, &b, tb.precision.as_deref())
             }
+            Expression::Before(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first())?;
+                let b = self.eval_expr_opt(tb.operand.get(1))?;
+                super::operators::before(&a, &b, tb.precision.as_deref())
+            }
+            Expression::After(tb) => {
+                let a = self.eval_expr_opt(tb.operand.first())?;
+                let b = self.eval_expr_opt(tb.operand.get(1))?;
+                super::operators::after(&a, &b, tb.precision.as_deref())
+            }
             Expression::DurationBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
@@ -1171,6 +1222,50 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     &b,
                     tb.precision.as_deref().unwrap_or("day"),
                 )
+            }
+
+            // ----- Date/Time constructors -----
+            Expression::DateTime(e) => {
+                let year = self.eval_expr_opt(e.year.as_deref())?;
+                let month = self.eval_expr_opt(e.month.as_deref())?;
+                let day = self.eval_expr_opt(e.day.as_deref())?;
+                let hour = self.eval_expr_opt(e.hour.as_deref())?;
+                let minute = self.eval_expr_opt(e.minute.as_deref())?;
+                let second = self.eval_expr_opt(e.second.as_deref())?;
+                let millisecond = self.eval_expr_opt(e.millisecond.as_deref())?;
+                let tz = self.eval_expr_opt(e.timezone_offset.as_deref())?;
+                datetime_construct(
+                    &year,
+                    Some(&month),
+                    Some(&day),
+                    Some(&hour),
+                    Some(&minute),
+                    Some(&second),
+                    Some(&millisecond),
+                    Some(&tz),
+                )
+            }
+            Expression::Date(e) => {
+                let year = self.eval_expr_opt(e.year.as_deref())?;
+                let month = self.eval_expr_opt(e.month.as_deref())?;
+                let day = self.eval_expr_opt(e.day.as_deref())?;
+                date_construct(&year, Some(&month), Some(&day))
+            }
+            Expression::Time(e) => {
+                let hour = self.eval_expr_opt(e.hour.as_deref())?;
+                let minute = self.eval_expr_opt(e.minute.as_deref())?;
+                let second = self.eval_expr_opt(e.second.as_deref())?;
+                let ms = self.eval_expr_opt(e.millisecond.as_deref())?;
+                time_construct(&hour, Some(&minute), Some(&second), Some(&ms))
+            }
+            Expression::DateTimeComponentFrom(e) => {
+                let value = self.eval_expr_opt(e.operand.as_deref())?;
+                let component = e
+                    .precision
+                    .as_deref()
+                    .unwrap_or("year")
+                    .to_ascii_lowercase();
+                date_time_component(&value, &component)
             }
 
             // ----- Interval: proper / expand / size -----
@@ -1345,37 +1440,54 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         Ok(out)
     }
 
-    /// Evaluate CQL age functions (AgeInYears, AgeInYearsAt, etc.).
-    ///
-    /// These functions implicitly reference the Patient context to obtain a
-    /// birthDate and then compute a duration.  Returns `None` if `name` is not
-    /// a recognised age function.
+    /// Evaluate CQL age functions: `AgeIn<unit>[At]` (implicit patient
+    /// birthDate from context) and `CalculateAgeIn<unit>[At]` (explicit
+    /// birthDate argument). Returns `None` if `name` is not a recognised age
+    /// function.
     fn eval_age_function(&self, name: &str, args: &[Value]) -> Option<Result<Value, EvalError>> {
-        let unit = match name {
-            "AgeInYears" | "AgeInYearsAt" => "year",
-            "AgeInMonths" | "AgeInMonthsAt" => "month",
-            "AgeInWeeks" | "AgeInWeeksAt" => "week",
-            "AgeInDays" | "AgeInDaysAt" => "day",
-            "AgeInHours" | "AgeInHoursAt" => "hour",
-            "AgeInMinutes" | "AgeInMinutesAt" => "minute",
-            "AgeInSeconds" | "AgeInSecondsAt" => "second",
+        let explicit_birth = name.starts_with("CalculateAgeIn");
+        let unit_part = name
+            .strip_prefix("CalculateAgeIn")
+            .or_else(|| name.strip_prefix("AgeIn"))?;
+        let unit = match unit_part.strip_suffix("At").unwrap_or(unit_part) {
+            "Years" => "year",
+            "Months" => "month",
+            "Weeks" => "week",
+            "Days" => "day",
+            "Hours" => "hour",
+            "Minutes" => "minute",
+            "Seconds" => "second",
             _ => return None,
         };
+        let at_variant = unit_part.ends_with("At");
 
-        // Extract birthDate from the Patient context value.
-        let birth_raw = match &self.ctx.context_value {
-            Some(Value::Tuple(fields)) => {
-                match fields.get("birthDate").or_else(|| fields.get("birthdate")) {
-                    Some(v) => v.clone(),
-                    None => return Some(Ok(Value::Null)),
+        let birth_raw = if explicit_birth {
+            // CalculateAgeIn<unit>[At]: birthDate is the first argument.
+            match args.first() {
+                Some(v) => v.clone(),
+                None => {
+                    return Some(Err(EvalError::General(format!(
+                        "{name}: expected a birthDate argument"
+                    ))))
                 }
             }
-            _ => return Some(Ok(Value::Null)),
+        } else {
+            // AgeIn<unit>[At]: birthDate comes from the Patient context.
+            match &self.ctx.context_value {
+                Some(Value::Tuple(fields)) => {
+                    match fields.get("birthDate").or_else(|| fields.get("birthdate")) {
+                        Some(v) => v.clone(),
+                        None => return Some(Ok(Value::Null)),
+                    }
+                }
+                _ => return Some(Ok(Value::Null)),
+            }
         };
 
         // Convert a string birthDate (e.g. "1970-01-01") to Value::Date.
         let birth_val = match birth_raw {
-            Value::Date(_) => birth_raw,
+            Value::Date(_) | Value::DateTime(_) => birth_raw,
+            Value::Null => return Some(Ok(Value::Null)),
             ref s @ Value::String(_) => match to_date(s) {
                 Ok(v) => v,
                 Err(e) => return Some(Err(e)),
@@ -1383,13 +1495,14 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             _ => return Some(Ok(Value::Null)),
         };
 
-        // AgeInXxxAt(date) uses the supplied date; AgeInXxx() uses today.
-        let ref_val = if name.ends_with("At") {
-            match args.first() {
+        // The `At` variants use the supplied as-of date; otherwise today.
+        let ref_val = if at_variant {
+            let as_of_index = usize::from(explicit_birth);
+            match args.get(as_of_index) {
                 Some(v) => v.clone(),
                 None => {
                     return Some(Err(EvalError::General(format!(
-                        "{name}: expected 1 argument"
+                        "{name}: expected an as-of date argument"
                     ))))
                 }
             }

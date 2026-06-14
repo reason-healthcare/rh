@@ -14,6 +14,102 @@
 //! 4. Document known/acceptable diffs from the Java reference inline.
 
 use rh_cql::compile;
+use serde_json::Value;
+
+#[derive(Debug, Default)]
+struct MetadataReport {
+    local_id_nodes: usize,
+    locator_nodes: usize,
+    annotation_nodes: usize,
+    empty_annotation_nodes: usize,
+    source_annotation_nodes: usize,
+    translator_info_nodes: usize,
+    expression_types: Vec<String>,
+    statement_names: Vec<String>,
+}
+
+fn compile_json_ok(source: &str) -> Value {
+    let result = compile(source, None).expect("compilation should not hard-fail");
+    let json = result.to_compact_json().expect("ELM JSON serialization");
+    serde_json::from_str(&json).expect("valid ELM JSON")
+}
+
+fn compile_json_allowing_reference_warnings(source: &str) -> Value {
+    let result = compile(source, None).expect("compilation should not hard-fail");
+    let fatal: Vec<_> = result
+        .errors
+        .iter()
+        .filter(|e| {
+            let msg = e.message.to_lowercase();
+            !msg.contains("not found")
+                && !msg.contains("unknown")
+                && !msg.contains("unresolved")
+                && !msg.contains("resolve")
+                && !msg.contains("identifier")
+        })
+        .collect();
+    assert!(
+        fatal.is_empty(),
+        "unexpected fatal errors while compiling fixed corpus: {:?}",
+        fatal
+    );
+    let json = result.to_compact_json().expect("ELM JSON serialization");
+    serde_json::from_str(&json).expect("valid ELM JSON")
+}
+
+fn collect_metadata_report(value: &Value) -> MetadataReport {
+    fn visit(value: &Value, report: &mut MetadataReport) {
+        match value {
+            Value::Object(map) => {
+                if map.contains_key("localId") {
+                    report.local_id_nodes += 1;
+                }
+                if map.contains_key("locator") {
+                    report.locator_nodes += 1;
+                }
+                if let Some(annotation) = map.get("annotation").and_then(Value::as_array) {
+                    report.annotation_nodes += 1;
+                    if annotation.is_empty() {
+                        report.empty_annotation_nodes += 1;
+                    }
+                    for item in annotation {
+                        if let Some(item_map) = item.as_object() {
+                            if item_map.get("type").and_then(Value::as_str) == Some("Annotation") {
+                                report.source_annotation_nodes += 1;
+                            }
+                            if item_map.contains_key("translatorVersion")
+                                && item_map.contains_key("translatorOptions")
+                            {
+                                report.translator_info_nodes += 1;
+                            }
+                        }
+                    }
+                }
+                if let Some(expr_type) = map.get("type").and_then(Value::as_str) {
+                    report.expression_types.push(expr_type.to_string());
+                }
+                if map.contains_key("expression") {
+                    if let Some(name) = map.get("name").and_then(Value::as_str) {
+                        report.statement_names.push(name.to_string());
+                    }
+                }
+                for child in map.values() {
+                    visit(child, report);
+                }
+            }
+            Value::Array(items) => {
+                for item in items {
+                    visit(item, report);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut report = MetadataReport::default();
+    visit(value, &mut report);
+    report
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -336,6 +432,104 @@ fn simple_test_add_produces_integer_add_elm() {
         "1 + 1 should emit as Add, got: {:?}",
         expr
     );
+}
+
+#[test]
+fn simple_test_metadata_diff_matches_java_reference() {
+    let rust_json = compile_json_ok(SIMPLE_CQL);
+    let java_json: Value = serde_json::from_str(include_str!(
+        "../conformance/test-cases/simple/SimpleTest.json"
+    ))
+    .expect("reference ELM JSON should parse");
+
+    let rust_report = collect_metadata_report(&rust_json);
+    let java_report = collect_metadata_report(&java_json);
+
+    assert!(
+        rust_report
+            .statement_names
+            .contains(&"TestExpression".to_string()),
+        "Rust ELM should preserve the user-authored TestExpression statement"
+    );
+    assert!(
+        java_report
+            .statement_names
+            .contains(&"TestExpression".to_string()),
+        "Java ELM should preserve the user-authored TestExpression statement"
+    );
+    assert!(
+        java_report.statement_names.contains(&"Patient".to_string()),
+        "Java reference corpus should retain the synthetic Patient statement"
+    );
+    assert!(
+        rust_report.expression_types.contains(&"Add".to_string()),
+        "Rust ELM should preserve the Add expression"
+    );
+    assert!(
+        java_report.expression_types.contains(&"Add".to_string()),
+        "Java ELM should preserve the Add expression"
+    );
+
+    assert_eq!(
+        rust_report.translator_info_nodes, 1,
+        "Rust output should emit one top-level translator metadata annotation"
+    );
+    assert_eq!(
+        java_report.translator_info_nodes, 1,
+        "Java reference output should emit one top-level translator metadata annotation"
+    );
+
+    assert!(
+        rust_report.local_id_nodes > java_report.local_id_nodes,
+        "Rust output intentionally carries more localIds than the non-debug Java reference"
+    );
+    assert!(
+        rust_report.locator_nodes > java_report.locator_nodes,
+        "Rust output intentionally carries locators where the Java reference does not"
+    );
+    assert!(
+        rust_report.empty_annotation_nodes < java_report.empty_annotation_nodes,
+        "Rust output intentionally omits empty annotation arrays"
+    );
+}
+
+#[test]
+fn fixed_corpus_metadata_report_covers_all_comparison_fixtures() {
+    let corpus = [
+        ("test0", TEST0_CQL, &["Retrieve"][..]),
+        ("test2", TEST2_CQL, &["Retrieve"][..]),
+        (
+            "arithmetic",
+            ARITHMETIC_CQL,
+            &["Add", "Divide", "Power"][..],
+        ),
+        ("simple", SIMPLE_CQL, &["Add"][..]),
+    ];
+
+    for (name, source, expected_types) in corpus {
+        let json = compile_json_allowing_reference_warnings(source);
+        let report = collect_metadata_report(&json);
+
+        assert!(
+            !report.statement_names.is_empty(),
+            "{name}: fixed corpus report should include expression statements"
+        );
+        assert!(
+            report.local_id_nodes > 0,
+            "{name}: localIds should be present in emitted ELM"
+        );
+        assert!(
+            report.translator_info_nodes == 1,
+            "{name}: exactly one translator metadata annotation is expected"
+        );
+
+        for expected_type in expected_types {
+            assert!(
+                report.expression_types.iter().any(|ty| ty == expected_type),
+                "{name}: expected expression type `{expected_type}` missing from corpus report"
+            );
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

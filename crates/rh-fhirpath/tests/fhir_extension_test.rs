@@ -518,7 +518,7 @@ mod tests {
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(
             result,
-            FhirPathValue::String("2023-12-01T10:30:00Z".to_string())
+            FhirPathValue::DateTime("2023-12-01T10:30:00Z".to_string())
         );
     }
 
@@ -549,7 +549,10 @@ mod tests {
 
         assert_eq!(
             result,
-            FhirPathValue::Boolean(true),
+            FhirPathValue::TypedBoolean {
+                value: true,
+                fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean
+            },
             "Should be able to access choice type valueBoolean with base name 'value'"
         );
     }
@@ -570,7 +573,13 @@ mod tests {
 
         let parsed = parser.parse("%resource.value").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        assert_eq!(result, FhirPathValue::String("Normal".to_string()));
+        assert_eq!(
+            result,
+            FhirPathValue::TypedString {
+                value: "Normal".to_string(),
+                fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::String
+            }
+        );
 
         // Test with valueInteger
         let observation_integer = json!({
@@ -649,7 +658,7 @@ mod tests {
         // Should return the first match found (order may vary based on JSON object iteration)
         assert!(matches!(
             result,
-            FhirPathValue::Boolean(true) | FhirPathValue::String(_)
+            FhirPathValue::TypedBoolean { value: true, .. } | FhirPathValue::TypedString { .. }
         ));
 
         // Test accessing field that doesn't follow choice type pattern
@@ -695,18 +704,15 @@ mod tests {
         let parsed = parser.parse("%resource.value").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
+        // Choice-type access (`Observation.value` → valueQuantity) returns a
+        // typed Quantity so `is(Quantity)` / `as(Quantity)` / member access
+        // on `.value` and `.unit` all work per the FHIRPath spec.
         match result {
-            FhirPathValue::Object(obj) => {
-                assert_eq!(
-                    obj.get("value").unwrap(),
-                    &serde_json::Value::Number(serde_json::Number::from_f64(150.0).unwrap())
-                );
-                assert_eq!(
-                    obj.get("unit").unwrap(),
-                    &serde_json::Value::String("mmHg".to_string())
-                );
+            FhirPathValue::Quantity { value, unit } => {
+                assert_eq!(value, 150.0);
+                assert_eq!(unit.as_deref(), Some("mmHg"));
             }
-            _ => panic!("Expected Object value for valueQuantity"),
+            other => panic!("Expected Quantity for valueQuantity, got {other:?}"),
         }
 
         // Test accessing nested field through choice type

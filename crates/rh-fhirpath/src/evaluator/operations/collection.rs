@@ -12,32 +12,37 @@ impl CollectionEvaluator {
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let mut result = Vec::new();
+        let mut result: Vec<FhirPathValue> = Vec::new();
+
+        let push_dedup = |result: &mut Vec<FhirPathValue>, v: FhirPathValue| {
+            if !result
+                .iter()
+                .any(|existing| FhirPathValue::equals_static(existing, &v))
+            {
+                result.push(v);
+            }
+        };
 
         // Add items from left operand
         match left {
             FhirPathValue::Collection(items) => {
-                result.extend(items.clone());
+                for item in items {
+                    push_dedup(&mut result, item.clone());
+                }
             }
-            FhirPathValue::Empty => {
-                // Don't add anything
-            }
-            value => {
-                result.push(value.clone());
-            }
+            FhirPathValue::Empty => {}
+            value => push_dedup(&mut result, value.clone()),
         }
 
-        // Add items from right operand
+        // Add items from right operand, deduplicating against result so far
         match right {
             FhirPathValue::Collection(items) => {
-                result.extend(items.clone());
+                for item in items {
+                    push_dedup(&mut result, item.clone());
+                }
             }
-            FhirPathValue::Empty => {
-                // Don't add anything
-            }
-            value => {
-                result.push(value.clone());
-            }
+            FhirPathValue::Empty => {}
+            value => push_dedup(&mut result, value.clone()),
         }
 
         if result.is_empty() {
@@ -486,7 +491,8 @@ impl CollectionEvaluator {
         }
     }
 
-    /// Check if all items in collection are true (boolean true values only)
+    /// Check if all items in collection are true (boolean true values only).
+    /// Per spec, evaluation is undefined (returns empty) if any item is not boolean.
     pub fn all_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: allTrue() is true
@@ -500,7 +506,8 @@ impl CollectionEvaluator {
                             FhirPathValue::Boolean(false) => {
                                 return Ok(FhirPathValue::Boolean(false))
                             }
-                            _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not true
+                            FhirPathValue::Empty => {} // empty item is not true → handled below
+                            _ => return Ok(FhirPathValue::Empty), // Non-boolean → undefined
                         }
                     }
                     Ok(FhirPathValue::Boolean(true))
@@ -508,7 +515,8 @@ impl CollectionEvaluator {
             }
             value => match value {
                 FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
-                _ => Ok(FhirPathValue::Boolean(false)),
+                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(false)),
+                _ => Ok(FhirPathValue::Empty), // Non-boolean → undefined
             },
         }
     }
@@ -763,8 +771,32 @@ impl CollectionEvaluator {
         true_result: &FhirPathValue,
         otherwise_result: Option<&FhirPathValue>,
     ) -> FhirPathResult<FhirPathValue> {
-        // Evaluate the criterion for truthiness
-        let is_truthy = criterion.to_boolean();
+        // Per spec §6.9: the criterion must evaluate to a single Boolean (or
+        // empty, which is treated as false). A non-Boolean singleton is a
+        // semantic error; a multi-item collection is an execution error.
+        let effective_criterion = match criterion {
+            FhirPathValue::Collection(items) if items.len() == 1 => &items[0],
+            FhirPathValue::Collection(items) if items.is_empty() => &FhirPathValue::Empty,
+            FhirPathValue::Collection(_) => {
+                return Err(FhirPathError::EvaluationError {
+                    message:
+                        "iif() criterion must be a single Boolean; got a multi-item collection"
+                            .to_string(),
+                });
+            }
+            other => other,
+        };
+
+        let is_truthy = match effective_criterion {
+            FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::TypedBoolean { value, .. } => *value,
+            FhirPathValue::Empty => false,
+            other => {
+                return Err(FhirPathError::TypeError {
+                    message: format!("iif() criterion must be Boolean, got {other:?}"),
+                });
+            }
+        };
 
         if is_truthy {
             Ok(true_result.clone())

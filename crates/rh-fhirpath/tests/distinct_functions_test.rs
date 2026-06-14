@@ -176,21 +176,24 @@ fn test_is_distinct_with_duplicates() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_test_context();
 
-    // Collection with duplicate integers
-    let expr = parser.parse("(1 | 2 | 3 | 2).isDistinct()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(false)));
-
-    // Collection with duplicate strings
+    // The | operator is set union (deduplicating). To test isDistinct() with
+    // duplicates, use combine() which does NOT deduplicate.
     let expr = parser
-        .parse("('apple' | 'banana' | 'apple').isDistinct()")
+        .parse("(1 | 2 | 3).combine(2 | 3).isDistinct()")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
-    // Mixed types with duplicates
+    // Collection with duplicate strings via combine
     let expr = parser
-        .parse("(1 | 'hello' | true | 1).isDistinct()")
+        .parse("('apple' | 'banana').combine('apple').isDistinct()")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Boolean(false)));
+
+    // Mixed types with duplicates via combine
+    let expr = parser
+        .parse("(1 | 'hello' | true).combine(1).isDistinct()")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));

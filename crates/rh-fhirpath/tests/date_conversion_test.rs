@@ -111,13 +111,12 @@ fn test_to_datetime_function() {
         FhirPathValue::DateTime("2023-12-25T23:59:59".to_string())
     );
 
-    // Test String date to DateTime
+    // Test String date to DateTime — DateTime accepts partial-precision per
+    // FHIRPath spec, so a date-only string is itself a valid DateTime value
+    // rather than getting padded with T00:00:00.
     let expr = parser.parse("'2023-12-25'.toDateTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(
-        result,
-        FhirPathValue::DateTime("2023-12-25T00:00:00".to_string())
-    );
+    assert_eq!(result, FhirPathValue::DateTime("2023-12-25".to_string()));
 
     // Test invalid string conversion
     let expr = parser.parse("'not-a-datetime'.toDateTime()").unwrap();

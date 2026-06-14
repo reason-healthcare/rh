@@ -5,24 +5,41 @@ use crate::evaluator::types::FhirPathValue;
 pub struct StringEvaluator;
 
 impl StringEvaluator {
+    /// Propagate FHIRPath empty collections: empty.anything() = empty.
+    fn is_empty(v: &FhirPathValue) -> bool {
+        match v {
+            FhirPathValue::Empty => true,
+            FhirPathValue::Collection(c) => c.is_empty(),
+            _ => false,
+        }
+    }
+
     /// Get the length of a string
     /// FHIRPath: String.length() -> Integer
     pub fn length(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::Integer(s.len() as i64)),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.is_empty() => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.len() == 1 => Self::length(&items[0]),
             _ => Err(FhirPathError::TypeError {
                 message: "length() can only be called on String values".to_string(),
             }),
         }
     }
 
-    /// Extract a substring from a string
+    /// Extract a substring from a string. Per FHIRPath §6.7, an out-of-range
+    /// or negative `start` returns the empty collection (not an empty string),
+    /// and an empty input collection propagates empty.
     /// FHIRPath: String.substring(start: Integer, length?: Integer) -> String
     pub fn substring(
         target: &FhirPathValue,
         start: &FhirPathValue,
         length: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -32,8 +49,9 @@ impl StringEvaluator {
             }
         };
 
-        let start_index = match start {
-            FhirPathValue::Integer(i) => *i as usize,
+        let start_signed = match start {
+            FhirPathValue::Integer(i) => *i,
+            FhirPathValue::Long(i) => *i,
             _ => {
                 return Err(FhirPathError::TypeError {
                     message: "substring() start parameter must be an Integer".to_string(),
@@ -41,22 +59,28 @@ impl StringEvaluator {
             }
         };
 
-        if start_index > string.len() {
-            return Ok(FhirPathValue::String(String::new()));
+        // Negative starts and starts past the end of the string both yield
+        // the empty collection per the FHIRPath spec.
+        if start_signed < 0 || start_signed as usize >= string.len() {
+            return Ok(FhirPathValue::Empty);
         }
+        let start_index = start_signed as usize;
 
         let result = match length {
             Some(len_val) => {
                 let length_val = match len_val {
-                    FhirPathValue::Integer(i) => *i as usize,
+                    FhirPathValue::Integer(i) => *i,
+                    FhirPathValue::Long(i) => *i,
                     _ => {
                         return Err(FhirPathError::TypeError {
                             message: "substring() length parameter must be an Integer".to_string(),
                         })
                     }
                 };
-
-                let end_index = std::cmp::min(start_index + length_val, string.len());
+                if length_val <= 0 {
+                    return Ok(FhirPathValue::Empty);
+                }
+                let end_index = std::cmp::min(start_index + length_val as usize, string.len());
                 string[start_index..end_index].to_string()
             }
             None => string[start_index..].to_string(),
@@ -71,6 +95,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         prefix: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(prefix) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -98,6 +128,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         suffix: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(suffix) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -126,6 +162,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(substring) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -157,6 +199,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(substring) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -188,6 +236,9 @@ impl StringEvaluator {
         pattern: &FhirPathValue,
         replacement: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -197,6 +248,9 @@ impl StringEvaluator {
             }
         };
 
+        if Self::is_empty(pattern) || Self::is_empty(replacement) {
+            return Ok(FhirPathValue::Empty);
+        }
         let pattern_str = match pattern {
             FhirPathValue::String(s) => s,
             _ => {
@@ -220,13 +274,19 @@ impl StringEvaluator {
         ))
     }
 
-    /// Replace all matches of a regular expression pattern with a substitution string
+    /// Replace all matches of a regular expression pattern with a substitution
+    /// string. Per FHIRPath §6.7 string functions, an empty input collection
+    /// or an empty regex/substitution argument propagates empty. An empty
+    /// regex string matches nothing, so the original input is returned.
     /// FHIRPath: String.replaceMatches(regex: String, substitution: String) -> String
     pub fn replace_matches(
         target: &FhirPathValue,
         regex_pattern: &FhirPathValue,
         substitution: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) || Self::is_empty(regex_pattern) || Self::is_empty(substitution) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -254,7 +314,14 @@ impl StringEvaluator {
             }
         };
 
-        // Use regex for pattern replacement
+        // An empty pattern matches the zero-width position before every
+        // character — per the suite's expectation, treat this as no match
+        // and return the input unchanged rather than splicing the
+        // substitution between every character.
+        if pattern_str.is_empty() {
+            return Ok(FhirPathValue::String(string.clone()));
+        }
+
         match regex::Regex::new(pattern_str) {
             Ok(re) => Ok(FhirPathValue::String(
                 re.replace_all(string, substitution_str).to_string(),
@@ -292,6 +359,9 @@ impl StringEvaluator {
     pub fn trim(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::String(s.trim().to_string())),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.is_empty() => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) if items.len() == 1 => Self::trim(&items[0]),
             _ => Err(FhirPathError::TypeError {
                 message: "trim() can only be called on String values".to_string(),
             }),
@@ -377,8 +447,14 @@ impl StringEvaluator {
         target: &FhirPathValue,
         pattern: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(pattern) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
-            FhirPathValue::String(s) => s,
+            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => s,
             _ => {
                 return Err(FhirPathError::TypeError {
                     message: "matches() can only be called on String values".to_string(),
@@ -395,8 +471,10 @@ impl StringEvaluator {
             }
         };
 
-        // Use regex for proper pattern matching
-        match regex::Regex::new(pattern_str) {
+        // FHIRPath matches() uses single-line mode: dot matches newlines.
+        // Wrap the pattern with (?s) to enable dotall mode.
+        let dotall_pattern = format!("(?s){}", pattern_str);
+        match regex::Regex::new(&dotall_pattern) {
             Ok(re) => Ok(FhirPathValue::Boolean(re.is_match(string))),
             Err(_) => {
                 // If regex compilation fails, return false (invalid pattern)
@@ -412,6 +490,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         pattern: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(pattern) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -449,6 +533,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if Self::is_empty(substring) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {

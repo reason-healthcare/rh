@@ -60,6 +60,35 @@ pub(crate) fn parse_quantity_literal_expr(input: Span<'_>) -> IResult<Span<'_>, 
     })(input)
 }
 
+/// Parse a ratio literal: `<quantity> : <quantity>` where each side is a
+/// quantity (`1 'mg'`) or a plain number (`1:128`).
+pub(crate) fn parse_ratio_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    fn ratio_part(input: Span<'_>) -> IResult<Span<'_>, Literal> {
+        alt((
+            map(quantity_literal, |(value, unit)| Literal::Quantity {
+                value,
+                unit,
+            }),
+            map(decimal_literal, Literal::Decimal),
+            map(long_literal, Literal::Long),
+            map(integer_literal, Literal::Integer),
+        ))(input)
+    }
+
+    let (input, numerator) = ratio_part(input)?;
+    let (input, _) = nom::character::complete::multispace0(input)?;
+    let (input, _) = nom::character::complete::char(':')(input)?;
+    let (input, _) = nom::character::complete::multispace0(input)?;
+    let (input, denominator) = ratio_part(input)?;
+    Ok((
+        input,
+        Expression::Literal(Literal::Ratio {
+            numerator: Box::new(numerator),
+            denominator: Box::new(denominator),
+        }),
+    ))
+}
+
 pub(crate) fn parse_duration_quantity_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, qty_value) = alt((decimal_literal, map(integer_literal, |i| i as f64)))(input)?;
     let (input, _) = multispace1(input)?;

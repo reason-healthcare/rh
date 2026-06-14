@@ -1,6 +1,7 @@
 //! Conversion function registration for FHIRPath
 
 use crate::error::*;
+use crate::evaluator::operations::temporal::parse_temporal;
 use crate::evaluator::types::FhirPathValue;
 use regex::Regex;
 use std::collections::HashMap;
@@ -108,6 +109,59 @@ pub fn register_conversion_functions(functions: &mut HashMap<String, FhirPathFun
             converts_to_quantity(target, params.first())
         }),
     );
+
+    // toDecimal() function
+    functions.insert(
+        "toDecimal".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| to_decimal(target)),
+    );
+
+    // convertsToDecimal() function
+    functions.insert(
+        "convertsToDecimal".to_string(),
+        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| converts_to_decimal(target)),
+    );
+}
+
+/// Convert a value to Decimal according to the FHIRPath specification.
+fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    match value {
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) => {
+            if items.len() == 1 {
+                to_decimal(&items[0])
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        FhirPathValue::Number(n) => Ok(FhirPathValue::Number(*n)),
+        FhirPathValue::Integer(i) | FhirPathValue::Long(i) => Ok(FhirPathValue::Number(*i as f64)),
+        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Number(if *b { 1.0 } else { 0.0 })),
+        FhirPathValue::String(s) => {
+            let decimal_re = Regex::new(r"^[+-]?\d+(\.\d+)?$").expect("static regex");
+            if decimal_re.is_match(s.trim()) {
+                match s.trim().parse::<f64>() {
+                    Ok(n) => Ok(FhirPathValue::Number(n)),
+                    Err(_) => Ok(FhirPathValue::Empty),
+                }
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        _ => Ok(FhirPathValue::Empty),
+    }
+}
+
+/// Check whether a value is convertible to Decimal.
+fn converts_to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    match value {
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) if items.len() != 1 => Ok(FhirPathValue::Empty),
+        other => match to_decimal(other)? {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+            _ => Ok(FhirPathValue::Boolean(true)),
+        },
+    }
 }
 
 /// Convert a value to Boolean according to FHIRPath specification
@@ -583,21 +637,19 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         FhirPathValue::Long(l) => Ok(FhirPathValue::String(l.to_string())),
 
         FhirPathValue::Number(n) => {
-            // Format number without unnecessary trailing zeros
-            let formatted = if n.fract() == 0.0 {
-                format!("{n:.0}")
+            // FHIRPath Decimal.toString() preserves the decimal point so that
+            // 1.0 → "1.0" — required to distinguish Decimal from Integer in
+            // string form. Trailing zeros past the first are still trimmed.
+            let mut s = format!("{n}");
+            if !s.contains('.') {
+                s.push_str(".0");
             } else {
-                // Remove trailing zeros but keep at least one decimal place if needed
-                let mut formatted = format!("{n}");
-                if formatted.contains('.') {
-                    formatted = formatted.trim_end_matches('0').to_string();
-                    if formatted.ends_with('.') {
-                        formatted.push('0');
-                    }
+                s = s.trim_end_matches('0').to_string();
+                if s.ends_with('.') {
+                    s.push('0');
                 }
-                formatted
-            };
-            Ok(FhirPathValue::String(formatted))
+            }
+            Ok(FhirPathValue::String(s))
         }
 
         FhirPathValue::Date(d) => Ok(FhirPathValue::String(d.clone())),
@@ -615,6 +667,12 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         }
 
         FhirPathValue::Quantity { value, unit } => match unit {
+            // Calendar-duration words are emitted unquoted (`1 week`),
+            // while UCUM codes are quoted (`1 'kg'`). The set tracks the
+            // FHIRPath calendar-duration vocabulary plus their plurals.
+            Some(u) if is_calendar_duration_unit(u) => {
+                Ok(FhirPathValue::String(format!("{value} {u}")))
+            }
             Some(u) => Ok(FhirPathValue::String(format!("{value} '{u}'"))),
             None => Ok(FhirPathValue::String(value.to_string())),
         },
@@ -771,53 +829,27 @@ fn to_quantity(
             })
         }
 
-        FhirPathValue::Integer(i) => {
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => None, // Invalid unit parameter
-                }
-            } else {
-                None
-            };
+        // Numeric and Boolean conversions get the default UCUM unit "1"
+        // when no explicit unit is supplied — per FHIRPath §6.3 toQuantity().
+        FhirPathValue::Integer(i) => Ok(FhirPathValue::Quantity {
+            value: *i as f64,
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
-            Ok(FhirPathValue::Quantity {
-                value: *i as f64,
-                unit: target_unit,
-            })
-        }
+        FhirPathValue::Number(n) => Ok(FhirPathValue::Quantity {
+            value: *n,
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
-        FhirPathValue::Number(n) => {
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => None, // Invalid unit parameter
-                }
-            } else {
-                None
-            };
+        FhirPathValue::Long(l) => Ok(FhirPathValue::Quantity {
+            value: *l as f64,
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
-            Ok(FhirPathValue::Quantity {
-                value: *n,
-                unit: target_unit,
-            })
-        }
-
-        FhirPathValue::Long(l) => {
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => None, // Invalid unit parameter
-                }
-            } else {
-                None
-            };
-
-            Ok(FhirPathValue::Quantity {
-                value: *l as f64,
-                unit: target_unit,
-            })
-        }
+        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Quantity {
+            value: if *b { 1.0 } else { 0.0 },
+            unit: Some(quantity_unit_or_default(unit_param)),
+        }),
 
         FhirPathValue::String(s) => {
             // Try to parse as a quantity string or as a number
@@ -837,19 +869,11 @@ fn to_quantity(
                     unit: target_unit,
                 })
             } else if let Ok(value) = s.parse::<f64>() {
-                // Parse as a plain number
-                let target_unit = if let Some(unit_param) = unit_param {
-                    match unit_param {
-                        FhirPathValue::String(u) => Some(u.clone()),
-                        _ => None, // Invalid unit parameter
-                    }
-                } else {
-                    None
-                };
-
+                // Plain numeric string — defaults to UCUM unit "1" like the
+                // direct numeric-input path does.
                 Ok(FhirPathValue::Quantity {
                     value,
-                    unit: target_unit,
+                    unit: Some(quantity_unit_or_default(unit_param)),
                 })
             } else {
                 // Not convertible
@@ -887,8 +911,11 @@ fn converts_to_quantity(
             Ok(FhirPathValue::Boolean(true))
         }
 
-        FhirPathValue::Integer(_) | FhirPathValue::Number(_) | FhirPathValue::Long(_) => {
-            // Numeric types are always convertible to quantity
+        FhirPathValue::Integer(_)
+        | FhirPathValue::Number(_)
+        | FhirPathValue::Long(_)
+        | FhirPathValue::Boolean(_) => {
+            // Numeric and Boolean inputs convert via the default unit "1".
             Ok(FhirPathValue::Boolean(true))
         }
 
@@ -906,174 +933,97 @@ fn converts_to_quantity(
 
 /// Helper function to validate date string format (YYYY-MM-DD)
 fn is_valid_date_string(s: &str) -> bool {
-    // Basic validation for YYYY-MM-DD format
-    if s.len() < 8 || s.len() > 10 {
+    // Per FHIRPath spec, Date accepts YYYY, YYYY-MM, or YYYY-MM-DD. Delegates
+    // to the temporal parser to cover all three precisions plus value-range
+    // validation (month 1-12, day 1-31).
+    let Some(parts) = parse_temporal(s) else {
+        return false;
+    };
+    // Must not be a Time-only or DateTime-with-time string.
+    if s.contains('T') || parts.hour.is_some() || parts.year.is_none() {
         return false;
     }
-
-    // Check for basic date pattern
-    let parts: Vec<&str> = s.split('-').collect();
-    if parts.len() != 3 {
-        return false;
-    }
-
-    // Validate year (4 digits)
-    if parts[0].len() != 4 || !parts[0].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-
-    // Validate month (1-12)
-    if parts[1].is_empty() || parts[1].len() > 2 || !parts[1].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(month) = parts[1].parse::<u32>() {
-        if !(1..=12).contains(&month) {
+    if let Some(m) = parts.month {
+        if !(1..=12).contains(&m) {
             return false;
         }
-    } else {
-        return false;
     }
-
-    // Validate day (1-31, basic check)
-    if parts[2].is_empty() || parts[2].len() > 2 || !parts[2].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(day) = parts[2].parse::<u32>() {
-        if !(1..=31).contains(&day) {
+    if let Some(d) = parts.day {
+        if !(1..=31).contains(&d) {
             return false;
         }
-    } else {
-        return false;
     }
-
     true
 }
 
-/// Helper function to validate datetime string format
+/// Per FHIRPath spec, DateTime accepts partial-precision shapes (year alone,
+/// year-month, full date, and the date plus any prefix of `T[hh[:mm[:ss[.fff]]][TZ]]`).
 fn is_valid_datetime_string(s: &str) -> bool {
-    // Basic validation for ISO 8601 datetime format
-    if !s.contains('T') {
+    let Some(parts) = parse_temporal(s) else {
         return false;
-    }
-
-    let parts: Vec<&str> = s.split('T').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-
-    // Validate date part
-    if !is_valid_date_string(parts[0]) {
-        return false;
-    }
-
-    // Basic time validation (HH:MM:SS or HH:MM:SS.sss with optional timezone)
-    let time_part = parts[1];
-    if time_part.is_empty() {
-        return false;
-    }
-
-    // Remove timezone info for basic validation
-    let time_only = if let Some(tz_pos) = time_part.find(&['+', '-', 'Z'][..]) {
-        &time_part[..tz_pos]
-    } else {
-        time_part
     };
-
-    // Split by colon to get time components
-    let time_components: Vec<&str> = time_only.split(':').collect();
-    if time_components.len() < 2 || time_components.len() > 3 {
+    if parts.year.is_none() {
         return false;
     }
-
-    // Validate hour (00-23)
-    if time_components[0].len() != 2 || !time_components[0].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(hour) = time_components[0].parse::<u32>() {
-        if hour > 23 {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    // Validate minute (00-59)
-    if time_components[1].len() != 2 || !time_components[1].chars().all(|c| c.is_ascii_digit()) {
-        return false;
-    }
-    if let Ok(minute) = time_components[1].parse::<u32>() {
-        if minute > 59 {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    // Validate seconds if present (00-59, may include decimal)
-    if time_components.len() == 3 {
-        let seconds_part = time_components[2];
-        if seconds_part.is_empty() {
-            return false;
-        }
-
-        // Handle decimal seconds
-        let seconds_str = if let Some(dot_pos) = seconds_part.find('.') {
-            &seconds_part[..dot_pos]
-        } else {
-            seconds_part
-        };
-
-        if seconds_str.len() != 2 || !seconds_str.chars().all(|c| c.is_ascii_digit()) {
-            return false;
-        }
-        if let Ok(seconds) = seconds_str.parse::<u32>() {
-            if seconds > 59 {
-                return false;
-            }
-        } else {
+    if let Some(m) = parts.month {
+        if !(1..=12).contains(&m) {
             return false;
         }
     }
-
+    if let Some(d) = parts.day {
+        if !(1..=31).contains(&d) {
+            return false;
+        }
+    }
+    if let Some(h) = parts.hour {
+        if h > 23 {
+            return false;
+        }
+    }
+    if let Some(m) = parts.minute {
+        if m > 59 {
+            return false;
+        }
+    }
+    if let Some(sec) = parts.second {
+        if sec > 59 {
+            return false;
+        }
+    }
     true
 }
 
-/// Validate if a string represents a valid time format
+/// Per FHIRPath spec, Time accepts hh, hh:mm, hh:mm:ss, or hh:mm:ss.fff.
+/// Storage form has a leading T; user-supplied strings often do not, so we
+/// normalise before delegating to the temporal parser.
 fn is_valid_time_string(s: &str) -> bool {
-    // Remove leading 'T' if present for validation
-    let time_str = s.strip_prefix('T').unwrap_or(s);
-
-    // Time format: HH:MM:SS or HH:MM:SS.sss
-    let time_regex =
-        Regex::new(r"^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9])(\.\d{1,3})?$").unwrap();
-
-    if !time_regex.is_match(time_str) {
+    let with_t = if s.starts_with('T') {
+        s.to_string()
+    } else {
+        format!("T{s}")
+    };
+    let Some(parts) = parse_temporal(&with_t) else {
+        return false;
+    };
+    if parts.hour.is_none() {
         return false;
     }
-
-    // Additional validation for actual time values
-    let parts: Vec<&str> = time_str.split(':').collect();
-    if parts.len() < 3 {
-        return false;
+    if let Some(h) = parts.hour {
+        if h > 23 {
+            return false;
+        }
     }
-
-    let hour: u8 = match parts[0].parse() {
-        Ok(h) => h,
-        Err(_) => return false,
-    };
-    let minute: u8 = match parts[1].parse() {
-        Ok(m) => m,
-        Err(_) => return false,
-    };
-
-    // Parse seconds (might have fractional part)
-    let second_str = parts[2];
-    let second: f64 = match second_str.parse() {
-        Ok(s) => s,
-        Err(_) => return false,
-    };
-
-    hour <= 23 && minute <= 59 && second < 60.0
+    if let Some(m) = parts.minute {
+        if m > 59 {
+            return false;
+        }
+    }
+    if let Some(sec) = parts.second {
+        if sec > 59 {
+            return false;
+        }
+    }
+    true
 }
 
 /// Extract time part from datetime string
@@ -1105,17 +1055,14 @@ fn extract_time_from_datetime(dt: &str) -> Option<String> {
 /// Parse a string that might represent a quantity (e.g., "5 'mg'", "10.5'kg'")
 /// Returns (value, unit) if successful
 fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
-    // Try to parse as "value 'unit'" or "value'unit'" format
     let s = s.trim();
 
-    // Look for quote patterns
+    // Quoted UCUM unit form: "value 'unit'" or "value'unit'"
     if let Some(quote_start) = s.find('\'') {
         if let Some(quote_end) = s.rfind('\'') {
             if quote_start < quote_end {
-                // Extract the value part
                 let value_str = s[..quote_start].trim();
                 let unit_str = &s[quote_start + 1..quote_end];
-
                 if let Ok(value) = value_str.parse::<f64>() {
                     let unit = if unit_str.is_empty() {
                         None
@@ -1128,5 +1075,49 @@ fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
         }
     }
 
+    // Unquoted calendar-duration form: "value day" / "value weeks" etc.
+    if let Some(sep) = s.find(char::is_whitespace) {
+        let value_str = s[..sep].trim();
+        let unit_str = s[sep..].trim();
+        if !unit_str.is_empty() && is_calendar_duration_unit(unit_str) {
+            if let Ok(value) = value_str.parse::<f64>() {
+                return Some((value, Some(unit_str.to_string())));
+            }
+        }
+    }
+
     None
+}
+
+/// Read the unit-argument for `toQuantity(unit)`, defaulting to the UCUM
+/// "no unit" code `'1'` when no argument is supplied — per FHIRPath §6.3.
+fn quantity_unit_or_default(unit_param: Option<&FhirPathValue>) -> String {
+    match unit_param {
+        Some(FhirPathValue::String(u)) => u.clone(),
+        _ => "1".to_string(),
+    }
+}
+
+/// FHIRPath calendar-duration vocabulary (used by Quantity.toString to decide
+/// whether the unit gets quoted). Both singular and plural forms accepted.
+fn is_calendar_duration_unit(u: &str) -> bool {
+    matches!(
+        u,
+        "year"
+            | "years"
+            | "month"
+            | "months"
+            | "week"
+            | "weeks"
+            | "day"
+            | "days"
+            | "hour"
+            | "hours"
+            | "minute"
+            | "minutes"
+            | "second"
+            | "seconds"
+            | "millisecond"
+            | "milliseconds"
+    )
 }
