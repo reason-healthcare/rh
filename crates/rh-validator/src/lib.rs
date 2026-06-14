@@ -2,6 +2,7 @@
 pub mod fhir_version;
 pub mod profile;
 pub mod questionnaire;
+pub mod report;
 pub mod rules;
 pub mod terminology;
 pub mod types;

@@ -6,6 +6,10 @@
 //! - [`OutputFormat`] — format negotiation (`human` / `json` / `ndjson`)
 //! - [`Envelope`] — stable JSON output envelope
 //! - [`OutputContext`] — resolved output settings for a command run
+
+// Items in this module are part of the output contract API; not all are wired
+// up yet — they will be used as 3.5/3.6 land.
+#![allow(dead_code)]
 //! - [`ColorMode`] — color / TTY policy
 
 use is_terminal::IsTerminal;

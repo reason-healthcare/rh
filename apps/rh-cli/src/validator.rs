@@ -5,7 +5,7 @@
 use anyhow::{bail, Context, Result};
 use clap::{Args, Subcommand};
 use glob::glob;
-use rh_validator::{FhirValidator, Severity, TerminologyConfig, ValidationOptions};
+use rh_validator::{report, FhirValidator, Severity, TerminologyConfig, ValidationOptions};
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
@@ -224,16 +224,16 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: OutputContext) -> R
             } else if results.len() == 1 {
                 let (_, resource, result) = &results[0];
                 match args.report_format {
-                    OutputFormat::Text => print_single_result_text(result, resource),
-                    OutputFormat::Json => print_single_result_json(result, resource)?,
-                    OutputFormat::OperationOutcome => print_operation_outcome(result)?,
+                    OutputFormat::Text => report::print_single_result_text(result, resource),
+                    OutputFormat::Json => report::print_single_result_json(result, resource)?,
+                    OutputFormat::OperationOutcome => report::print_operation_outcome(result)?,
                 }
             } else {
                 match args.report_format {
-                    OutputFormat::Text => print_labeled_batch_results_text(&results, false),
-                    OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+                    OutputFormat::Text => report::print_labeled_batch_results_text(&results, false),
+                    OutputFormat::Json => report::print_labeled_batch_results_json(&results)?,
                     OutputFormat::OperationOutcome => {
-                        print_labeled_batch_operation_outcomes(&results)?
+                        report::print_labeled_batch_operation_outcomes(&results)?
                     }
                 }
             }
@@ -270,9 +270,9 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: OutputContext) -> R
             print_envelope(&ctx, &Envelope::ok(payload, "validate resource"))?;
         } else {
             match args.report_format {
-                OutputFormat::Text => print_single_result_text(&result, &resource),
-                OutputFormat::Json => print_single_result_json(&result, &resource)?,
-                OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
+                OutputFormat::Text => report::print_single_result_text(&result, &resource),
+                OutputFormat::Json => report::print_single_result_json(&result, &resource)?,
+                OutputFormat::OperationOutcome => report::print_operation_outcome(&result)?,
             }
         }
 
@@ -362,11 +362,11 @@ async fn handle_batch_validation(args: BatchArgs, ctx: OutputContext) -> Result<
             } else {
                 match args.report_format {
                     OutputFormat::Text => {
-                        print_labeled_batch_results_text(&results, args.summary_only)
+                        report::print_labeled_batch_results_text(&results, args.summary_only)
                     }
-                    OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+                    OutputFormat::Json => report::print_labeled_batch_results_json(&results)?,
                     OutputFormat::OperationOutcome => {
-                        print_labeled_batch_operation_outcomes(&results)?
+                        report::print_labeled_batch_operation_outcomes(&results)?
                     }
                 }
             }
@@ -412,9 +412,9 @@ async fn handle_batch_validation(args: BatchArgs, ctx: OutputContext) -> Result<
             print_envelope(&ctx, &Envelope::ok(payload, "validate batch"))?;
         } else {
             match args.report_format {
-                OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
-                OutputFormat::Json => print_batch_results_json(&results)?,
-                OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,
+                OutputFormat::Text => report::print_batch_results_text(&results, args.summary_only),
+                OutputFormat::Json => report::print_batch_results_json(&results)?,
+                OutputFormat::OperationOutcome => report::print_batch_operation_outcomes(&results)?,
             }
         }
 
@@ -510,296 +510,6 @@ fn resolve_input_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
     }
 
     Ok(resolved.into_iter().collect())
-}
-
-fn print_single_result_text(result: &rh_validator::ValidationResult, resource: &serde_json::Value) {
-    let errors = result.error_count();
-    let warnings = result.warning_count();
-    let info_count = result.info_count();
-
-    let resource_type = resource
-        .get("resourceType")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown");
-
-    if result.valid {
-        println!("✅ FHIR resource is valid ({resource_type})");
-        if warnings > 0 {
-            println!("⚠️  {warnings} warning(s)");
-        }
-        if info_count > 0 {
-            println!("ℹ️  {info_count} informational message(s)");
-        }
-    } else {
-        println!("❌ FHIR validation failed ({resource_type})");
-        println!("  Errors: {errors}");
-        if warnings > 0 {
-            println!("  Warnings: {warnings}");
-        }
-        if info_count > 0 {
-            println!("  Info: {info_count}");
-        }
-    }
-
-    if !result.issues.is_empty() {
-        println!();
-        println!("Issues:");
-        for (i, issue) in result.issues.iter().enumerate() {
-            let icon = match issue.severity {
-                Severity::Error => "❌",
-                Severity::Warning => "⚠️ ",
-                Severity::Information => "ℹ️ ",
-            };
-            println!("  {}. {} {}", i + 1, icon, issue.message);
-            if let Some(path) = &issue.path {
-                println!("     Path: {path}");
-            }
-            if let Some(location) = &issue.location {
-                println!(
-                    "     Location: line {}, column {}",
-                    location.line, location.column
-                );
-            }
-        }
-    }
-}
-
-fn print_single_result_json(
-    result: &rh_validator::ValidationResult,
-    resource: &serde_json::Value,
-) -> Result<()> {
-    let resource_type = resource
-        .get("resourceType")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown");
-
-    let output = serde_json::json!({
-        "resourceType": resource_type,
-        "valid": result.valid,
-        "errors": result.error_count(),
-        "warnings": result.warning_count(),
-        "issues": result.issues.iter().map(|issue| {
-            serde_json::json!({
-                "severity": issue.severity.to_string(),
-                "code": issue.code.to_string(),
-                "message": issue.message,
-                "path": issue.path,
-                "location": issue.location,
-            })
-        }).collect::<Vec<_>>()
-    });
-
-    println!("{}", serde_json::to_string_pretty(&output)?);
-    Ok(())
-}
-
-fn print_batch_results_text(
-    results: &[(usize, serde_json::Value, rh_validator::ValidationResult)],
-    summary_only: bool,
-) {
-    let total = results.len();
-    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
-    let invalid_count = total - valid_count;
-    let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
-    let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
-
-    println!("📋 Batch Validation Summary:");
-    println!("  Total resources: {total}");
-    println!("  ✅ Valid: {valid_count}");
-    println!("  ❌ Invalid: {invalid_count}");
-    println!("  Total errors: {total_errors}");
-    println!("  Total warnings: {total_warnings}");
-    println!();
-
-    if !summary_only && invalid_count > 0 {
-        println!("❌ Invalid resources:");
-        for (line_num, resource, result) in results.iter() {
-            if !result.valid {
-                let resource_type = resource
-                    .get("resourceType")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown");
-                let errors = result.error_count();
-                let warnings = result.warning_count();
-                println!(
-                    "  Line {} ({}): {} error(s), {} warning(s)",
-                    line_num + 1,
-                    resource_type,
-                    errors,
-                    warnings
-                );
-                for issue in &result.issues {
-                    if issue.severity == Severity::Error {
-                        println!("    ❌ {}", issue.message);
-                        if let Some(path) = &issue.path {
-                            println!("       at {path}");
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn print_batch_results_json(
-    results: &[(usize, serde_json::Value, rh_validator::ValidationResult)],
-) -> Result<()> {
-    let total = results.len();
-    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
-
-    let json_results: Vec<_> = results
-        .iter()
-        .map(|(line_num, resource, result)| {
-            let resource_type = resource
-                .get("resourceType")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Unknown");
-            serde_json::json!({
-                "line": line_num + 1,
-                "resourceType": resource_type,
-                "valid": result.valid,
-                "errors": result.error_count(),
-                "warnings": result.warning_count(),
-                "issues": result.issues.iter().map(|issue| {
-                    serde_json::json!({
-                        "severity": issue.severity.to_string(),
-                        "code": issue.code.to_string(),
-                        "message": issue.message,
-                        "path": issue.path,
-                        "location": issue.location,
-                    })
-                }).collect::<Vec<_>>()
-            })
-        })
-        .collect();
-
-    let summary = serde_json::json!({
-        "summary": {
-            "total": total,
-            "valid": valid_count,
-            "invalid": total - valid_count
-        },
-        "results": json_results
-    });
-
-    println!("{}", serde_json::to_string_pretty(&summary)?);
-    Ok(())
-}
-
-fn print_labeled_batch_results_text(
-    results: &[(String, serde_json::Value, rh_validator::ValidationResult)],
-    summary_only: bool,
-) {
-    let total = results.len();
-    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
-    let invalid_count = total - valid_count;
-    let total_errors: usize = results.iter().map(|(_, _, r)| r.error_count()).sum();
-    let total_warnings: usize = results.iter().map(|(_, _, r)| r.warning_count()).sum();
-
-    println!("📋 Batch Validation Summary:");
-    println!("  Total resources: {total}");
-    println!("  ✅ Valid: {valid_count}");
-    println!("  ❌ Invalid: {invalid_count}");
-    println!("  Total errors: {total_errors}");
-    println!("  Total warnings: {total_warnings}");
-    println!();
-
-    if !summary_only && invalid_count > 0 {
-        println!("❌ Invalid resources:");
-        for (source, resource, result) in results.iter() {
-            if !result.valid {
-                let resource_type = resource
-                    .get("resourceType")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown");
-                let errors = result.error_count();
-                let warnings = result.warning_count();
-                println!(
-                    "  {} ({}): {} error(s), {} warning(s)",
-                    source, resource_type, errors, warnings
-                );
-                for issue in &result.issues {
-                    if issue.severity == Severity::Error {
-                        println!("    ❌ {}", issue.message);
-                        if let Some(path) = &issue.path {
-                            println!("       at {path}");
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn print_labeled_batch_results_json(
-    results: &[(String, serde_json::Value, rh_validator::ValidationResult)],
-) -> Result<()> {
-    let total = results.len();
-    let valid_count = results.iter().filter(|(_, _, r)| r.valid).count();
-
-    let json_results: Vec<_> = results
-        .iter()
-        .map(|(source, resource, result)| {
-            let resource_type = resource
-                .get("resourceType")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Unknown");
-            serde_json::json!({
-                "source": source,
-                "resourceType": resource_type,
-                "valid": result.valid,
-                "errors": result.error_count(),
-                "warnings": result.warning_count(),
-                "issues": result.issues.iter().map(|issue| {
-                    serde_json::json!({
-                        "severity": issue.severity.to_string(),
-                        "code": issue.code.to_string(),
-                        "message": issue.message,
-                        "path": issue.path,
-                        "location": issue.location,
-                    })
-                }).collect::<Vec<_>>()
-            })
-        })
-        .collect();
-
-    let summary = serde_json::json!({
-        "summary": {
-            "total": total,
-            "valid": valid_count,
-            "invalid": total - valid_count
-        },
-        "results": json_results
-    });
-
-    println!("{}", serde_json::to_string_pretty(&summary)?);
-    Ok(())
-}
-
-fn print_operation_outcome(result: &rh_validator::ValidationResult) -> Result<()> {
-    let operation_outcome = result.to_operation_outcome();
-    println!("{}", serde_json::to_string_pretty(&operation_outcome)?);
-    Ok(())
-}
-
-fn print_batch_operation_outcomes(
-    results: &[(usize, serde_json::Value, rh_validator::ValidationResult)],
-) -> Result<()> {
-    for (_, _, result) in results {
-        let operation_outcome = result.to_operation_outcome();
-        println!("{}", serde_json::to_string(&operation_outcome)?);
-    }
-    Ok(())
-}
-
-fn print_labeled_batch_operation_outcomes(
-    results: &[(String, serde_json::Value, rh_validator::ValidationResult)],
-) -> Result<()> {
-    for (_, _, result) in results {
-        let operation_outcome = result.to_operation_outcome();
-        println!("{}", serde_json::to_string(&operation_outcome)?);
-    }
-    Ok(())
 }
 
 #[cfg(test)]

@@ -270,6 +270,37 @@ pub fn exit_if(condition: bool, code: i32) {
     }
 }
 
+/// Parse a `name@version` package specification into `(name, version)`.
+///
+/// # Errors
+/// Returns an error if the spec does not contain exactly one `@`.
+pub fn parse_package_spec(spec: &str) -> Result<(String, String)> {
+    let parts: Vec<&str> = spec.splitn(2, '@').collect();
+    if parts.len() != 2 {
+        return Err(FoundationError::Other(anyhow::anyhow!(
+            "Invalid package specification: '{spec}'. Expected format: name@version"
+        )));
+    }
+    Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
+/// Expand a leading `~/` in a path to the user's home directory.
+///
+/// Returns the path unchanged if it does not start with `~/`.
+pub fn expand_home_dir(path: &std::path::Path) -> Result<std::path::PathBuf> {
+    let path_str = path.to_string_lossy();
+    if let Some(stripped) = path_str.strip_prefix("~/") {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .map_err(|_| {
+                FoundationError::Other(anyhow::anyhow!("Could not determine home directory"))
+            })?;
+        Ok(std::path::PathBuf::from(home).join(stripped))
+    } else {
+        Ok(path.to_path_buf())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
