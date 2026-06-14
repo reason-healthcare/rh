@@ -1,6 +1,6 @@
 # rh-fhirpath Conformance
 
-**Last updated**: 2026-06-12 (wave 4: sort, aggregate/$total, type(), comparable, string empty-propagation)
+**Last updated**: 2026-06-14 (waves 26–29: quantity equivalence, FHIR type provenance, matches single-line, iif collection error)
 **FHIRPath specification**: 2.0.0 (http://hl7.org/fhirpath)
 **Test suite source**: `tests-fhir-r4.xml` from
 https://github.com/FHIR/fhir-test-cases/blob/master/r4/fhirpath/ (R4 copy of
@@ -38,15 +38,15 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-12, wave 4)
+### 1.1 Current results (2026-06-14, waves 26–29)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 694 | 74.2% |
-| Wrong answer | 122 | 13.0% |
-| Parse error | 61 | 6.5% |
-| Eval error | 57 | 6.1% |
+| Pass | 907 | 97.0% |
+| Wrong answer | 19 | 2.0% |
+| Parse error | 1 | 0.1% |
+| Eval error | 7 | 0.7% |
 | Skipped | 1 | 0.1% |
 
 History:
@@ -60,6 +60,12 @@ History:
 | 2026-06-12 | 658 (70.4%) | 120 | 61 | 95 | Wave 3: `toDecimal()`/`convertsToDecimal()`, `encode()`/`decode()` (base64/urlbase64/hex), `escape()`/`unescape()` (html/json), cross-type numeric equality fix (`1 = 1.0`). 8 wrong answers removed from baseline. |
 
 | 2026-06-12 | 694 (74.2%) | 122 | 61 | 57 | Wave 4: `sort()`, `aggregate()`/`$total`, `type()` (System + FHIR resource names), `comparable()`, string empty-propagation (`{}.startsWith()` etc.). FHIR primitive type tracking deferred (`testType9/10`). |
+
+| 2026-06-13 | 848 (90.7%) | 57 | 1 | 28 | Waves 5–20: partial-precision datetime/time literals, temporal comparison/arithmetic, UCUM unit map + quantity equivalence, three-valued logic, lazy iif, sort, `%vs-`/`%ext-` variables, repeat(), defineVariable(), string empty-propagation, iif criterion type check, FHIR operator precedence. |
+
+| 2026-06-13 | 895 (95.7%) | 31 | 1 | 7 | Waves 21–25: UCUM month/year units, FHIRPath operator precedence fix, singleton equality, type check fixes, testWhere2/4/testIndexer2. |
+
+| 2026-06-14 | 907 (97.0%) | 19 | 1 | 7 | Waves 26–29: quantity `~` uses precision-aware equivalence; `FhirPathValue::TypedString` carries FHIR primitive type provenance (code/id/uri/url/canonical); `is()` follows FHIR type hierarchy; `as()`/`ofType()` use exact type match; `type()` returns FHIR namespace for TypedString; `matches()` uses single-line (dotall) mode; `iif()` errors on multi-element collections. 9 inheritance tests fixed, 2 misc tests fixed (testQuantity4, testMatchesSingleLineMode1, testIif10). |
 
 ### 1.2 Regression policy
 
@@ -91,10 +97,11 @@ successful **non-empty** result as a wrong answer.
 
 | Cluster | Cases | Notes |
 |---|---|---|
-| `convertsToDecimal()`/`toDecimal()` edge cases | 22 | Unknown function + partial semantics |
-| `sort()` | 10 | Not implemented |
-| `encode()`/`decode()`/`escape()`/`unescape()` | 12 | Not implemented |
-| `aggregate()` | 4 | Not implemented |
-| `type()` reflection / `is`/`as` on FHIR types | ~50 | Choice-type (`value[x]`) polymorphism + type hierarchy gaps |
-| Partial-precision date/time semantics | ~30 | `!=` empty propagation, partial-date `convertsTo*` |
-| Quantity conversions (`toQuantity`, calendar units) | ~15 | Unit handling gaps |
+| `highBoundary()`/`lowBoundary()`/`precision()` | 5 | Need decimal precision support |
+| Polymorphic choice-type access | 3 | `value[x]` semantic errors (valueQuantity, extension) |
+| FHIR `type()`/`is()` for non-string primitives | 4 | `Patient.active.type()` needs TypedBoolean (deferred) |
+| `defineVariable`/`$this` ordering | 1 | Semantic error expected |
+| `extension()` on primitives | 1 | Not yet implemented |
+| `combine().isDistinct()` | 1 | `isDistinct()` semantics |
+| `ofType(HumanName)` on collection | 1 | Complex type resolution |
+| Remaining parse error | 1 | Unary `+` prefix not supported |
