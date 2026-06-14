@@ -454,7 +454,7 @@ impl StringEvaluator {
             return Ok(FhirPathValue::Empty);
         }
         let string = match target {
-            FhirPathValue::String(s) => s,
+            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => s,
             _ => {
                 return Err(FhirPathError::TypeError {
                     message: "matches() can only be called on String values".to_string(),
@@ -471,8 +471,10 @@ impl StringEvaluator {
             }
         };
 
-        // Use regex for proper pattern matching
-        match regex::Regex::new(pattern_str) {
+        // FHIRPath matches() uses single-line mode: dot matches newlines.
+        // Wrap the pattern with (?s) to enable dotall mode.
+        let dotall_pattern = format!("(?s){}", pattern_str);
+        match regex::Regex::new(&dotall_pattern) {
             Ok(re) => Ok(FhirPathValue::Boolean(re.is_match(string))),
             Err(_) => {
                 // If regex compilation fails, return false (invalid pattern)

@@ -444,6 +444,18 @@ impl FhirPathEvaluator {
             });
         }
 
+        // iif() on a multi-element collection is an error per FHIRPath spec.
+        // Single-element collections are unwrapped; empty collections become Empty.
+        // However, non-collection values (objects, booleans, etc.) are fine.
+        if let FhirPathValue::Collection(items) = target {
+            if items.len() > 1 {
+                return Err(FhirPathError::EvaluationError {
+                    message: "iif() can only be called on a singleton or empty collection"
+                        .to_string(),
+                });
+            }
+        }
+
         // Set the receiver as the evaluation focus (both $this and current).
         // This matches FHIRPath semantics: x.iif(criterion, t, f) evaluates
         // criterion/t/f with x as the focus. When iif has no explicit receiver

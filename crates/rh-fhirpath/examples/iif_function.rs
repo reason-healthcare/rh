@@ -234,7 +234,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let collection_examples = vec![
         (
-            "testData.conditions.nonEmptyArray.iif(count() > 2, 'Has many items', 'Has few items')",
+            "iif(testData.conditions.nonEmptyArray.count() > 2, 'Has many items', 'Has few items')",
             "Collection size conditional message",
         ),
         (
