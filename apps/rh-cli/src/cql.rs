@@ -140,7 +140,7 @@ pub enum CqlCommands {
 // Command dispatcher
 // ---------------------------------------------------------------------------
 
-pub async fn handle_command(cmd: CqlCommands, _ctx: &OutputContext) -> Result<()> {
+pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         CqlCommands::Compile {
             input,
@@ -161,6 +161,7 @@ pub async fn handle_command(cmd: CqlCommands, _ctx: &OutputContext) -> Result<()
                 signatures,
                 source_map,
                 source_map_output.as_deref(),
+                ctx,
             )?;
         }
         CqlCommands::Validate {
@@ -168,10 +169,10 @@ pub async fn handle_command(cmd: CqlCommands, _ctx: &OutputContext) -> Result<()
             lib_path,
             verbose,
         } => {
-            validate_cql_multi(&inputs, &lib_path, verbose)?;
+            validate_cql_multi(&inputs, &lib_path, verbose, ctx)?;
         }
         CqlCommands::Info { input } => {
-            show_info(&input)?;
+            show_info(&input, ctx)?;
         }
         CqlCommands::Repl { debug } => {
             run_repl(debug).await?;
@@ -186,7 +187,7 @@ pub async fn handle_command(cmd: CqlCommands, _ctx: &OutputContext) -> Result<()
             lib_path,
             trace,
         } => {
-            eval_cql(&file, &expression, data.as_deref(), &lib_path, trace)?;
+            eval_cql(&file, &expression, data.as_deref(), &lib_path, trace, ctx)?;
         }
     }
 
@@ -280,7 +281,12 @@ fn resolve_cql_paths(inputs: &[String]) -> Result<Vec<PathBuf>> {
 ///
 /// When multiple files match, each file is validated independently and a
 /// summary failure is returned after all files have been processed.
-fn validate_cql_multi(inputs: &[String], lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
+fn validate_cql_multi(
+    inputs: &[String],
+    lib_paths: &[PathBuf],
+    verbose: bool,
+    _ctx: &OutputContext,
+) -> Result<()> {
     // No inputs, or the explicit stdin sentinel "-" → validate from stdin.
     if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
         return validate_cql(
@@ -341,6 +347,7 @@ fn compile_cql(
     signatures: bool,
     emit_source_map: bool,
     source_map_output: Option<&Path>,
+    _ctx: &OutputContext,
 ) -> Result<()> {
     let source = read_source(input)?;
 
@@ -689,6 +696,7 @@ fn eval_cql(
     data: Option<&str>,
     lib_paths: &[PathBuf],
     show_trace: bool,
+    _ctx: &OutputContext,
 ) -> Result<()> {
     let source = read_source(input)?;
 
@@ -1016,7 +1024,7 @@ fn validate_cql(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<()>
 // ---------------------------------------------------------------------------
 
 /// Show library information
-fn show_info(input: &str) -> Result<()> {
+fn show_info(input: &str, _ctx: &OutputContext) -> Result<()> {
     let source = read_source(input)?;
 
     let result = compile(&source, None).context("Failed to compile CQL")?;
