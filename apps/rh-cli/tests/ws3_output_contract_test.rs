@@ -1,5 +1,4 @@
 use assert_cmd::Command;
-use predicates::prelude::*;
 use std::path::PathBuf;
 
 fn rh_cmd() -> Command {
@@ -87,7 +86,7 @@ fn test_validate_json_envelope_parse_error() {
     let json_line = stderr
         .lines()
         .filter(|l| l.starts_with('{'))
-        .last()
+        .next_back()
         .expect("should find JSON envelope in stderr");
     let envelope: serde_json::Value = serde_json::from_str(json_line).unwrap();
     assert_eq!(envelope["ok"], false);
@@ -199,7 +198,7 @@ fn test_codegen_missing_package_json_envelope() {
     let json_line = stderr
         .lines()
         .filter(|l| l.starts_with('{'))
-        .last()
+        .next_back()
         .expect("should find JSON envelope in stderr");
     let envelope: serde_json::Value = serde_json::from_str(json_line).unwrap();
     assert_eq!(envelope["ok"], false);
