@@ -26,8 +26,13 @@ use output::{ColorMode, ExitCode, OutputContext, OutputFormat};
 #[clap(long_about = "RH CLI - A comprehensive command-line toolkit for working with FHIR")]
 struct Cli {
     /// Output format: human (default), json, ndjson
-    #[clap(long, global = true, default_value = "human", value_name = "FORMAT")]
-    format: OutputFormat,
+    #[clap(
+        long,
+        global = true,
+        default_value = "human",
+        value_name = "FORMAT"
+    )]
+    format: String,
 
     /// Suppress informational output (stderr)
     #[clap(short, long, global = true)]
@@ -38,8 +43,13 @@ struct Cli {
     verbose: u8,
 
     /// Color output policy: auto (default), always, never
-    #[clap(long, global = true, default_value = "auto", value_name = "WHEN")]
-    color: ColorMode,
+    #[clap(
+        long,
+        global = true,
+        default_value = "auto",
+        value_name = "WHEN"
+    )]
+    color: String,
 
     #[clap(subcommand)]
     command: Commands,
@@ -86,9 +96,17 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+    let format: OutputFormat = cli
+        .format
+        .parse()
+        .map_err(|e: String| anyhow::anyhow!(e))?;
+    let color: ColorMode = cli
+        .color
+        .parse()
+        .map_err(|e: String| anyhow::anyhow!(e))?;
 
     // Build output context from global flags
-    let _output_ctx = OutputContext::new(cli.format, cli.quiet, cli.color);
+    let output_ctx = OutputContext::new(format, cli.quiet, color);
 
     // Initialize tracing subscriber
     // verbose: 0=INFO (or WARN when quiet), 1=DEBUG, 2+=TRACE
@@ -108,15 +126,15 @@ async fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber)?;
 
     let result = match cli.command {
-        Commands::Codegen(cmd) => codegen::handle_command(cmd).await,
-        Commands::Cql(cmd) => cql::handle_command(cmd).await,
-        Commands::Download(cmd) => download::handle_command(cmd).await,
-        Commands::Fhirpath(cmd) => fhirpath::handle_command(cmd).await,
-        Commands::Vcl(cmd) => vcl::handle_command(cmd).await,
-        Commands::Fsh(cmd) => fsh::handle_command(cmd).await,
-        Commands::Snapshot(cmd) => snapshot::handle_command(cmd).await,
-        Commands::Validate(cmd) => validator::handle_command(cmd).await,
-        Commands::Package(cmd) => package::handle_command(cmd).await,
+        Commands::Codegen(cmd) => codegen::handle_command(cmd, &output_ctx).await,
+        Commands::Cql(cmd) => cql::handle_command(cmd, &output_ctx).await,
+        Commands::Download(cmd) => download::handle_command(cmd, &output_ctx).await,
+        Commands::Fhirpath(cmd) => fhirpath::handle_command(cmd, &output_ctx).await,
+        Commands::Vcl(cmd) => vcl::handle_command(cmd, &output_ctx).await,
+        Commands::Fsh(cmd) => fsh::handle_command(cmd, &output_ctx).await,
+        Commands::Snapshot(cmd) => snapshot::handle_command(cmd, &output_ctx).await,
+        Commands::Validate(cmd) => validator::handle_command(cmd, &output_ctx).await,
+        Commands::Package(cmd) => package::handle_command(cmd, &output_ctx).await,
     };
 
     if let Err(e) = result {
@@ -126,4 +144,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

@@ -1,11 +1,14 @@
 use anyhow::{bail, Context, Result};
 use clap::Subcommand;
 use glob::glob;
+use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use tracing::info;
+use tracing::{error, info};
+
+use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_with_libraries,
@@ -14,6 +17,35 @@ use rh_cql::{
     CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
     InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
 };
+
+#[derive(Serialize)]
+struct CqlDiagnostic {
+    file: String,
+    valid: bool,
+    errors: Vec<String>,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
+
+fn format_diagnostic_message(item: &Diagnostic, with_location: bool) -> String {
+    if with_location {
+        if let Some(span) = &item.span {
+            return format!(
+                "{} (line {}, col {})",
+                item.message, span.start.line, span.start.column
+            );
+        }
+    }
+    item.message.clone()
+}
 
 #[derive(Subcommand)]
 pub enum ExplainMode {
@@ -136,7 +168,7 @@ pub enum CqlCommands {
 // Command dispatcher
 // ---------------------------------------------------------------------------
 
-pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
+pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         CqlCommands::Compile {
             input,
@@ -157,6 +189,7 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
                 signatures,
                 source_map,
                 source_map_output.as_deref(),
+                ctx,
             )?;
         }
         CqlCommands::Validate {
@@ -164,7 +197,17 @@ pub async fn handle_command(cmd: CqlCommands) -> Result<()> {
             lib_path,
             details,
         } => {
-            validate_cql_multi(&inputs, &lib_path, details)?;
+            if ctx.is_json() {
+                let diagnostics = validate_cql_multi_json(&inputs, &lib_path, details)?;
+                let has_errors = diagnostics.iter().any(|diagnostic| !diagnostic.valid);
+                print_envelope(ctx, &Envelope::ok(diagnostics, "cql validate"))?;
+                if has_errors {
+                    ExitCode::ValidationFailure.exit();
+                }
+            } else if let Err(e) = validate_cql_multi(&inputs, &lib_path, details) {
+                error!("{e}");
+                ExitCode::ValidationFailure.exit();
+            }
         }
         CqlCommands::Info { input } => {
             show_info(&input)?;
@@ -309,6 +352,47 @@ fn validate_cql_multi(inputs: &[String], lib_paths: &[PathBuf], verbose: bool) -
     Ok(())
 }
 
+fn validate_cql_multi_json(
+    inputs: &[String],
+    lib_paths: &[PathBuf],
+    verbose: bool,
+) -> Result<Vec<CqlDiagnostic>> {
+    if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
+        return Ok(vec![validate_cql_collect(
+            inputs.first().map_or("-", |s| s.as_str()),
+            lib_paths,
+            verbose,
+        )?]);
+    }
+
+    let paths = resolve_cql_paths(inputs)?;
+    paths.iter()
+        .map(|path| validate_cql_collect(&path.display().to_string(), lib_paths, verbose))
+        .collect()
+}
+
+fn validate_cql_collect(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<CqlDiagnostic> {
+    let source = read_source(input)?;
+    let (errors, _warnings, valid) = if lib_paths.is_empty() {
+        let result = validate(&source, None).context("Failed to validate CQL")?;
+        let valid = result.is_valid();
+        (result.errors, result.warnings, valid)
+    } else {
+        let out = compile_with_search_dirs(&source, input, lib_paths)?;
+        let valid = out.result.is_success();
+        (out.result.errors, out.result.warnings, valid)
+    };
+
+    Ok(CqlDiagnostic {
+        file: input.to_string(),
+        valid,
+        errors: errors
+            .iter()
+            .map(|item| format_diagnostic_message(item, verbose))
+            .collect(),
+    })
+}
+
 /// Read CQL source from file or stdin
 fn read_source(input: &str) -> Result<String> {
     if input == "-" {
@@ -337,6 +421,7 @@ fn compile_cql(
     signatures: bool,
     emit_source_map: bool,
     source_map_output: Option<&Path>,
+    ctx: &OutputContext,
 ) -> Result<()> {
     let source = read_source(input)?;
 
@@ -365,12 +450,14 @@ fn compile_cql(
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
-                anyhow::bail!("CQL compilation failed");
+                ExitCode::ParseError.exit();
             }
         };
 
         if !result.is_success() {
-            return Err(report_compile_failure(&result.errors, &result.warnings));
+            let err = report_compile_failure(&result.errors, &result.warnings);
+            error!("{err}");
+            ExitCode::ParseError.exit();
         }
 
         let json = if compact {
@@ -388,12 +475,14 @@ fn compile_cql(
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
-                anyhow::bail!("CQL compilation failed");
+                ExitCode::ParseError.exit();
             }
         };
 
         if !result.is_success() {
-            return Err(report_compile_failure(&result.errors, &result.warnings));
+            let err = report_compile_failure(&result.errors, &result.warnings);
+            error!("{err}");
+            ExitCode::ParseError.exit();
         }
 
         let json = if compact {
@@ -409,7 +498,11 @@ fn compile_cql(
     if let Some(path) = output {
         fs::write(path, &json).with_context(|| format!("Failed to write to {}", path.display()))?;
         info!("✓ Compiled to {}", path.display());
-    } else {
+    }
+    if ctx.is_json() {
+        let elm_value = serde_json::from_str::<serde_json::Value>(&json)?;
+        print_envelope(ctx, &Envelope::ok(elm_value, "cql compile"))?;
+    } else if output.is_none() {
         println!("{json}");
     }
 

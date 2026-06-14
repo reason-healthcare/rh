@@ -1,12 +1,24 @@
 use anyhow::Result;
 use clap::Subcommand;
+use serde::Serialize;
 use serde_json::Value;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use tracing::{error, info};
 
+use crate::output::{Envelope, OutputContext, OutputFormat};
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
 
 /// Convert FhirPathValue to JSON Value for serialization
 fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
@@ -95,17 +107,17 @@ pub enum FhirpathCommands {
     },
 }
 
-pub async fn handle_command(cmd: FhirpathCommands) -> Result<()> {
+pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         FhirpathCommands::Parse { expression, format } => {
-            parse_expression(&expression, &format)?;
+            parse_expression(&expression, &format, ctx)?;
         }
         FhirpathCommands::Eval {
             expression,
             data,
             format,
         } => {
-            eval_expression(&expression, data.as_deref(), &format)?;
+            eval_expression(&expression, data.as_deref(), &format, ctx)?;
         }
         FhirpathCommands::Repl { data } => {
             rh_fhirpath::repl::run_repl(data.as_deref())?;
@@ -119,29 +131,34 @@ pub async fn handle_command(cmd: FhirpathCommands) -> Result<()> {
 }
 
 /// Parse a FHIRPath expression and display the AST
-fn parse_expression(expression: &str, format: &str) -> Result<()> {
+fn parse_expression(expression: &str, format: &str, ctx: &OutputContext) -> Result<()> {
     info!("Parsing FHIRPath expression: {}", expression);
 
     let parser = FhirPathParser::new();
 
     match parser.parse(expression) {
-        Ok(ast) => match format {
-            "json" => {
-                let json = serde_json::to_string_pretty(&ast)?;
-                println!("{json}");
+        Ok(ast) => {
+            if ctx.is_json() {
+                return print_envelope(ctx, &Envelope::ok(ast, "fhirpath parse"));
             }
-            "debug" => {
-                println!("{ast:#?}");
+            match format {
+                "json" => {
+                    let json = serde_json::to_string_pretty(&ast)?;
+                    println!("{json}");
+                }
+                "debug" => {
+                    println!("{ast:#?}");
+                }
+                "pretty" => {
+                    println!("✅ Successfully parsed: {expression}");
+                    println!("AST: {ast}");
+                }
+                _ => {
+                    println!("✅ Successfully parsed: {expression}");
+                    println!("AST: {ast}");
+                }
             }
-            "pretty" => {
-                println!("✅ Successfully parsed: {expression}");
-                println!("AST: {ast}");
-            }
-            _ => {
-                println!("✅ Successfully parsed: {expression}");
-                println!("AST: {ast}");
-            }
-        },
+        }
         Err(e) => {
             error!("❌ Parse error: {}", e);
             return Err(e.into());
@@ -156,6 +173,7 @@ fn eval_expression(
     expression: &str,
     data_file: Option<&std::path::Path>,
     format: &str,
+    ctx: &OutputContext,
 ) -> Result<()> {
     info!("Evaluating FHIRPath expression: {}", expression);
 
@@ -196,21 +214,39 @@ fn eval_expression(
 
             match format {
                 "json" => {
-                    // Convert FhirPathValue to JSON-compatible format
                     let json_value = fhirpath_value_to_json(&result);
-                    let json = serde_json::to_string_pretty(&json_value)?;
-                    println!("{json}");
+                    if ctx.is_json() {
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        let json = serde_json::to_string_pretty(&json_value)?;
+                        println!("{json}");
+                    }
                 }
                 "debug" => {
-                    println!("{result:#?}");
+                    if ctx.is_json() {
+                        let json_value = fhirpath_value_to_json(&result);
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        println!("{result:#?}");
+                    }
                 }
                 "pretty" => {
-                    println!("✅ Expression: {expression}");
-                    println!("Result: {result:?}");
+                    if ctx.is_json() {
+                        let json_value = fhirpath_value_to_json(&result);
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        println!("✅ Expression: {expression}");
+                        println!("Result: {result:?}");
+                    }
                 }
                 _ => {
-                    println!("✅ Expression: {expression}");
-                    println!("Result: {result:?}");
+                    if ctx.is_json() {
+                        let json_value = fhirpath_value_to_json(&result);
+                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
+                    } else {
+                        println!("✅ Expression: {expression}");
+                        println!("Result: {result:?}");
+                    }
                 }
             }
         }

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::Args;
+use serde::Serialize;
 use tracing::{info, warn};
 
 use rh_codegen::quality::run_quality_checks;
@@ -11,6 +12,52 @@ use rh_codegen::{
     CodegenConfig, CrateGenerationParams, QualityConfig,
 };
 use rh_foundation::loader::{LoaderConfig, PackageLoader};
+
+use crate::output::{Envelope, OutputContext, OutputFormat};
+
+#[derive(Serialize)]
+struct CodegenManifest {
+    package: String,
+    version: String,
+    crate_name: String,
+    output_dir: String,
+    files_generated: usize,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
+
+fn count_generated_files(path: &Path) -> Result<usize> {
+    let mut count = 0usize;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            count += count_generated_files(&entry_path)?;
+        } else {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
+fn resolve_generated_crate_name(output_path: &Path, fallback: &str) -> Result<String> {
+    let cargo_toml = fs::read_to_string(output_path.join("Cargo.toml"))?;
+    for line in cargo_toml.lines() {
+        let trimmed = line.trim();
+        if let Some(name) = trimmed.strip_prefix("name = ") {
+            return Ok(name.trim_matches('"').to_string());
+        }
+    }
+    Ok(fallback.to_string())
+}
 
 /// Check if a directory exists and is not empty
 fn is_directory_non_empty(path: &Path) -> Result<bool> {
@@ -59,7 +106,7 @@ pub struct CodegenArgs {
     pub crate_name: Option<String>,
 }
 
-pub async fn handle_command(args: CodegenArgs) -> Result<()> {
+pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()> {
     // Set up loader configuration first to resolve version if needed
     let token = std::env::var("RH_REGISTRY_TOKEN").ok();
     let loader_config = LoaderConfig {
@@ -224,6 +271,21 @@ pub async fn handle_command(args: CodegenArgs) -> Result<()> {
         "Successfully generated complete crate at: {}",
         output_path.display()
     );
+
+    if ctx.is_json() {
+        let crate_name_fallback = args
+            .crate_name
+            .clone()
+            .unwrap_or_else(|| args.package.replace('.', "-"));
+        let manifest = CodegenManifest {
+            package: args.package,
+            version,
+            crate_name: resolve_generated_crate_name(output_path, &crate_name_fallback)?,
+            output_dir: output_path.display().to_string(),
+            files_generated: count_generated_files(output_path)?,
+        };
+        print_envelope(ctx, &Envelope::ok(manifest, "codegen"))?;
+    }
 
     Ok(())
 }

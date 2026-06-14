@@ -25,7 +25,7 @@ fn test_validate_resource_basic_structure() {
         .args(["validate", "resource"])
         .write_stdin(patient)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Patient"));
 }
 
@@ -73,7 +73,7 @@ fn test_validate_resource_json_output() {
         .args(["validate", "resource", "--report-format", "json"])
         .write_stdin(patient)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("\"valid\""))
         .stdout(predicate::str::contains("\"resourceType\""));
 }
@@ -103,7 +103,7 @@ fn test_validate_resource_from_file() {
             file_path.to_str().unwrap(),
         ])
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Patient"));
 }
 
@@ -123,7 +123,7 @@ fn test_validate_resource_with_cli_flags() {
         .args(["validate", "resource", "--strict"])
         .write_stdin(patient)
         .assert()
-        .code(predicate::in_iter([0, 1]));
+        .code(predicate::in_iter([0, 1, 3]));
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn test_validate_resource_with_security_checks_flag() {
         .args(["validate", "resource", "--security-checks"])
         .write_stdin(patient)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stderr(predicate::str::contains("Validator runtime options"))
         .stderr(predicate::str::contains("security_checks"));
 }
@@ -164,7 +164,7 @@ fn test_validate_resource_with_terminology_server_flag() {
         ])
         .write_stdin(patient)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stderr(predicate::str::contains("Validator runtime options"))
         .stderr(predicate::str::contains("terminology_configured"));
 }
@@ -353,7 +353,7 @@ fn test_validate_batch_summary_only() {
         .args(["validate", "batch", "--summary-only"])
         .write_stdin(ndjson)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Total resources: 2"));
 }
 
@@ -366,7 +366,7 @@ fn test_validate_batch_json_output() {
         .args(["validate", "batch", "--report-format", "json"])
         .write_stdin(ndjson)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("\"summary\""))
         .stdout(predicate::str::contains("\"results\""));
 }
@@ -384,7 +384,7 @@ fn test_validate_batch_from_file() {
     rh_cmd()
         .args(["validate", "batch", "--input", file_path.to_str().unwrap()])
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Total resources: 2"));
 }
 
@@ -399,7 +399,7 @@ fn test_validate_batch_empty_lines() {
         .args(["validate", "batch"])
         .write_stdin(ndjson)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Total resources: 2"));
 }
 
@@ -450,7 +450,7 @@ fn test_validate_resource_glob_input() {
     rh_cmd()
         .args(["validate", "resource", "--input", &pattern])
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Total resources: 2"));
 }
 
@@ -480,7 +480,7 @@ fn test_validate_resource_mixed_input_dedupes_matches() {
         .arg("--input")
         .arg(&pattern)
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Total resources: 2"));
 }
 
@@ -528,7 +528,7 @@ fn test_validate_resource_recursive_glob_input() {
     rh_cmd()
         .args(["validate", "resource", "--input", &pattern])
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .stdout(predicate::str::contains("Total resources: 2"));
 }
 
@@ -555,7 +555,7 @@ fn test_validate_resource_glob_output_order_is_stable() {
             "validate", "resource", "--input", &pattern, "--report-format", "json",
         ])
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .get_output()
         .stdout
         .clone();
@@ -565,7 +565,7 @@ fn test_validate_resource_glob_output_order_is_stable() {
             "validate", "resource", "--input", &pattern, "--report-format", "json",
         ])
         .assert()
-        .code(predicate::in_iter([0, 1]))
+        .code(predicate::in_iter([0, 1, 3]))
         .get_output()
         .stdout
         .clone();

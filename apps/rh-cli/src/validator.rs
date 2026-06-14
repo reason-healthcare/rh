@@ -6,11 +6,62 @@ use anyhow::{bail, Context, Result};
 use clap::{Args, Subcommand};
 use glob::glob;
 use rh_validator::{FhirValidator, Severity, TerminologyConfig, ValidationOptions};
+use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
+
+use crate::output::{
+    Envelope, ExitCode, OutputContext, OutputFormat as GlobalOutputFormat,
+};
+
+#[derive(Serialize)]
+struct ValidationIssue {
+    severity: String,
+    message: String,
+    path: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ValidationResult {
+    resource: Option<String>,
+    valid: bool,
+    issues: Vec<ValidationIssue>,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, GlobalOutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
+
+fn to_validation_result(
+    resource: &serde_json::Value,
+    result: &rh_validator::ValidationResult,
+) -> ValidationResult {
+    ValidationResult {
+        resource: resource
+            .get("resourceType")
+            .and_then(|value| value.as_str())
+            .map(str::to_string),
+        valid: result.valid,
+        issues: result
+            .issues
+            .iter()
+            .map(|issue| ValidationIssue {
+                severity: issue.severity.to_string(),
+                message: issue.message.clone(),
+                path: issue.path.clone(),
+            })
+            .collect(),
+    }
+}
 
 #[derive(Subcommand)]
 pub enum ValidatorCommands {
@@ -113,14 +164,14 @@ impl std::str::FromStr for OutputFormat {
 }
 
 /// Handle validator commands
-pub async fn handle_command(cmd: ValidatorCommands) -> Result<()> {
+pub async fn handle_command(cmd: ValidatorCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
-        ValidatorCommands::Resource(args) => handle_resource_validation(args).await,
-        ValidatorCommands::Batch(args) => handle_batch_validation(args).await,
+        ValidatorCommands::Resource(args) => handle_resource_validation(args, ctx.clone()).await,
+        ValidatorCommands::Batch(args) => handle_batch_validation(args, ctx.clone()).await,
     }
 }
 
-async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
+async fn handle_resource_validation(args: ResourceArgs, ctx: OutputContext) -> Result<()> {
     tokio::task::spawn_blocking(move || {
         // Note: skip_invariants and skip_bindings are not yet supported in the new API
         if args.skip_invariants {
@@ -159,12 +210,18 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
             if results.is_empty() {
                 warn!("Input is empty");
                 if args.strict {
-                    std::process::exit(1);
+                    ExitCode::ValidationFailure.exit();
                 }
                 return Ok(());
             }
 
-            if results.len() == 1 {
+            if ctx.is_json() {
+                let payload = results
+                    .iter()
+                    .map(|(_, resource, result)| to_validation_result(resource, result))
+                    .collect::<Vec<_>>();
+                print_envelope(&ctx, &Envelope::ok(payload, "validate resource"))?;
+            } else if results.len() == 1 {
                 let (_, resource, result) = &results[0];
                 match args.report_format {
                     OutputFormat::Text => print_single_result_text(result, resource),
@@ -185,7 +242,7 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
             let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
 
             if has_errors || has_issues {
-                std::process::exit(1);
+                ExitCode::ValidationFailure.exit();
             }
 
             return Ok(());
@@ -196,7 +253,7 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
         if content.trim().is_empty() {
             warn!("Input is empty");
             if args.strict {
-                std::process::exit(1);
+                ExitCode::ValidationFailure.exit();
             }
             return Ok(());
         }
@@ -208,17 +265,22 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
             .validate_auto(&resource)
             .context("Failed to validate FHIR resource")?;
 
-        match args.report_format {
-            OutputFormat::Text => print_single_result_text(&result, &resource),
-            OutputFormat::Json => print_single_result_json(&result, &resource)?,
-            OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
+        if ctx.is_json() {
+            let payload = vec![to_validation_result(&resource, &result)];
+            print_envelope(&ctx, &Envelope::ok(payload, "validate resource"))?;
+        } else {
+            match args.report_format {
+                OutputFormat::Text => print_single_result_text(&result, &resource),
+                OutputFormat::Json => print_single_result_json(&result, &resource)?,
+                OutputFormat::OperationOutcome => print_operation_outcome(&result)?,
+            }
         }
 
         let has_errors = !result.valid;
         let has_issues = args.strict && !result.issues.is_empty();
 
         if has_errors || has_issues {
-            std::process::exit(1);
+            ExitCode::ValidationFailure.exit();
         }
 
         Ok(())
@@ -227,7 +289,7 @@ async fn handle_resource_validation(args: ResourceArgs) -> Result<()> {
     .context("Resource validation task failed")?
 }
 
-async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
+async fn handle_batch_validation(args: BatchArgs, ctx: OutputContext) -> Result<()> {
     tokio::task::spawn_blocking(move || {
         // Note: skip_invariants and skip_bindings are not yet supported in the new API
         if args.skip_invariants {
@@ -286,22 +348,34 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
             if results.is_empty() {
                 warn!("Input is empty");
                 if args.strict {
-                    std::process::exit(1);
+                    ExitCode::ValidationFailure.exit();
                 }
                 return Ok(());
             }
 
-            match args.report_format {
-                OutputFormat::Text => print_labeled_batch_results_text(&results, args.summary_only),
-                OutputFormat::Json => print_labeled_batch_results_json(&results)?,
-                OutputFormat::OperationOutcome => print_labeled_batch_operation_outcomes(&results)?,
+            if ctx.is_json() {
+                let payload = results
+                    .iter()
+                    .map(|(_, resource, result)| to_validation_result(resource, result))
+                    .collect::<Vec<_>>();
+                print_envelope(&ctx, &Envelope::ok(payload, "validate batch"))?;
+            } else {
+                match args.report_format {
+                    OutputFormat::Text => {
+                        print_labeled_batch_results_text(&results, args.summary_only)
+                    }
+                    OutputFormat::Json => print_labeled_batch_results_json(&results)?,
+                    OutputFormat::OperationOutcome => {
+                        print_labeled_batch_operation_outcomes(&results)?
+                    }
+                }
             }
 
             let has_errors = results.iter().any(|(_, _, r)| !r.valid);
             let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
 
             if has_errors || has_issues {
-                std::process::exit(1);
+                ExitCode::ValidationFailure.exit();
             }
 
             return Ok(());
@@ -312,7 +386,7 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
         if content.trim().is_empty() {
             warn!("Input is empty");
             if args.strict {
-                std::process::exit(1);
+                ExitCode::ValidationFailure.exit();
             }
             return Ok(());
         }
@@ -330,17 +404,25 @@ async fn handle_batch_validation(args: BatchArgs) -> Result<()> {
             results.push((line_num, resource, result));
         }
 
-        match args.report_format {
-            OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
-            OutputFormat::Json => print_batch_results_json(&results)?,
-            OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,
+        if ctx.is_json() {
+            let payload = results
+                .iter()
+                .map(|(_, resource, result)| to_validation_result(resource, result))
+                .collect::<Vec<_>>();
+            print_envelope(&ctx, &Envelope::ok(payload, "validate batch"))?;
+        } else {
+            match args.report_format {
+                OutputFormat::Text => print_batch_results_text(&results, args.summary_only),
+                OutputFormat::Json => print_batch_results_json(&results)?,
+                OutputFormat::OperationOutcome => print_batch_operation_outcomes(&results)?,
+            }
         }
 
         let has_errors = results.iter().any(|(_, _, r)| !r.valid);
         let has_issues = args.strict && results.iter().any(|(_, _, r)| !r.issues.is_empty());
 
         if has_errors || has_issues {
-            std::process::exit(1);
+            ExitCode::ValidationFailure.exit();
         }
 
         Ok(())

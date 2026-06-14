@@ -1,7 +1,30 @@
 use anyhow::Result;
 use clap::Subcommand;
 use rh_fsh::{compile_fsh_files, FshParser, FshTank};
+use serde::Serialize;
 use std::path::PathBuf;
+use tracing::{info, warn};
+
+use crate::output::{Envelope, OutputContext, OutputFormat};
+
+#[derive(Serialize)]
+struct TankSummary {
+    profiles: usize,
+    extensions: usize,
+    instances: usize,
+    value_sets: usize,
+    code_systems: usize,
+}
+
+fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
+    let json = if matches!(ctx.format, OutputFormat::Json) {
+        serde_json::to_string_pretty(envelope)?
+    } else {
+        serde_json::to_string(envelope)?
+    };
+    println!("{json}");
+    Ok(())
+}
 
 #[derive(Subcommand)]
 pub enum FshCommands {
@@ -28,7 +51,7 @@ pub enum FshCommands {
     },
 }
 
-pub async fn handle_command(cmd: FshCommands) -> Result<()> {
+pub async fn handle_command(cmd: FshCommands, ctx: &OutputContext) -> Result<()> {
     match cmd {
         FshCommands::Compile {
             inputs,
@@ -39,7 +62,7 @@ pub async fn handle_command(cmd: FshCommands) -> Result<()> {
             let package = compile_fsh_files(&paths)?;
             if !package.errors.is_empty() {
                 for e in &package.errors {
-                    eprintln!("Warning: {e}");
+                    warn!("{e}");
                 }
             }
             if let Some(dir) = &output {
@@ -61,12 +84,16 @@ pub async fn handle_command(cmd: FshCommands) -> Result<()> {
                     };
                     std::fs::write(filename, json)?;
                 }
-                eprintln!(
+                info!(
                     "Wrote {} resources to {}",
                     package.resources.len(),
                     dir.display()
                 );
-            } else {
+            }
+
+            if ctx.is_json() {
+                print_envelope(ctx, &Envelope::ok(package.resources, "fsh compile"))?;
+            } else if output.is_none() {
                 for resource in &package.resources {
                     let json = if compact {
                         serde_json::to_string(resource)?
@@ -80,7 +107,11 @@ pub async fn handle_command(cmd: FshCommands) -> Result<()> {
         FshCommands::Parse { input } => {
             let content = std::fs::read_to_string(&input)?;
             let doc = FshParser::parse(&content, &input)?;
-            println!("{}", serde_json::to_string_pretty(&doc)?);
+            if ctx.is_json() {
+                print_envelope(ctx, &Envelope::ok(doc, "fsh parse"))?;
+            } else {
+                println!("{}", serde_json::to_string_pretty(&doc)?);
+            }
         }
         FshCommands::Tank { input } => {
             let content = std::fs::read_to_string(&input)?;
@@ -88,12 +119,23 @@ pub async fn handle_command(cmd: FshCommands) -> Result<()> {
             let mut tank = FshTank::new();
             tank.add_document(doc)
                 .map_err(|errs| anyhow::anyhow!("{}", errs[0]))?;
-            println!("Tank summary:");
-            println!("  Profiles:     {}", tank.profiles.len());
-            println!("  Extensions:   {}", tank.extensions.len());
-            println!("  Instances:    {}", tank.instances.len());
-            println!("  ValueSets:    {}", tank.value_sets.len());
-            println!("  CodeSystems:  {}", tank.code_systems.len());
+            let summary = TankSummary {
+                profiles: tank.profiles.len(),
+                extensions: tank.extensions.len(),
+                instances: tank.instances.len(),
+                value_sets: tank.value_sets.len(),
+                code_systems: tank.code_systems.len(),
+            };
+            if ctx.is_json() {
+                print_envelope(ctx, &Envelope::ok(summary, "fsh tank"))?;
+            } else {
+                info!("Tank summary:");
+                println!("  Profiles:     {}", summary.profiles);
+                println!("  Extensions:   {}", summary.extensions);
+                println!("  Instances:    {}", summary.instances);
+                println!("  ValueSets:    {}", summary.value_sets);
+                println!("  CodeSystems:  {}", summary.code_systems);
+            }
         }
     }
     Ok(())
