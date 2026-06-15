@@ -16,22 +16,6 @@ pub struct Iso21090ADXPStreetName {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// ADXP Street Name Type
-///
-/// The designation given to the street. (e.g. Street, Avenue, Crescent, etc.).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetNameType
-/// - Version: 5.1.0-snapshot1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Iso21090ADXPStreetNameType {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// ADXP Street Name Base
 ///
 /// The base name of a roadway or artery recognized by a municipality (excluding street type and direction).
@@ -44,6 +28,22 @@ pub struct Iso21090ADXPStreetNameType {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Iso21090ADXPStreetNameBase {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// ADXP Street Name Type
+///
+/// The designation given to the street. (e.g. Street, Avenue, Crescent, etc.).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetNameType
+/// - Version: 5.1.0-snapshot1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Iso21090ADXPStreetNameType {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,

@@ -61,6 +61,25 @@ pub struct Medication {
     /// Knowledge about this medication
     pub definition: Option<Reference>,
 }
+/// Medication nested structure for the 'batch' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationBatch {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifier assigned to batch
+    #[serde(rename = "lotNumber")]
+    pub lot_number: Option<StringType>,
+    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lotNumber")]
+    pub _lot_number: Option<Element>,
+    /// When batch will expire
+    #[serde(rename = "expirationDate")]
+    pub expiration_date: Option<DateTimeType>,
+    /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_expirationDate")]
+    pub _expiration_date: Option<Element>,
+}
 /// Medication nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationIngredient {
@@ -89,25 +108,6 @@ pub struct MedicationIngredient {
     #[serde(rename = "strengthQuantity")]
     pub strength_quantity: Option<Quantity>,
 }
-/// Medication nested structure for the 'batch' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationBatch {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifier assigned to batch
-    #[serde(rename = "lotNumber")]
-    pub lot_number: Option<StringType>,
-    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lotNumber")]
-    pub _lot_number: Option<Element>,
-    /// When batch will expire
-    #[serde(rename = "expirationDate")]
-    pub expiration_date: Option<DateTimeType>,
-    /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_expirationDate")]
-    pub _expiration_date: Option<Element>,
-}
 
 impl Default for Medication {
     fn default() -> Self {
@@ -127,6 +127,18 @@ impl Default for Medication {
     }
 }
 
+impl Default for MedicationBatch {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            lot_number: Default::default(),
+            _lot_number: Default::default(),
+            expiration_date: Default::default(),
+            _expiration_date: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicationIngredient {
     fn default() -> Self {
         Self {
@@ -137,18 +149,6 @@ impl Default for MedicationIngredient {
             strength_ratio: Default::default(),
             strength_codeable_concept: Default::default(),
             strength_quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationBatch {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            lot_number: Default::default(),
-            _lot_number: Default::default(),
-            expiration_date: Default::default(),
-            _expiration_date: Default::default(),
         }
     }
 }

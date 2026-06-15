@@ -77,19 +77,6 @@ pub struct AdministrableProductDefinition {
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<AdministrableProductDefinitionRouteofadministration>,
 }
-/// AdministrableProductDefinitionRouteofadministration nested structure for the 'targetSpecies' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdministrableProductDefinitionRouteofadministrationTargetspecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the species
-    ///
-    /// Binding: example (A tissue type of an animal.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/target-species
-    pub code: CodeableConcept,
-}
 /// AdministrableProductDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdministrableProductDefinitionProperty {
@@ -159,6 +146,19 @@ pub struct AdministrableProductDefinitionRouteofadministration {
     #[serde(rename = "maxTreatmentPeriod")]
     pub max_treatment_period: Option<Duration>,
 }
+/// AdministrableProductDefinitionRouteofadministration nested structure for the 'targetSpecies' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdministrableProductDefinitionRouteofadministrationTargetspecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the species
+    ///
+    /// Binding: example (A tissue type of an animal.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/target-species
+    pub code: CodeableConcept,
+}
 
 impl Default for AdministrableProductDefinition {
     fn default() -> Self {
@@ -177,15 +177,6 @@ impl Default for AdministrableProductDefinition {
             _description: Default::default(),
             property: Default::default(),
             route_of_administration: Vec::new(),
-        }
-    }
-}
-
-impl Default for AdministrableProductDefinitionRouteofadministrationTargetspecies {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
         }
     }
 }
@@ -218,6 +209,15 @@ impl Default for AdministrableProductDefinitionRouteofadministration {
             max_dose_per_day: Default::default(),
             max_dose_per_treatment_period: Default::default(),
             max_treatment_period: Default::default(),
+        }
+    }
+}
+
+impl Default for AdministrableProductDefinitionRouteofadministrationTargetspecies {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
         }
     }
 }

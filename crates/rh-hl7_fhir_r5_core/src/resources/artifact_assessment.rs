@@ -528,11 +528,11 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentMutators for Artifact
 }
 
 impl crate::traits::artifact_assessment::ArtifactAssessmentExistence for ArtifactAssessment {
-    fn has_cite_as(&self) -> bool {
-        self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
-    }
     fn has_artifact(&self) -> bool {
         true
+    }
+    fn has_cite_as(&self) -> bool {
+        self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

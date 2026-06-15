@@ -105,6 +105,38 @@ pub struct Location {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub endpoint: Vec<Reference>,
 }
+/// Boundary (GeoJSON)
+///
+/// A boundary shape that represents the outside edge of the location (in GeoJSON format) This shape may have holes, and disconnected shapes.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/location-boundary-geojson
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationBoundaryGeojson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Distance
+///
+/// A calculated distance between the resource and a provided location.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/location-distance
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationDistance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Location nested structure for the 'hoursOfOperation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocationHoursofoperation {
@@ -157,38 +189,6 @@ pub struct LocationPosition {
     /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
     pub _altitude: Option<Element>,
 }
-/// Boundary (GeoJSON)
-///
-/// A boundary shape that represents the outside edge of the location (in GeoJSON format) This shape may have holes, and disconnected shapes.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/location-boundary-geojson
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationBoundaryGeojson {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Distance
-///
-/// A calculated distance between the resource and a provided location.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/location-distance
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationDistance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 
 impl Default for Location {
     fn default() -> Self {
@@ -221,6 +221,22 @@ impl Default for Location {
     }
 }
 
+impl Default for LocationBoundaryGeojson {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for LocationDistance {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for LocationHoursofoperation {
     fn default() -> Self {
         Self {
@@ -247,22 +263,6 @@ impl Default for LocationPosition {
             _latitude: Default::default(),
             altitude: Default::default(),
             _altitude: Default::default(),
-        }
-    }
-}
-
-impl Default for LocationBoundaryGeojson {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for LocationDistance {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }

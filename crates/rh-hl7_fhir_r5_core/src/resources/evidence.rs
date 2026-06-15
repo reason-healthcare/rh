@@ -167,37 +167,39 @@ pub struct Evidence {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub certainty: Vec<EvidenceCertainty>,
 }
-/// EvidenceStatistic nested structure for the 'sampleSize' field
+/// Evidence nested structure for the 'certainty' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticSamplesize {
+pub struct EvidenceCertainty {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Textual description of sample size for statistic
+    /// Textual description of certainty
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-    /// Footnote or explanatory note about the sample size
+    /// Footnotes and/or explanatory notes
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
-    /// Number of contributing studies
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<UnsignedIntType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// Cumulative number of participants
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<UnsignedIntType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-    /// Number of participants with known results for measured variables
-    #[serde(rename = "knownDataCount")]
-    pub known_data_count: Option<UnsignedIntType>,
-    /// Extension element for the 'knownDataCount' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_knownDataCount")]
-    pub _known_data_count: Option<Element>,
+    /// Aspect of certainty being rated
+    ///
+    /// Binding: extensible (The aspect of quality, confidence, or certainty.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Assessment or judgement of the aspect
+    ///
+    /// Binding: extensible (The assessment of quality, confidence, or certainty.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-rating
+    pub rating: Option<CodeableConcept>,
+    /// Individual or group who did the rating
+    pub rater: Option<StringType>,
+    /// Extension element for the 'rater' primitive field. Contains metadata and extensions.
+    pub _rater: Option<Element>,
+    /// A domain or subdomain of certainty
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subcomponent: Vec<StringType>,
 }
 /// Evidence nested structure for the 'statistic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -246,98 +248,6 @@ pub struct EvidenceStatistic {
     /// Extension element for the 'numberAffected' primitive field. Contains metadata and extensions.
     #[serde(rename = "_numberAffected")]
     pub _number_affected: Option<Element>,
-}
-/// Evidence nested structure for the 'certainty' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceCertainty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of certainty
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Footnotes and/or explanatory notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-    /// Aspect of certainty being rated
-    ///
-    /// Binding: extensible (The aspect of quality, confidence, or certainty.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Assessment or judgement of the aspect
-    ///
-    /// Binding: extensible (The assessment of quality, confidence, or certainty.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-rating
-    pub rating: Option<CodeableConcept>,
-    /// Individual or group who did the rating
-    pub rater: Option<StringType>,
-    /// Extension element for the 'rater' primitive field. Contains metadata and extensions.
-    pub _rater: Option<Element>,
-    /// A domain or subdomain of certainty
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub subcomponent: Vec<StringType>,
-}
-/// Evidence nested structure for the 'variableDefinition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceVariabledefinition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A text description or summary of the variable
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Footnotes and/or explanatory notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-    /// population | subpopulation | exposure | referenceExposure | measuredVariable | confounder
-    ///
-    /// Binding: extensible (The role that the assertion variable plays.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/variable-role
-    #[serde(rename = "variableRole")]
-    pub variable_role: CodeableConcept,
-    /// Definition of the actual variable related to the statistic(s)
-    pub observed: Option<Reference>,
-    /// Definition of the intended variable related to the Evidence
-    pub intended: Option<Reference>,
-    /// low | moderate | high | exact
-    ///
-    /// Binding: extensible (The quality of how direct the match is.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/directness
-    #[serde(rename = "directnessMatch")]
-    pub directness_match: Option<CodeableConcept>,
-}
-/// EvidenceStatisticModelcharacteristic nested structure for the 'variable' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticModelcharacteristicVariable {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of the variable
-    #[serde(rename = "variableDefinition")]
-    pub variable_definition: Reference,
-    /// continuous | dichotomous | ordinal | polychotomous
-    pub handling: Option<VariableHandling>,
-    /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
-    pub _handling: Option<Element>,
-    /// Description for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueCategory")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub value_category: Vec<CodeableConcept>,
-    /// Discrete value for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueQuantity")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub value_quantity: Vec<Quantity>,
-    /// Range of values for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueRange")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub value_range: Vec<Range>,
 }
 /// EvidenceStatistic nested structure for the 'attributeEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -390,6 +300,96 @@ pub struct EvidenceStatisticModelcharacteristic {
     #[serde(rename = "attributeEstimate")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attribute_estimate: Vec<StringType>,
+}
+/// EvidenceStatisticModelcharacteristic nested structure for the 'variable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticModelcharacteristicVariable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of the variable
+    #[serde(rename = "variableDefinition")]
+    pub variable_definition: Reference,
+    /// continuous | dichotomous | ordinal | polychotomous
+    pub handling: Option<VariableHandling>,
+    /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
+    pub _handling: Option<Element>,
+    /// Description for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueCategory")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_category: Vec<CodeableConcept>,
+    /// Discrete value for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueQuantity")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_quantity: Vec<Quantity>,
+    /// Range of values for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueRange")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_range: Vec<Range>,
+}
+/// EvidenceStatistic nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of sample size for statistic
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Footnote or explanatory note about the sample size
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// Number of contributing studies
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<UnsignedIntType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// Cumulative number of participants
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<UnsignedIntType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
+    /// Number of participants with known results for measured variables
+    #[serde(rename = "knownDataCount")]
+    pub known_data_count: Option<UnsignedIntType>,
+    /// Extension element for the 'knownDataCount' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_knownDataCount")]
+    pub _known_data_count: Option<Element>,
+}
+/// Evidence nested structure for the 'variableDefinition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceVariabledefinition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A text description or summary of the variable
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Footnotes and/or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// population | subpopulation | exposure | referenceExposure | measuredVariable | confounder
+    ///
+    /// Binding: extensible (The role that the assertion variable plays.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/variable-role
+    #[serde(rename = "variableRole")]
+    pub variable_role: CodeableConcept,
+    /// Definition of the actual variable related to the statistic(s)
+    pub observed: Option<Reference>,
+    /// Definition of the intended variable related to the Evidence
+    pub intended: Option<Reference>,
+    /// low | moderate | high | exact
+    ///
+    /// Binding: extensible (The quality of how direct the match is.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/directness
+    #[serde(rename = "directnessMatch")]
+    pub directness_match: Option<CodeableConcept>,
 }
 
 impl Default for Evidence {
@@ -448,19 +448,18 @@ impl Default for Evidence {
     }
 }
 
-impl Default for EvidenceStatisticSamplesize {
+impl Default for EvidenceCertainty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             description: Default::default(),
             _description: Default::default(),
             note: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
-            known_data_count: Default::default(),
-            _known_data_count: Default::default(),
+            type_: Default::default(),
+            rating: Default::default(),
+            rater: Default::default(),
+            _rater: Default::default(),
+            subcomponent: Default::default(),
         }
     }
 }
@@ -482,51 +481,6 @@ impl Default for EvidenceStatistic {
             _number_of_events: Default::default(),
             number_affected: Default::default(),
             _number_affected: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceCertainty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            note: Default::default(),
-            type_: Default::default(),
-            rating: Default::default(),
-            rater: Default::default(),
-            _rater: Default::default(),
-            subcomponent: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceVariabledefinition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            note: Default::default(),
-            variable_role: Default::default(),
-            observed: Default::default(),
-            intended: Default::default(),
-            directness_match: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceStatisticModelcharacteristicVariable {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            variable_definition: Default::default(),
-            handling: Default::default(),
-            _handling: Default::default(),
-            value_category: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
         }
     }
 }
@@ -555,6 +509,52 @@ impl Default for EvidenceStatisticModelcharacteristic {
             code: Default::default(),
             value: Default::default(),
             attribute_estimate: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatisticModelcharacteristicVariable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            variable_definition: Default::default(),
+            handling: Default::default(),
+            _handling: Default::default(),
+            value_category: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatisticSamplesize {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            note: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
+            known_data_count: Default::default(),
+            _known_data_count: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceVariabledefinition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            note: Default::default(),
+            variable_role: Default::default(),
+            observed: Default::default(),
+            intended: Default::default(),
+            directness_match: Default::default(),
         }
     }
 }
@@ -1303,11 +1303,11 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
 }
 
 impl crate::traits::evidence::EvidenceExistence for Evidence {
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
-    }
     fn has_cite_as(&self) -> bool {
         self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

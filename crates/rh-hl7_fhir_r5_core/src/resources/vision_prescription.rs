@@ -56,22 +56,6 @@ pub struct VisionPrescription {
     #[serde(rename = "lensSpecification")]
     pub lens_specification: Vec<VisionPrescriptionLensspecification>,
 }
-/// VisionPrescriptionLensspecification nested structure for the 'prism' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VisionPrescriptionLensspecificationPrism {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Amount of adjustment
-    pub amount: DecimalType,
-    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
-    pub _amount: Option<Element>,
-    /// up | down | in | out
-    #[serde(rename = "base")]
-    pub base_definition: VisionBaseCodes,
-    /// Extension element for the 'base' primitive field. Contains metadata and extensions.
-    pub _base: Option<Element>,
-}
 /// VisionPrescription nested structure for the 'lensSpecification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisionPrescriptionLensspecification {
@@ -135,6 +119,22 @@ pub struct VisionPrescriptionLensspecification {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
+/// VisionPrescriptionLensspecification nested structure for the 'prism' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisionPrescriptionLensspecificationPrism {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Amount of adjustment
+    pub amount: DecimalType,
+    /// Extension element for the 'amount' primitive field. Contains metadata and extensions.
+    pub _amount: Option<Element>,
+    /// up | down | in | out
+    #[serde(rename = "base")]
+    pub base_definition: VisionBaseCodes,
+    /// Extension element for the 'base' primitive field. Contains metadata and extensions.
+    pub _base: Option<Element>,
+}
 
 impl Default for VisionPrescription {
     fn default() -> Self {
@@ -151,18 +151,6 @@ impl Default for VisionPrescription {
             _date_written: Default::default(),
             prescriber: Reference::default(),
             lens_specification: Vec::new(),
-        }
-    }
-}
-
-impl Default for VisionPrescriptionLensspecificationPrism {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            amount: Default::default(),
-            _amount: Default::default(),
-            base_definition: Default::default(),
-            _base: Default::default(),
         }
     }
 }
@@ -195,6 +183,18 @@ impl Default for VisionPrescriptionLensspecification {
             brand: Default::default(),
             _brand: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for VisionPrescriptionLensspecificationPrism {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            amount: Default::default(),
+            _amount: Default::default(),
+            base_definition: Default::default(),
+            _base: Default::default(),
         }
     }
 }

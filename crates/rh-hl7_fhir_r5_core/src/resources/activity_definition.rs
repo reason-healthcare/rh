@@ -1211,25 +1211,25 @@ impl crate::traits::activity_definition::ActivityDefinitionMutators for Activity
 }
 
 impl crate::traits::activity_definition::ActivityDefinitionExistence for ActivityDefinition {
-    fn has_subject(&self) -> bool {
-        self.subject_codeable_concept.is_some()
-            || self.subject_reference.is_some()
-            || self.subject_canonical.is_some()
-    }
     fn has_as_needed(&self) -> bool {
         self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
     }
     fn has_product(&self) -> bool {
         self.product_reference.is_some() || self.product_codeable_concept.is_some()
     }
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
+    fn has_subject(&self) -> bool {
+        self.subject_codeable_concept.is_some()
+            || self.subject_reference.is_some()
+            || self.subject_canonical.is_some()
     }
     fn has_timing(&self) -> bool {
         self.timing_timing.is_some()
             || self.timing_age.is_some()
             || self.timing_range.is_some()
             || self.timing_duration.is_some()
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

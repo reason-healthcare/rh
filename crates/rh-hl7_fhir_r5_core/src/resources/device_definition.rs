@@ -144,6 +144,25 @@ pub struct DeviceDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub charge_item: Vec<DeviceDefinitionChargeitem>,
 }
+/// DeviceDefinition nested structure for the 'chargeItem' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionChargeitem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The code or reference for the charge item
+    #[serde(rename = "chargeItemCode")]
+    pub charge_item_code: CodeableReference,
+    /// Coefficient applicable to the billing code
+    pub count: Quantity,
+    /// A specific time period in which this charge item applies
+    #[serde(rename = "effectivePeriod")]
+    pub effective_period: Option<Period>,
+    /// The context to which this charge item applies
+    #[serde(rename = "useContext")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
+}
 /// DeviceDefinition nested structure for the 'classification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionClassification {
@@ -171,166 +190,6 @@ pub struct DeviceDefinitionClassification {
     /// Further information qualifying this classification of the device model
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub justification: Vec<RelatedArtifact>,
-}
-/// DeviceDefinition nested structure for the 'chargeItem' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionChargeitem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The code or reference for the charge item
-    #[serde(rename = "chargeItemCode")]
-    pub charge_item_code: CodeableReference,
-    /// Coefficient applicable to the billing code
-    pub count: Quantity,
-    /// A specific time period in which this charge item applies
-    #[serde(rename = "effectivePeriod")]
-    pub effective_period: Option<Period>,
-    /// The context to which this charge item applies
-    #[serde(rename = "useContext")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub use_context: Vec<UsageContext>,
-}
-/// DeviceDefinition nested structure for the 'regulatoryIdentifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionRegulatoryidentifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// basic | master | license
-    #[serde(rename = "type")]
-    pub type_: DevicedefinitionRegulatoryIdentifierType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// The identifier itself
-    #[serde(rename = "deviceIdentifier")]
-    pub device_identifier: StringType,
-    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_deviceIdentifier")]
-    pub _device_identifier: Option<Element>,
-    /// The organization that issued this identifier
-    pub issuer: StringType,
-    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
-    pub _issuer: Option<Element>,
-    /// The jurisdiction to which the deviceIdentifier applies
-    pub jurisdiction: StringType,
-    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
-    pub _jurisdiction: Option<Element>,
-}
-/// DeviceDefinitionPackaging nested structure for the 'distributor' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionPackagingDistributor {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Distributor's human-readable name
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Distributor as an Organization resource
-    #[serde(rename = "organizationReference")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub organization_reference: Vec<Reference>,
-}
-/// DeviceDefinition nested structure for the 'correctiveAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionCorrectiveaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether the corrective action was a recall
-    pub recall: BooleanType,
-    /// Extension element for the 'recall' primitive field. Contains metadata and extensions.
-    pub _recall: Option<Element>,
-    /// model | lot-numbers | serial-numbers
-    pub scope: Option<DeviceCorrectiveactionscope>,
-    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
-    pub _scope: Option<Element>,
-    /// Start and end dates of the  corrective action
-    pub period: Period,
-}
-/// DeviceDefinitionUdideviceidentifier nested structure for the 'marketDistribution' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionUdideviceidentifierMarketdistribution {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Begin and end dates for the commercial distribution of the device
-    #[serde(rename = "marketPeriod")]
-    pub market_period: Period,
-    /// National state or territory where the device is commercialized
-    #[serde(rename = "subJurisdiction")]
-    pub sub_jurisdiction: StringType,
-    /// Extension element for the 'subJurisdiction' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_subJurisdiction")]
-    pub _sub_jurisdiction: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'deviceName' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionDevicename {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A name that is used to refer to the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// registered-name | user-friendly-name | patient-reported-name
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'udiDeviceIdentifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionUdideviceidentifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Indicates whether and when the device is available on the market
-    #[serde(rename = "marketDistribution")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub market_distribution: Vec<DeviceDefinitionUdideviceidentifierMarketdistribution>,
-    /// The identifier that is to be associated with every Device that references this DeviceDefintiion for the issuer and jurisdiction provided in the DeviceDefinition.udiDeviceIdentifier
-    #[serde(rename = "deviceIdentifier")]
-    pub device_identifier: StringType,
-    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_deviceIdentifier")]
-    pub _device_identifier: Option<Element>,
-    /// The organization that assigns the identifier algorithm
-    pub issuer: StringType,
-    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
-    pub _issuer: Option<Element>,
-    /// The jurisdiction to which the deviceIdentifier applies
-    pub jurisdiction: StringType,
-    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
-    pub _jurisdiction: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'packaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionPackaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// An organization that distributes the packaged device
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub distributor: Vec<DeviceDefinitionPackagingDistributor>,
-    /// Business identifier of the packaged medication
-    pub identifier: Option<Identifier>,
-    /// A code that defines the specific type of packaging
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The number of items contained in the package (devices or sub-packages)
-    pub count: Option<IntegerType>,
-    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
-    pub _count: Option<Element>,
-    /// Unique Device Identifier (UDI) Barcode string on the packaging
-    #[serde(rename = "udiDeviceIdentifier")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub udi_device_identifier: Vec<StringType>,
-    /// Allows packages within packages
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub packaging: Vec<StringType>,
 }
 /// DeviceDefinition nested structure for the 'conformsTo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -371,6 +230,88 @@ pub struct DeviceDefinitionConformsto {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source: Vec<RelatedArtifact>,
 }
+/// DeviceDefinition nested structure for the 'correctiveAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionCorrectiveaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether the corrective action was a recall
+    pub recall: BooleanType,
+    /// Extension element for the 'recall' primitive field. Contains metadata and extensions.
+    pub _recall: Option<Element>,
+    /// model | lot-numbers | serial-numbers
+    pub scope: Option<DeviceCorrectiveactionscope>,
+    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
+    pub _scope: Option<Element>,
+    /// Start and end dates of the  corrective action
+    pub period: Period,
+}
+/// DeviceDefinition nested structure for the 'deviceName' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionDevicename {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A name that is used to refer to the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// registered-name | user-friendly-name | patient-reported-name
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'guideline' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionGuideline {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The circumstances that form the setting for using the device
+    #[serde(rename = "useContext")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
+    /// Detailed written and visual directions for the user on how to use the device
+    #[serde(rename = "usageInstruction")]
+    pub usage_instruction: Option<StringType>,
+    /// Extension element for the 'usageInstruction' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_usageInstruction")]
+    pub _usage_instruction: Option<Element>,
+    /// A source of information or reference for this guideline
+    #[serde(rename = "relatedArtifact")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
+    /// A clinical condition for which the device was designed to be used
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub indication: Vec<CodeableConcept>,
+    /// A specific situation when a device should not be used because it may cause harm
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contraindication: Vec<CodeableConcept>,
+    /// Specific hazard alert information that a user needs to know before using the device
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warning: Vec<CodeableConcept>,
+    /// A description of the general purpose or medical use of the device or its function
+    #[serde(rename = "intendedUse")]
+    pub intended_use: Option<StringType>,
+    /// Extension element for the 'intendedUse' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_intendedUse")]
+    pub _intended_use: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'hasPart' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionHaspart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the part
+    pub reference: Reference,
+    /// Number of occurrences of the part
+    pub count: Option<IntegerType>,
+    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
+    pub _count: Option<Element>,
+}
 /// DeviceDefinition nested structure for the 'link' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionLink {
@@ -386,19 +327,6 @@ pub struct DeviceDefinitionLink {
     /// A reference to the linked device
     #[serde(rename = "relatedDevice")]
     pub related_device: CodeableReference,
-}
-/// DeviceDefinition nested structure for the 'hasPart' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionHaspart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the part
-    pub reference: Reference,
-    /// Number of occurrences of the part
-    pub count: Option<IntegerType>,
-    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
-    pub _count: Option<Element>,
 }
 /// DeviceDefinition nested structure for the 'material' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -418,6 +346,47 @@ pub struct DeviceDefinitionMaterial {
     /// Extension element for the 'allergenicIndicator' primitive field. Contains metadata and extensions.
     #[serde(rename = "_allergenicIndicator")]
     pub _allergenic_indicator: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'packaging' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionPackaging {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// An organization that distributes the packaged device
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub distributor: Vec<DeviceDefinitionPackagingDistributor>,
+    /// Business identifier of the packaged medication
+    pub identifier: Option<Identifier>,
+    /// A code that defines the specific type of packaging
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The number of items contained in the package (devices or sub-packages)
+    pub count: Option<IntegerType>,
+    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
+    pub _count: Option<Element>,
+    /// Unique Device Identifier (UDI) Barcode string on the packaging
+    #[serde(rename = "udiDeviceIdentifier")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub udi_device_identifier: Vec<StringType>,
+    /// Allows packages within packages
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packaging: Vec<StringType>,
+}
+/// DeviceDefinitionPackaging nested structure for the 'distributor' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionPackagingDistributor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Distributor's human-readable name
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Distributor as an Organization resource
+    #[serde(rename = "organizationReference")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub organization_reference: Vec<Reference>,
 }
 /// DeviceDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -465,6 +434,73 @@ pub struct DeviceDefinitionProperty {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Attachment,
 }
+/// DeviceDefinition nested structure for the 'regulatoryIdentifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionRegulatoryidentifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// basic | master | license
+    #[serde(rename = "type")]
+    pub type_: DevicedefinitionRegulatoryIdentifierType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// The identifier itself
+    #[serde(rename = "deviceIdentifier")]
+    pub device_identifier: StringType,
+    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_deviceIdentifier")]
+    pub _device_identifier: Option<Element>,
+    /// The organization that issued this identifier
+    pub issuer: StringType,
+    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
+    pub _issuer: Option<Element>,
+    /// The jurisdiction to which the deviceIdentifier applies
+    pub jurisdiction: StringType,
+    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
+    pub _jurisdiction: Option<Element>,
+}
+/// DeviceDefinition nested structure for the 'udiDeviceIdentifier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionUdideviceidentifier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Indicates whether and when the device is available on the market
+    #[serde(rename = "marketDistribution")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub market_distribution: Vec<DeviceDefinitionUdideviceidentifierMarketdistribution>,
+    /// The identifier that is to be associated with every Device that references this DeviceDefintiion for the issuer and jurisdiction provided in the DeviceDefinition.udiDeviceIdentifier
+    #[serde(rename = "deviceIdentifier")]
+    pub device_identifier: StringType,
+    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_deviceIdentifier")]
+    pub _device_identifier: Option<Element>,
+    /// The organization that assigns the identifier algorithm
+    pub issuer: StringType,
+    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
+    pub _issuer: Option<Element>,
+    /// The jurisdiction to which the deviceIdentifier applies
+    pub jurisdiction: StringType,
+    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
+    pub _jurisdiction: Option<Element>,
+}
+/// DeviceDefinitionUdideviceidentifier nested structure for the 'marketDistribution' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionUdideviceidentifierMarketdistribution {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Begin and end dates for the commercial distribution of the device
+    #[serde(rename = "marketPeriod")]
+    pub market_period: Period,
+    /// National state or territory where the device is commercialized
+    #[serde(rename = "subJurisdiction")]
+    pub sub_jurisdiction: StringType,
+    /// Extension element for the 'subJurisdiction' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_subJurisdiction")]
+    pub _sub_jurisdiction: Option<Element>,
+}
 /// DeviceDefinition nested structure for the 'version' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionVersion {
@@ -480,42 +516,6 @@ pub struct DeviceDefinitionVersion {
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'guideline' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionGuideline {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The circumstances that form the setting for using the device
-    #[serde(rename = "useContext")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub use_context: Vec<UsageContext>,
-    /// Detailed written and visual directions for the user on how to use the device
-    #[serde(rename = "usageInstruction")]
-    pub usage_instruction: Option<StringType>,
-    /// Extension element for the 'usageInstruction' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_usageInstruction")]
-    pub _usage_instruction: Option<Element>,
-    /// A source of information or reference for this guideline
-    #[serde(rename = "relatedArtifact")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub related_artifact: Vec<RelatedArtifact>,
-    /// A clinical condition for which the device was designed to be used
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub indication: Vec<CodeableConcept>,
-    /// A specific situation when a device should not be used because it may cause harm
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub contraindication: Vec<CodeableConcept>,
-    /// Specific hazard alert information that a user needs to know before using the device
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub warning: Vec<CodeableConcept>,
-    /// A description of the general purpose or medical use of the device or its function
-    #[serde(rename = "intendedUse")]
-    pub intended_use: Option<StringType>,
-    /// Extension element for the 'intendedUse' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_intendedUse")]
-    pub _intended_use: Option<Element>,
 }
 
 impl Default for DeviceDefinition {
@@ -556,16 +556,6 @@ impl Default for DeviceDefinition {
     }
 }
 
-impl Default for DeviceDefinitionClassification {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            justification: Default::default(),
-        }
-    }
-}
-
 impl Default for DeviceDefinitionChargeitem {
     fn default() -> Self {
         Self {
@@ -578,29 +568,25 @@ impl Default for DeviceDefinitionChargeitem {
     }
 }
 
-impl Default for DeviceDefinitionRegulatoryidentifier {
+impl Default for DeviceDefinitionClassification {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            _type: Default::default(),
-            device_identifier: Default::default(),
-            _device_identifier: Default::default(),
-            issuer: Default::default(),
-            _issuer: Default::default(),
-            jurisdiction: Default::default(),
-            _jurisdiction: Default::default(),
+            justification: Default::default(),
         }
     }
 }
 
-impl Default for DeviceDefinitionPackagingDistributor {
+impl Default for DeviceDefinitionConformsto {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            organization_reference: Default::default(),
+            category: Default::default(),
+            specification: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            source: Default::default(),
         }
     }
 }
@@ -618,17 +604,6 @@ impl Default for DeviceDefinitionCorrectiveaction {
     }
 }
 
-impl Default for DeviceDefinitionUdideviceidentifierMarketdistribution {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            market_period: Default::default(),
-            sub_jurisdiction: Default::default(),
-            _sub_jurisdiction: Default::default(),
-        }
-    }
-}
-
 impl Default for DeviceDefinitionDevicename {
     fn default() -> Self {
         Self {
@@ -641,17 +616,53 @@ impl Default for DeviceDefinitionDevicename {
     }
 }
 
-impl Default for DeviceDefinitionUdideviceidentifier {
+impl Default for DeviceDefinitionGuideline {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            market_distribution: Default::default(),
-            device_identifier: Default::default(),
-            _device_identifier: Default::default(),
-            issuer: Default::default(),
-            _issuer: Default::default(),
-            jurisdiction: Default::default(),
-            _jurisdiction: Default::default(),
+            use_context: Default::default(),
+            usage_instruction: Default::default(),
+            _usage_instruction: Default::default(),
+            related_artifact: Default::default(),
+            indication: Default::default(),
+            contraindication: Default::default(),
+            warning: Default::default(),
+            intended_use: Default::default(),
+            _intended_use: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionHaspart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            reference: Default::default(),
+            count: Default::default(),
+            _count: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            relation: Coding::default(),
+            related_device: CodeableReference::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionMaterial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            substance: CodeableConcept::default(),
+            alternate: Default::default(),
+            _alternate: Default::default(),
+            allergenic_indicator: Default::default(),
+            _allergenic_indicator: Default::default(),
         }
     }
 }
@@ -671,49 +682,13 @@ impl Default for DeviceDefinitionPackaging {
     }
 }
 
-impl Default for DeviceDefinitionConformsto {
+impl Default for DeviceDefinitionPackagingDistributor {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: Default::default(),
-            specification: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            relation: Coding::default(),
-            related_device: CodeableReference::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionHaspart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            reference: Default::default(),
-            count: Default::default(),
-            _count: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionMaterial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substance: CodeableConcept::default(),
-            alternate: Default::default(),
-            _alternate: Default::default(),
-            allergenic_indicator: Default::default(),
-            _allergenic_indicator: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            organization_reference: Default::default(),
         }
     }
 }
@@ -734,6 +709,48 @@ impl Default for DeviceDefinitionProperty {
     }
 }
 
+impl Default for DeviceDefinitionRegulatoryidentifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            device_identifier: Default::default(),
+            _device_identifier: Default::default(),
+            issuer: Default::default(),
+            _issuer: Default::default(),
+            jurisdiction: Default::default(),
+            _jurisdiction: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionUdideviceidentifier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            market_distribution: Default::default(),
+            device_identifier: Default::default(),
+            _device_identifier: Default::default(),
+            issuer: Default::default(),
+            _issuer: Default::default(),
+            jurisdiction: Default::default(),
+            _jurisdiction: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceDefinitionUdideviceidentifierMarketdistribution {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            market_period: Default::default(),
+            sub_jurisdiction: Default::default(),
+            _sub_jurisdiction: Default::default(),
+        }
+    }
+}
+
 impl Default for DeviceDefinitionVersion {
     fn default() -> Self {
         Self {
@@ -742,23 +759,6 @@ impl Default for DeviceDefinitionVersion {
             component: Default::default(),
             value: StringType::default(),
             _value: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionGuideline {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            use_context: Default::default(),
-            usage_instruction: Default::default(),
-            _usage_instruction: Default::default(),
-            related_artifact: Default::default(),
-            indication: Default::default(),
-            contraindication: Default::default(),
-            warning: Default::default(),
-            intended_use: Default::default(),
-            _intended_use: Default::default(),
         }
     }
 }

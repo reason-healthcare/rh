@@ -80,14 +80,20 @@ pub struct InsurancePlan {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub plan: Vec<InsurancePlanPlan>,
 }
-/// InsurancePlanPlan nested structure for the 'specificCost' field
+/// InsurancePlan nested structure for the 'coverage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcost {
+pub struct InsurancePlanCoverage {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// General category of benefit
-    pub category: CodeableConcept,
+    /// List of benefits
+    pub benefit: Vec<InsurancePlanCoverageBenefit>,
+    /// Type of coverage
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// What networks provide coverage
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub network: Vec<Reference>,
 }
 /// InsurancePlanCoverage nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +120,34 @@ pub struct InsurancePlanCoverageBenefitLimit {
     /// Benefit limit details
     pub code: Option<CodeableConcept>,
 }
+/// InsurancePlan nested structure for the 'plan' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlan {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Overall costs
+    #[serde(rename = "generalCost")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub general_cost: Vec<InsurancePlanPlanGeneralcost>,
+    /// Specific costs
+    #[serde(rename = "specificCost")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specific_cost: Vec<InsurancePlanPlanSpecificcost>,
+    /// Business Identifier for Product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// Type of plan
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Where product applies
+    #[serde(rename = "coverageArea")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage_area: Vec<Reference>,
+    /// What networks provide coverage
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub network: Vec<Reference>,
+}
 /// InsurancePlanPlan nested structure for the 'generalCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsurancePlanPlanGeneralcost {
@@ -136,20 +170,24 @@ pub struct InsurancePlanPlanGeneralcost {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
 }
-/// InsurancePlan nested structure for the 'coverage' field
+/// InsurancePlanPlan nested structure for the 'specificCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanCoverage {
+pub struct InsurancePlanPlanSpecificcost {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// List of benefits
-    pub benefit: Vec<InsurancePlanCoverageBenefit>,
-    /// Type of coverage
+    /// General category of benefit
+    pub category: CodeableConcept,
+}
+/// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlanSpecificcostBenefit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of specific benefit
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// What networks provide coverage
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub network: Vec<Reference>,
 }
 /// InsurancePlanPlanSpecificcostBenefit nested structure for the 'cost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,44 +205,6 @@ pub struct InsurancePlanPlanSpecificcostBenefitCost {
     pub qualifiers: Vec<CodeableConcept>,
     /// The actual cost value
     pub value: Option<Quantity>,
-}
-/// InsurancePlan nested structure for the 'plan' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlan {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specific costs
-    #[serde(rename = "specificCost")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub specific_cost: Vec<InsurancePlanPlanSpecificcost>,
-    /// Overall costs
-    #[serde(rename = "generalCost")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub general_cost: Vec<InsurancePlanPlanGeneralcost>,
-    /// Business Identifier for Product
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub identifier: Vec<Identifier>,
-    /// Type of plan
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Where product applies
-    #[serde(rename = "coverageArea")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub coverage_area: Vec<Reference>,
-    /// What networks provide coverage
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub network: Vec<Reference>,
-}
-/// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcostBenefit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of specific benefit
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
 }
 
 impl Default for InsurancePlan {
@@ -232,11 +232,13 @@ impl Default for InsurancePlan {
     }
 }
 
-impl Default for InsurancePlanPlanSpecificcost {
+impl Default for InsurancePlanCoverage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: Default::default(),
+            benefit: Vec::new(),
+            type_: Default::default(),
+            network: Default::default(),
         }
     }
 }
@@ -262,6 +264,20 @@ impl Default for InsurancePlanCoverageBenefitLimit {
     }
 }
 
+impl Default for InsurancePlanPlan {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            general_cost: Default::default(),
+            specific_cost: Default::default(),
+            identifier: Default::default(),
+            type_: Default::default(),
+            coverage_area: Default::default(),
+            network: Default::default(),
+        }
+    }
+}
+
 impl Default for InsurancePlanPlanGeneralcost {
     fn default() -> Self {
         Self {
@@ -276,13 +292,20 @@ impl Default for InsurancePlanPlanGeneralcost {
     }
 }
 
-impl Default for InsurancePlanCoverage {
+impl Default for InsurancePlanPlanSpecificcost {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            benefit: Vec::new(),
+            category: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanPlanSpecificcostBenefit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             type_: Default::default(),
-            network: Default::default(),
         }
     }
 }
@@ -295,29 +318,6 @@ impl Default for InsurancePlanPlanSpecificcostBenefitCost {
             applicability: Default::default(),
             qualifiers: Default::default(),
             value: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlan {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            specific_cost: Default::default(),
-            general_cost: Default::default(),
-            identifier: Default::default(),
-            type_: Default::default(),
-            coverage_area: Default::default(),
-            network: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlanSpecificcostBenefit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
         }
     }
 }

@@ -257,6 +257,9 @@ impl<'a> FileGenerator<'a> {
             }
         }
 
+        embedded_nested.sort_by(|left, right| left.name.cmp(&right.name));
+        external_extensions.sort_by(|left, right| left.name.cmp(&right.name));
+
         let filename = crate::naming::Naming::filename(structure_def);
         let output_path = target_dir.join(filename);
 
@@ -393,7 +396,9 @@ impl<'a> FileGenerator<'a> {
         }
 
         let mut import_tokens = proc_macro2::TokenStream::new();
-        for import in &imports {
+        let mut sorted_imports: Vec<_> = imports.iter().collect();
+        sorted_imports.sort();
+        for import in sorted_imports {
             let import_token: proc_macro2::TokenStream = format!("use {import};")
                 .parse()
                 .expect("codegen bug: invalid import statement in generated file imports");
@@ -417,7 +422,10 @@ impl<'a> FileGenerator<'a> {
                 formatted_code.push_str(&default_impl);
             }
 
-            for nested in nested_structs {
+            let mut sorted_nested_structs = nested_structs.to_vec();
+            sorted_nested_structs.sort_by(|left, right| left.name.cmp(&right.name));
+
+            for nested in &sorted_nested_structs {
                 let nested_default_impl =
                     self.generate_nested_struct_default_implementation(structure_def, nested);
                 if !nested_default_impl.is_empty() {

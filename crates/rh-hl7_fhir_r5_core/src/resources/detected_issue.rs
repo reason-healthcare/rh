@@ -80,6 +80,23 @@ pub struct DetectedIssue {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mitigation: Vec<DetectedIssueMitigation>,
 }
+/// DetectedIssue nested structure for the 'evidence' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectedIssueEvidence {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Manifestation
+    ///
+    /// Binding: example (Codes that describes the types of evidence for a detected issue.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
+    /// Supporting information
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
+}
 /// DetectedIssue nested structure for the 'mitigation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectedIssueMitigation {
@@ -101,23 +118,6 @@ pub struct DetectedIssueMitigation {
     /// Additional notes about the mitigation
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
-}
-/// DetectedIssue nested structure for the 'evidence' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DetectedIssueEvidence {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Manifestation
-    ///
-    /// Binding: example (Codes that describes the types of evidence for a detected issue.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub code: Vec<CodeableConcept>,
-    /// Supporting information
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub detail: Vec<Reference>,
 }
 
 impl Default for DetectedIssue {
@@ -147,6 +147,16 @@ impl Default for DetectedIssue {
     }
 }
 
+impl Default for DetectedIssueEvidence {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
 impl Default for DetectedIssueMitigation {
     fn default() -> Self {
         Self {
@@ -156,16 +166,6 @@ impl Default for DetectedIssueMitigation {
             _date: Default::default(),
             author: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for DetectedIssueEvidence {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            detail: Default::default(),
         }
     }
 }

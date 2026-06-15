@@ -178,70 +178,23 @@ pub struct EvidenceVariableCategory {
     #[serde(rename = "valueRange")]
     pub value_range: Option<Range>,
 }
-/// EvidenceVariableCharacteristic nested structure for the 'definitionByCombination' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceVariableCharacteristicDefinitionbycombination {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// all-of | any-of | at-least | at-most | statistical | net-effect | dataset
-    pub code: CharacteristicCombination,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Provides the value of "n" when "at-least" or "at-most" codes are used
-    pub threshold: Option<PositiveIntType>,
-    /// Extension element for the 'threshold' primitive field. Contains metadata and extensions.
-    pub _threshold: Option<Element>,
-    /// A defining factor of the characteristic
-    pub characteristic: Vec<StringType>,
-}
-/// EvidenceVariableCharacteristic nested structure for the 'timeFromEvent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceVariableCharacteristicTimefromevent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Human readable description
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Used for footnotes or explanatory notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-    /// The event used as a base point (reference point) in time (CodeableConcept)
-    #[serde(rename = "eventCodeableConcept")]
-    pub event_codeable_concept: Option<CodeableConcept>,
-    /// The event used as a base point (reference point) in time (Reference)
-    #[serde(rename = "eventReference")]
-    pub event_reference: Option<Reference>,
-    /// The event used as a base point (reference point) in time (dateTime)
-    #[serde(rename = "eventDateTime")]
-    pub event_date_time: Option<DateTimeType>,
-    /// The event used as a base point (reference point) in time (id)
-    #[serde(rename = "eventId")]
-    pub event_id: Option<StringType>,
-    /// Used to express the observation at a defined amount of time before or after the event
-    pub quantity: Option<Quantity>,
-    /// Used to express the observation within a period before and/or after the event
-    pub range: Option<Range>,
-}
 /// EvidenceVariable nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceVariableCharacteristic {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Timing in which the characteristic is determined
-    #[serde(rename = "timeFromEvent")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub time_from_event: Vec<EvidenceVariableCharacteristicTimefromevent>,
+    /// Used to specify how two or more characteristics are combined
+    #[serde(rename = "definitionByCombination")]
+    pub definition_by_combination: Option<EvidenceVariableCharacteristicDefinitionbycombination>,
     /// Defines the characteristic using type and value
     #[serde(rename = "definitionByTypeAndValue")]
     pub definition_by_type_and_value:
         Option<EvidenceVariableCharacteristicDefinitionbytypeandvalue>,
-    /// Used to specify how two or more characteristics are combined
-    #[serde(rename = "definitionByCombination")]
-    pub definition_by_combination: Option<EvidenceVariableCharacteristicDefinitionbycombination>,
+    /// Timing in which the characteristic is determined
+    #[serde(rename = "timeFromEvent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub time_from_event: Vec<EvidenceVariableCharacteristicTimefromevent>,
     /// Label for internal linking
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -293,6 +246,23 @@ pub struct EvidenceVariableCharacteristic {
     #[serde(rename = "durationRange")]
     pub duration_range: Option<Range>,
 }
+/// EvidenceVariableCharacteristic nested structure for the 'definitionByCombination' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceVariableCharacteristicDefinitionbycombination {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// all-of | any-of | at-least | at-most | statistical | net-effect | dataset
+    pub code: CharacteristicCombination,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Provides the value of "n" when "at-least" or "at-most" codes are used
+    pub threshold: Option<PositiveIntType>,
+    /// Extension element for the 'threshold' primitive field. Contains metadata and extensions.
+    pub _threshold: Option<Element>,
+    /// A defining factor of the characteristic
+    pub characteristic: Vec<StringType>,
+}
 /// EvidenceVariableCharacteristic nested structure for the 'definitionByTypeAndValue' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceVariableCharacteristicDefinitionbytypeandvalue {
@@ -339,6 +309,36 @@ pub struct EvidenceVariableCharacteristicDefinitionbytypeandvalue {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/characteristic-offset
     pub offset: Option<CodeableConcept>,
+}
+/// EvidenceVariableCharacteristic nested structure for the 'timeFromEvent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceVariableCharacteristicTimefromevent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Human readable description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Used for footnotes or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// The event used as a base point (reference point) in time (CodeableConcept)
+    #[serde(rename = "eventCodeableConcept")]
+    pub event_codeable_concept: Option<CodeableConcept>,
+    /// The event used as a base point (reference point) in time (Reference)
+    #[serde(rename = "eventReference")]
+    pub event_reference: Option<Reference>,
+    /// The event used as a base point (reference point) in time (dateTime)
+    #[serde(rename = "eventDateTime")]
+    pub event_date_time: Option<DateTimeType>,
+    /// The event used as a base point (reference point) in time (id)
+    #[serde(rename = "eventId")]
+    pub event_id: Option<StringType>,
+    /// Used to express the observation at a defined amount of time before or after the event
+    pub quantity: Option<Quantity>,
+    /// Used to express the observation within a period before and/or after the event
+    pub range: Option<Range>,
 }
 
 impl Default for EvidenceVariable {
@@ -410,43 +410,13 @@ impl Default for EvidenceVariableCategory {
     }
 }
 
-impl Default for EvidenceVariableCharacteristicDefinitionbycombination {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            threshold: Default::default(),
-            _threshold: Default::default(),
-            characteristic: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceVariableCharacteristicTimefromevent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            note: Default::default(),
-            event_codeable_concept: Default::default(),
-            event_reference: Default::default(),
-            event_date_time: Default::default(),
-            event_id: Default::default(),
-            quantity: Default::default(),
-            range: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceVariableCharacteristic {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            time_from_event: Default::default(),
-            definition_by_type_and_value: Default::default(),
             definition_by_combination: Default::default(),
+            definition_by_type_and_value: Default::default(),
+            time_from_event: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             description: Default::default(),
@@ -469,6 +439,19 @@ impl Default for EvidenceVariableCharacteristic {
     }
 }
 
+impl Default for EvidenceVariableCharacteristicDefinitionbycombination {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            threshold: Default::default(),
+            _threshold: Default::default(),
+            characteristic: Default::default(),
+        }
+    }
+}
+
 impl Default for EvidenceVariableCharacteristicDefinitionbytypeandvalue {
     fn default() -> Self {
         Self {
@@ -483,6 +466,23 @@ impl Default for EvidenceVariableCharacteristicDefinitionbytypeandvalue {
             value_reference: Default::default(),
             value_id: Default::default(),
             offset: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceVariableCharacteristicTimefromevent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            note: Default::default(),
+            event_codeable_concept: Default::default(),
+            event_reference: Default::default(),
+            event_date_time: Default::default(),
+            event_id: Default::default(),
+            quantity: Default::default(),
+            range: Default::default(),
         }
     }
 }

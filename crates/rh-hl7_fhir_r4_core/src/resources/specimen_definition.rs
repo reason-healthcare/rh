@@ -115,30 +115,6 @@ pub struct SpecimenDefinitionTypetested {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rejection_criterion: Vec<CodeableConcept>,
 }
-/// SpecimenDefinitionTypetested nested structure for the 'handling' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Temperature qualifier
-    ///
-    /// Binding: example (Set of handling instructions prior testing of the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
-    #[serde(rename = "temperatureQualifier")]
-    pub temperature_qualifier: Option<CodeableConcept>,
-    /// Temperature range
-    #[serde(rename = "temperatureRange")]
-    pub temperature_range: Option<Range>,
-    /// Maximum preservation time
-    #[serde(rename = "maxDuration")]
-    pub max_duration: Option<Duration>,
-    /// Preservation instruction
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
 /// SpecimenDefinitionTypetested nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetestedContainer {
@@ -197,6 +173,30 @@ pub struct SpecimenDefinitionTypetestedContainerAdditive {
     #[serde(rename = "additiveReference")]
     pub additive_reference: Reference,
 }
+/// SpecimenDefinitionTypetested nested structure for the 'handling' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Temperature qualifier
+    ///
+    /// Binding: example (Set of handling instructions prior testing of the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
+    #[serde(rename = "temperatureQualifier")]
+    pub temperature_qualifier: Option<CodeableConcept>,
+    /// Temperature range
+    #[serde(rename = "temperatureRange")]
+    pub temperature_range: Option<Range>,
+    /// Maximum preservation time
+    #[serde(rename = "maxDuration")]
+    pub max_duration: Option<Duration>,
+    /// Preservation instruction
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
 
 impl Default for SpecimenDefinition {
     fn default() -> Self {
@@ -232,19 +232,6 @@ impl Default for SpecimenDefinitionTypetested {
     }
 }
 
-impl Default for SpecimenDefinitionTypetestedHandling {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            temperature_qualifier: Default::default(),
-            temperature_range: Default::default(),
-            max_duration: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
-        }
-    }
-}
-
 impl Default for SpecimenDefinitionTypetestedContainer {
     fn default() -> Self {
         Self {
@@ -269,6 +256,19 @@ impl Default for SpecimenDefinitionTypetestedContainerAdditive {
             base: BackboneElement::default(),
             additive_codeable_concept: Default::default(),
             additive_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenDefinitionTypetestedHandling {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            temperature_qualifier: Default::default(),
+            temperature_range: Default::default(),
+            max_duration: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
         }
     }
 }

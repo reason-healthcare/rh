@@ -161,9 +161,6 @@ pub struct QuestionnaireItem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Initial value(s) when item is first rendered
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub initial: Vec<QuestionnaireItemInitial>,
     /// Permitted answer
     #[serde(rename = "answerOption")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -172,6 +169,9 @@ pub struct QuestionnaireItem {
     #[serde(rename = "enableWhen")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub enable_when: Vec<QuestionnaireItemEnablewhen>,
+    /// Initial value(s) when item is first rendered
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub initial: Vec<QuestionnaireItemInitial>,
     /// Unique id for item in questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -281,49 +281,6 @@ pub struct QuestionnaireItemAnsweroption {
     #[serde(rename = "_initialSelected")]
     pub _initial_selected: Option<Element>,
 }
-/// QuestionnaireItem nested structure for the 'initial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemInitial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Actual value for initializing the question (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Actual value for initializing the question (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Actual value for initializing the question (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Actual value for initializing the question (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Actual value for initializing the question (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Actual value for initializing the question (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Actual value for initializing the question (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Actual value for initializing the question (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Actual value for initializing the question (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Actual value for initializing the question (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Actual value for initializing the question (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Actual value for initializing the question (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-}
 /// QuestionnaireItem nested structure for the 'enableWhen' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItemEnablewhen {
@@ -368,6 +325,49 @@ pub struct QuestionnaireItemEnablewhen {
     /// Value for question comparison based on operator (Reference)
     #[serde(rename = "answerReference")]
     pub answer_reference: Reference,
+}
+/// QuestionnaireItem nested structure for the 'initial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemInitial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Actual value for initializing the question (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Actual value for initializing the question (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Actual value for initializing the question (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Actual value for initializing the question (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Actual value for initializing the question (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Actual value for initializing the question (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Actual value for initializing the question (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Actual value for initializing the question (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Actual value for initializing the question (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Actual value for initializing the question (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Actual value for initializing the question (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Actual value for initializing the question (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
 }
 
 impl Default for Questionnaire {
@@ -423,9 +423,9 @@ impl Default for QuestionnaireItem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            initial: Default::default(),
             answer_option: Default::default(),
             enable_when: Default::default(),
+            initial: Default::default(),
             link_id: StringType::default(),
             _link_id: Default::default(),
             definition: Default::default(),
@@ -474,26 +474,6 @@ impl Default for QuestionnaireItemAnsweroption {
     }
 }
 
-impl Default for QuestionnaireItemInitial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_boolean: Default::default(),
-            value_decimal: Default::default(),
-            value_integer: Default::default(),
-            value_date: Default::default(),
-            value_date_time: Default::default(),
-            value_time: Default::default(),
-            value_string: Default::default(),
-            value_uri: Default::default(),
-            value_attachment: Default::default(),
-            value_coding: Default::default(),
-            value_quantity: Default::default(),
-            value_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for QuestionnaireItemEnablewhen {
     fn default() -> Self {
         Self {
@@ -512,6 +492,26 @@ impl Default for QuestionnaireItemEnablewhen {
             answer_coding: Default::default(),
             answer_quantity: Default::default(),
             answer_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireItemInitial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_boolean: Default::default(),
+            value_decimal: Default::default(),
+            value_integer: Default::default(),
+            value_date: Default::default(),
+            value_date_time: Default::default(),
+            value_time: Default::default(),
+            value_string: Default::default(),
+            value_uri: Default::default(),
+            value_attachment: Default::default(),
+            value_coding: Default::default(),
+            value_quantity: Default::default(),
+            value_reference: Default::default(),
         }
     }
 }

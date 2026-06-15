@@ -94,17 +94,6 @@ pub struct Invoice {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// Invoice nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement in creation of this Invoice
-    pub role: Option<CodeableConcept>,
-    /// Individual who was involved
-    pub actor: Reference,
-}
 /// Invoice nested structure for the 'lineItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceLineitem {
@@ -131,6 +120,17 @@ pub struct InvoiceLineitem {
     #[serde(rename = "priceComponent")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub price_component: Vec<MonetaryComponent>,
+}
+/// Invoice nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvoiceParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement in creation of this Invoice
+    pub role: Option<CodeableConcept>,
+    /// Individual who was involved
+    pub actor: Reference,
 }
 
 impl Default for Invoice {
@@ -165,16 +165,6 @@ impl Default for Invoice {
     }
 }
 
-impl Default for InvoiceParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            actor: Reference::default(),
-        }
-    }
-}
-
 impl Default for InvoiceLineitem {
     fn default() -> Self {
         Self {
@@ -186,6 +176,16 @@ impl Default for InvoiceLineitem {
             charge_item_reference: Default::default(),
             charge_item_codeable_concept: Default::default(),
             price_component: Default::default(),
+        }
+    }
+}
+
+impl Default for InvoiceParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            actor: Reference::default(),
         }
     }
 }

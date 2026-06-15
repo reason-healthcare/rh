@@ -166,7 +166,10 @@ impl<'a> StructGenerator<'a> {
         }
 
         // First pass: Generate nested structs for BackboneElements
-        for (nested_field_name, nested_elements) in &nested_structs_info {
+        let mut nested_structs: Vec<_> = nested_structs_info.iter().collect();
+        nested_structs.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
+        for (nested_field_name, nested_elements) in nested_structs {
             if let Some(nested_struct) = self.generate_nested_struct(
                 &struct_name,
                 nested_field_name,
@@ -338,7 +341,11 @@ impl<'a> StructGenerator<'a> {
         }
 
         // First, generate any sub-nested structs
-        for (sub_nested_field_name, sub_nested_elements) in &sub_nested_structs {
+        let mut sorted_sub_nested_structs: Vec<_> = sub_nested_structs.iter().collect();
+        sorted_sub_nested_structs
+            .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
+        for (sub_nested_field_name, sub_nested_elements) in sorted_sub_nested_structs {
             // For recursive calls, we need to create a modified context
             // The base path for sub-nested structs should be the current nested struct's path
             let sub_nested_struct_name = format!(
@@ -425,7 +432,13 @@ impl<'a> StructGenerator<'a> {
                 }
 
                 // First, recursively generate any further sub-nested structs
-                for (sub_sub_nested_field_name, sub_sub_nested_elements) in &sub_sub_nested_structs
+                let mut sorted_sub_sub_nested_structs: Vec<_> =
+                    sub_sub_nested_structs.iter().collect();
+                sorted_sub_sub_nested_structs
+                    .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
+                for (sub_sub_nested_field_name, sub_sub_nested_elements) in
+                    sorted_sub_sub_nested_structs
                 {
                     self.generate_deeply_nested_struct(
                         &sub_nested_struct_name,
@@ -578,7 +591,11 @@ impl<'a> StructGenerator<'a> {
             }
 
             // First, recursively generate any further nested structs
-            for (sub_nested_field_name, sub_nested_elements) in &sub_nested_structs {
+            let mut sorted_sub_nested_structs: Vec<_> = sub_nested_structs.iter().collect();
+            sorted_sub_nested_structs
+                .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
+            for (sub_nested_field_name, sub_nested_elements) in sorted_sub_nested_structs {
                 self.generate_deeply_nested_struct(
                     &nested_struct_name,
                     sub_nested_field_name,

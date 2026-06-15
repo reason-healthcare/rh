@@ -74,26 +74,6 @@ pub struct ManufacturedItemDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub component: Vec<ManufacturedItemDefinitionComponent>,
 }
-/// ManufacturedItemDefinitionComponent nested structure for the 'constituent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ManufacturedItemDefinitionComponentConstituent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The measurable amount of the substance, expressable in different ways (e.g. by mass or volume)
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub amount: Vec<Quantity>,
-    /// The physical location of the constituent/ingredient within the component
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub location: Vec<CodeableConcept>,
-    /// The function of this constituent within the component e.g. binder
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub function: Vec<CodeableConcept>,
-    /// The ingredient that is the constituent of the given component
-    #[serde(rename = "hasIngredient")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub has_ingredient: Vec<CodeableReference>,
-}
 /// ManufacturedItemDefinition nested structure for the 'component' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManufacturedItemDefinitionComponent {
@@ -118,6 +98,26 @@ pub struct ManufacturedItemDefinitionComponent {
     /// A component that this component contains or is made from
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub component: Vec<StringType>,
+}
+/// ManufacturedItemDefinitionComponent nested structure for the 'constituent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ManufacturedItemDefinitionComponentConstituent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The measurable amount of the substance, expressable in different ways (e.g. by mass or volume)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amount: Vec<Quantity>,
+    /// The physical location of the constituent/ingredient within the component
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<CodeableConcept>,
+    /// The function of this constituent within the component e.g. binder
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub function: Vec<CodeableConcept>,
+    /// The ingredient that is the constituent of the given component
+    #[serde(rename = "hasIngredient")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub has_ingredient: Vec<CodeableReference>,
 }
 /// ManufacturedItemDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -175,18 +175,6 @@ impl Default for ManufacturedItemDefinition {
     }
 }
 
-impl Default for ManufacturedItemDefinitionComponentConstituent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            amount: Default::default(),
-            location: Default::default(),
-            function: Default::default(),
-            has_ingredient: Default::default(),
-        }
-    }
-}
-
 impl Default for ManufacturedItemDefinitionComponent {
     fn default() -> Self {
         Self {
@@ -197,6 +185,18 @@ impl Default for ManufacturedItemDefinitionComponent {
             amount: Default::default(),
             property: Default::default(),
             component: Default::default(),
+        }
+    }
+}
+
+impl Default for ManufacturedItemDefinitionComponentConstituent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            amount: Default::default(),
+            location: Default::default(),
+            function: Default::default(),
+            has_ingredient: Default::default(),
         }
     }
 }

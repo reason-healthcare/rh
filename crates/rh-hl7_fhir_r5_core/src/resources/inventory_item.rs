@@ -77,6 +77,21 @@ pub struct InventoryItem {
     #[serde(rename = "productReference")]
     pub product_reference: Option<Reference>,
 }
+/// InventoryItem nested structure for the 'association' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryItemAssociation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of association between the device and the other item
+    #[serde(rename = "associationType")]
+    pub association_type: CodeableConcept,
+    /// The related item or product
+    #[serde(rename = "relatedItem")]
+    pub related_item: Reference,
+    /// The quantity of the product in this product
+    pub quantity: Ratio,
+}
 /// InventoryItem nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InventoryItemCharacteristic {
@@ -126,21 +141,6 @@ pub struct InventoryItemCharacteristic {
     #[serde(rename = "valueCodeableConcept")]
     pub value_codeable_concept: CodeableConcept,
 }
-/// InventoryItem nested structure for the 'association' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryItemAssociation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of association between the device and the other item
-    #[serde(rename = "associationType")]
-    pub association_type: CodeableConcept,
-    /// The related item or product
-    #[serde(rename = "relatedItem")]
-    pub related_item: Reference,
-    /// The quantity of the product in this product
-    pub quantity: Ratio,
-}
 /// InventoryItem nested structure for the 'description' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InventoryItemDescription {
@@ -155,28 +155,6 @@ pub struct InventoryItemDescription {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-}
-/// InventoryItem nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryItemName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of name e.g. 'brand-name', 'functional-name', 'common-name'
-    ///
-    /// Binding: preferred (Name types.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/inventoryitem-nametype
-    #[serde(rename = "nameType")]
-    pub name_type: Coding,
-    /// The language used to express the item name
-    pub language: StringType,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// The name or designation of the item
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
 }
 /// InventoryItem nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,6 +179,28 @@ pub struct InventoryItemInstance {
     pub subject: Option<Reference>,
     /// The location that the item is associated with
     pub location: Option<Reference>,
+}
+/// InventoryItem nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryItemName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of name e.g. 'brand-name', 'functional-name', 'common-name'
+    ///
+    /// Binding: preferred (Name types.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/inventoryitem-nametype
+    #[serde(rename = "nameType")]
+    pub name_type: Coding,
+    /// The language used to express the item name
+    pub language: StringType,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// The name or designation of the item
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
 }
 /// InventoryItem nested structure for the 'responsibleOrganization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,6 +237,17 @@ impl Default for InventoryItem {
     }
 }
 
+impl Default for InventoryItemAssociation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            association_type: CodeableConcept::default(),
+            related_item: Reference::default(),
+            quantity: Ratio::default(),
+        }
+    }
+}
+
 impl Default for InventoryItemCharacteristic {
     fn default() -> Self {
         Self {
@@ -259,17 +270,6 @@ impl Default for InventoryItemCharacteristic {
     }
 }
 
-impl Default for InventoryItemAssociation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            association_type: CodeableConcept::default(),
-            related_item: Reference::default(),
-            quantity: Ratio::default(),
-        }
-    }
-}
-
 impl Default for InventoryItemDescription {
     fn default() -> Self {
         Self {
@@ -278,19 +278,6 @@ impl Default for InventoryItemDescription {
             _language: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-        }
-    }
-}
-
-impl Default for InventoryItemName {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name_type: Coding::default(),
-            language: StringType::default(),
-            _language: Default::default(),
-            name: StringType::default(),
-            _name: Default::default(),
         }
     }
 }
@@ -306,6 +293,19 @@ impl Default for InventoryItemInstance {
             _expiry: Default::default(),
             subject: Default::default(),
             location: Default::default(),
+        }
+    }
+}
+
+impl Default for InventoryItemName {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name_type: Coding::default(),
+            language: StringType::default(),
+            _language: Default::default(),
+            name: StringType::default(),
+            _name: Default::default(),
         }
     }
 }

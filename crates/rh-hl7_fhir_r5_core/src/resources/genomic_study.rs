@@ -91,18 +91,18 @@ pub struct GenomicStudyAnalysis {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Performer for the analysis event
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub performer: Vec<GenomicStudyAnalysisPerformer>,
-    /// Inputs for the analysis event
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub input: Vec<GenomicStudyAnalysisInput>,
     /// Devices used for the analysis (e.g., instruments, software), with settings and parameters
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub device: Vec<GenomicStudyAnalysisDevice>,
+    /// Inputs for the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input: Vec<GenomicStudyAnalysisInput>,
     /// Outputs for the analysis event
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub output: Vec<GenomicStudyAnalysisOutput>,
+    /// Performer for the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<GenomicStudyAnalysisPerformer>,
     /// Identifiers for the analysis event
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub identifier: Vec<Identifier>,
@@ -170,17 +170,6 @@ pub struct GenomicStudyAnalysis {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub regions_called: Vec<Reference>,
 }
-/// GenomicStudyAnalysis nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysisPerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The organization, healthcare professional, or others who participated in performing this analysis
-    pub actor: Option<Reference>,
-    /// Role of the actor for this analysis
-    pub role: Option<CodeableConcept>,
-}
 /// GenomicStudyAnalysis nested structure for the 'device' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenomicStudyAnalysisDevice {
@@ -191,22 +180,6 @@ pub struct GenomicStudyAnalysisDevice {
     pub device: Option<Reference>,
     /// Specific function for the device used for the analysis
     pub function: Option<CodeableConcept>,
-}
-/// GenomicStudyAnalysis nested structure for the 'output' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysisOutput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// File containing output data
-    pub file: Option<Reference>,
-    /// Type of output data (e.g., VCF, MAF, or BAM)
-    ///
-    /// Binding: example (The data format of the data file.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-dataformat
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
 }
 /// GenomicStudyAnalysis nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,6 +202,33 @@ pub struct GenomicStudyAnalysisInput {
     /// The analysis event or other GenomicStudy that generated this input file (Reference)
     #[serde(rename = "generatedByReference")]
     pub generated_by_reference: Option<Reference>,
+}
+/// GenomicStudyAnalysis nested structure for the 'output' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysisOutput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// File containing output data
+    pub file: Option<Reference>,
+    /// Type of output data (e.g., VCF, MAF, or BAM)
+    ///
+    /// Binding: example (The data format of the data file.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-dataformat
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+}
+/// GenomicStudyAnalysis nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysisPerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The organization, healthcare professional, or others who participated in performing this analysis
+    pub actor: Option<Reference>,
+    /// Role of the actor for this analysis
+    pub role: Option<CodeableConcept>,
 }
 
 impl Default for GenomicStudy {
@@ -263,10 +263,10 @@ impl Default for GenomicStudyAnalysis {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            performer: Default::default(),
-            input: Default::default(),
             device: Default::default(),
+            input: Default::default(),
             output: Default::default(),
+            performer: Default::default(),
             identifier: Default::default(),
             method_type: Default::default(),
             change_type: Default::default(),
@@ -289,22 +289,24 @@ impl Default for GenomicStudyAnalysis {
     }
 }
 
-impl Default for GenomicStudyAnalysisPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            actor: Default::default(),
-            role: Default::default(),
-        }
-    }
-}
-
 impl Default for GenomicStudyAnalysisDevice {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             device: Default::default(),
             function: Default::default(),
+        }
+    }
+}
+
+impl Default for GenomicStudyAnalysisInput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            file: Default::default(),
+            type_: Default::default(),
+            generated_by_identifier: Default::default(),
+            generated_by_reference: Default::default(),
         }
     }
 }
@@ -319,14 +321,12 @@ impl Default for GenomicStudyAnalysisOutput {
     }
 }
 
-impl Default for GenomicStudyAnalysisInput {
+impl Default for GenomicStudyAnalysisPerformer {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            file: Default::default(),
-            type_: Default::default(),
-            generated_by_identifier: Default::default(),
-            generated_by_reference: Default::default(),
+            actor: Default::default(),
+            role: Default::default(),
         }
     }
 }

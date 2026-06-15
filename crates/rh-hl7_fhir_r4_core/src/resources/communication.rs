@@ -132,22 +132,6 @@ pub struct Communication {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// Communication nested structure for the 'payload' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommunicationPayload {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Message part content (string)
-    #[serde(rename = "contentString")]
-    pub content_string: StringType,
-    /// Message part content (Attachment)
-    #[serde(rename = "contentAttachment")]
-    pub content_attachment: Attachment,
-    /// Message part content (Reference)
-    #[serde(rename = "contentReference")]
-    pub content_reference: Reference,
-}
 /// media
 ///
 /// It contains enriched media representation of the alert message, such as a voice recording.  This may be used, for example for compliance with jurisdictional accessibility requirements, literacy issues, or translations of the unstructured text content in other languages.
@@ -163,6 +147,22 @@ pub struct CommunicationMedia {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// Communication nested structure for the 'payload' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunicationPayload {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Message part content (string)
+    #[serde(rename = "contentString")]
+    pub content_string: StringType,
+    /// Message part content (Attachment)
+    #[serde(rename = "contentAttachment")]
+    pub content_attachment: Attachment,
+    /// Message part content (Reference)
+    #[serde(rename = "contentReference")]
+    pub content_reference: Reference,
 }
 
 impl Default for Communication {
@@ -202,6 +202,14 @@ impl Default for Communication {
     }
 }
 
+impl Default for CommunicationMedia {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for CommunicationPayload {
     fn default() -> Self {
         Self {
@@ -209,14 +217,6 @@ impl Default for CommunicationPayload {
             content_string: Default::default(),
             content_attachment: Default::default(),
             content_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for CommunicationMedia {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }

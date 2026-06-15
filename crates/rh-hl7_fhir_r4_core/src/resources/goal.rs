@@ -111,22 +111,6 @@ pub struct Goal {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub outcome_reference: Vec<Reference>,
 }
-/// related goal
-///
-/// Establishes a relationship between this goal and other goals.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalRelationship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Goal acceptance
 ///
 /// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
@@ -155,6 +139,22 @@ pub struct GoalAcceptance {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalReasonRejected {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// related goal
+///
+/// Establishes a relationship between this goal and other goals.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalRelationship {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -228,14 +228,6 @@ impl Default for Goal {
     }
 }
 
-impl Default for GoalRelationship {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for GoalAcceptance {
     fn default() -> Self {
         Self {
@@ -245,6 +237,14 @@ impl Default for GoalAcceptance {
 }
 
 impl Default for GoalReasonRejected {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for GoalRelationship {
     fn default() -> Self {
         Self {
             base: Extension::default(),

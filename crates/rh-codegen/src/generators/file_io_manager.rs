@@ -272,6 +272,7 @@ impl<'a> FileIoManager<'a> {
             }
         }
 
+        nested_structs.sort_by(|left, right| left.name.cmp(&right.name));
         nested_structs
     }
 

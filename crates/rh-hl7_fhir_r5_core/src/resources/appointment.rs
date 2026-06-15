@@ -195,18 +195,45 @@ pub struct Appointment {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub recurrence_template: Vec<AppointmentRecurrencetemplate>,
 }
+/// Appointment nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppointmentParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role of participant in the appointment
+    ///
+    /// Binding: extensible (Role of participant in encounter.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-participant-type
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
+    /// Participation period of the actor
+    pub period: Option<Period>,
+    /// The individual, device, location, or service participating in the appointment
+    pub actor: Option<Reference>,
+    /// The participant is required to attend (optional when false)
+    pub required: Option<BooleanType>,
+    /// Extension element for the 'required' primitive field. Contains metadata and extensions.
+    pub _required: Option<Element>,
+    /// accepted | declined | tentative | needs-action
+    pub status: Participationstatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+}
 /// Appointment nested structure for the 'recurrenceTemplate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentRecurrencetemplate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Information about weekly recurring appointments
-    #[serde(rename = "weeklyTemplate")]
-    pub weekly_template: Option<AppointmentRecurrencetemplateWeeklytemplate>,
     /// Information about monthly recurring appointments
     #[serde(rename = "monthlyTemplate")]
     pub monthly_template: Option<AppointmentRecurrencetemplateMonthlytemplate>,
+    /// Information about weekly recurring appointments
+    #[serde(rename = "weeklyTemplate")]
+    pub weekly_template: Option<AppointmentRecurrencetemplateWeeklytemplate>,
     /// Information about yearly recurring appointments
     #[serde(rename = "yearlyTemplate")]
     pub yearly_template: Option<AppointmentRecurrencetemplateYearlytemplate>,
@@ -326,33 +353,6 @@ pub struct AppointmentRecurrencetemplateWeeklytemplate {
     #[serde(rename = "_weekInterval")]
     pub _week_interval: Option<Element>,
 }
-/// Appointment nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppointmentParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role of participant in the appointment
-    ///
-    /// Binding: extensible (Role of participant in encounter.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-participant-type
-    #[serde(rename = "type")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub type_: Vec<CodeableConcept>,
-    /// Participation period of the actor
-    pub period: Option<Period>,
-    /// The individual, device, location, or service participating in the appointment
-    pub actor: Option<Reference>,
-    /// The participant is required to attend (optional when false)
-    pub required: Option<BooleanType>,
-    /// Extension element for the 'required' primitive field. Contains metadata and extensions.
-    pub _required: Option<Element>,
-    /// accepted | declined | tentative | needs-action
-    pub status: Participationstatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-}
 /// AppointmentRecurrencetemplate nested structure for the 'yearlyTemplate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppointmentRecurrencetemplateYearlytemplate {
@@ -416,12 +416,27 @@ impl Default for Appointment {
     }
 }
 
+impl Default for AppointmentParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
+            actor: Default::default(),
+            required: Default::default(),
+            _required: Default::default(),
+            status: Participationstatus::default(),
+            _status: Default::default(),
+        }
+    }
+}
+
 impl Default for AppointmentRecurrencetemplate {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            weekly_template: Default::default(),
             monthly_template: Default::default(),
+            weekly_template: Default::default(),
             yearly_template: Default::default(),
             timezone: Default::default(),
             recurrence_type: Default::default(),
@@ -473,21 +488,6 @@ impl Default for AppointmentRecurrencetemplateWeeklytemplate {
             _sunday: Default::default(),
             week_interval: Default::default(),
             _week_interval: Default::default(),
-        }
-    }
-}
-
-impl Default for AppointmentParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
-            actor: Default::default(),
-            required: Default::default(),
-            _required: Default::default(),
-            status: Participationstatus::default(),
-            _status: Default::default(),
         }
     }
 }

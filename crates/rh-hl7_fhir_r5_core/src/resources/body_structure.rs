@@ -55,6 +55,73 @@ pub struct BodyStructure {
     /// Who this is about
     pub patient: Reference,
 }
+/// BodyStructure nested structure for the 'includedStructure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BodyStructureIncludedstructure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Landmark relative location
+    #[serde(rename = "bodyLandmarkOrientation")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_landmark_orientation: Vec<BodyStructureIncludedstructureBodylandmarkorientation>,
+    /// Code that represents the included structure
+    ///
+    /// Binding: example (SNOMED CT Body site concepts)
+    ///
+    /// Available values:
+    /// - `53075003`: Distal phalanx of hallux
+    /// - `76986006`: Distal phalanx of second toe
+    /// - `65258003`: Distal phalanx of third toe
+    /// - `54333003`: Distal phalanx of fourth toe
+    /// - `10770001`: Distal phalanx of fifth toe
+    /// - `363670009`: Interphalangeal joint structure of great toe
+    /// - `371216008`: Distal interphalangeal joint of second toe
+    /// - `371219001`: Distal interphalangeal joint of third toe
+    /// - `371205001`: Distal interphalangeal joint of fourth toe
+    /// - `371203008`: Distal interphalangeal joint of fifth toe
+    /// - ... and 30 more values
+    pub structure: CodeableConcept,
+    /// Code that represents the included structure laterality
+    ///
+    /// Binding: example (Concepts modifying the anatomic location.)
+    ///
+    /// Available values:
+    /// - `7771000`: Left (qualifier value)
+    /// - `24028007`: Right (qualifier value)
+    /// - `51440002`: Bilateral
+    /// - `46053002`: Distal
+    /// - `255554000`: Dorsal
+    /// - `264147007`: Plantar
+    /// - `261183002`: Upper
+    /// - `261122009`: Lower
+    /// - `255561001`: Medial
+    /// - `49370004`: Lateral
+    /// - ... and 5 more values
+    pub laterality: Option<CodeableConcept>,
+    /// Cartesian reference for structure
+    #[serde(rename = "spatialReference")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spatial_reference: Vec<Reference>,
+    /// Code that represents the included structure qualifier
+    ///
+    /// Binding: example (Concepts modifying the anatomic location.)
+    ///
+    /// Available values:
+    /// - `7771000`: Left (qualifier value)
+    /// - `24028007`: Right (qualifier value)
+    /// - `51440002`: Bilateral
+    /// - `46053002`: Distal
+    /// - `255554000`: Dorsal
+    /// - `264147007`: Plantar
+    /// - `261183002`: Upper
+    /// - `261122009`: Lower
+    /// - `255561001`: Medial
+    /// - `49370004`: Lateral
+    /// - ... and 5 more values
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualifier: Vec<CodeableConcept>,
+}
 /// BodyStructureIncludedstructure nested structure for the 'bodyLandmarkOrientation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BodyStructureIncludedstructureBodylandmarkorientation {
@@ -147,73 +214,6 @@ pub struct BodyStructureIncludedstructureBodylandmarkorientationDistancefromland
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub value: Vec<Quantity>,
 }
-/// BodyStructure nested structure for the 'includedStructure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BodyStructureIncludedstructure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Landmark relative location
-    #[serde(rename = "bodyLandmarkOrientation")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub body_landmark_orientation: Vec<BodyStructureIncludedstructureBodylandmarkorientation>,
-    /// Code that represents the included structure
-    ///
-    /// Binding: example (SNOMED CT Body site concepts)
-    ///
-    /// Available values:
-    /// - `53075003`: Distal phalanx of hallux
-    /// - `76986006`: Distal phalanx of second toe
-    /// - `65258003`: Distal phalanx of third toe
-    /// - `54333003`: Distal phalanx of fourth toe
-    /// - `10770001`: Distal phalanx of fifth toe
-    /// - `363670009`: Interphalangeal joint structure of great toe
-    /// - `371216008`: Distal interphalangeal joint of second toe
-    /// - `371219001`: Distal interphalangeal joint of third toe
-    /// - `371205001`: Distal interphalangeal joint of fourth toe
-    /// - `371203008`: Distal interphalangeal joint of fifth toe
-    /// - ... and 30 more values
-    pub structure: CodeableConcept,
-    /// Code that represents the included structure laterality
-    ///
-    /// Binding: example (Concepts modifying the anatomic location.)
-    ///
-    /// Available values:
-    /// - `7771000`: Left (qualifier value)
-    /// - `24028007`: Right (qualifier value)
-    /// - `51440002`: Bilateral
-    /// - `46053002`: Distal
-    /// - `255554000`: Dorsal
-    /// - `264147007`: Plantar
-    /// - `261183002`: Upper
-    /// - `261122009`: Lower
-    /// - `255561001`: Medial
-    /// - `49370004`: Lateral
-    /// - ... and 5 more values
-    pub laterality: Option<CodeableConcept>,
-    /// Cartesian reference for structure
-    #[serde(rename = "spatialReference")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub spatial_reference: Vec<Reference>,
-    /// Code that represents the included structure qualifier
-    ///
-    /// Binding: example (Concepts modifying the anatomic location.)
-    ///
-    /// Available values:
-    /// - `7771000`: Left (qualifier value)
-    /// - `24028007`: Right (qualifier value)
-    /// - `51440002`: Bilateral
-    /// - `46053002`: Distal
-    /// - `255554000`: Dorsal
-    /// - `264147007`: Plantar
-    /// - `261183002`: Upper
-    /// - `261122009`: Lower
-    /// - `255561001`: Medial
-    /// - `49370004`: Lateral
-    /// - ... and 5 more values
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub qualifier: Vec<CodeableConcept>,
-}
 
 impl Default for BodyStructure {
     fn default() -> Self {
@@ -229,6 +229,19 @@ impl Default for BodyStructure {
             _description: Default::default(),
             image: Default::default(),
             patient: Reference::default(),
+        }
+    }
+}
+
+impl Default for BodyStructureIncludedstructure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            body_landmark_orientation: Default::default(),
+            structure: Default::default(),
+            laterality: Default::default(),
+            spatial_reference: Default::default(),
+            qualifier: Default::default(),
         }
     }
 }
@@ -250,19 +263,6 @@ impl Default for BodyStructureIncludedstructureBodylandmarkorientationDistancefr
             base: BackboneElement::default(),
             device: Default::default(),
             value: Default::default(),
-        }
-    }
-}
-
-impl Default for BodyStructureIncludedstructure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            body_landmark_orientation: Default::default(),
-            structure: Default::default(),
-            laterality: Default::default(),
-            spatial_reference: Default::default(),
-            qualifier: Default::default(),
         }
     }
 }

@@ -78,38 +78,6 @@ pub struct Provenance {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signature: Vec<Signature>,
 }
-/// Provenance nested structure for the 'entity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProvenanceEntity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// derivation | revision | quotation | source | removal
-    pub role: ProvenanceEntityRole,
-    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
-    pub _role: Option<Element>,
-    /// Identity of entity
-    pub what: Reference,
-    /// Entity is attributed to this agent
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub agent: Vec<StringType>,
-}
-/// Provenance Relevant History
-///
-/// Guidance on using Provenance for related history elements
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/provenance-relevant-history
-/// - Version: 4.0.1
-/// - Kind: resource
-/// - Type: Provenance
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Provenance
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ProvenanceRelevantHistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Provenance,
-}
 /// Provenance nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProvenanceAgent {
@@ -147,6 +115,38 @@ pub struct ProvenanceAgent {
     #[serde(rename = "onBehalfOf")]
     pub on_behalf_of: Option<Reference>,
 }
+/// Provenance nested structure for the 'entity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProvenanceEntity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// derivation | revision | quotation | source | removal
+    pub role: ProvenanceEntityRole,
+    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
+    pub _role: Option<Element>,
+    /// Identity of entity
+    pub what: Reference,
+    /// Entity is attributed to this agent
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub agent: Vec<StringType>,
+}
+/// Provenance Relevant History
+///
+/// Guidance on using Provenance for related history elements
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/provenance-relevant-history
+/// - Version: 4.0.1
+/// - Kind: resource
+/// - Type: Provenance
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Provenance
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ProvenanceRelevantHistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Provenance,
+}
 
 impl Default for Provenance {
     fn default() -> Self {
@@ -169,18 +169,6 @@ impl Default for Provenance {
     }
 }
 
-impl Default for ProvenanceEntity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: ProvenanceEntityRole::default(),
-            _role: Default::default(),
-            what: Reference::default(),
-            agent: Default::default(),
-        }
-    }
-}
-
 impl Default for ProvenanceAgent {
     fn default() -> Self {
         Self {
@@ -189,6 +177,18 @@ impl Default for ProvenanceAgent {
             role: Default::default(),
             who: Reference::default(),
             on_behalf_of: Default::default(),
+        }
+    }
+}
+
+impl Default for ProvenanceEntity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: ProvenanceEntityRole::default(),
+            _role: Default::default(),
+            what: Reference::default(),
+            agent: Default::default(),
         }
     }
 }

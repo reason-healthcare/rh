@@ -16,22 +16,6 @@ pub struct QuestionnaireUnit {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// QuestionnaireResponse Unit ValueSet
-///
-/// A set of units that the user may choose when providing a quantity value.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet
-/// - Version: 5.1.0-snapshot1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireUnitValueSet {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// QuestionnaireResponse Unit Option
 ///
 /// A unit that the user may choose when providing a quantity value.
@@ -44,6 +28,22 @@ pub struct QuestionnaireUnitValueSet {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireUnitOption {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// QuestionnaireResponse Unit ValueSet
+///
+/// A set of units that the user may choose when providing a quantity value.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet
+/// - Version: 5.1.0-snapshot1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireUnitValueSet {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,

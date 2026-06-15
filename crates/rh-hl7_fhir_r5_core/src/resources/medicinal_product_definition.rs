@@ -186,63 +186,6 @@ pub struct MedicinalProductDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub characteristic: Vec<MedicinalProductDefinitionCharacteristic>,
 }
-/// MedicinalProductDefinition nested structure for the 'operation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionOperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of manufacturing operation e.g. manufacturing itself, re-packaging
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableReference>,
-    /// Date range of applicability
-    #[serde(rename = "effectiveDate")]
-    pub effective_date: Option<Period>,
-    /// The organization responsible for the particular process, e.g. the manufacturer or importer
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub organization: Vec<Reference>,
-    /// Specifies whether this process is considered proprietary or confidential
-    ///
-    /// Binding: example (Confidentiality rating, e.g. commercial sensitivity for a Medicinal Product.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-confidentiality
-    #[serde(rename = "confidentialityIndicator")]
-    pub confidentiality_indicator: Option<CodeableConcept>,
-}
-/// MedicinalProductDefinition nested structure for the 'contact' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionContact {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Allows the contact to be classified, for example QPPV, Pharmacovigilance Enquiry Information
-    ///
-    /// Binding: example (Extra measures defined for a Medicinal Product, such as heightened reporting requirements.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-contact-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// A product specific contact, person (in a role), or an organization
-    pub contact: Reference,
-}
-/// MedicinalProductDefinitionName nested structure for the 'part' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionNamePart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A fragment of a product name
-    pub part: StringType,
-    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
-    pub _part: Option<Element>,
-    /// Identifying type for this part of the name (e.g. strength part)
-    ///
-    /// Binding: example (Type of part of a name for a Medicinal Product.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-part-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-}
 /// MedicinalProductDefinition nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductDefinitionCharacteristic {
@@ -278,6 +221,22 @@ pub struct MedicinalProductDefinitionCharacteristic {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Option<Attachment>,
 }
+/// MedicinalProductDefinition nested structure for the 'contact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductDefinitionContact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Allows the contact to be classified, for example QPPV, Pharmacovigilance Enquiry Information
+    ///
+    /// Binding: example (Extra measures defined for a Medicinal Product, such as heightened reporting requirements.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-contact-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// A product specific contact, person (in a role), or an organization
+    pub contact: Reference,
+}
 /// MedicinalProductDefinition nested structure for the 'crossReference' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductDefinitionCrossreference {
@@ -293,6 +252,50 @@ pub struct MedicinalProductDefinitionCrossreference {
     /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-cross-reference-type
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
+}
+/// MedicinalProductDefinition nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductDefinitionName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coding words or phrases of the name
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part: Vec<MedicinalProductDefinitionNamePart>,
+    /// Country and jurisdiction where the name applies
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub usage: Vec<MedicinalProductDefinitionNameUsage>,
+    /// The full product name
+    #[serde(rename = "productName")]
+    pub product_name: StringType,
+    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_productName")]
+    pub _product_name: Option<Element>,
+    /// Type of product name, such as rINN, BAN, Proprietary, Non-Proprietary
+    ///
+    /// Binding: example (Type of a name for a Medicinal Product.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+}
+/// MedicinalProductDefinitionName nested structure for the 'part' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductDefinitionNamePart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A fragment of a product name
+    pub part: StringType,
+    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
+    pub _part: Option<Element>,
+    /// Identifying type for this part of the name (e.g. strength part)
+    ///
+    /// Binding: example (Type of part of a name for a Medicinal Product.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-part-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
 }
 /// MedicinalProductDefinitionName nested structure for the 'usage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -315,31 +318,28 @@ pub struct MedicinalProductDefinitionNameUsage {
     /// Language code for this name
     pub language: StringType,
 }
-/// MedicinalProductDefinition nested structure for the 'name' field
+/// MedicinalProductDefinition nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductDefinitionName {
+pub struct MedicinalProductDefinitionOperation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Country and jurisdiction where the name applies
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub usage: Vec<MedicinalProductDefinitionNameUsage>,
-    /// Coding words or phrases of the name
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub part: Vec<MedicinalProductDefinitionNamePart>,
-    /// The full product name
-    #[serde(rename = "productName")]
-    pub product_name: StringType,
-    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_productName")]
-    pub _product_name: Option<Element>,
-    /// Type of product name, such as rINN, BAN, Proprietary, Non-Proprietary
-    ///
-    /// Binding: example (Type of a name for a Medicinal Product.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-name-type
+    /// The type of manufacturing operation e.g. manufacturing itself, re-packaging
     #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
+    pub type_: Option<CodeableReference>,
+    /// Date range of applicability
+    #[serde(rename = "effectiveDate")]
+    pub effective_date: Option<Period>,
+    /// The organization responsible for the particular process, e.g. the manufacturer or importer
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub organization: Vec<Reference>,
+    /// Specifies whether this process is considered proprietary or confidential
+    ///
+    /// Binding: example (Confidentiality rating, e.g. commercial sensitivity for a Medicinal Product.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicinal-product-confidentiality
+    #[serde(rename = "confidentialityIndicator")]
+    pub confidentiality_indicator: Option<CodeableConcept>,
 }
 
 impl Default for MedicinalProductDefinition {
@@ -383,39 +383,6 @@ impl Default for MedicinalProductDefinition {
     }
 }
 
-impl Default for MedicinalProductDefinitionOperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            effective_date: Default::default(),
-            organization: Default::default(),
-            confidentiality_indicator: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductDefinitionContact {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            contact: Reference::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductDefinitionNamePart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            _part: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductDefinitionCharacteristic {
     fn default() -> Self {
         Self {
@@ -432,11 +399,45 @@ impl Default for MedicinalProductDefinitionCharacteristic {
     }
 }
 
+impl Default for MedicinalProductDefinitionContact {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            contact: Reference::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductDefinitionCrossreference {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             product: Default::default(),
+            type_: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductDefinitionName {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            usage: Default::default(),
+            product_name: StringType::default(),
+            _product_name: Default::default(),
+            type_: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductDefinitionNamePart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            _part: Default::default(),
             type_: Default::default(),
         }
     }
@@ -453,15 +454,14 @@ impl Default for MedicinalProductDefinitionNameUsage {
     }
 }
 
-impl Default for MedicinalProductDefinitionName {
+impl Default for MedicinalProductDefinitionOperation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            usage: Default::default(),
-            part: Default::default(),
-            product_name: StringType::default(),
-            _product_name: Default::default(),
             type_: Default::default(),
+            effective_date: Default::default(),
+            organization: Default::default(),
+            confidentiality_indicator: Default::default(),
         }
     }
 }

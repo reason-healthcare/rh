@@ -67,6 +67,37 @@ pub struct PermissionJustification {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub evidence: Vec<Reference>,
 }
+/// Permission nested structure for the 'rule' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionRule {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A description or definition of which activities are allowed to be done on the data
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub activity: Vec<PermissionRuleActivity>,
+    /// The selection criteria to identify data that is within scope of this provision
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<PermissionRuleData>,
+    /// deny | permit
+    #[serde(rename = "type")]
+    pub type_: Option<ConsentProvisionType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// What limits apply to the use of the data
+    ///
+    /// Binding: example (Obligations and Refrains)
+    ///
+    /// Available values:
+    /// - `TREAT`
+    /// - `HPAYMT`
+    /// - `ETREAT`
+    /// - `NOAUTH`
+    /// - `DELAU`
+    /// - `NORDSCLCD`
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub limit: Vec<CodeableConcept>,
+}
 /// PermissionRule nested structure for the 'activity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PermissionRuleActivity {
@@ -90,37 +121,6 @@ pub struct PermissionRuleActivity {
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub purpose: Vec<CodeableConcept>,
-}
-/// Permission nested structure for the 'rule' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PermissionRule {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The selection criteria to identify data that is within scope of this provision
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub data: Vec<PermissionRuleData>,
-    /// A description or definition of which activities are allowed to be done on the data
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub activity: Vec<PermissionRuleActivity>,
-    /// deny | permit
-    #[serde(rename = "type")]
-    pub type_: Option<ConsentProvisionType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// What limits apply to the use of the data
-    ///
-    /// Binding: example (Obligations and Refrains)
-    ///
-    /// Available values:
-    /// - `TREAT`
-    /// - `HPAYMT`
-    /// - `ETREAT`
-    /// - `NOAUTH`
-    /// - `DELAU`
-    /// - `NORDSCLCD`
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub limit: Vec<CodeableConcept>,
 }
 /// PermissionRule nested structure for the 'data' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,6 +166,19 @@ impl Default for PermissionJustification {
     }
 }
 
+impl Default for PermissionRule {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            activity: Default::default(),
+            data: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            limit: Default::default(),
+        }
+    }
+}
+
 impl Default for PermissionRuleActivity {
     fn default() -> Self {
         Self {
@@ -173,19 +186,6 @@ impl Default for PermissionRuleActivity {
             actor: Default::default(),
             action: Default::default(),
             purpose: Default::default(),
-        }
-    }
-}
-
-impl Default for PermissionRule {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            data: Default::default(),
-            activity: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            limit: Default::default(),
         }
     }
 }

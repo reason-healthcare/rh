@@ -112,41 +112,127 @@ pub struct SubstanceDefinition {
     #[serde(rename = "sourceMaterial")]
     pub source_material: Option<SubstanceDefinitionSourcematerial>,
 }
-/// SubstanceDefinition nested structure for the 'sourceMaterial' field
+/// SubstanceDefinition nested structure for the 'characterization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionSourcematerial {
+pub struct SubstanceDefinitionCharacterization {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Classification of the origin of the raw material. e.g. cat hair is an Animal source type
+    /// The method used to find the characterization e.g. HPLC
     ///
-    /// Binding: example (A classification that provides the origin of the substance raw material.)
+    /// Binding: example (The method used to elucidate the characterization of the drug substance.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-type
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-structure-technique
+    pub technique: Option<CodeableConcept>,
+    /// Describes the nature of the chemical entity and explains, for instance, whether this is a base or a salt form
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-form
+    pub form: Option<CodeableConcept>,
+    /// The description or justification in support of the interpretation of the data file
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The data produced by the analytical instrument or a pictorial representation of that data. Examples: a JCAMP, JDX, or ADX file, or a chromatogram or spectrum analysis
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub file: Vec<Attachment>,
+}
+/// SubstanceDefinition nested structure for the 'code' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionCode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific code
+    pub code: Option<CodeableConcept>,
+    /// Status of the code assignment, for example 'provisional', 'approved'
+    ///
+    /// Binding: preferred (The lifecycle status of an artifact.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/publication-status
+    pub status: Option<CodeableConcept>,
+    /// The date at which the code status was changed
+    #[serde(rename = "statusDate")]
+    pub status_date: Option<DateTimeType>,
+    /// Extension element for the 'statusDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_statusDate")]
+    pub _status_date: Option<Element>,
+    /// Any comment can be provided in this field
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// Supporting literature
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
+/// SubstanceDefinition nested structure for the 'moiety' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionMoiety {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role that the moiety is playing
+    pub role: Option<CodeableConcept>,
+    /// Identifier by which this moiety substance is known
+    pub identifier: Option<Identifier>,
+    /// Textual name for this moiety substance
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Stereochemistry type
+    ///
+    /// Binding: example (The optical rotation type of a substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-stereochemistry
+    pub stereochemistry: Option<CodeableConcept>,
+    /// Optical activity type
+    ///
+    /// Binding: example (The optical rotation type of a substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-optical-activity
+    #[serde(rename = "opticalActivity")]
+    pub optical_activity: Option<CodeableConcept>,
+    /// Molecular formula for this moiety (e.g. with the Hill system)
+    #[serde(rename = "molecularFormula")]
+    pub molecular_formula: Option<StringType>,
+    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_molecularFormula")]
+    pub _molecular_formula: Option<Element>,
+    /// Quantitative value for this moiety (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// Quantitative value for this moiety (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
+    /// The measurement type of the quantitative value
+    ///
+    /// Binding: example (The relationship between two substance types.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-amount-type
+    #[serde(rename = "measurementType")]
+    pub measurement_type: Option<CodeableConcept>,
+}
+/// SubstanceDefinition nested structure for the 'molecularWeight' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionMolecularweight {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The method by which the weight was determined
+    ///
+    /// Binding: example (The method by which the substance weight was measured.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-method
+    pub method: Option<CodeableConcept>,
+    /// Type of molecular weight e.g. exact, average, weight average
+    ///
+    /// Binding: example (The type of substance weight measurement.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-type
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
-    /// The genus of an organism e.g. the Latin epithet of the plant/animal scientific name
-    ///
-    /// Binding: example (The genus of an organism, typically referring to the Latin epithet of the genus element of the plant/animal scientific name.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-genus
-    pub genus: Option<CodeableConcept>,
-    /// The species of an organism e.g. the Latin epithet of the species of the plant/animal
-    ///
-    /// Binding: example (A species of origin a substance raw material.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-species
-    pub species: Option<CodeableConcept>,
-    /// An anatomical origin of the source material within an organism
-    ///
-    /// Binding: example (An anatomical origin of the source material within an organism.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-part
-    pub part: Option<CodeableConcept>,
-    /// The country or countries where the material is harvested
-    #[serde(rename = "countryOfOrigin")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub country_of_origin: Vec<CodeableConcept>,
+    /// Used to capture quantitative values for a variety of elements
+    pub amount: Quantity,
 }
 /// SubstanceDefinition nested structure for the 'name' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,32 +291,6 @@ pub struct SubstanceDefinitionName {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source: Vec<Reference>,
 }
-/// SubstanceDefinition nested structure for the 'characterization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionCharacterization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The method used to find the characterization e.g. HPLC
-    ///
-    /// Binding: example (The method used to elucidate the characterization of the drug substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-structure-technique
-    pub technique: Option<CodeableConcept>,
-    /// Describes the nature of the chemical entity and explains, for instance, whether this is a base or a salt form
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-form
-    pub form: Option<CodeableConcept>,
-    /// The description or justification in support of the interpretation of the data file
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// The data produced by the analytical instrument or a pictorial representation of that data. Examples: a JCAMP, JDX, or ADX file, or a chromatogram or spectrum analysis
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub file: Vec<Attachment>,
-}
 /// SubstanceDefinitionName nested structure for the 'official' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceDefinitionNameOfficial {
@@ -254,32 +314,117 @@ pub struct SubstanceDefinitionNameOfficial {
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
 }
-/// SubstanceDefinition nested structure for the 'code' field
+/// SubstanceDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionCode {
+pub struct SubstanceDefinitionProperty {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The specific code
-    pub code: Option<CodeableConcept>,
-    /// Status of the code assignment, for example 'provisional', 'approved'
+    /// A code expressing the type of property
     ///
-    /// Binding: preferred (The lifecycle status of an artifact.)
+    /// Binding: example (This value set includes all observable entity codes from SNOMED CT - provided as an exemplar value set.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/publication-status
-    pub status: Option<CodeableConcept>,
-    /// The date at which the code status was changed
-    #[serde(rename = "statusDate")]
-    pub status_date: Option<DateTimeType>,
-    /// Extension element for the 'statusDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_statusDate")]
-    pub _status_date: Option<Element>,
-    /// Any comment can be provided in this field
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/product-characteristic-codes
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// A value for the property (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: Option<CodeableConcept>,
+    /// A value for the property (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// A value for the property (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: Option<DateType>,
+    /// A value for the property (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// A value for the property (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Option<Attachment>,
+}
+/// SubstanceDefinition nested structure for the 'relationship' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionRelationship {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A pointer to another substance, as a resource or a representational code (Reference)
+    #[serde(rename = "substanceDefinitionReference")]
+    pub substance_definition_reference: Option<Reference>,
+    /// A pointer to another substance, as a resource or a representational code (CodeableConcept)
+    #[serde(rename = "substanceDefinitionCodeableConcept")]
+    pub substance_definition_codeable_concept: Option<CodeableConcept>,
+    /// For example "salt to parent", "active moiety"
+    ///
+    /// Binding: example (The relationship between two substance types.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-relationship-type
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// For example where an enzyme strongly bonds with a particular substance, this is a defining relationship for that enzyme, out of several possible relationships
+    #[serde(rename = "isDefining")]
+    pub is_defining: Option<BooleanType>,
+    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_isDefining")]
+    pub _is_defining: Option<Element>,
+    /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other (Quantity)
+    #[serde(rename = "amountQuantity")]
+    pub amount_quantity: Option<Quantity>,
+    /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other (Ratio)
+    #[serde(rename = "amountRatio")]
+    pub amount_ratio: Option<Ratio>,
+    /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other (string)
+    #[serde(rename = "amountString")]
+    pub amount_string: Option<StringType>,
+    /// For use when the numeric has an uncertain range
+    #[serde(rename = "ratioHighLimitAmount")]
+    pub ratio_high_limit_amount: Option<Ratio>,
+    /// An operator for the amount, for example "average", "approximately", "less than"
+    ///
+    /// Binding: example (The relationship between two substance types.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-amount-type
+    pub comparator: Option<CodeableConcept>,
     /// Supporting literature
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source: Vec<Reference>,
+}
+/// SubstanceDefinition nested structure for the 'sourceMaterial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceDefinitionSourcematerial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Classification of the origin of the raw material. e.g. cat hair is an Animal source type
+    ///
+    /// Binding: example (A classification that provides the origin of the substance raw material.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The genus of an organism e.g. the Latin epithet of the plant/animal scientific name
+    ///
+    /// Binding: example (The genus of an organism, typically referring to the Latin epithet of the genus element of the plant/animal scientific name.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-genus
+    pub genus: Option<CodeableConcept>,
+    /// The species of an organism e.g. the Latin epithet of the species of the plant/animal
+    ///
+    /// Binding: example (A species of origin a substance raw material.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-species
+    pub species: Option<CodeableConcept>,
+    /// An anatomical origin of the source material within an organism
+    ///
+    /// Binding: example (An anatomical origin of the source material within an organism.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-source-material-part
+    pub part: Option<CodeableConcept>,
+    /// The country or countries where the material is harvested
+    #[serde(rename = "countryOfOrigin")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country_of_origin: Vec<CodeableConcept>,
 }
 /// SubstanceDefinition nested structure for the 'structure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -330,82 +475,6 @@ pub struct SubstanceDefinitionStructure {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source_document: Vec<Reference>,
 }
-/// SubstanceDefinition nested structure for the 'moiety' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionMoiety {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role that the moiety is playing
-    pub role: Option<CodeableConcept>,
-    /// Identifier by which this moiety substance is known
-    pub identifier: Option<Identifier>,
-    /// Textual name for this moiety substance
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Stereochemistry type
-    ///
-    /// Binding: example (The optical rotation type of a substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-stereochemistry
-    pub stereochemistry: Option<CodeableConcept>,
-    /// Optical activity type
-    ///
-    /// Binding: example (The optical rotation type of a substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-optical-activity
-    #[serde(rename = "opticalActivity")]
-    pub optical_activity: Option<CodeableConcept>,
-    /// Molecular formula for this moiety (e.g. with the Hill system)
-    #[serde(rename = "molecularFormula")]
-    pub molecular_formula: Option<StringType>,
-    /// Extension element for the 'molecularFormula' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_molecularFormula")]
-    pub _molecular_formula: Option<Element>,
-    /// Quantitative value for this moiety (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// Quantitative value for this moiety (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
-    /// The measurement type of the quantitative value
-    ///
-    /// Binding: example (The relationship between two substance types.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-amount-type
-    #[serde(rename = "measurementType")]
-    pub measurement_type: Option<CodeableConcept>,
-}
-/// SubstanceDefinition nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A code expressing the type of property
-    ///
-    /// Binding: example (This value set includes all observable entity codes from SNOMED CT - provided as an exemplar value set.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/product-characteristic-codes
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// A value for the property (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: Option<CodeableConcept>,
-    /// A value for the property (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// A value for the property (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: Option<DateType>,
-    /// A value for the property (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// A value for the property (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Option<Attachment>,
-}
 /// SubstanceDefinitionStructure nested structure for the 'representation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceDefinitionStructureRepresentation {
@@ -431,75 +500,6 @@ pub struct SubstanceDefinitionStructureRepresentation {
     pub format: Option<CodeableConcept>,
     /// An attachment with the structural representation e.g. a structure graphic or AnIML file
     pub document: Option<Reference>,
-}
-/// SubstanceDefinition nested structure for the 'molecularWeight' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionMolecularweight {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The method by which the weight was determined
-    ///
-    /// Binding: example (The method by which the substance weight was measured.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-method
-    pub method: Option<CodeableConcept>,
-    /// Type of molecular weight e.g. exact, average, weight average
-    ///
-    /// Binding: example (The type of substance weight measurement.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-weight-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Used to capture quantitative values for a variety of elements
-    pub amount: Quantity,
-}
-/// SubstanceDefinition nested structure for the 'relationship' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceDefinitionRelationship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A pointer to another substance, as a resource or a representational code (Reference)
-    #[serde(rename = "substanceDefinitionReference")]
-    pub substance_definition_reference: Option<Reference>,
-    /// A pointer to another substance, as a resource or a representational code (CodeableConcept)
-    #[serde(rename = "substanceDefinitionCodeableConcept")]
-    pub substance_definition_codeable_concept: Option<CodeableConcept>,
-    /// For example "salt to parent", "active moiety"
-    ///
-    /// Binding: example (The relationship between two substance types.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-relationship-type
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// For example where an enzyme strongly bonds with a particular substance, this is a defining relationship for that enzyme, out of several possible relationships
-    #[serde(rename = "isDefining")]
-    pub is_defining: Option<BooleanType>,
-    /// Extension element for the 'isDefining' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_isDefining")]
-    pub _is_defining: Option<Element>,
-    /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other (Quantity)
-    #[serde(rename = "amountQuantity")]
-    pub amount_quantity: Option<Quantity>,
-    /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other (Ratio)
-    #[serde(rename = "amountRatio")]
-    pub amount_ratio: Option<Ratio>,
-    /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other (string)
-    #[serde(rename = "amountString")]
-    pub amount_string: Option<StringType>,
-    /// For use when the numeric has an uncertain range
-    #[serde(rename = "ratioHighLimitAmount")]
-    pub ratio_high_limit_amount: Option<Ratio>,
-    /// An operator for the amount, for example "average", "approximately", "less than"
-    ///
-    /// Binding: example (The relationship between two substance types.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/substance-amount-type
-    pub comparator: Option<CodeableConcept>,
-    /// Supporting literature
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source: Vec<Reference>,
 }
 
 impl Default for SubstanceDefinition {
@@ -536,15 +536,59 @@ impl Default for SubstanceDefinition {
     }
 }
 
-impl Default for SubstanceDefinitionSourcematerial {
+impl Default for SubstanceDefinitionCharacterization {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            technique: Default::default(),
+            form: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            file: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionCode {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            status: Default::default(),
+            status_date: Default::default(),
+            _status_date: Default::default(),
+            note: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionMoiety {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            stereochemistry: Default::default(),
+            optical_activity: Default::default(),
+            molecular_formula: Default::default(),
+            _molecular_formula: Default::default(),
+            amount_quantity: Default::default(),
+            amount_string: Default::default(),
+            measurement_type: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionMolecularweight {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            method: Default::default(),
             type_: Default::default(),
-            genus: Default::default(),
-            species: Default::default(),
-            part: Default::default(),
-            country_of_origin: Default::default(),
+            amount: Default::default(),
         }
     }
 }
@@ -570,19 +614,6 @@ impl Default for SubstanceDefinitionName {
     }
 }
 
-impl Default for SubstanceDefinitionCharacterization {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            technique: Default::default(),
-            form: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            file: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceDefinitionNameOfficial {
     fn default() -> Self {
         Self {
@@ -595,16 +626,48 @@ impl Default for SubstanceDefinitionNameOfficial {
     }
 }
 
-impl Default for SubstanceDefinitionCode {
+impl Default for SubstanceDefinitionProperty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
-            status: Default::default(),
-            status_date: Default::default(),
-            _status_date: Default::default(),
-            note: Default::default(),
+            type_: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_quantity: Default::default(),
+            value_date: Default::default(),
+            value_boolean: Default::default(),
+            value_attachment: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionRelationship {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            substance_definition_reference: Default::default(),
+            substance_definition_codeable_concept: Default::default(),
+            type_: Default::default(),
+            is_defining: Default::default(),
+            _is_defining: Default::default(),
+            amount_quantity: Default::default(),
+            amount_ratio: Default::default(),
+            amount_string: Default::default(),
+            ratio_high_limit_amount: Default::default(),
+            comparator: Default::default(),
             source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceDefinitionSourcematerial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            genus: Default::default(),
+            species: Default::default(),
+            part: Default::default(),
+            country_of_origin: Default::default(),
         }
     }
 }
@@ -627,39 +690,6 @@ impl Default for SubstanceDefinitionStructure {
     }
 }
 
-impl Default for SubstanceDefinitionMoiety {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            stereochemistry: Default::default(),
-            optical_activity: Default::default(),
-            molecular_formula: Default::default(),
-            _molecular_formula: Default::default(),
-            amount_quantity: Default::default(),
-            amount_string: Default::default(),
-            measurement_type: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceDefinitionProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_quantity: Default::default(),
-            value_date: Default::default(),
-            value_boolean: Default::default(),
-            value_attachment: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceDefinitionStructureRepresentation {
     fn default() -> Self {
         Self {
@@ -669,36 +699,6 @@ impl Default for SubstanceDefinitionStructureRepresentation {
             _representation: Default::default(),
             format: Default::default(),
             document: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceDefinitionMolecularweight {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            method: Default::default(),
-            type_: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceDefinitionRelationship {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substance_definition_reference: Default::default(),
-            substance_definition_codeable_concept: Default::default(),
-            type_: Default::default(),
-            is_defining: Default::default(),
-            _is_defining: Default::default(),
-            amount_quantity: Default::default(),
-            amount_ratio: Default::default(),
-            amount_string: Default::default(),
-            ratio_high_limit_amount: Default::default(),
-            comparator: Default::default(),
-            source: Default::default(),
         }
     }
 }

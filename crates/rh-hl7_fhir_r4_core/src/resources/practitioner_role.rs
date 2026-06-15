@@ -92,19 +92,6 @@ pub struct PractitionerRole {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub endpoint: Vec<Reference>,
 }
-/// PractitionerRole nested structure for the 'notAvailable' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerRoleNotavailable {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reason presented to the user explaining why time not available
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Service not available from this date
-    pub during: Option<Period>,
-}
 /// PractitionerRole nested structure for the 'availableTime' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PractitionerRoleAvailabletime {
@@ -138,6 +125,19 @@ pub struct PractitionerRoleAvailabletime {
     #[serde(rename = "_availableEndTime")]
     pub _available_end_time: Option<Element>,
 }
+/// PractitionerRole nested structure for the 'notAvailable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerRoleNotavailable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reason presented to the user explaining why time not available
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Service not available from this date
+    pub during: Option<Period>,
+}
 
 impl Default for PractitionerRole {
     fn default() -> Self {
@@ -163,17 +163,6 @@ impl Default for PractitionerRole {
     }
 }
 
-impl Default for PractitionerRoleNotavailable {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            during: Default::default(),
-        }
-    }
-}
-
 impl Default for PractitionerRoleAvailabletime {
     fn default() -> Self {
         Self {
@@ -186,6 +175,17 @@ impl Default for PractitionerRoleAvailabletime {
             _available_start_time: Default::default(),
             available_end_time: Default::default(),
             _available_end_time: Default::default(),
+        }
+    }
+}
+
+impl Default for PractitionerRoleNotavailable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            during: Default::default(),
         }
     }
 }

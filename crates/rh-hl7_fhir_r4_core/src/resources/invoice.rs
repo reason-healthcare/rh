@@ -83,16 +83,26 @@ pub struct Invoice {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// Invoice nested structure for the 'participant' field
+/// Invoice nested structure for the 'lineItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceParticipant {
+pub struct InvoiceLineitem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of involvement in creation of this Invoice
-    pub role: Option<CodeableConcept>,
-    /// Individual who was involved
-    pub actor: Reference,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub price_component: Vec<InvoiceLineitemPricecomponent>,
+    /// Sequence number of line item
+    pub sequence: Option<PositiveIntType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Reference to ChargeItem containing details of this line item or an inline billing code (Reference)
+    #[serde(rename = "chargeItemReference")]
+    pub charge_item_reference: Reference,
+    /// Reference to ChargeItem containing details of this line item or an inline billing code (CodeableConcept)
+    #[serde(rename = "chargeItemCodeableConcept")]
+    pub charge_item_codeable_concept: CodeableConcept,
 }
 /// InvoiceLineitem nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,26 +124,16 @@ pub struct InvoiceLineitemPricecomponent {
     /// Monetary amount associated with this component
     pub amount: Option<Money>,
 }
-/// Invoice nested structure for the 'lineItem' field
+/// Invoice nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceLineitem {
+pub struct InvoiceParticipant {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub price_component: Vec<InvoiceLineitemPricecomponent>,
-    /// Sequence number of line item
-    pub sequence: Option<PositiveIntType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Reference to ChargeItem containing details of this line item or an inline billing code (Reference)
-    #[serde(rename = "chargeItemReference")]
-    pub charge_item_reference: Reference,
-    /// Reference to ChargeItem containing details of this line item or an inline billing code (CodeableConcept)
-    #[serde(rename = "chargeItemCodeableConcept")]
-    pub charge_item_codeable_concept: CodeableConcept,
+    /// Type of involvement in creation of this Invoice
+    pub role: Option<CodeableConcept>,
+    /// Individual who was involved
+    pub actor: Reference,
 }
 
 impl Default for Invoice {
@@ -164,12 +164,15 @@ impl Default for Invoice {
     }
 }
 
-impl Default for InvoiceParticipant {
+impl Default for InvoiceLineitem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            role: Default::default(),
-            actor: Reference::default(),
+            price_component: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            charge_item_reference: Default::default(),
+            charge_item_codeable_concept: Default::default(),
         }
     }
 }
@@ -188,15 +191,12 @@ impl Default for InvoiceLineitemPricecomponent {
     }
 }
 
-impl Default for InvoiceLineitem {
+impl Default for InvoiceParticipant {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            price_component: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            charge_item_reference: Default::default(),
-            charge_item_codeable_concept: Default::default(),
+            role: Default::default(),
+            actor: Reference::default(),
         }
     }
 }

@@ -83,22 +83,6 @@ pub struct PaymentReconciliation {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub process_note: Vec<PaymentReconciliationProcessnote>,
 }
-/// PaymentReconciliation nested structure for the 'processNote' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaymentReconciliationProcessnote {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// display | print | printoper
-    #[serde(rename = "type")]
-    pub type_: Option<NoteType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Note explanatory text
-    pub text: Option<StringType>,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-}
 /// PaymentReconciliation nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentReconciliationDetail {
@@ -133,6 +117,22 @@ pub struct PaymentReconciliationDetail {
     /// Amount allocated to this payable
     pub amount: Option<Money>,
 }
+/// PaymentReconciliation nested structure for the 'processNote' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentReconciliationProcessnote {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// display | print | printoper
+    #[serde(rename = "type")]
+    pub type_: Option<NoteType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Note explanatory text
+    pub text: Option<StringType>,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+}
 
 impl Default for PaymentReconciliation {
     fn default() -> Self {
@@ -162,18 +162,6 @@ impl Default for PaymentReconciliation {
     }
 }
 
-impl Default for PaymentReconciliationProcessnote {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-        }
-    }
-}
-
 impl Default for PaymentReconciliationDetail {
     fn default() -> Self {
         Self {
@@ -189,6 +177,18 @@ impl Default for PaymentReconciliationDetail {
             responsible: Default::default(),
             payee: Default::default(),
             amount: Default::default(),
+        }
+    }
+}
+
+impl Default for PaymentReconciliationProcessnote {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
         }
     }
 }

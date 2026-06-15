@@ -184,18 +184,18 @@ pub struct Task {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub output: Vec<TaskOutput>,
 }
-/// replaces
+/// Candidate List
 ///
-/// Completed or terminated task(s) whose function is taken by this new task.
+/// Identifies the individuals who are candidates for being the owner of the task.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/task-replaces
+/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskReplaces {
+pub struct TaskCandidateList {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -362,22 +362,6 @@ pub struct TaskInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Task nested structure for the 'restriction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskRestriction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub recipient: Vec<Reference>,
-}
 /// Task nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskOutput {
@@ -540,21 +524,37 @@ pub struct TaskOutput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Candidate List
+/// replaces
 ///
-/// Identifies the individuals who are candidates for being the owner of the task.
+/// Completed or terminated task(s) whose function is taken by this new task.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/task-candidateList
+/// - URL: http://hl7.org/fhir/StructureDefinition/task-replaces
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskCandidateList {
+pub struct TaskReplaces {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// Task nested structure for the 'restriction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskRestriction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipient: Vec<Reference>,
 }
 
 impl Default for Task {
@@ -604,7 +604,7 @@ impl Default for Task {
     }
 }
 
-impl Default for TaskReplaces {
+impl Default for TaskCandidateList {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -671,18 +671,6 @@ impl Default for TaskInput {
     }
 }
 
-impl Default for TaskRestriction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
-        }
-    }
-}
-
 impl Default for TaskOutput {
     fn default() -> Self {
         Self {
@@ -742,10 +730,22 @@ impl Default for TaskOutput {
     }
 }
 
-impl Default for TaskCandidateList {
+impl Default for TaskReplaces {
     fn default() -> Self {
         Self {
             base: Extension::default(),
+        }
+    }
+}
+
+impl Default for TaskRestriction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }

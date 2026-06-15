@@ -94,76 +94,6 @@ pub struct Account {
     #[serde(rename = "_calculatedAt")]
     pub _calculated_at: Option<Element>,
 }
-/// Account nested structure for the 'procedure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountProcedure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Ranking of the procedure (for each type)
-    pub sequence: Option<PositiveIntType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// The procedure relevant to the account
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/procedure-code
-    pub code: CodeableReference,
-    /// Date of the procedure (when coded procedure)
-    #[serde(rename = "dateOfService")]
-    pub date_of_service: Option<DateTimeType>,
-    /// Extension element for the 'dateOfService' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_dateOfService")]
-    pub _date_of_service: Option<Element>,
-    /// How this procedure value should be used in charging the account
-    ///
-    /// Binding: example (Usage for the specific procedure - e.g. billing)
-    #[serde(rename = "type")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub type_: Vec<CodeableConcept>,
-    /// Package Code specific for billing
-    ///
-    /// Binding: example (Local or Regional package codes, e.g. DRGs)
-    #[serde(rename = "packageCode")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub package_code: Vec<CodeableConcept>,
-    /// Any devices that were associated with the procedure
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub device: Vec<Reference>,
-}
-/// Account nested structure for the 'guarantor' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountGuarantor {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Responsible entity
-    pub party: Reference,
-    /// Credit or other hold applied
-    #[serde(rename = "onHold")]
-    pub on_hold: Option<BooleanType>,
-    /// Extension element for the 'onHold' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_onHold")]
-    pub _on_hold: Option<Element>,
-    /// Guarantee account during
-    pub period: Option<Period>,
-}
-/// Account nested structure for the 'relatedAccount' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountRelatedaccount {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Relationship of the associated Account
-    ///
-    /// Binding: example (Indicates the relationship between the accounts)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/account-relationship
-    pub relationship: Option<CodeableConcept>,
-    /// Reference to an associated Account
-    pub account: Reference,
-}
 /// Account nested structure for the 'balance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountBalance {
@@ -188,6 +118,19 @@ pub struct AccountBalance {
     pub _estimate: Option<Element>,
     /// Calculated amount
     pub amount: Money,
+}
+/// Account nested structure for the 'coverage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountCoverage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The party(s), such as insurances, that may contribute to the payment of this account
+    pub coverage: Reference,
+    /// The priority of the coverage in the context of this account
+    pub priority: Option<PositiveIntType>,
+    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
+    pub _priority: Option<Element>,
 }
 /// Account nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,18 +176,75 @@ pub struct AccountDiagnosis {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub package_code: Vec<CodeableConcept>,
 }
-/// Account nested structure for the 'coverage' field
+/// Account nested structure for the 'guarantor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountCoverage {
+pub struct AccountGuarantor {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The party(s), such as insurances, that may contribute to the payment of this account
-    pub coverage: Reference,
-    /// The priority of the coverage in the context of this account
-    pub priority: Option<PositiveIntType>,
-    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
-    pub _priority: Option<Element>,
+    /// Responsible entity
+    pub party: Reference,
+    /// Credit or other hold applied
+    #[serde(rename = "onHold")]
+    pub on_hold: Option<BooleanType>,
+    /// Extension element for the 'onHold' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_onHold")]
+    pub _on_hold: Option<Element>,
+    /// Guarantee account during
+    pub period: Option<Period>,
+}
+/// Account nested structure for the 'procedure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountProcedure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Ranking of the procedure (for each type)
+    pub sequence: Option<PositiveIntType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// The procedure relevant to the account
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/procedure-code
+    pub code: CodeableReference,
+    /// Date of the procedure (when coded procedure)
+    #[serde(rename = "dateOfService")]
+    pub date_of_service: Option<DateTimeType>,
+    /// Extension element for the 'dateOfService' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_dateOfService")]
+    pub _date_of_service: Option<Element>,
+    /// How this procedure value should be used in charging the account
+    ///
+    /// Binding: example (Usage for the specific procedure - e.g. billing)
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
+    /// Package Code specific for billing
+    ///
+    /// Binding: example (Local or Regional package codes, e.g. DRGs)
+    #[serde(rename = "packageCode")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub package_code: Vec<CodeableConcept>,
+    /// Any devices that were associated with the procedure
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<Reference>,
+}
+/// Account nested structure for the 'relatedAccount' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountRelatedaccount {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Relationship of the associated Account
+    ///
+    /// Binding: example (Indicates the relationship between the accounts)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/account-relationship
+    pub relationship: Option<CodeableConcept>,
+    /// Reference to an associated Account
+    pub account: Reference,
 }
 
 impl Default for Account {
@@ -276,44 +276,6 @@ impl Default for Account {
     }
 }
 
-impl Default for AccountProcedure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            code: CodeableReference::default(),
-            date_of_service: Default::default(),
-            _date_of_service: Default::default(),
-            type_: Default::default(),
-            package_code: Default::default(),
-            device: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountGuarantor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            party: Reference::default(),
-            on_hold: Default::default(),
-            _on_hold: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountRelatedaccount {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            relationship: Default::default(),
-            account: Default::default(),
-        }
-    }
-}
-
 impl Default for AccountBalance {
     fn default() -> Self {
         Self {
@@ -323,6 +285,17 @@ impl Default for AccountBalance {
             estimate: Default::default(),
             _estimate: Default::default(),
             amount: Money::default(),
+        }
+    }
+}
+
+impl Default for AccountCoverage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            coverage: Reference::default(),
+            priority: Default::default(),
+            _priority: Default::default(),
         }
     }
 }
@@ -344,13 +317,40 @@ impl Default for AccountDiagnosis {
     }
 }
 
-impl Default for AccountCoverage {
+impl Default for AccountGuarantor {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            coverage: Reference::default(),
-            priority: Default::default(),
-            _priority: Default::default(),
+            party: Reference::default(),
+            on_hold: Default::default(),
+            _on_hold: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
+impl Default for AccountProcedure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            code: CodeableReference::default(),
+            date_of_service: Default::default(),
+            _date_of_service: Default::default(),
+            type_: Default::default(),
+            package_code: Default::default(),
+            device: Default::default(),
+        }
+    }
+}
+
+impl Default for AccountRelatedaccount {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            relationship: Default::default(),
+            account: Default::default(),
         }
     }
 }

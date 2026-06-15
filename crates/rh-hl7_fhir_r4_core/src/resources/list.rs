@@ -79,6 +79,22 @@ pub struct List {
     #[serde(rename = "emptyReason")]
     pub empty_reason: Option<CodeableConcept>,
 }
+/// changeBase
+///
+/// Reference to the List that a "change" list is asserting changes with respect to.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/list-changeBase
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListChangeBase {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// List nested structure for the 'entry' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListEntry {
@@ -101,22 +117,6 @@ pub struct ListEntry {
     pub _date: Option<Element>,
     /// Actual entry
     pub item: Reference,
-}
-/// changeBase
-///
-/// Reference to the List that a "change" list is asserting changes with respect to.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/list-changeBase
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ListChangeBase {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
 }
 
 impl Default for List {
@@ -144,6 +144,14 @@ impl Default for List {
     }
 }
 
+impl Default for ListChangeBase {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for ListEntry {
     fn default() -> Self {
         Self {
@@ -154,14 +162,6 @@ impl Default for ListEntry {
             date: Default::default(),
             _date: Default::default(),
             item: Reference::default(),
-        }
-    }
-}
-
-impl Default for ListChangeBase {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }

@@ -334,6 +334,25 @@ regen-check:
         --output /tmp/rh-regen-check-r5 \
         --crate-name rh-hl7-fhir-r5-core \
         --force 2>/dev/null
+    echo "Adding R5 extensions for drift check..."
+    EXT_OUTPUT=$(mktemp -d)
+    if cargo run -p rh-cli -- codegen hl7.fhir.uv.extensions 5.1.0-snapshot1 \
+        --output "$EXT_OUTPUT" \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force 2>/dev/null; then
+        mkdir -p /tmp/rh-regen-check-r5/src/extensions
+        find "$EXT_OUTPUT/src/extensions" -maxdepth 1 -type f -name '*.rs' ! -name 'mod.rs' \
+            -exec cp {} /tmp/rh-regen-check-r5/src/extensions/ \;
+        {
+            echo "//! FHIR extension types"
+            echo
+            find /tmp/rh-regen-check-r5/src/extensions -maxdepth 1 -type f -name '*.rs' ! -name 'mod.rs' \
+                -exec basename {} .rs \; | sort | sed 's/^/pub mod /; s/$/;/'
+        } > /tmp/rh-regen-check-r5/src/extensions/mod.rs
+    else
+        echo "Warning: R5 extensions package not available, skipping"
+    fi
+    rm -rf "$EXT_OUTPUT"
     # Compare only src/ (generated content), not tests/ (hand-authored)
     R4_DIFF=0; R5_DIFF=0
     diff -rq crates/rh-hl7_fhir_r4_core/src /tmp/rh-regen-check-r4/src || R4_DIFF=$?

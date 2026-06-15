@@ -121,22 +121,6 @@ pub struct Condition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// occurredFollowing
-///
-/// Further conditions, problems, diagnoses, procedures or events or the substance that preceded this Condition.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/condition-occurredFollowing
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionOccurredFollowing {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// assertedDate
 ///
 /// The date on which the existence of the Condition was first asserted or acknowledged.
@@ -153,6 +137,55 @@ pub struct ConditionAssertedDate {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// dueTo
+///
+/// Further conditions, problems, diagnoses, procedures or events or the substance that caused/triggered this Condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-dueTo
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDueTo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Condition nested structure for the 'evidence' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionEvidence {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Manifestation/symptom
+    ///
+    /// Binding: example (Codes that describe the manifestation or symptoms of a condition.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
+    /// Supporting information found elsewhere
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
+}
+/// occurredFollowing
+///
+/// Further conditions, problems, diagnoses, procedures or events or the substance that preceded this Condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-occurredFollowing
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionOccurredFollowing {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// related
 ///
 /// This condition has an unspecified relationship with another condition.
@@ -165,6 +198,22 @@ pub struct ConditionAssertedDate {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionRelated {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// ruledOut
+///
+/// Identifies what potential diagnoses have been ruled out for this condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-ruledOut
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionRuledOut {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -193,55 +242,6 @@ pub struct ConditionStage {
     /// - `260998006`: Clinical staging (qualifier value)
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
-}
-/// Condition nested structure for the 'evidence' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionEvidence {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Manifestation/symptom
-    ///
-    /// Binding: example (Codes that describe the manifestation or symptoms of a condition.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub code: Vec<CodeableConcept>,
-    /// Supporting information found elsewhere
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub detail: Vec<Reference>,
-}
-/// ruledOut
-///
-/// Identifies what potential diagnoses have been ruled out for this condition.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/condition-ruledOut
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionRuledOut {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// dueTo
-///
-/// Further conditions, problems, diagnoses, procedures or events or the substance that caused/triggered this Condition.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/condition-dueTo
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDueTo {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
 }
 
 impl Default for Condition {
@@ -278,7 +278,7 @@ impl Default for Condition {
     }
 }
 
-impl Default for ConditionOccurredFollowing {
+impl Default for ConditionAssertedDate {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -286,7 +286,25 @@ impl Default for ConditionOccurredFollowing {
     }
 }
 
-impl Default for ConditionAssertedDate {
+impl Default for ConditionDueTo {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConditionEvidence {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionOccurredFollowing {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -302,27 +320,6 @@ impl Default for ConditionRelated {
     }
 }
 
-impl Default for ConditionStage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            summary: Default::default(),
-            assessment: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
-impl Default for ConditionEvidence {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            detail: Default::default(),
-        }
-    }
-}
-
 impl Default for ConditionRuledOut {
     fn default() -> Self {
         Self {
@@ -331,10 +328,13 @@ impl Default for ConditionRuledOut {
     }
 }
 
-impl Default for ConditionDueTo {
+impl Default for ConditionStage {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            summary: Default::default(),
+            assessment: Default::default(),
+            type_: Default::default(),
         }
     }
 }

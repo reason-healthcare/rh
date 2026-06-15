@@ -106,6 +106,18 @@ pub struct NutritionProductCharacteristic {
     #[serde(rename = "valueBoolean")]
     pub value_boolean: BooleanType,
 }
+/// NutritionProduct nested structure for the 'ingredient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductIngredient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The ingredient contained in the product
+    pub item: CodeableReference,
+    /// The amount of ingredient that is in the product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amount: Vec<Ratio>,
+}
 /// NutritionProduct nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionProductInstance {
@@ -140,18 +152,6 @@ pub struct NutritionProductInstance {
     /// An identifier that supports traceability to the event during which material in this product from one or more biological entities was obtained or pooled
     #[serde(rename = "biologicalSourceEvent")]
     pub biological_source_event: Option<Identifier>,
-}
-/// NutritionProduct nested structure for the 'ingredient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductIngredient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The ingredient contained in the product
-    pub item: CodeableReference,
-    /// The amount of ingredient that is in the product
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub amount: Vec<Ratio>,
 }
 /// NutritionProduct nested structure for the 'nutrient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -204,6 +204,16 @@ impl Default for NutritionProductCharacteristic {
     }
 }
 
+impl Default for NutritionProductIngredient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: CodeableReference::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
 impl Default for NutritionProductInstance {
     fn default() -> Self {
         Self {
@@ -219,16 +229,6 @@ impl Default for NutritionProductInstance {
             use_by: Default::default(),
             _use_by: Default::default(),
             biological_source_event: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionProductIngredient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: CodeableReference::default(),
-            amount: Default::default(),
         }
     }
 }

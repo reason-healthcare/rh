@@ -185,88 +185,6 @@ pub struct SpecimenDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub type_tested: Vec<SpecimenDefinitionTypetested>,
 }
-/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedContainerAdditive {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additive associated with container (CodeableConcept)
-    #[serde(rename = "additiveCodeableConcept")]
-    pub additive_codeable_concept: CodeableConcept,
-    /// Additive associated with container (Reference)
-    #[serde(rename = "additiveReference")]
-    pub additive_reference: Reference,
-}
-/// SpecimenDefinitionTypetested nested structure for the 'container' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedContainer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The material type used for the container
-    ///
-    /// Binding: example (SCT 32039001 |Glass|, 61088005 |Plastic|, 425620007 |Metal|)
-    ///
-    /// Available values:
-    /// - `32039001`: glass
-    /// - `61088005`: plastic
-    /// - `425620007`: metal
-    pub material: Option<CodeableConcept>,
-    /// Kind of container associated with the kind of specimen
-    ///
-    /// Binding: example (SCT descendants of 706041008 |Device for body fluid and tissue collection/transfer/processing (physical object)|)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-container-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Color of container cap
-    ///
-    /// Binding: example (Color of the container cap.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/container-cap
-    pub cap: Option<CodeableConcept>,
-    /// The description of the kind of container
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// The capacity of this kind of container
-    pub capacity: Option<Quantity>,
-    /// Minimum volume (Quantity)
-    #[serde(rename = "minimumVolumeQuantity")]
-    pub minimum_volume_quantity: Option<Quantity>,
-    /// Minimum volume (string)
-    #[serde(rename = "minimumVolumeString")]
-    pub minimum_volume_string: Option<StringType>,
-    /// Special processing applied to the container for this specimen type
-    pub preparation: Option<StringType>,
-    /// Extension element for the 'preparation' primitive field. Contains metadata and extensions.
-    pub _preparation: Option<Element>,
-}
-/// SpecimenDefinitionTypetested nested structure for the 'handling' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Qualifies the interval of temperature
-    ///
-    /// Binding: example (Set of handling instructions prior testing of the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
-    #[serde(rename = "temperatureQualifier")]
-    pub temperature_qualifier: Option<CodeableConcept>,
-    /// Temperature range for these handling instructions
-    #[serde(rename = "temperatureRange")]
-    pub temperature_range: Option<Range>,
-    /// Maximum preservation time
-    #[serde(rename = "maxDuration")]
-    pub max_duration: Option<Duration>,
-    /// Preservation instruction
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
 /// SpecimenDefinition nested structure for the 'typeTested' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetested {
@@ -325,6 +243,88 @@ pub struct SpecimenDefinitionTypetested {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub testing_destination: Vec<CodeableConcept>,
 }
+/// SpecimenDefinitionTypetested nested structure for the 'container' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedContainer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The material type used for the container
+    ///
+    /// Binding: example (SCT 32039001 |Glass|, 61088005 |Plastic|, 425620007 |Metal|)
+    ///
+    /// Available values:
+    /// - `32039001`: glass
+    /// - `61088005`: plastic
+    /// - `425620007`: metal
+    pub material: Option<CodeableConcept>,
+    /// Kind of container associated with the kind of specimen
+    ///
+    /// Binding: example (SCT descendants of 706041008 |Device for body fluid and tissue collection/transfer/processing (physical object)|)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-container-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Color of container cap
+    ///
+    /// Binding: example (Color of the container cap.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/container-cap
+    pub cap: Option<CodeableConcept>,
+    /// The description of the kind of container
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The capacity of this kind of container
+    pub capacity: Option<Quantity>,
+    /// Minimum volume (Quantity)
+    #[serde(rename = "minimumVolumeQuantity")]
+    pub minimum_volume_quantity: Option<Quantity>,
+    /// Minimum volume (string)
+    #[serde(rename = "minimumVolumeString")]
+    pub minimum_volume_string: Option<StringType>,
+    /// Special processing applied to the container for this specimen type
+    pub preparation: Option<StringType>,
+    /// Extension element for the 'preparation' primitive field. Contains metadata and extensions.
+    pub _preparation: Option<Element>,
+}
+/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedContainerAdditive {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additive associated with container (CodeableConcept)
+    #[serde(rename = "additiveCodeableConcept")]
+    pub additive_codeable_concept: CodeableConcept,
+    /// Additive associated with container (Reference)
+    #[serde(rename = "additiveReference")]
+    pub additive_reference: Reference,
+}
+/// SpecimenDefinitionTypetested nested structure for the 'handling' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Qualifies the interval of temperature
+    ///
+    /// Binding: example (Set of handling instructions prior testing of the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
+    #[serde(rename = "temperatureQualifier")]
+    pub temperature_qualifier: Option<CodeableConcept>,
+    /// Temperature range for these handling instructions
+    #[serde(rename = "temperatureRange")]
+    pub temperature_range: Option<Range>,
+    /// Maximum preservation time
+    #[serde(rename = "maxDuration")]
+    pub max_duration: Option<Duration>,
+    /// Preservation instruction
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
 
 impl Default for SpecimenDefinition {
     fn default() -> Self {
@@ -381,12 +381,24 @@ impl Default for SpecimenDefinition {
     }
 }
 
-impl Default for SpecimenDefinitionTypetestedContainerAdditive {
+impl Default for SpecimenDefinitionTypetested {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            additive_codeable_concept: Default::default(),
-            additive_reference: Default::default(),
+            container: Default::default(),
+            handling: Default::default(),
+            is_derived: Default::default(),
+            _is_derived: Default::default(),
+            type_: Default::default(),
+            preference: Default::default(),
+            _preference: Default::default(),
+            requirement: Default::default(),
+            _requirement: Default::default(),
+            retention_time: Default::default(),
+            single_use: Default::default(),
+            _single_use: Default::default(),
+            rejection_criterion: Default::default(),
+            testing_destination: Default::default(),
         }
     }
 }
@@ -409,6 +421,16 @@ impl Default for SpecimenDefinitionTypetestedContainer {
     }
 }
 
+impl Default for SpecimenDefinitionTypetestedContainerAdditive {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            additive_codeable_concept: Default::default(),
+            additive_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for SpecimenDefinitionTypetestedHandling {
     fn default() -> Self {
         Self {
@@ -418,28 +440,6 @@ impl Default for SpecimenDefinitionTypetestedHandling {
             max_duration: Default::default(),
             instruction: Default::default(),
             _instruction: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenDefinitionTypetested {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            container: Default::default(),
-            handling: Default::default(),
-            is_derived: Default::default(),
-            _is_derived: Default::default(),
-            type_: Default::default(),
-            preference: Default::default(),
-            _preference: Default::default(),
-            requirement: Default::default(),
-            _requirement: Default::default(),
-            retention_time: Default::default(),
-            single_use: Default::default(),
-            _single_use: Default::default(),
-            rejection_criterion: Default::default(),
-            testing_destination: Default::default(),
         }
     }
 }

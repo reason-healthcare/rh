@@ -98,41 +98,6 @@ pub struct MedicinalProduct {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub special_designation: Vec<MedicinalProductSpecialdesignation>,
 }
-/// MedicinalProductName nested structure for the 'namePart' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductNameNamepart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A fragment of a product name
-    pub part: StringType,
-    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
-    pub _part: Option<Element>,
-    /// Idenifying type for this part of the name (e.g. strength part)
-    #[serde(rename = "type")]
-    pub type_: Coding,
-}
-/// MedicinalProduct nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coding words or phrases of the name
-    #[serde(rename = "namePart")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub name_part: Vec<MedicinalProductNameNamepart>,
-    /// Country where the name applies
-    #[serde(rename = "countryLanguage")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub country_language: Vec<MedicinalProductNameCountrylanguage>,
-    /// The full product name
-    #[serde(rename = "productName")]
-    pub product_name: StringType,
-    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_productName")]
-    pub _product_name: Option<Element>,
-}
 /// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductManufacturingbusinessoperation {
@@ -160,6 +125,27 @@ pub struct MedicinalProductManufacturingbusinessoperation {
     /// A regulator which oversees the operation
     pub regulator: Option<Reference>,
 }
+/// MedicinalProduct nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Country where the name applies
+    #[serde(rename = "countryLanguage")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country_language: Vec<MedicinalProductNameCountrylanguage>,
+    /// Coding words or phrases of the name
+    #[serde(rename = "namePart")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name_part: Vec<MedicinalProductNameNamepart>,
+    /// The full product name
+    #[serde(rename = "productName")]
+    pub product_name: StringType,
+    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_productName")]
+    pub _product_name: Option<Element>,
+}
 /// MedicinalProductName nested structure for the 'countryLanguage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductNameCountrylanguage {
@@ -172,6 +158,20 @@ pub struct MedicinalProductNameCountrylanguage {
     pub jurisdiction: Option<CodeableConcept>,
     /// Language code for this name
     pub language: StringType,
+}
+/// MedicinalProductName nested structure for the 'namePart' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductNameNamepart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A fragment of a product name
+    pub part: StringType,
+    /// Extension element for the 'part' primitive field. Contains metadata and extensions.
+    pub _part: Option<Element>,
+    /// Idenifying type for this part of the name (e.g. strength part)
+    #[serde(rename = "type")]
+    pub type_: Coding,
 }
 /// MedicinalProduct nested structure for the 'specialDesignation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,29 +233,6 @@ impl Default for MedicinalProduct {
     }
 }
 
-impl Default for MedicinalProductNameNamepart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            part: Default::default(),
-            _part: Default::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductName {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name_part: Default::default(),
-            country_language: Default::default(),
-            product_name: StringType::default(),
-            _product_name: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductManufacturingbusinessoperation {
     fn default() -> Self {
         Self {
@@ -271,6 +248,18 @@ impl Default for MedicinalProductManufacturingbusinessoperation {
     }
 }
 
+impl Default for MedicinalProductName {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            country_language: Default::default(),
+            name_part: Default::default(),
+            product_name: StringType::default(),
+            _product_name: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductNameCountrylanguage {
     fn default() -> Self {
         Self {
@@ -278,6 +267,17 @@ impl Default for MedicinalProductNameCountrylanguage {
             country: Default::default(),
             jurisdiction: Default::default(),
             language: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductNameNamepart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            _part: Default::default(),
+            type_: Default::default(),
         }
     }
 }

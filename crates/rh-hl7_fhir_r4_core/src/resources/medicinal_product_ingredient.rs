@@ -43,6 +43,22 @@ pub struct MedicinalProductIngredient {
     /// The ingredient substance
     pub substance: Option<MedicinalProductIngredientSubstance>,
 }
+/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub strength: Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>,
+    /// The specified substance
+    pub code: CodeableConcept,
+    /// The group of specified substance, e.g. group 1 to 4
+    pub group: CodeableConcept,
+    /// Confidentiality level of the specified substance as the ingredient
+    pub confidentiality: Option<CodeableConcept>,
+}
 /// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
@@ -68,22 +84,6 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
     /// The country or countries for which the strength range applies
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub country: Vec<CodeableConcept>,
-}
-/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub strength: Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>,
-    /// The specified substance
-    pub code: CodeableConcept,
-    /// The group of specified substance, e.g. group 1 to 4
-    pub group: CodeableConcept,
-    /// Confidentiality level of the specified substance as the ingredient
-    pub confidentiality: Option<CodeableConcept>,
 }
 /// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,6 +136,18 @@ impl Default for MedicinalProductIngredient {
     }
 }
 
+impl Default for MedicinalProductIngredientSpecifiedsubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: Default::default(),
+            group: Default::default(),
+            confidentiality: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
     fn default() -> Self {
         Self {
@@ -147,18 +159,6 @@ impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductIngredientSpecifiedsubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: Default::default(),
-            group: Default::default(),
-            confidentiality: Default::default(),
         }
     }
 }

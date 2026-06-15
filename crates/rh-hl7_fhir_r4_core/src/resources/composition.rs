@@ -95,6 +95,23 @@ pub struct Composition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section: Vec<CompositionSection>,
 }
+/// Composition nested structure for the 'attester' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionAttester {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// personal | professional | legal | official
+    pub mode: CompositionAttestationMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// When the composition was attested
+    pub time: Option<DateTimeType>,
+    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
+    pub _time: Option<Element>,
+    /// Who attested the composition
+    pub party: Option<Reference>,
+}
 /// otherConfidentiality
 ///
 /// Carries additional confidentiality codes beyond the base fixed code specified in the CDA document.
@@ -111,21 +128,57 @@ pub struct CompositionClinicaldocumentOtherConfidentiality {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Overrides Composition.subject
+/// versionNumber
 ///
-/// Specifies that the section has a different subject that the Composition, or it's container section.
+/// Version specific identifier for the composition, assigned when each version is created/updated.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/composition-section-subject
+/// - URL: http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-versionNumber
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionSectionSubject {
+pub struct CompositionClinicaldocumentVersionNumber {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// Composition nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code(s) that apply to the event being documented
+    ///
+    /// Binding: example (This list of codes represents the main clinical acts being documented.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
+    /// The period covered by the documentation
+    pub period: Option<Period>,
+    /// The event(s) being documented
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
+}
+/// Composition nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship (Identifier)
+    #[serde(rename = "targetIdentifier")]
+    pub target_identifier: Identifier,
+    /// Target of the relationship (Reference)
+    #[serde(rename = "targetReference")]
+    pub target_reference: Reference,
 }
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,74 +239,21 @@ pub struct CompositionSection {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section: Vec<StringType>,
 }
-/// Composition nested structure for the 'event' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionEvent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code(s) that apply to the event being documented
-    ///
-    /// Binding: example (This list of codes represents the main clinical acts being documented.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub code: Vec<CodeableConcept>,
-    /// The period covered by the documentation
-    pub period: Option<Period>,
-    /// The event(s) being documented
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub detail: Vec<Reference>,
-}
-/// Composition nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship (Identifier)
-    #[serde(rename = "targetIdentifier")]
-    pub target_identifier: Identifier,
-    /// Target of the relationship (Reference)
-    #[serde(rename = "targetReference")]
-    pub target_reference: Reference,
-}
-/// versionNumber
+/// Overrides Composition.subject
 ///
-/// Version specific identifier for the composition, assigned when each version is created/updated.
+/// Specifies that the section has a different subject that the Composition, or it's container section.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-versionNumber
+/// - URL: http://hl7.org/fhir/StructureDefinition/composition-section-subject
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionClinicaldocumentVersionNumber {
+pub struct CompositionSectionSubject {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
-}
-/// Composition nested structure for the 'attester' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionAttester {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// personal | professional | legal | official
-    pub mode: CompositionAttestationMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// When the composition was attested
-    pub time: Option<DateTimeType>,
-    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
-    pub _time: Option<Element>,
-    /// Who attested the composition
-    pub party: Option<Reference>,
 }
 
 impl Default for Composition {
@@ -283,6 +283,19 @@ impl Default for Composition {
     }
 }
 
+impl Default for CompositionAttester {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: CompositionAttestationMode::default(),
+            _mode: Default::default(),
+            time: Default::default(),
+            _time: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
 impl Default for CompositionClinicaldocumentOtherConfidentiality {
     fn default() -> Self {
         Self {
@@ -291,30 +304,10 @@ impl Default for CompositionClinicaldocumentOtherConfidentiality {
     }
 }
 
-impl Default for CompositionSectionSubject {
+impl Default for CompositionClinicaldocumentVersionNumber {
     fn default() -> Self {
         Self {
             base: Extension::default(),
-        }
-    }
-}
-
-impl Default for CompositionSection {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            code: Default::default(),
-            author: Default::default(),
-            focus: Default::default(),
-            text: Default::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
-            ordered_by: Default::default(),
-            entry: Default::default(),
-            empty_reason: Default::default(),
-            section: Default::default(),
         }
     }
 }
@@ -342,23 +335,30 @@ impl Default for CompositionRelatesto {
     }
 }
 
-impl Default for CompositionClinicaldocumentVersionNumber {
+impl Default for CompositionSection {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            code: Default::default(),
+            author: Default::default(),
+            focus: Default::default(),
+            text: Default::default(),
+            mode: Default::default(),
+            _mode: Default::default(),
+            ordered_by: Default::default(),
+            entry: Default::default(),
+            empty_reason: Default::default(),
+            section: Default::default(),
         }
     }
 }
 
-impl Default for CompositionAttester {
+impl Default for CompositionSectionSubject {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            mode: CompositionAttestationMode::default(),
-            _mode: Default::default(),
-            time: Default::default(),
-            _time: Default::default(),
-            party: Default::default(),
+            base: Extension::default(),
         }
     }
 }

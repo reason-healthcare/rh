@@ -154,24 +154,6 @@ pub struct ImagingSelectionInstance {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub _subset: Vec<Element>,
 }
-/// ImagingSelectionInstance nested structure for the 'imageRegion3D' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingSelectionInstanceImageregion3d {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// point | multipoint | polyline | polygon | ellipse | ellipsoid
-    #[serde(rename = "regionType")]
-    pub region_type: Imagingselection3dgraphictype,
-    /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_regionType")]
-    pub _region_type: Option<Element>,
-    /// Specifies the coordinates that define the image region
-    pub coordinate: Vec<DecimalType>,
-    /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub _coordinate: Vec<Element>,
-}
 /// ImagingSelectionInstance nested structure for the 'imageRegion2D' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImagingSelectionInstanceImageregion2d {
@@ -181,6 +163,24 @@ pub struct ImagingSelectionInstanceImageregion2d {
     /// point | polyline | interpolated | circle | ellipse
     #[serde(rename = "regionType")]
     pub region_type: Imagingselection2dgraphictype,
+    /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_regionType")]
+    pub _region_type: Option<Element>,
+    /// Specifies the coordinates that define the image region
+    pub coordinate: Vec<DecimalType>,
+    /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _coordinate: Vec<Element>,
+}
+/// ImagingSelectionInstance nested structure for the 'imageRegion3D' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagingSelectionInstanceImageregion3d {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// point | multipoint | polyline | polygon | ellipse | ellipsoid
+    #[serde(rename = "regionType")]
+    pub region_type: Imagingselection3dgraphictype,
     /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_regionType")]
     pub _region_type: Option<Element>,
@@ -259,7 +259,7 @@ impl Default for ImagingSelectionInstance {
     }
 }
 
-impl Default for ImagingSelectionInstanceImageregion3d {
+impl Default for ImagingSelectionInstanceImageregion2d {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -271,7 +271,7 @@ impl Default for ImagingSelectionInstanceImageregion3d {
     }
 }
 
-impl Default for ImagingSelectionInstanceImageregion2d {
+impl Default for ImagingSelectionInstanceImageregion3d {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),

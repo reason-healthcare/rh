@@ -273,24 +273,6 @@ pub struct ObservationComponent {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reference_range: Vec<StringType>,
 }
-/// Observation nested structure for the 'triggeredBy' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationTriggeredby {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Triggering observation
-    pub observation: Reference,
-    /// reflex | repeat | re-run
-    #[serde(rename = "type")]
-    pub type_: ObservationTriggeredbytype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Reason that the observation was triggered
-    pub reason: Option<StringType>,
-    /// Extension element for the 'reason' primitive field. Contains metadata and extensions.
-    pub _reason: Option<Element>,
-}
 /// Observation nested structure for the 'referenceRange' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObservationReferencerange {
@@ -332,6 +314,24 @@ pub struct ObservationReferencerange {
     pub text: Option<StringType>,
     /// Extension element for the 'text' primitive field. Contains metadata and extensions.
     pub _text: Option<Element>,
+}
+/// Observation nested structure for the 'triggeredBy' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationTriggeredby {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Triggering observation
+    pub observation: Reference,
+    /// reflex | repeat | re-run
+    #[serde(rename = "type")]
+    pub type_: ObservationTriggeredbytype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Reason that the observation was triggered
+    pub reason: Option<StringType>,
+    /// Extension element for the 'reason' primitive field. Contains metadata and extensions.
+    pub _reason: Option<Element>,
 }
 
 impl Default for Observation {
@@ -412,19 +412,6 @@ impl Default for ObservationComponent {
     }
 }
 
-impl Default for ObservationTriggeredby {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            observation: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            reason: Default::default(),
-            _reason: Default::default(),
-        }
-    }
-}
-
 impl Default for ObservationReferencerange {
     fn default() -> Self {
         Self {
@@ -437,6 +424,19 @@ impl Default for ObservationReferencerange {
             age: Default::default(),
             text: Default::default(),
             _text: Default::default(),
+        }
+    }
+}
+
+impl Default for ObservationTriggeredby {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            observation: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            reason: Default::default(),
+            _reason: Default::default(),
         }
     }
 }
@@ -978,6 +978,15 @@ impl crate::traits::observation::ObservationMutators for Observation {
 }
 
 impl crate::traits::observation::ObservationExistence for Observation {
+    fn has_effective(&self) -> bool {
+        self.effective_date_time.is_some()
+            || self.effective_period.is_some()
+            || self.effective_timing.is_some()
+            || self.effective_instant.is_some()
+    }
+    fn has_instantiates(&self) -> bool {
+        self.instantiates_canonical.is_some() || self.instantiates_reference.is_some()
+    }
     fn has_value(&self) -> bool {
         self.value_quantity.is_some()
             || self.value_codeable_concept.is_some()
@@ -992,15 +1001,6 @@ impl crate::traits::observation::ObservationExistence for Observation {
             || self.value_period.is_some()
             || self.value_attachment.is_some()
             || self.value_reference.is_some()
-    }
-    fn has_effective(&self) -> bool {
-        self.effective_date_time.is_some()
-            || self.effective_period.is_some()
-            || self.effective_timing.is_some()
-            || self.effective_instant.is_some()
-    }
-    fn has_instantiates(&self) -> bool {
-        self.instantiates_canonical.is_some() || self.instantiates_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

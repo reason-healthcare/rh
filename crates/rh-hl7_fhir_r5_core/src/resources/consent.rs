@@ -103,20 +103,18 @@ pub struct Consent {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub provision: Vec<ConsentProvision>,
 }
-/// ConsentProvision nested structure for the 'actor' field
+/// Consent nested structure for the 'policyBasis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionActor {
+pub struct ConsentPolicybasis {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// How the actor is involved
-    ///
-    /// Binding: extensible (How an actor is involved in the consent considerations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub role: Option<CodeableConcept>,
-    /// Resource for the actor (or group, by role)
+    /// Reference backing policy resource
     pub reference: Option<Reference>,
+    /// URL to a computable backing policy
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
 }
 /// Consent nested structure for the 'provision' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -199,6 +197,34 @@ pub struct ConsentProvision {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub provision: Vec<StringType>,
 }
+/// ConsentProvision nested structure for the 'actor' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentProvisionActor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How the actor is involved
+    ///
+    /// Binding: extensible (How an actor is involved in the consent considerations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub role: Option<CodeableConcept>,
+    /// Resource for the actor (or group, by role)
+    pub reference: Option<Reference>,
+}
+/// ConsentProvision nested structure for the 'data' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentProvisionData {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// instance | related | dependents | authoredby
+    pub meaning: ConsentDataMeaning,
+    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
+    pub _meaning: Option<Element>,
+    /// The actual data reference
+    pub reference: Reference,
+}
 /// Consent nested structure for the 'verification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsentVerification {
@@ -231,32 +257,6 @@ pub struct ConsentVerification {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub _verification_date: Vec<Element>,
 }
-/// Consent nested structure for the 'policyBasis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentPolicybasis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference backing policy resource
-    pub reference: Option<Reference>,
-    /// URL to a computable backing policy
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-}
-/// ConsentProvision nested structure for the 'data' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionData {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// instance | related | dependents | authoredby
-    pub meaning: ConsentDataMeaning,
-    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
-    pub _meaning: Option<Element>,
-    /// The actual data reference
-    pub reference: Reference,
-}
 
 impl Default for Consent {
     fn default() -> Self {
@@ -287,12 +287,13 @@ impl Default for Consent {
     }
 }
 
-impl Default for ConsentProvisionActor {
+impl Default for ConsentPolicybasis {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            role: Default::default(),
             reference: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
         }
     }
 }
@@ -317,28 +318,12 @@ impl Default for ConsentProvision {
     }
 }
 
-impl Default for ConsentVerification {
+impl Default for ConsentProvisionActor {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            verified: BooleanType::default(),
-            _verified: Default::default(),
-            verification_type: Default::default(),
-            verified_by: Default::default(),
-            verified_with: Default::default(),
-            verification_date: Default::default(),
-            _verification_date: Default::default(),
-        }
-    }
-}
-
-impl Default for ConsentPolicybasis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
+            role: Default::default(),
             reference: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
         }
     }
 }
@@ -350,6 +335,21 @@ impl Default for ConsentProvisionData {
             meaning: Default::default(),
             _meaning: Default::default(),
             reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentVerification {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            verified: BooleanType::default(),
+            _verified: Default::default(),
+            verification_type: Default::default(),
+            verified_by: Default::default(),
+            verified_with: Default::default(),
+            verification_date: Default::default(),
+            _verification_date: Default::default(),
         }
     }
 }

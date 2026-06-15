@@ -78,80 +78,6 @@ pub struct Specimen {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// Specimen nested structure for the 'processing' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenProcessing {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of procedure
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Indicates the treatment step  applied to the specimen
-    ///
-    /// Binding: example (Type indicating the technique used to process the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
-    pub procedure: Option<CodeableConcept>,
-    /// Material used in the processing step
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additive: Vec<Reference>,
-    /// Date and time of specimen processing (dateTime)
-    #[serde(rename = "timeDateTime")]
-    pub time_date_time: Option<DateTimeType>,
-    /// Date and time of specimen processing (Period)
-    #[serde(rename = "timePeriod")]
-    pub time_period: Option<Period>,
-}
-/// sequenceNumber
-///
-/// An assigned number on the specimen denoting the order of collection.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-sequenceNumber
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenSequenceNumber {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Processing Time
-///
-/// Period or duration of processing.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-processingTime
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenProcessingTime {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Special handling
-///
-/// Special handling during the collection, transport, or storage of the specimen.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-specialHandling
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenSpecialHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Specimen nested structure for the 'collection' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenCollection {
@@ -248,6 +174,80 @@ pub struct SpecimenIsDryWeight {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// Specimen nested structure for the 'processing' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenProcessing {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of procedure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Indicates the treatment step  applied to the specimen
+    ///
+    /// Binding: example (Type indicating the technique used to process the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
+    pub procedure: Option<CodeableConcept>,
+    /// Material used in the processing step
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additive: Vec<Reference>,
+    /// Date and time of specimen processing (dateTime)
+    #[serde(rename = "timeDateTime")]
+    pub time_date_time: Option<DateTimeType>,
+    /// Date and time of specimen processing (Period)
+    #[serde(rename = "timePeriod")]
+    pub time_period: Option<Period>,
+}
+/// Processing Time
+///
+/// Period or duration of processing.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-processingTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenProcessingTime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// sequenceNumber
+///
+/// An assigned number on the specimen denoting the order of collection.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-sequenceNumber
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenSequenceNumber {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Special handling
+///
+/// Special handling during the collection, transport, or storage of the specimen.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-specialHandling
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenSpecialHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for Specimen {
     fn default() -> Self {
@@ -268,44 +268,6 @@ impl Default for Specimen {
             container: Default::default(),
             condition: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenProcessing {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            procedure: Default::default(),
-            additive: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenSequenceNumber {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for SpecimenProcessingTime {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for SpecimenSpecialHandling {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }
@@ -344,6 +306,44 @@ impl Default for SpecimenContainer {
 }
 
 impl Default for SpecimenIsDryWeight {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for SpecimenProcessing {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            procedure: Default::default(),
+            additive: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenProcessingTime {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for SpecimenSequenceNumber {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for SpecimenSpecialHandling {
     fn default() -> Self {
         Self {
             base: Extension::default(),

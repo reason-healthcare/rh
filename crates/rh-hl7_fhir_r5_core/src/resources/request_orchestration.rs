@@ -119,80 +119,32 @@ pub struct RequestOrchestration {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub action: Vec<RequestOrchestrationAction>,
 }
-/// RequestOrchestrationAction nested structure for the 'input' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionInput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
-}
-/// RequestOrchestrationAction nested structure for the 'relatedAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionRelatedaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What action this is related to
-    #[serde(rename = "targetId")]
-    pub target_id: StringType,
-    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetId")]
-    pub _target_id: Option<Element>,
-    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
-    pub relationship: ActionRelationshipType,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
-    #[serde(rename = "endRelationship")]
-    pub end_relationship: Option<ActionRelationshipType>,
-    /// Extension element for the 'endRelationship' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_endRelationship")]
-    pub _end_relationship: Option<Element>,
-    /// Time offset for the relationship (Duration)
-    #[serde(rename = "offsetDuration")]
-    pub offset_duration: Option<Duration>,
-    /// Time offset for the relationship (Range)
-    #[serde(rename = "offsetRange")]
-    pub offset_range: Option<Range>,
-}
 /// RequestOrchestration nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestOrchestrationAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Input data requirements
+    /// Whether or not the action is applicable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub input: Vec<RequestOrchestrationActionInput>,
-    /// Relationship to another action
-    #[serde(rename = "relatedAction")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub related_action: Vec<RequestOrchestrationActionRelatedaction>,
-    /// Who should perform the action
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub participant: Vec<RequestOrchestrationActionParticipant>,
+    pub condition: Vec<RequestOrchestrationActionCondition>,
     /// Dynamic aspects of the definition
     #[serde(rename = "dynamicValue")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dynamic_value: Vec<RequestOrchestrationActionDynamicvalue>,
-    /// Whether or not the action is applicable
+    /// Input data requirements
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub condition: Vec<RequestOrchestrationActionCondition>,
+    pub input: Vec<RequestOrchestrationActionInput>,
     /// Output data definition
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub output: Vec<RequestOrchestrationActionOutput>,
+    /// Who should perform the action
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<RequestOrchestrationActionParticipant>,
+    /// Relationship to another action
+    #[serde(rename = "relatedAction")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_action: Vec<RequestOrchestrationActionRelatedaction>,
     /// Pointer to specific item from the PlanDefinition
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -333,6 +285,44 @@ pub struct RequestOrchestrationActionDynamicvalue {
     /// An expression that provides the dynamic value for the customization
     pub expression: Option<Expression>,
 }
+/// RequestOrchestrationAction nested structure for the 'input' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestOrchestrationActionInput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
+}
+/// RequestOrchestrationAction nested structure for the 'output' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestOrchestrationActionOutput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
+}
 /// RequestOrchestrationAction nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestOrchestrationActionParticipant {
@@ -372,24 +362,34 @@ pub struct RequestOrchestrationActionParticipant {
     #[serde(rename = "actorReference")]
     pub actor_reference: Option<Reference>,
 }
-/// RequestOrchestrationAction nested structure for the 'output' field
+/// RequestOrchestrationAction nested structure for the 'relatedAction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionOutput {
+pub struct RequestOrchestrationActionRelatedaction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
+    /// What action this is related to
+    #[serde(rename = "targetId")]
+    pub target_id: StringType,
+    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetId")]
+    pub _target_id: Option<Element>,
+    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
+    pub relationship: ActionRelationshipType,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
+    #[serde(rename = "endRelationship")]
+    pub end_relationship: Option<ActionRelationshipType>,
+    /// Extension element for the 'endRelationship' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_endRelationship")]
+    pub _end_relationship: Option<Element>,
+    /// Time offset for the relationship (Duration)
+    #[serde(rename = "offsetDuration")]
+    pub offset_duration: Option<Duration>,
+    /// Time offset for the relationship (Range)
+    #[serde(rename = "offsetRange")]
+    pub offset_range: Option<Range>,
 }
 
 impl Default for RequestOrchestration {
@@ -424,45 +424,16 @@ impl Default for RequestOrchestration {
     }
 }
 
-impl Default for RequestOrchestrationActionInput {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestOrchestrationActionRelatedaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target_id: Default::default(),
-            _target_id: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            end_relationship: Default::default(),
-            _end_relationship: Default::default(),
-            offset_duration: Default::default(),
-            offset_range: Default::default(),
-        }
-    }
-}
-
 impl Default for RequestOrchestrationAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            input: Default::default(),
-            related_action: Default::default(),
-            participant: Default::default(),
-            dynamic_value: Default::default(),
             condition: Default::default(),
+            dynamic_value: Default::default(),
+            input: Default::default(),
             output: Default::default(),
+            participant: Default::default(),
+            related_action: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             prefix: Default::default(),
@@ -528,6 +499,32 @@ impl Default for RequestOrchestrationActionDynamicvalue {
     }
 }
 
+impl Default for RequestOrchestrationActionInput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestOrchestrationActionOutput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
+        }
+    }
+}
+
 impl Default for RequestOrchestrationActionParticipant {
     fn default() -> Self {
         Self {
@@ -545,15 +542,18 @@ impl Default for RequestOrchestrationActionParticipant {
     }
 }
 
-impl Default for RequestOrchestrationActionOutput {
+impl Default for RequestOrchestrationActionRelatedaction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
+            target_id: Default::default(),
+            _target_id: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            end_relationship: Default::default(),
+            _end_relationship: Default::default(),
+            offset_duration: Default::default(),
+            offset_range: Default::default(),
         }
     }
 }

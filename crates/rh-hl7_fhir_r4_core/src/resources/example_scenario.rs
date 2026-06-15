@@ -96,40 +96,6 @@ pub struct ExampleScenario {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub _workflow: Vec<Element>,
 }
-/// ExampleScenario nested structure for the 'instance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExampleScenarioInstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A specific version of the resource
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub version: Vec<ExampleScenarioInstanceVersion>,
-    /// Resources contained in the instance
-    #[serde(rename = "containedInstance")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub contained_instance: Vec<ExampleScenarioInstanceContainedinstance>,
-    /// The id of the resource for referencing
-    #[serde(rename = "resourceId")]
-    pub resource_id: StringType,
-    /// Extension element for the 'resourceId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_resourceId")]
-    pub _resource_id: Option<Element>,
-    /// The type of the resource
-    #[serde(rename = "resourceType")]
-    pub resource_type: ResourceTypes,
-    /// Extension element for the 'resourceType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_resourceType")]
-    pub _resource_type: Option<Element>,
-    /// A short name for the resource instance
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Human-friendly description of the resource instance
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 /// ExampleScenario nested structure for the 'actor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExampleScenarioActor {
@@ -156,6 +122,40 @@ pub struct ExampleScenarioActor {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
+/// ExampleScenario nested structure for the 'instance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExampleScenarioInstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Resources contained in the instance
+    #[serde(rename = "containedInstance")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contained_instance: Vec<ExampleScenarioInstanceContainedinstance>,
+    /// A specific version of the resource
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub version: Vec<ExampleScenarioInstanceVersion>,
+    /// The id of the resource for referencing
+    #[serde(rename = "resourceId")]
+    pub resource_id: StringType,
+    /// Extension element for the 'resourceId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_resourceId")]
+    pub _resource_id: Option<Element>,
+    /// The type of the resource
+    #[serde(rename = "resourceType")]
+    pub resource_type: ResourceTypes,
+    /// Extension element for the 'resourceType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_resourceType")]
+    pub _resource_type: Option<Element>,
+    /// A short name for the resource instance
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Human-friendly description of the resource instance
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// ExampleScenarioInstance nested structure for the 'containedInstance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExampleScenarioInstanceContainedinstance {
@@ -174,6 +174,23 @@ pub struct ExampleScenarioInstanceContainedinstance {
     /// Extension element for the 'versionId' primitive field. Contains metadata and extensions.
     #[serde(rename = "_versionId")]
     pub _version_id: Option<Element>,
+}
+/// ExampleScenarioInstance nested structure for the 'version' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExampleScenarioInstanceVersion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The identifier of a specific version of a resource
+    #[serde(rename = "versionId")]
+    pub version_id: StringType,
+    /// Extension element for the 'versionId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_versionId")]
+    pub _version_id: Option<Element>,
+    /// The description of the resource version
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
 }
 /// ExampleScenario nested structure for the 'process' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,22 +222,37 @@ pub struct ExampleScenarioProcess {
     #[serde(rename = "_postConditions")]
     pub _post_conditions: Option<Element>,
 }
-/// ExampleScenarioInstance nested structure for the 'version' field
+/// ExampleScenarioProcess nested structure for the 'step' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExampleScenarioInstanceVersion {
+pub struct ExampleScenarioProcessStep {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The identifier of a specific version of a resource
-    #[serde(rename = "versionId")]
-    pub version_id: StringType,
-    /// Extension element for the 'versionId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_versionId")]
-    pub _version_id: Option<Element>,
-    /// The description of the resource version
-    pub description: StringType,
+    /// Nested process
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub process: Vec<StringType>,
+    /// If there is a pause in the flow
+    pub pause: Option<BooleanType>,
+    /// Extension element for the 'pause' primitive field. Contains metadata and extensions.
+    pub _pause: Option<Element>,
+}
+/// ExampleScenarioProcessStep nested structure for the 'alternative' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExampleScenarioProcessStepAlternative {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for alternative
+    pub title: StringType,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// A human-readable description of each option
+    pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+    /// What happens in each alternative option
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub step: Vec<StringType>,
 }
 /// ExampleScenarioProcessStep nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,38 +302,6 @@ pub struct ExampleScenarioProcessStepOperation {
     /// Each resource instance used by the responder
     pub response: Option<StringType>,
 }
-/// ExampleScenarioProcess nested structure for the 'step' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExampleScenarioProcessStep {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Nested process
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub process: Vec<StringType>,
-    /// If there is a pause in the flow
-    pub pause: Option<BooleanType>,
-    /// Extension element for the 'pause' primitive field. Contains metadata and extensions.
-    pub _pause: Option<Element>,
-}
-/// ExampleScenarioProcessStep nested structure for the 'alternative' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExampleScenarioProcessStepAlternative {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for alternative
-    pub title: StringType,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// A human-readable description of each option
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// What happens in each alternative option
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub step: Vec<StringType>,
-}
 
 impl Default for ExampleScenario {
     fn default() -> Self {
@@ -338,24 +338,6 @@ impl Default for ExampleScenario {
     }
 }
 
-impl Default for ExampleScenarioInstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            version: Default::default(),
-            contained_instance: Default::default(),
-            resource_id: StringType::default(),
-            _resource_id: Default::default(),
-            resource_type: ResourceTypes::default(),
-            _resource_type: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
 impl Default for ExampleScenarioActor {
     fn default() -> Self {
         Self {
@@ -372,6 +354,24 @@ impl Default for ExampleScenarioActor {
     }
 }
 
+impl Default for ExampleScenarioInstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            contained_instance: Default::default(),
+            version: Default::default(),
+            resource_id: StringType::default(),
+            _resource_id: Default::default(),
+            resource_type: ResourceTypes::default(),
+            _resource_type: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
 impl Default for ExampleScenarioInstanceContainedinstance {
     fn default() -> Self {
         Self {
@@ -380,6 +380,18 @@ impl Default for ExampleScenarioInstanceContainedinstance {
             _resource_id: Default::default(),
             version_id: Default::default(),
             _version_id: Default::default(),
+        }
+    }
+}
+
+impl Default for ExampleScenarioInstanceVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            version_id: Default::default(),
+            _version_id: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
         }
     }
 }
@@ -401,14 +413,26 @@ impl Default for ExampleScenarioProcess {
     }
 }
 
-impl Default for ExampleScenarioInstanceVersion {
+impl Default for ExampleScenarioProcessStep {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            version_id: Default::default(),
-            _version_id: Default::default(),
+            process: Default::default(),
+            pause: Default::default(),
+            _pause: Default::default(),
+        }
+    }
+}
+
+impl Default for ExampleScenarioProcessStepAlternative {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+            step: Default::default(),
         }
     }
 }
@@ -435,30 +459,6 @@ impl Default for ExampleScenarioProcessStepOperation {
             _receiver_active: Default::default(),
             request: Default::default(),
             response: Default::default(),
-        }
-    }
-}
-
-impl Default for ExampleScenarioProcessStep {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            process: Default::default(),
-            pause: Default::default(),
-            _pause: Default::default(),
-        }
-    }
-}
-
-impl Default for ExampleScenarioProcessStepAlternative {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            step: Default::default(),
         }
     }
 }

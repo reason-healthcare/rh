@@ -57,6 +57,42 @@ pub struct MessageHeader {
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
     pub _definition: Option<Element>,
 }
+/// MessageHeader nested structure for the 'destination' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageHeaderDestination {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Actual destination address or Endpoint resource (url)
+    #[serde(rename = "endpointUrl")]
+    pub endpoint_url: Option<StringType>,
+    /// Actual destination address or Endpoint resource (Reference)
+    #[serde(rename = "endpointReference")]
+    pub endpoint_reference: Option<Reference>,
+    /// Name of system
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Particular delivery destination within the destination
+    pub target: Option<Reference>,
+    /// Intended "real-world" recipient for the data
+    pub receiver: Option<Reference>,
+}
+/// MessageHeader nested structure for the 'response' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageHeaderResponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Bundle.identifier of original message
+    pub identifier: Identifier,
+    /// ok | transient-error | fatal-error
+    pub code: ResponseCode,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Specific list of hints/warnings/errors
+    pub details: Option<Reference>,
+}
 /// MessageHeader nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageHeaderSource {
@@ -84,42 +120,6 @@ pub struct MessageHeaderSource {
     /// Human contact for problems
     pub contact: Option<ContactPoint>,
 }
-/// MessageHeader nested structure for the 'response' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderResponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Bundle.identifier of original message
-    pub identifier: Identifier,
-    /// ok | transient-error | fatal-error
-    pub code: ResponseCode,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Specific list of hints/warnings/errors
-    pub details: Option<Reference>,
-}
-/// MessageHeader nested structure for the 'destination' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderDestination {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Actual destination address or Endpoint resource (url)
-    #[serde(rename = "endpointUrl")]
-    pub endpoint_url: Option<StringType>,
-    /// Actual destination address or Endpoint resource (Reference)
-    #[serde(rename = "endpointReference")]
-    pub endpoint_reference: Option<Reference>,
-    /// Name of system
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Particular delivery destination within the destination
-    pub target: Option<Reference>,
-    /// Intended "real-world" recipient for the data
-    pub receiver: Option<Reference>,
-}
 
 impl Default for MessageHeader {
     fn default() -> Self {
@@ -141,7 +141,7 @@ impl Default for MessageHeader {
     }
 }
 
-impl Default for MessageHeaderSource {
+impl Default for MessageHeaderDestination {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -149,11 +149,8 @@ impl Default for MessageHeaderSource {
             endpoint_reference: Default::default(),
             name: Default::default(),
             _name: Default::default(),
-            software: Default::default(),
-            _software: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            contact: Default::default(),
+            target: Default::default(),
+            receiver: Default::default(),
         }
     }
 }
@@ -170,7 +167,7 @@ impl Default for MessageHeaderResponse {
     }
 }
 
-impl Default for MessageHeaderDestination {
+impl Default for MessageHeaderSource {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -178,8 +175,11 @@ impl Default for MessageHeaderDestination {
             endpoint_reference: Default::default(),
             name: Default::default(),
             _name: Default::default(),
-            target: Default::default(),
-            receiver: Default::default(),
+            software: Default::default(),
+            _software: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            contact: Default::default(),
         }
     }
 }

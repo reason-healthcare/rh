@@ -90,22 +90,6 @@ pub struct SubstanceSourceMaterialFractiondescription {
     #[serde(rename = "materialType")]
     pub material_type: Option<CodeableConcept>,
 }
-/// SubstanceSourceMaterialOrganism nested structure for the 'author' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialOrganismAuthor {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of author of an organism species shall be specified. The parenthetical author of an organism species refers to the first author who published the plant/animal name (of any rank). The primary author of an organism species refers to the first author(s), who validly published the plant/animal name
-    #[serde(rename = "authorType")]
-    pub author_type: Option<CodeableConcept>,
-    /// The author of an organism species shall be specified. The author year of an organism shall also be specified when applicable; refers to the year in which the first author(s) published the infraspecific plant/animal name (of any rank)
-    #[serde(rename = "authorDescription")]
-    pub author_description: Option<StringType>,
-    /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_authorDescription")]
-    pub _author_description: Option<Element>,
-}
 /// SubstanceSourceMaterial nested structure for the 'organism' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceSourceMaterialOrganism {
@@ -115,11 +99,11 @@ pub struct SubstanceSourceMaterialOrganism {
     /// 4.9.13.6.1 Author type (Conditional)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub author: Vec<SubstanceSourceMaterialOrganismAuthor>,
+    /// 4.9.13.8.1 Hybrid species maternal organism ID (Optional)
+    pub hybrid: Option<SubstanceSourceMaterialOrganismHybrid>,
     /// 4.9.13.7.1 Kingdom (Conditional)
     #[serde(rename = "organismGeneral")]
     pub organism_general: Option<SubstanceSourceMaterialOrganismOrganismgeneral>,
-    /// 4.9.13.8.1 Hybrid species maternal organism ID (Optional)
-    pub hybrid: Option<SubstanceSourceMaterialOrganismHybrid>,
     /// The family of an organism shall be specified
     pub family: Option<CodeableConcept>,
     /// The genus of an organism shall be specified; refers to the Latin epithet of the genus element of the plant/animal scientific name; it is present in names for genera, species and infraspecies
@@ -136,17 +120,21 @@ pub struct SubstanceSourceMaterialOrganism {
     #[serde(rename = "_intraspecificDescription")]
     pub _intraspecific_description: Option<Element>,
 }
-/// SubstanceSourceMaterial nested structure for the 'partDescription' field
+/// SubstanceSourceMaterialOrganism nested structure for the 'author' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialPartdescription {
+pub struct SubstanceSourceMaterialOrganismAuthor {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Entity of anatomical origin of source material within an organism
-    pub part: Option<CodeableConcept>,
-    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
-    #[serde(rename = "partLocation")]
-    pub part_location: Option<CodeableConcept>,
+    /// The type of author of an organism species shall be specified. The parenthetical author of an organism species refers to the first author who published the plant/animal name (of any rank). The primary author of an organism species refers to the first author(s), who validly published the plant/animal name
+    #[serde(rename = "authorType")]
+    pub author_type: Option<CodeableConcept>,
+    /// The author of an organism species shall be specified. The author year of an organism shall also be specified when applicable; refers to the year in which the first author(s) published the infraspecific plant/animal name (of any rank)
+    #[serde(rename = "authorDescription")]
+    pub author_description: Option<StringType>,
+    /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_authorDescription")]
+    pub _author_description: Option<Element>,
 }
 /// SubstanceSourceMaterialOrganism nested structure for the 'hybrid' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,6 +185,18 @@ pub struct SubstanceSourceMaterialOrganismOrganismgeneral {
     /// The order of an organism shall be specified,
     pub order: Option<CodeableConcept>,
 }
+/// SubstanceSourceMaterial nested structure for the 'partDescription' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialPartdescription {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Entity of anatomical origin of source material within an organism
+    pub part: Option<CodeableConcept>,
+    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
+    #[serde(rename = "partLocation")]
+    pub part_location: Option<CodeableConcept>,
+}
 
 impl Default for SubstanceSourceMaterial {
     fn default() -> Self {
@@ -233,24 +233,13 @@ impl Default for SubstanceSourceMaterialFractiondescription {
     }
 }
 
-impl Default for SubstanceSourceMaterialOrganismAuthor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            author_type: Default::default(),
-            author_description: Default::default(),
-            _author_description: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceSourceMaterialOrganism {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             author: Default::default(),
-            organism_general: Default::default(),
             hybrid: Default::default(),
+            organism_general: Default::default(),
             family: Default::default(),
             genus: Default::default(),
             species: Default::default(),
@@ -261,12 +250,13 @@ impl Default for SubstanceSourceMaterialOrganism {
     }
 }
 
-impl Default for SubstanceSourceMaterialPartdescription {
+impl Default for SubstanceSourceMaterialOrganismAuthor {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            part: Default::default(),
-            part_location: Default::default(),
+            author_type: Default::default(),
+            author_description: Default::default(),
+            _author_description: Default::default(),
         }
     }
 }
@@ -296,6 +286,16 @@ impl Default for SubstanceSourceMaterialOrganismOrganismgeneral {
             phylum: Default::default(),
             class: Default::default(),
             order: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSourceMaterialPartdescription {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            part: Default::default(),
+            part_location: Default::default(),
         }
     }
 }

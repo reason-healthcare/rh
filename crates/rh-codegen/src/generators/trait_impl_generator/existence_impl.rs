@@ -136,7 +136,7 @@ impl TraitImplGenerator {
             return trait_impl;
         };
 
-        let mut choice_fields = std::collections::HashSet::new();
+        let mut choice_fields = std::collections::BTreeSet::new();
         for element in elements {
             let path_parts: Vec<&str> = element.path.split('.').collect();
             if path_parts.len() == 2 && path_parts[0] == structure_def.name {

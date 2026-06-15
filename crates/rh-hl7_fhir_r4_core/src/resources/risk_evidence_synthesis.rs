@@ -155,6 +155,51 @@ pub struct RiskEvidenceSynthesis {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub certainty: Vec<RiskEvidenceSynthesisCertainty>,
 }
+/// RiskEvidenceSynthesis nested structure for the 'certainty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisCertainty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A component that contributes to the overall certainty
+    #[serde(rename = "certaintySubcomponent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub certainty_subcomponent: Vec<RiskEvidenceSynthesisCertaintyCertaintysubcomponent>,
+    /// Certainty rating
+    ///
+    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rating: Vec<CodeableConcept>,
+    /// Used for footnotes or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// RiskEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of subcomponent of certainty rating
+    ///
+    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Subcomponent certainty rating
+    ///
+    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rating: Vec<CodeableConcept>,
+    /// Used for footnotes or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
 /// RiskEvidenceSynthesis nested structure for the 'riskEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisRiskestimate {
@@ -196,53 +241,6 @@ pub struct RiskEvidenceSynthesisRiskestimate {
     #[serde(rename = "_numeratorCount")]
     pub _numerator_count: Option<Element>,
 }
-/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-}
-/// RiskEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of subcomponent of certainty rating
-    ///
-    /// Binding: extensible (The subcomponent classification of quality of evidence rating systems.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Subcomponent certainty rating
-    ///
-    /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub rating: Vec<CodeableConcept>,
-    /// Used for footnotes or explanatory notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-}
 /// RiskEvidenceSynthesisRiskestimate nested structure for the 'precisionEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
@@ -269,26 +267,28 @@ pub struct RiskEvidenceSynthesisRiskestimatePrecisionestimate {
     /// Extension element for the 'to' primitive field. Contains metadata and extensions.
     pub _to: Option<Element>,
 }
-/// RiskEvidenceSynthesis nested structure for the 'certainty' field
+/// RiskEvidenceSynthesis nested structure for the 'sampleSize' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskEvidenceSynthesisCertainty {
+pub struct RiskEvidenceSynthesisSamplesize {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A component that contributes to the overall certainty
-    #[serde(rename = "certaintySubcomponent")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub certainty_subcomponent: Vec<RiskEvidenceSynthesisCertaintyCertaintysubcomponent>,
-    /// Certainty rating
-    ///
-    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub rating: Vec<CodeableConcept>,
-    /// Used for footnotes or explanatory notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
+    /// Description of sample size
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
 }
 
 impl Default for RiskEvidenceSynthesis {
@@ -341,6 +341,28 @@ impl Default for RiskEvidenceSynthesis {
     }
 }
 
+impl Default for RiskEvidenceSynthesisCertainty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            certainty_subcomponent: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
+impl Default for RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
 impl Default for RiskEvidenceSynthesisRiskestimate {
     fn default() -> Self {
         Self {
@@ -360,31 +382,6 @@ impl Default for RiskEvidenceSynthesisRiskestimate {
     }
 }
 
-impl Default for RiskEvidenceSynthesisSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
-        }
-    }
-}
-
-impl Default for RiskEvidenceSynthesisCertaintyCertaintysubcomponent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
 impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
     fn default() -> Self {
         Self {
@@ -400,13 +397,16 @@ impl Default for RiskEvidenceSynthesisRiskestimatePrecisionestimate {
     }
 }
 
-impl Default for RiskEvidenceSynthesisCertainty {
+impl Default for RiskEvidenceSynthesisSamplesize {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            certainty_subcomponent: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
         }
     }
 }

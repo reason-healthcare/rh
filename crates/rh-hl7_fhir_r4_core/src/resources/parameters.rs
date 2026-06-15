@@ -64,6 +64,22 @@ pub struct Parameters {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub parameter: Vec<ParametersParameter>,
 }
+/// fullUrl for resource
+///
+/// This specifies the fullUrl for the resource in parameters.resource, if there is one. When fullUrl is provided, ithe [resource resolution method described for Bundle](bundle.html#references).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/parameters-fullUrl
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParametersFullURL {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Parameters nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParametersParameter {
@@ -230,28 +246,20 @@ pub struct ParametersParameter {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub part: Vec<StringType>,
 }
-/// fullUrl for resource
-///
-/// This specifies the fullUrl for the resource in parameters.resource, if there is one. When fullUrl is provided, ithe [resource resolution method described for Bundle](bundle.html#references).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/parameters-fullUrl
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParametersFullURL {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 
 impl Default for Parameters {
     fn default() -> Self {
         Self {
             base: Resource::default(),
             parameter: Default::default(),
+        }
+    }
+}
+
+impl Default for ParametersFullURL {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -314,14 +322,6 @@ impl Default for ParametersParameter {
             value_meta: Default::default(),
             resource: Default::default(),
             part: Default::default(),
-        }
-    }
-}
-
-impl Default for ParametersFullURL {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }

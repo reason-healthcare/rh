@@ -190,6 +190,106 @@ pub struct Device {
     /// The higher level or encompassing device that this device is a logical part of
     pub parent: Option<Reference>,
 }
+/// Device nested structure for the 'conformsTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceConformsto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Describes the common type of the standard, specification, or formal guidance.  communication | performance | measurement
+    ///
+    /// Binding: example (The kind of standards used by the device.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/device-specification-category
+    pub category: Option<CodeableConcept>,
+    /// Identifies the standard, specification, or formal guidance that the device adheres to
+    ///
+    /// Binding: example (The type of version indicated for the device.)
+    ///
+    /// Available values:
+    /// - `528391`: Blood Pressure Cuff
+    /// - `528404`: Body Composition Analyzer
+    /// - `528425`: Cardiovascular Device
+    /// - `528402`: Coagulation meter
+    /// - `528409`: Continuous Glucose Monitor
+    /// - `528390`: Electro cardiograph
+    /// - `528457`: Generic 20601 Device
+    /// - `528401`: Glucose Monitor
+    /// - `528455`: Independent Activity/Living Hub
+    /// - `528403`: Insulin Pump
+    /// - ... and 7 more values
+    pub specification: CodeableConcept,
+    /// Specific form or variant of the standard
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+}
+/// Device nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The term that names the device
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// registered-name | user-friendly-name | patient-reported-name
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// The preferred device name
+    pub display: Option<BooleanType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+}
+/// Device nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that specifies the property being represented
+    ///
+    /// Binding: example (Device property type.)
+    ///
+    /// Available values:
+    /// - `528391`: Blood Pressure Cuff
+    /// - `528404`: Body Composition Analyzer
+    /// - `528425`: Cardiovascular Device
+    /// - `528402`: Coagulation meter
+    /// - `528409`: Continuous Glucose Monitor
+    /// - `528390`: Electro cardiograph
+    /// - `528457`: Generic 20601 Device
+    /// - `528401`: Glucose Monitor
+    /// - `528455`: Independent Activity/Living Hub
+    /// - `528403`: Insulin Pump
+    /// - ... and 18 more values
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Value of the property (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Value of the property (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Value of the property (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Value of the property (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Value of the property (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Value of the property (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Value of the property (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+}
 /// Device nested structure for the 'udiCarrier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceUdicarrier {
@@ -260,106 +360,6 @@ pub struct DeviceVersion {
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
 }
-/// Device nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The term that names the device
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// registered-name | user-friendly-name | patient-reported-name
-    #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// The preferred device name
-    pub display: Option<BooleanType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
-/// Device nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that specifies the property being represented
-    ///
-    /// Binding: example (Device property type.)
-    ///
-    /// Available values:
-    /// - `528391`: Blood Pressure Cuff
-    /// - `528404`: Body Composition Analyzer
-    /// - `528425`: Cardiovascular Device
-    /// - `528402`: Coagulation meter
-    /// - `528409`: Continuous Glucose Monitor
-    /// - `528390`: Electro cardiograph
-    /// - `528457`: Generic 20601 Device
-    /// - `528401`: Glucose Monitor
-    /// - `528455`: Independent Activity/Living Hub
-    /// - `528403`: Insulin Pump
-    /// - ... and 18 more values
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Value of the property (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Value of the property (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Value of the property (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Value of the property (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Value of the property (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Value of the property (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Value of the property (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-}
-/// Device nested structure for the 'conformsTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceConformsto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Describes the common type of the standard, specification, or formal guidance.  communication | performance | measurement
-    ///
-    /// Binding: example (The kind of standards used by the device.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/device-specification-category
-    pub category: Option<CodeableConcept>,
-    /// Identifies the standard, specification, or formal guidance that the device adheres to
-    ///
-    /// Binding: example (The type of version indicated for the device.)
-    ///
-    /// Available values:
-    /// - `528391`: Blood Pressure Cuff
-    /// - `528404`: Body Composition Analyzer
-    /// - `528425`: Cardiovascular Device
-    /// - `528402`: Coagulation meter
-    /// - `528409`: Continuous Glucose Monitor
-    /// - `528390`: Electro cardiograph
-    /// - `528457`: Generic 20601 Device
-    /// - `528401`: Glucose Monitor
-    /// - `528455`: Independent Activity/Living Hub
-    /// - `528403`: Insulin Pump
-    /// - ... and 7 more values
-    pub specification: CodeableConcept,
-    /// Specific form or variant of the standard
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-}
 
 impl Default for Device {
     fn default() -> Self {
@@ -411,36 +411,14 @@ impl Default for Device {
     }
 }
 
-impl Default for DeviceUdicarrier {
+impl Default for DeviceConformsto {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            device_identifier: Default::default(),
-            _device_identifier: Default::default(),
-            issuer: Default::default(),
-            _issuer: Default::default(),
-            jurisdiction: Default::default(),
-            _jurisdiction: Default::default(),
-            carrier_a_i_d_c: Default::default(),
-            _carrier_a_i_d_c: Default::default(),
-            carrier_h_r_f: Default::default(),
-            _carrier_h_r_f: Default::default(),
-            entry_type: Default::default(),
-            _entry_type: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceVersion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            component: Default::default(),
-            install_date: Default::default(),
-            _install_date: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
+            category: Default::default(),
+            specification: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
         }
     }
 }
@@ -475,14 +453,36 @@ impl Default for DeviceProperty {
     }
 }
 
-impl Default for DeviceConformsto {
+impl Default for DeviceUdicarrier {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: Default::default(),
-            specification: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
+            device_identifier: Default::default(),
+            _device_identifier: Default::default(),
+            issuer: Default::default(),
+            _issuer: Default::default(),
+            jurisdiction: Default::default(),
+            _jurisdiction: Default::default(),
+            carrier_a_i_d_c: Default::default(),
+            _carrier_a_i_d_c: Default::default(),
+            carrier_h_r_f: Default::default(),
+            _carrier_h_r_f: Default::default(),
+            entry_type: Default::default(),
+            _entry_type: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            component: Default::default(),
+            install_date: Default::default(),
+            _install_date: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
         }
     }
 }

@@ -199,22 +199,26 @@ pub struct ImmunizationPerformer {
     /// Individual or organization who was performing
     pub actor: Reference,
 }
-/// Immunization nested structure for the 'reaction' field
+/// Immunization nested structure for the 'programEligibility' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationReaction {
+pub struct ImmunizationProgrameligibility {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// When reaction started
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Additional information on reaction
-    pub manifestation: Option<CodeableReference>,
-    /// Indicates self-reported reaction
-    pub reported: Option<BooleanType>,
-    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
-    pub _reported: Option<Element>,
+    /// The program that eligibility is declared for
+    ///
+    /// Binding: example (x)
+    ///
+    /// Available values:
+    /// - `64994-7`
+    pub program: CodeableConcept,
+    /// The patient's eligibility status for the program
+    ///
+    /// Binding: example (x)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-program-eligibility
+    #[serde(rename = "programStatus")]
+    pub program_status: CodeableConcept,
 }
 /// Immunization nested structure for the 'protocolApplied' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -260,26 +264,22 @@ pub struct ImmunizationProtocolapplied {
     #[serde(rename = "_seriesDoses")]
     pub _series_doses: Option<Element>,
 }
-/// Immunization nested structure for the 'programEligibility' field
+/// Immunization nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationProgrameligibility {
+pub struct ImmunizationReaction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The program that eligibility is declared for
-    ///
-    /// Binding: example (x)
-    ///
-    /// Available values:
-    /// - `64994-7`
-    pub program: CodeableConcept,
-    /// The patient's eligibility status for the program
-    ///
-    /// Binding: example (x)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-program-eligibility
-    #[serde(rename = "programStatus")]
-    pub program_status: CodeableConcept,
+    /// When reaction started
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Additional information on reaction
+    pub manifestation: Option<CodeableReference>,
+    /// Indicates self-reported reaction
+    pub reported: Option<BooleanType>,
+    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
+    pub _reported: Option<Element>,
 }
 
 impl Default for Immunization {
@@ -334,15 +334,12 @@ impl Default for ImmunizationPerformer {
     }
 }
 
-impl Default for ImmunizationReaction {
+impl Default for ImmunizationProgrameligibility {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            manifestation: Default::default(),
-            reported: Default::default(),
-            _reported: Default::default(),
+            program: Default::default(),
+            program_status: Default::default(),
         }
     }
 }
@@ -363,12 +360,15 @@ impl Default for ImmunizationProtocolapplied {
     }
 }
 
-impl Default for ImmunizationProgrameligibility {
+impl Default for ImmunizationReaction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            program: Default::default(),
-            program_status: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            manifestation: Default::default(),
+            reported: Default::default(),
+            _reported: Default::default(),
         }
     }
 }

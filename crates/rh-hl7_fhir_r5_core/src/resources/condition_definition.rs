@@ -178,6 +178,25 @@ pub struct ConditionDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub plan: Vec<ConditionDefinitionPlan>,
 }
+/// ConditionDefinition nested structure for the 'medication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDefinitionMedication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category that is relevant
+    ///
+    /// Binding: example (A coded concept identifying the category of medication request.  For example, where the medication is to be consumed or administered, or the type of medication treatment.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/medicationrequest-category
+    pub category: Option<CodeableConcept>,
+    /// Code for relevant Medication
+    ///
+    /// Binding: example (A coded concept identifying substance or product that can be ordered.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medication-codes
+    pub code: Option<CodeableConcept>,
+}
 /// ConditionDefinition nested structure for the 'observation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionDefinitionObservation {
@@ -196,19 +215,6 @@ pub struct ConditionDefinitionObservation {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
     pub code: Option<CodeableConcept>,
-}
-/// ConditionDefinition nested structure for the 'questionnaire' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionQuestionnaire {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// preadmit | diff-diagnosis | outcome
-    pub purpose: ConditionQuestionnairePurpose,
-    /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
-    pub _purpose: Option<Element>,
-    /// Specific Questionnaire
-    pub reference: Reference,
 }
 /// ConditionDefinition nested structure for the 'plan' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -245,24 +251,18 @@ pub struct ConditionDefinitionPrecondition {
     #[serde(rename = "valueQuantity")]
     pub value_quantity: Option<Quantity>,
 }
-/// ConditionDefinition nested structure for the 'medication' field
+/// ConditionDefinition nested structure for the 'questionnaire' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionMedication {
+pub struct ConditionDefinitionQuestionnaire {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Category that is relevant
-    ///
-    /// Binding: example (A coded concept identifying the category of medication request.  For example, where the medication is to be consumed or administered, or the type of medication treatment.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/medicationrequest-category
-    pub category: Option<CodeableConcept>,
-    /// Code for relevant Medication
-    ///
-    /// Binding: example (A coded concept identifying substance or product that can be ordered.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medication-codes
-    pub code: Option<CodeableConcept>,
+    /// preadmit | diff-diagnosis | outcome
+    pub purpose: ConditionQuestionnairePurpose,
+    /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
+    pub _purpose: Option<Element>,
+    /// Specific Questionnaire
+    pub reference: Reference,
 }
 
 impl Default for ConditionDefinition {
@@ -317,7 +317,7 @@ impl Default for ConditionDefinition {
     }
 }
 
-impl Default for ConditionDefinitionObservation {
+impl Default for ConditionDefinitionMedication {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -327,13 +327,12 @@ impl Default for ConditionDefinitionObservation {
     }
 }
 
-impl Default for ConditionDefinitionQuestionnaire {
+impl Default for ConditionDefinitionObservation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            purpose: ConditionQuestionnairePurpose::default(),
-            _purpose: Default::default(),
-            reference: Reference::default(),
+            category: Default::default(),
+            code: Default::default(),
         }
     }
 }
@@ -361,12 +360,13 @@ impl Default for ConditionDefinitionPrecondition {
     }
 }
 
-impl Default for ConditionDefinitionMedication {
+impl Default for ConditionDefinitionQuestionnaire {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: Default::default(),
-            code: Default::default(),
+            purpose: ConditionQuestionnairePurpose::default(),
+            _purpose: Default::default(),
+            reference: Reference::default(),
         }
     }
 }

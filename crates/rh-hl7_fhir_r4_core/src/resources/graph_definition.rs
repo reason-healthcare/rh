@@ -91,6 +91,38 @@ pub struct GraphDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub link: Vec<GraphDefinitionLink>,
 }
+/// GraphDefinition nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Potential target for the link
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target: Vec<GraphDefinitionLinkTarget>,
+    /// Path in the resource that contains the link
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// Which slice (if profiled)
+    #[serde(rename = "sliceName")]
+    pub slice_name: Option<StringType>,
+    /// Extension element for the 'sliceName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sliceName")]
+    pub _slice_name: Option<Element>,
+    /// Minimum occurrences for this link
+    pub min: Option<IntegerType>,
+    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
+    pub _min: Option<Element>,
+    /// Maximum occurrences for this link
+    pub max: Option<StringType>,
+    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
+    pub _max: Option<Element>,
+    /// Why this link is specified
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
 /// GraphDefinitionLink nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinitionLinkTarget {
@@ -142,38 +174,6 @@ pub struct GraphDefinitionLinkTargetCompartment {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
-/// GraphDefinition nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Potential target for the link
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub target: Vec<GraphDefinitionLinkTarget>,
-    /// Path in the resource that contains the link
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// Which slice (if profiled)
-    #[serde(rename = "sliceName")]
-    pub slice_name: Option<StringType>,
-    /// Extension element for the 'sliceName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sliceName")]
-    pub _slice_name: Option<Element>,
-    /// Minimum occurrences for this link
-    pub min: Option<IntegerType>,
-    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
-    pub _min: Option<Element>,
-    /// Maximum occurrences for this link
-    pub max: Option<StringType>,
-    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
-    pub _max: Option<Element>,
-    /// Why this link is specified
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
 
 impl Default for GraphDefinition {
     fn default() -> Self {
@@ -209,6 +209,25 @@ impl Default for GraphDefinition {
     }
 }
 
+impl Default for GraphDefinitionLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            slice_name: Default::default(),
+            _slice_name: Default::default(),
+            min: Default::default(),
+            _min: Default::default(),
+            max: Default::default(),
+            _max: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
 impl Default for GraphDefinitionLinkTarget {
     fn default() -> Self {
         Self {
@@ -236,25 +255,6 @@ impl Default for GraphDefinitionLinkTargetCompartment {
             _rule: Default::default(),
             expression: Default::default(),
             _expression: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for GraphDefinitionLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target: Default::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            slice_name: Default::default(),
-            _slice_name: Default::default(),
-            min: Default::default(),
-            _min: Default::default(),
-            max: Default::default(),
-            _max: Default::default(),
             description: Default::default(),
             _description: Default::default(),
         }

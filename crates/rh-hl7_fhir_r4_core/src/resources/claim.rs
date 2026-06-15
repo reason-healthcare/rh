@@ -125,215 +125,58 @@ pub struct Claim {
     /// Total claim cost
     pub total: Option<Money>,
 }
-/// Claim nested structure for the 'supportingInfo' field
+/// Claim nested structure for the 'accident' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimSupportinginfo {
+pub struct ClaimAccident {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Information instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Classification of the supplied information
-    ///
-    /// Binding: example (The valuset used for additional information category codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-informationcategory
-    pub category: CodeableConcept,
-    /// Type of information
-    ///
-    /// Binding: example (The valuset used for additional information codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-exception
-    pub code: Option<CodeableConcept>,
-    /// When it occurred (date)
-    #[serde(rename = "timingDate")]
-    pub timing_date: Option<DateType>,
-    /// When it occurred (Period)
-    #[serde(rename = "timingPeriod")]
-    pub timing_period: Option<Period>,
-    /// Data to be provided (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// Data to be provided (string)
-    #[serde(rename = "valueString")]
-    pub value_string: Option<StringType>,
-    /// Data to be provided (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// Data to be provided (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Option<Attachment>,
-    /// Data to be provided (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Option<Reference>,
-    /// Explanation for the information
-    ///
-    /// Binding: example (Reason codes for the missing teeth.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/missing-tooth-reason
-    pub reason: Option<CodeableConcept>,
-}
-/// Claim nested structure for the 'payee' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimPayee {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category of recipient
-    ///
-    /// Binding: example (A code for the party to be reimbursed.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/payeetype
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Recipient reference
-    pub party: Option<Reference>,
-}
-/// Claim nested structure for the 'related' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimRelated {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the related claim
-    pub claim: Option<Reference>,
-    /// How the reference claim is related
-    ///
-    /// Binding: example (Relationship of this claim to a related Claim.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/related-claim-relationship
-    pub relationship: Option<CodeableConcept>,
-    /// File or case reference
-    pub reference: Option<Identifier>,
-}
-/// ClaimItemDetail nested structure for the 'subDetail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimItemDetailSubdetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Item instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Revenue or cost center code
-    ///
-    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
-    pub revenue: Option<CodeableConcept>,
-    /// Benefit classification
-    ///
-    /// Binding: example (Benefit categories such as: oral-basic, major, glasses.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
-    pub category: Option<CodeableConcept>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub modifier: Vec<CodeableConcept>,
-    /// Program the product or service is provided under
-    ///
-    /// Binding: example (Program specific reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
-    #[serde(rename = "programCode")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub program_code: Vec<CodeableConcept>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Unique device identifier
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub udi: Vec<Reference>,
-}
-/// Claim nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Insurance instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Coverage to be used for adjudication
-    pub focal: BooleanType,
-    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
-    pub _focal: Option<Element>,
-    /// Pre-assigned Claim number
-    pub identifier: Option<Identifier>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Additional provider contract number
-    #[serde(rename = "businessArrangement")]
-    pub business_arrangement: Option<StringType>,
-    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_businessArrangement")]
-    pub _business_arrangement: Option<Element>,
-    /// Prior authorization reference number
-    #[serde(rename = "preAuthRef")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub pre_auth_ref: Vec<StringType>,
-    /// Extension element for the 'preAuthRef' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_preAuthRef")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub _pre_auth_ref: Vec<Element>,
-    /// Adjudication results
-    #[serde(rename = "claimResponse")]
-    pub claim_response: Option<Reference>,
-}
-/// Claim nested structure for the 'procedure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimProcedure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Procedure instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Category of Procedure
-    ///
-    /// Binding: example (Example procedure type codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-procedure-type
-    #[serde(rename = "type")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub type_: Vec<CodeableConcept>,
-    /// When the procedure was performed
-    pub date: Option<DateTimeType>,
+    /// When the incident occurred
+    pub date: DateType,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
-    /// Specific clinical procedure (CodeableConcept)
-    #[serde(rename = "procedureCodeableConcept")]
-    pub procedure_codeable_concept: CodeableConcept,
-    /// Specific clinical procedure (Reference)
-    #[serde(rename = "procedureReference")]
-    pub procedure_reference: Reference,
-    /// Unique device identifier
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub udi: Vec<Reference>,
+    /// The nature of the accident
+    ///
+    /// Binding: extensible (Type of accident: work place, auto, etc.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActIncidentCode
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Where the event occurred (Address)
+    #[serde(rename = "locationAddress")]
+    pub location_address: Option<Address>,
+    /// Where the event occurred (Reference)
+    #[serde(rename = "locationReference")]
+    pub location_reference: Option<Reference>,
+}
+/// Claim nested structure for the 'careTeam' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimCareteam {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Order of care team
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Practitioner or organization
+    pub provider: Reference,
+    /// Indicator of the lead practitioner
+    pub responsible: Option<BooleanType>,
+    /// Extension element for the 'responsible' primitive field. Contains metadata and extensions.
+    pub _responsible: Option<Element>,
+    /// Function within the team
+    ///
+    /// Binding: example (The role codes for the care team members.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-careteamrole
+    pub role: Option<CodeableConcept>,
+    /// Practitioner credential or specialization
+    ///
+    /// Binding: example (Provider professional qualifications.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/provider-qualification
+    pub qualification: Option<CodeableConcept>,
 }
 /// Claim nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -374,88 +217,41 @@ pub struct ClaimDiagnosis {
     #[serde(rename = "packageCode")]
     pub package_code: Option<CodeableConcept>,
 }
-/// ClaimItem nested structure for the 'detail' field
+/// Claim nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimItemDetail {
+pub struct ClaimInsurance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Item instance identifier
+    /// Insurance instance identifier
     pub sequence: PositiveIntType,
     /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
     pub _sequence: Option<Element>,
-    /// Revenue or cost center code
-    ///
-    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
-    pub revenue: Option<CodeableConcept>,
-    /// Benefit classification
-    ///
-    /// Binding: example (Benefit categories such as: oral-basic, major, glasses.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
-    pub category: Option<CodeableConcept>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    /// Coverage to be used for adjudication
+    pub focal: BooleanType,
+    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
+    pub _focal: Option<Element>,
+    /// Pre-assigned Claim number
+    pub identifier: Option<Identifier>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Additional provider contract number
+    #[serde(rename = "businessArrangement")]
+    pub business_arrangement: Option<StringType>,
+    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_businessArrangement")]
+    pub _business_arrangement: Option<Element>,
+    /// Prior authorization reference number
+    #[serde(rename = "preAuthRef")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub modifier: Vec<CodeableConcept>,
-    /// Program the product or service is provided under
-    ///
-    /// Binding: example (Program specific reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
-    #[serde(rename = "programCode")]
+    pub pre_auth_ref: Vec<StringType>,
+    /// Extension element for the 'preAuthRef' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_preAuthRef")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub program_code: Vec<CodeableConcept>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Unique device identifier
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub udi: Vec<Reference>,
-}
-/// Claim nested structure for the 'accident' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimAccident {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When the incident occurred
-    pub date: DateType,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// The nature of the accident
-    ///
-    /// Binding: extensible (Type of accident: work place, auto, etc.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActIncidentCode
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Where the event occurred (Address)
-    #[serde(rename = "locationAddress")]
-    pub location_address: Option<Address>,
-    /// Where the event occurred (Reference)
-    #[serde(rename = "locationReference")]
-    pub location_reference: Option<Reference>,
+    pub _pre_auth_ref: Vec<Element>,
+    /// Adjudication results
+    #[serde(rename = "claimResponse")]
+    pub claim_response: Option<Reference>,
 }
 /// Claim nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -584,34 +380,238 @@ pub struct ClaimItem {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub encounter: Vec<Reference>,
 }
-/// Claim nested structure for the 'careTeam' field
+/// ClaimItem nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimCareteam {
+pub struct ClaimItemDetail {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Order of care team
+    /// Item instance identifier
     pub sequence: PositiveIntType,
     /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
     pub _sequence: Option<Element>,
-    /// Practitioner or organization
-    pub provider: Reference,
-    /// Indicator of the lead practitioner
-    pub responsible: Option<BooleanType>,
-    /// Extension element for the 'responsible' primitive field. Contains metadata and extensions.
-    pub _responsible: Option<Element>,
-    /// Function within the team
+    /// Revenue or cost center code
     ///
-    /// Binding: example (The role codes for the care team members.)
+    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-careteamrole
-    pub role: Option<CodeableConcept>,
-    /// Practitioner credential or specialization
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
+    pub revenue: Option<CodeableConcept>,
+    /// Benefit classification
     ///
-    /// Binding: example (Provider professional qualifications.)
+    /// Binding: example (Benefit categories such as: oral-basic, major, glasses.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/provider-qualification
-    pub qualification: Option<CodeableConcept>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
+    pub category: Option<CodeableConcept>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<CodeableConcept>,
+    /// Program the product or service is provided under
+    ///
+    /// Binding: example (Program specific reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
+    #[serde(rename = "programCode")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub program_code: Vec<CodeableConcept>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Unique device identifier
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub udi: Vec<Reference>,
+}
+/// ClaimItemDetail nested structure for the 'subDetail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimItemDetailSubdetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Item instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Revenue or cost center code
+    ///
+    /// Binding: example (Codes for the revenue or cost centers supplying the service and/or products.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-revenue-center
+    pub revenue: Option<CodeableConcept>,
+    /// Benefit classification
+    ///
+    /// Binding: example (Benefit categories such as: oral-basic, major, glasses.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
+    pub category: Option<CodeableConcept>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<CodeableConcept>,
+    /// Program the product or service is provided under
+    ///
+    /// Binding: example (Program specific reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
+    #[serde(rename = "programCode")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub program_code: Vec<CodeableConcept>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Unique device identifier
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub udi: Vec<Reference>,
+}
+/// Claim nested structure for the 'payee' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimPayee {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category of recipient
+    ///
+    /// Binding: example (A code for the party to be reimbursed.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/payeetype
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Recipient reference
+    pub party: Option<Reference>,
+}
+/// Claim nested structure for the 'procedure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimProcedure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Procedure instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Category of Procedure
+    ///
+    /// Binding: example (Example procedure type codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-procedure-type
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
+    /// When the procedure was performed
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Specific clinical procedure (CodeableConcept)
+    #[serde(rename = "procedureCodeableConcept")]
+    pub procedure_codeable_concept: CodeableConcept,
+    /// Specific clinical procedure (Reference)
+    #[serde(rename = "procedureReference")]
+    pub procedure_reference: Reference,
+    /// Unique device identifier
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub udi: Vec<Reference>,
+}
+/// Claim nested structure for the 'related' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimRelated {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the related claim
+    pub claim: Option<Reference>,
+    /// How the reference claim is related
+    ///
+    /// Binding: example (Relationship of this claim to a related Claim.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/related-claim-relationship
+    pub relationship: Option<CodeableConcept>,
+    /// File or case reference
+    pub reference: Option<Identifier>,
+}
+/// Claim nested structure for the 'supportingInfo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimSupportinginfo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Classification of the supplied information
+    ///
+    /// Binding: example (The valuset used for additional information category codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-informationcategory
+    pub category: CodeableConcept,
+    /// Type of information
+    ///
+    /// Binding: example (The valuset used for additional information codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-exception
+    pub code: Option<CodeableConcept>,
+    /// When it occurred (date)
+    #[serde(rename = "timingDate")]
+    pub timing_date: Option<DateType>,
+    /// When it occurred (Period)
+    #[serde(rename = "timingPeriod")]
+    pub timing_period: Option<Period>,
+    /// Data to be provided (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// Data to be provided (string)
+    #[serde(rename = "valueString")]
+    pub value_string: Option<StringType>,
+    /// Data to be provided (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// Data to be provided (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Option<Attachment>,
+    /// Data to be provided (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Option<Reference>,
+    /// Explanation for the information
+    ///
+    /// Binding: example (Reason codes for the missing teeth.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/missing-tooth-reason
+    pub reason: Option<CodeableConcept>,
 }
 
 impl Default for Claim {
@@ -652,99 +652,30 @@ impl Default for Claim {
     }
 }
 
-impl Default for ClaimSupportinginfo {
+impl Default for ClaimAccident {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            category: Default::default(),
-            code: Default::default(),
-            timing_date: Default::default(),
-            timing_period: Default::default(),
-            value_boolean: Default::default(),
-            value_string: Default::default(),
-            value_quantity: Default::default(),
-            value_attachment: Default::default(),
-            value_reference: Default::default(),
-            reason: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimPayee {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            party: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimRelated {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            claim: Default::default(),
-            relationship: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimItemDetailSubdetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            revenue: Default::default(),
-            category: Default::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            program_code: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            udi: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: PositiveIntType::default(),
-            _sequence: Default::default(),
-            focal: BooleanType::default(),
-            _focal: Default::default(),
-            identifier: Default::default(),
-            coverage: Reference::default(),
-            business_arrangement: Default::default(),
-            _business_arrangement: Default::default(),
-            pre_auth_ref: Default::default(),
-            _pre_auth_ref: Default::default(),
-            claim_response: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimProcedure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sequence: PositiveIntType::default(),
-            _sequence: Default::default(),
-            type_: Default::default(),
-            date: Default::default(),
+            date: DateType::default(),
             _date: Default::default(),
-            procedure_codeable_concept: Default::default(),
-            procedure_reference: Default::default(),
-            udi: Default::default(),
+            type_: Default::default(),
+            location_address: Default::default(),
+            location_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimCareteam {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            provider: Default::default(),
+            responsible: Default::default(),
+            _responsible: Default::default(),
+            role: Default::default(),
+            qualification: Default::default(),
         }
     }
 }
@@ -764,36 +695,21 @@ impl Default for ClaimDiagnosis {
     }
 }
 
-impl Default for ClaimItemDetail {
+impl Default for ClaimInsurance {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sequence: Default::default(),
+            sequence: PositiveIntType::default(),
             _sequence: Default::default(),
-            revenue: Default::default(),
-            category: Default::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            program_code: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            udi: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimAccident {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            date: DateType::default(),
-            _date: Default::default(),
-            type_: Default::default(),
-            location_address: Default::default(),
-            location_reference: Default::default(),
+            focal: BooleanType::default(),
+            _focal: Default::default(),
+            identifier: Default::default(),
+            coverage: Reference::default(),
+            business_arrangement: Default::default(),
+            _business_arrangement: Default::default(),
+            pre_auth_ref: Default::default(),
+            _pre_auth_ref: Default::default(),
+            claim_response: Default::default(),
         }
     }
 }
@@ -836,17 +752,101 @@ impl Default for ClaimItem {
     }
 }
 
-impl Default for ClaimCareteam {
+impl Default for ClaimItemDetail {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             sequence: Default::default(),
             _sequence: Default::default(),
-            provider: Default::default(),
-            responsible: Default::default(),
-            _responsible: Default::default(),
-            role: Default::default(),
-            qualification: Default::default(),
+            revenue: Default::default(),
+            category: Default::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            program_code: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            udi: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimItemDetailSubdetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            revenue: Default::default(),
+            category: Default::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            program_code: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            udi: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimPayee {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimProcedure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: PositiveIntType::default(),
+            _sequence: Default::default(),
+            type_: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            procedure_codeable_concept: Default::default(),
+            procedure_reference: Default::default(),
+            udi: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimRelated {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            claim: Default::default(),
+            relationship: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimSupportinginfo {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            category: Default::default(),
+            code: Default::default(),
+            timing_date: Default::default(),
+            timing_period: Default::default(),
+            value_boolean: Default::default(),
+            value_string: Default::default(),
+            value_quantity: Default::default(),
+            value_attachment: Default::default(),
+            value_reference: Default::default(),
+            reason: Default::default(),
         }
     }
 }

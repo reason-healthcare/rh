@@ -142,18 +142,66 @@ pub struct Questionnaire {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub item: Vec<QuestionnaireItem>,
 }
-/// unit
+/// baseType
 ///
-/// Provides a computable unit of measure associated with numeric questions to support subsequent computation on responses. This is for use on items of type integer and decimal, and it's purpose is to support converting the integer or decimal answer into a Quantity when extracting the data into a resource.
+/// This identifies the underlying type in a profile, when a questionnaire is generated from a profile.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unit
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-baseType
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireUnit {
+pub struct QuestionnaireBaseType {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// choiceOrientation
+///
+/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireChoiceOrientation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// constraint
+///
+/// An invariant that must be satisfied before responses to the questionnaire can be considered "complete".
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-constraint
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireConstraint {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// fhirType
+///
+/// For questionnaires generated from FHIR profiles, indicates the FHIR data type or resource type that corresponds to this node.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-fhirType
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireFHIRType {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -174,110 +222,12 @@ pub struct QuestionnaireHidden {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// minOccurs
-///
-/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireMinOccurs {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// optionExclusive
-///
-/// If true, indicates that if this answerOption is selected, no other possible answers may be selected, even if the item is a repeating question.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-optionExclusive
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireOptionExclusive {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// maxOccurs
-///
-/// The maximum number of times the group must appear, or the maximum number of answers for a question - when greater than 1 and not unlimited.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-maxOccurs
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireMaxOccurs {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// QuestionnaireItem nested structure for the 'answerOption' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemAnsweroption {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Answer value (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Answer value (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Answer value (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Answer value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Answer value (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Answer value (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Whether option is selected by default
-    #[serde(rename = "initialSelected")]
-    pub initial_selected: Option<BooleanType>,
-    /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_initialSelected")]
-    pub _initial_selected: Option<Element>,
-}
-/// signatureRequired
-///
-/// Indicates that a signature (of the specified type) is needed when completing the QuestionnaireResponse.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-signatureRequired
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireSignatureRequired {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Questionnaire nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireItem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Initial value(s) when item is first rendered
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub initial: Vec<QuestionnaireItemInitial>,
     /// Permitted answer
     #[serde(rename = "answerOption")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -286,6 +236,9 @@ pub struct QuestionnaireItem {
     #[serde(rename = "enableWhen")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub enable_when: Vec<QuestionnaireItemEnablewhen>,
+    /// Initial value(s) when item is first rendered
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub initial: Vec<QuestionnaireItemInitial>,
     /// Unique id for item in questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -352,208 +305,36 @@ pub struct QuestionnaireItem {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub item: Vec<StringType>,
 }
-/// optionPrefix
-///
-/// The label to list in front of a code when presenting a list of possible values in a questionnaire-like fashion.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-optionPrefix
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+/// QuestionnaireItem nested structure for the 'answerOption' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireOptionPrefix {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// supportLink
-///
-/// A URL that resolves to additional supporting information or guidance related to the question.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-supportLink
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireSupportLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// referenceProfile
-///
-/// Where the type for a question is "Reference", indicates a profile that the resource instances pointed to in answers to this question must be valid against.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceProfile
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireReferenceProfile {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// unitValueSet
-///
-/// A set of units that the user may choose when providing a quantity value.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireUnitValueSet {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// choiceOrientation
-///
-/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireChoiceOrientation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// referenceResource
-///
-/// Where the type for a question is "Reference", indicates a type of resource that is permitted.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireReferenceResource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// sliderStepValue
-///
-/// For slider-based controls, indicates the step size to use when toggling the control up or down.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-sliderStepValue
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireSliderStepValue {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// fhirType
-///
-/// For questionnaires generated from FHIR profiles, indicates the FHIR data type or resource type that corresponds to this node.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-fhirType
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireFHIRType {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// unitOption
-///
-/// A unit that the user may choose when providing a quantity value.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitOption
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireUnitOption {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// QuestionnaireItem nested structure for the 'initial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemInitial {
+pub struct QuestionnaireItemAnsweroption {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Actual value for initializing the question (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Actual value for initializing the question (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Actual value for initializing the question (integer)
+    /// Answer value (integer)
     #[serde(rename = "valueInteger")]
     pub value_integer: IntegerType,
-    /// Actual value for initializing the question (date)
+    /// Answer value (date)
     #[serde(rename = "valueDate")]
     pub value_date: DateType,
-    /// Actual value for initializing the question (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Actual value for initializing the question (time)
+    /// Answer value (time)
     #[serde(rename = "valueTime")]
     pub value_time: TimeType,
-    /// Actual value for initializing the question (string)
+    /// Answer value (string)
     #[serde(rename = "valueString")]
     pub value_string: StringType,
-    /// Actual value for initializing the question (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Actual value for initializing the question (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Actual value for initializing the question (Coding)
+    /// Answer value (Coding)
     #[serde(rename = "valueCoding")]
     pub value_coding: Coding,
-    /// Actual value for initializing the question (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Actual value for initializing the question (Reference)
+    /// Answer value (Reference)
     #[serde(rename = "valueReference")]
     pub value_reference: Reference,
-}
-/// referenceFilter
-///
-/// Identifies a filter to apply when looking up candidate answers for the question.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceFilter
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireReferenceFilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
+    /// Whether option is selected by default
+    #[serde(rename = "initialSelected")]
+    pub initial_selected: Option<BooleanType>,
+    /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_initialSelected")]
+    pub _initial_selected: Option<Element>,
 }
 /// QuestionnaireItem nested structure for the 'enableWhen' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -600,34 +381,253 @@ pub struct QuestionnaireItemEnablewhen {
     #[serde(rename = "answerReference")]
     pub answer_reference: Reference,
 }
-/// constraint
+/// QuestionnaireItem nested structure for the 'initial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemInitial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Actual value for initializing the question (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Actual value for initializing the question (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Actual value for initializing the question (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Actual value for initializing the question (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Actual value for initializing the question (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Actual value for initializing the question (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Actual value for initializing the question (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Actual value for initializing the question (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Actual value for initializing the question (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Actual value for initializing the question (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Actual value for initializing the question (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Actual value for initializing the question (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+}
+/// maxOccurs
 ///
-/// An invariant that must be satisfied before responses to the questionnaire can be considered "complete".
+/// The maximum number of times the group must appear, or the maximum number of answers for a question - when greater than 1 and not unlimited.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-constraint
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-maxOccurs
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireConstraint {
+pub struct QuestionnaireMaxOccurs {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// baseType
+/// minOccurs
 ///
-/// This identifies the underlying type in a profile, when a questionnaire is generated from a profile.
+/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-baseType
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireBaseType {
+pub struct QuestionnaireMinOccurs {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// optionExclusive
+///
+/// If true, indicates that if this answerOption is selected, no other possible answers may be selected, even if the item is a repeating question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-optionExclusive
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireOptionExclusive {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// optionPrefix
+///
+/// The label to list in front of a code when presenting a list of possible values in a questionnaire-like fashion.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-optionPrefix
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireOptionPrefix {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// referenceFilter
+///
+/// Identifies a filter to apply when looking up candidate answers for the question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceFilter
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireReferenceFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// referenceProfile
+///
+/// Where the type for a question is "Reference", indicates a profile that the resource instances pointed to in answers to this question must be valid against.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceProfile
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireReferenceProfile {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// referenceResource
+///
+/// Where the type for a question is "Reference", indicates a type of resource that is permitted.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireReferenceResource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// signatureRequired
+///
+/// Indicates that a signature (of the specified type) is needed when completing the QuestionnaireResponse.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-signatureRequired
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSignatureRequired {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// sliderStepValue
+///
+/// For slider-based controls, indicates the step size to use when toggling the control up or down.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-sliderStepValue
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSliderStepValue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// supportLink
+///
+/// A URL that resolves to additional supporting information or guidance related to the question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-supportLink
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSupportLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// unit
+///
+/// Provides a computable unit of measure associated with numeric questions to support subsequent computation on responses. This is for use on items of type integer and decimal, and it's purpose is to support converting the integer or decimal answer into a Quantity when extracting the data into a resource.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unit
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireUnit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// unitOption
+///
+/// A unit that the user may choose when providing a quantity value.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitOption
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireUnitOption {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// unitValueSet
+///
+/// A set of units that the user may choose when providing a quantity value.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireUnitValueSet {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -678,7 +678,31 @@ impl Default for Questionnaire {
     }
 }
 
-impl Default for QuestionnaireUnit {
+impl Default for QuestionnaireBaseType {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireChoiceOrientation {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireConstraint {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireFHIRType {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -694,61 +718,13 @@ impl Default for QuestionnaireHidden {
     }
 }
 
-impl Default for QuestionnaireMinOccurs {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireOptionExclusive {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireMaxOccurs {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireItemAnsweroption {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_integer: Default::default(),
-            value_date: Default::default(),
-            value_time: Default::default(),
-            value_string: Default::default(),
-            value_coding: Default::default(),
-            value_reference: Default::default(),
-            initial_selected: Default::default(),
-            _initial_selected: Default::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireSignatureRequired {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for QuestionnaireItem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            initial: Default::default(),
             answer_option: Default::default(),
             enable_when: Default::default(),
+            initial: Default::default(),
             link_id: StringType::default(),
             _link_id: Default::default(),
             definition: Default::default(),
@@ -777,102 +753,18 @@ impl Default for QuestionnaireItem {
     }
 }
 
-impl Default for QuestionnaireOptionPrefix {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireSupportLink {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireReferenceProfile {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireUnitValueSet {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireChoiceOrientation {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireReferenceResource {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireSliderStepValue {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireFHIRType {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireUnitOption {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireItemInitial {
+impl Default for QuestionnaireItemAnsweroption {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            value_boolean: Default::default(),
-            value_decimal: Default::default(),
             value_integer: Default::default(),
             value_date: Default::default(),
-            value_date_time: Default::default(),
             value_time: Default::default(),
             value_string: Default::default(),
-            value_uri: Default::default(),
-            value_attachment: Default::default(),
             value_coding: Default::default(),
-            value_quantity: Default::default(),
             value_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireReferenceFilter {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
+            initial_selected: Default::default(),
+            _initial_selected: Default::default(),
         }
     }
 }
@@ -899,7 +791,27 @@ impl Default for QuestionnaireItemEnablewhen {
     }
 }
 
-impl Default for QuestionnaireConstraint {
+impl Default for QuestionnaireItemInitial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_boolean: Default::default(),
+            value_decimal: Default::default(),
+            value_integer: Default::default(),
+            value_date: Default::default(),
+            value_date_time: Default::default(),
+            value_time: Default::default(),
+            value_string: Default::default(),
+            value_uri: Default::default(),
+            value_attachment: Default::default(),
+            value_coding: Default::default(),
+            value_quantity: Default::default(),
+            value_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireMaxOccurs {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -907,7 +819,95 @@ impl Default for QuestionnaireConstraint {
     }
 }
 
-impl Default for QuestionnaireBaseType {
+impl Default for QuestionnaireMinOccurs {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireOptionExclusive {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireOptionPrefix {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireReferenceFilter {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireReferenceProfile {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireReferenceResource {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSignatureRequired {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSliderStepValue {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSupportLink {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireUnit {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireUnitOption {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireUnitValueSet {
     fn default() -> Self {
         Self {
             base: Extension::default(),

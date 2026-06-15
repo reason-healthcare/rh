@@ -249,8 +249,11 @@ pub struct FieldInfo {
     // Track generated const names to avoid duplicates
     let mut generated_consts = std::collections::HashSet::new();
 
+    let mut sorted_types: Vec<_> = registry.types.iter().collect();
+    sorted_types.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
     // Generate phf maps for each type (skip duplicates)
-    for (type_name, type_metadata) in &registry.types {
+    for (type_name, type_metadata) in sorted_types {
         // Create sanitized const name
         let sanitized_name: String = type_name
             .chars()
@@ -329,7 +332,10 @@ fn generate_type_map(code: &mut String, type_name: &str, type_metadata: &TypeMet
         "pub static {const_name}: Map<&'static str, FieldInfo> = phf_map! {{\n"
     ));
 
-    for (field_name, field_info) in &type_metadata.fields {
+    let mut sorted_fields: Vec<_> = type_metadata.fields.iter().collect();
+    sorted_fields.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
+    for (field_name, field_info) in sorted_fields {
         code.push_str(&format!("    \"{field_name}\" => FieldInfo {{\n"));
 
         // Generate field_type
@@ -386,7 +392,10 @@ fn generate_registry_map(
         "pub static FHIR_TYPE_REGISTRY: Map<&'static str, &'static Map<&'static str, FieldInfo>> = phf_map! {\n",
     );
 
-    for type_name in types.keys() {
+    let mut sorted_type_names: Vec<_> = types.keys().collect();
+    sorted_type_names.sort();
+
+    for type_name in sorted_type_names {
         let sanitized_name: String = type_name
             .chars()
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
@@ -421,7 +430,10 @@ pub fn generate_metadata_code_split(
 
     // Partition types by category
     let mut categories: HashMap<MetadataCategory, Vec<(&String, &TypeMetadata)>> = HashMap::new();
-    for (type_name, type_metadata) in &registry.types {
+    let mut sorted_registry_types: Vec<_> = registry.types.iter().collect();
+    sorted_registry_types.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+
+    for (type_name, type_metadata) in sorted_registry_types {
         let category = name_to_category
             .get(type_name.as_str())
             .copied()
@@ -445,7 +457,8 @@ pub fn generate_metadata_code_split(
     ];
 
     for &category in &category_order {
-        let types = categories.get(&category).cloned().unwrap_or_default();
+        let mut types = categories.get(&category).cloned().unwrap_or_default();
+        types.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
         if types.is_empty() {
             continue;
         }

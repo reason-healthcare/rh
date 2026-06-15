@@ -3,164 +3,22 @@
 use super::*;
 use phf::{phf_map, Map};
 
-/// Field metadata for FiveWs
-pub static FIVEWS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
-    "source" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "identifier" => FieldInfo {
-        field_type: FhirFieldType::Complex("Identifier"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "context" => FieldInfo {
-        field_type: FhirFieldType::Reference,
+/// Field metadata for Definition
+pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "approvalDate" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
-    "init" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "done[x]" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
-        min: 0,
-        max: Some(1),
-        is_choice_type: true,
-    },
-    "witness" => FieldInfo {
-        field_type: FhirFieldType::Reference,
+    "contact" => FieldInfo {
+        field_type: FhirFieldType::Complex("ContactDetail"),
         min: 0,
         max: None,
         is_choice_type: false,
     },
-    "who" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "subject" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "actor" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "recorded" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Instant),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "class" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "planned" => FieldInfo {
-        field_type: FhirFieldType::Complex("Timing"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "grade" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "cause" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "version" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "why[x]" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: None,
-        is_choice_type: true,
-    },
-    "status" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "where[x]" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: None,
-        is_choice_type: true,
-    },
-    "author" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "what[x]" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: true,
-    },
-};
-
-/// Field metadata for MetadataResource
-pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
-    "useContext" => FieldInfo {
-        field_type: FhirFieldType::Complex("UsageContext"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "id" => FieldInfo {
-        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "modifierExtension" => FieldInfo {
-        field_type: FhirFieldType::Complex("Extension"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "version" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "contained" => FieldInfo {
-        field_type: FhirFieldType::Complex("Resource"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "title" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+    "copyright" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -171,44 +29,14 @@ pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "publisher" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+    "derivedFromCanonical" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
         min: 0,
-        max: Some(1),
+        max: None,
         is_choice_type: false,
     },
-    "experimental" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "implicitRules" => FieldInfo {
+    "derivedFromUri" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "text" => FieldInfo {
-        field_type: FhirFieldType::Complex("Narrative"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "url" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "status" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
-        min: 1,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "contact" => FieldInfo {
-        field_type: FhirFieldType::Complex("ContactDetail"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -219,14 +47,20 @@ pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "extension" => FieldInfo {
-        field_type: FhirFieldType::Complex("Extension"),
+    "effectivePeriod" => FieldInfo {
+        field_type: FhirFieldType::Complex("Period"),
         min: 0,
-        max: None,
+        max: Some(1),
         is_choice_type: false,
     },
-    "name" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+    "experimental" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "identifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("Identifier"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -237,14 +71,74 @@ pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
-    "language" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+    "lastReviewDate" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
-    "meta" => FieldInfo {
-        field_type: FhirFieldType::Complex("Meta"),
+    "partOf" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "performerType" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publisher" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "purpose" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "replaces" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "status" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "subject[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "title" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "url" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "useContext" => FieldInfo {
+        field_type: FhirFieldType::Complex("UsageContext"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "version" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -253,38 +147,8 @@ pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 
 /// Field metadata for Event
 pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
-    "instantiatesCanonical" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "encounter" => FieldInfo {
+    "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "subject" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 1,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "reasonCode" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "occurrence[x]" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
-        min: 0,
-        max: Some(1),
-        is_choice_type: true,
-    },
-    "instantiatesUri" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -293,6 +157,30 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "encounter" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "identifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("Identifier"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "instantiatesCanonical" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "instantiatesUri" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "location" => FieldInfo {
@@ -307,10 +195,28 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
+    "occurrence[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "partOf" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "performer" => FieldInfo {
         field_type: FhirFieldType::Reference,
         min: 1,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "reasonCode" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "reasonReference" => FieldInfo {
@@ -319,10 +225,10 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
-    "basedOn" => FieldInfo {
-        field_type: FhirFieldType::Reference,
+    "recorded" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
         min: 0,
-        max: None,
+        max: Some(1),
         is_choice_type: false,
     },
     "reported[x]" => FieldInfo {
@@ -349,105 +255,99 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
+    "subject" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for FiveWs
+pub static FIVEWS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "actor" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "author" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "cause" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "class" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "context" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "done[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "grade" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "identifier" => FieldInfo {
         field_type: FhirFieldType::Complex("Identifier"),
         min: 0,
         max: None,
         is_choice_type: false,
     },
-    "partOf" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "recorded" => FieldInfo {
+    "init" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
-};
-
-/// Field metadata for Definition
-pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
-    "approvalDate" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
+    "planned" => FieldInfo {
+        field_type: FhirFieldType::Complex("Timing"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "recorded" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Instant),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
-    "effectivePeriod" => FieldInfo {
-        field_type: FhirFieldType::Complex("Period"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "experimental" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "performerType" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "purpose" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "description" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "partOf" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+    "source" => FieldInfo {
+        field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
         is_choice_type: false,
     },
     "status" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
-        min: 1,
+        min: 0,
         max: Some(1),
         is_choice_type: false,
     },
-    "jurisdiction" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
+    "subject" => FieldInfo {
+        field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
         is_choice_type: false,
-    },
-    "identifier" => FieldInfo {
-        field_type: FhirFieldType::Complex("Identifier"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "lastReviewDate" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "useContext" => FieldInfo {
-        field_type: FhirFieldType::Complex("UsageContext"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "subject[x]" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: true,
     },
     "version" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -455,20 +355,48 @@ pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "derivedFromUri" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+    "what[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "where[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: true,
+    },
+    "who" => FieldInfo {
+        field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
         is_choice_type: false,
     },
-    "url" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+    "why[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
-        max: Some(1),
+        max: None,
+        is_choice_type: true,
+    },
+    "witness" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
-    "derivedFromCanonical" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+};
+
+/// Field metadata for MetadataResource
+pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "contact" => FieldInfo {
+        field_type: FhirFieldType::Complex("ContactDetail"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "contained" => FieldInfo {
+        field_type: FhirFieldType::Complex("Resource"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -479,14 +407,80 @@ pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "replaces" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+    "description" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "experimental" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
         min: 0,
         max: None,
         is_choice_type: false,
     },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "implicitRules" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "jurisdiction" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "language" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "meta" => FieldInfo {
+        field_type: FhirFieldType::Complex("Meta"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "modifierExtension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "name" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "publisher" => FieldInfo {
-        field_type: FhirFieldType::Reference,
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "status" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "text" => FieldInfo {
+        field_type: FhirFieldType::Complex("Narrative"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -497,14 +491,20 @@ pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "contact" => FieldInfo {
-        field_type: FhirFieldType::Complex("ContactDetail"),
+    "url" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "useContext" => FieldInfo {
+        field_type: FhirFieldType::Complex("UsageContext"),
         min: 0,
         max: None,
         is_choice_type: false,
     },
-    "copyright" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+    "version" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -513,45 +513,27 @@ pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 
 /// Field metadata for Request
 pub static REQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "authoredOn" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
         is_choice_type: false,
     },
-    "statusReason" => FieldInfo {
+    "code" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
-    "reported[x]" => FieldInfo {
+    "doNotPerform" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
         min: 0,
-        max: Some(1),
-        is_choice_type: true,
-    },
-    "subject" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 1,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "performer" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "instantiatesUri" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "status" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
-        min: 1,
         max: Some(1),
         is_choice_type: false,
     },
@@ -561,10 +543,70 @@ pub static REQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "replaces" => FieldInfo {
+    "groupIdentifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("Identifier"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "identifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("Identifier"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "instantiatesCanonical" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "instantiatesUri" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "insurance" => FieldInfo {
         field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
+        is_choice_type: false,
+    },
+    "intent" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "note" => FieldInfo {
+        field_type: FhirFieldType::Complex("Annotation"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "occurrence[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "performer" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "performerType" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "priority" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
         is_choice_type: false,
     },
     "reasonCode" => FieldInfo {
@@ -579,17 +621,23 @@ pub static REQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
-    "identifier" => FieldInfo {
-        field_type: FhirFieldType::Complex("Identifier"),
+    "relevantHistory" => FieldInfo {
+        field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
         is_choice_type: false,
     },
-    "intent" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
-        min: 1,
-        max: Some(1),
+    "replaces" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
         is_choice_type: false,
+    },
+    "reported[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
     },
     "requester" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -597,76 +645,28 @@ pub static REQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
-    "insurance" => FieldInfo {
-        field_type: FhirFieldType::Reference,
+    "status" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "statusReason" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
-        max: None,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "subject" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 1,
+        max: Some(1),
         is_choice_type: false,
     },
     "supportingInfo" => FieldInfo {
         field_type: FhirFieldType::Reference,
         min: 0,
         max: None,
-        is_choice_type: false,
-    },
-    "occurrence[x]" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
-        min: 0,
-        max: Some(1),
-        is_choice_type: true,
-    },
-    "groupIdentifier" => FieldInfo {
-        field_type: FhirFieldType::Complex("Identifier"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "doNotPerform" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "code" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "authoredOn" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "note" => FieldInfo {
-        field_type: FhirFieldType::Complex("Annotation"),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "instantiatesCanonical" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "relevantHistory" => FieldInfo {
-        field_type: FhirFieldType::Reference,
-        min: 0,
-        max: None,
-        is_choice_type: false,
-    },
-    "performerType" => FieldInfo {
-        field_type: FhirFieldType::Complex("CodeableConcept"),
-        min: 0,
-        max: Some(1),
-        is_choice_type: false,
-    },
-    "priority" => FieldInfo {
-        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
-        min: 0,
-        max: Some(1),
         is_choice_type: false,
     },
 };

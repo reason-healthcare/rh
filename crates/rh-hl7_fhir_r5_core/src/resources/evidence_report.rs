@@ -101,6 +101,38 @@ pub struct EvidenceReport {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section: Vec<EvidenceReportSection>,
 }
+/// EvidenceReport nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship
+    pub target: EvidenceReportRelatestoTarget,
+    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
+    pub code: ReportRelationType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+}
+/// EvidenceReportRelatesto nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatestoTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship URL
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+    /// Target of the relationship Identifier
+    pub identifier: Option<Identifier>,
+    /// Target of the relationship Display
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Target of the relationship Resource reference
+    pub resource: Option<Reference>,
+}
 /// EvidenceReport nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceReportSection {
@@ -163,6 +195,19 @@ pub struct EvidenceReportSection {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub section: Vec<StringType>,
 }
+/// EvidenceReport nested structure for the 'subject' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportSubject {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Characteristic
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<EvidenceReportSubjectCharacteristic>,
+    /// Footnotes and/or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
 /// EvidenceReportSubject nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceReportSubjectCharacteristic {
@@ -197,51 +242,6 @@ pub struct EvidenceReportSubjectCharacteristic {
     /// Timeframe for the characteristic
     pub period: Option<Period>,
 }
-/// EvidenceReportRelatesto nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatestoTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship URL
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-    /// Target of the relationship Identifier
-    pub identifier: Option<Identifier>,
-    /// Target of the relationship Display
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Target of the relationship Resource reference
-    pub resource: Option<Reference>,
-}
-/// EvidenceReport nested structure for the 'subject' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportSubject {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Characteristic
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub characteristic: Vec<EvidenceReportSubjectCharacteristic>,
-    /// Footnotes and/or explanatory notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-}
-/// EvidenceReport nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship
-    pub target: EvidenceReportRelatestoTarget,
-    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
-    pub code: ReportRelationType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-}
 
 impl Default for EvidenceReport {
     fn default() -> Self {
@@ -273,6 +273,31 @@ impl Default for EvidenceReport {
     }
 }
 
+impl Default for EvidenceReportRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceReportRelatestoTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            url: Default::default(),
+            _url: Default::default(),
+            identifier: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            resource: Default::default(),
+        }
+    }
+}
+
 impl Default for EvidenceReportSection {
     fn default() -> Self {
         Self {
@@ -295,6 +320,16 @@ impl Default for EvidenceReportSection {
     }
 }
 
+impl Default for EvidenceReportSubject {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            characteristic: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
 impl Default for EvidenceReportSubjectCharacteristic {
     fn default() -> Self {
         Self {
@@ -308,41 +343,6 @@ impl Default for EvidenceReportSubjectCharacteristic {
             exclude: Default::default(),
             _exclude: Default::default(),
             period: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportRelatestoTarget {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            url: Default::default(),
-            _url: Default::default(),
-            identifier: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-            resource: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportSubject {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            characteristic: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportRelatesto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target: Default::default(),
-            code: Default::default(),
-            _code: Default::default(),
         }
     }
 }

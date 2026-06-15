@@ -46,6 +46,17 @@ pub struct MedicinalProductPharmaceutical {
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<MedicinalProductPharmaceuticalRouteofadministration>,
 }
+/// MedicinalProductPharmaceutical nested structure for the 'characteristics' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductPharmaceuticalCharacteristics {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A coded characteristic
+    pub code: CodeableConcept,
+    /// The status of characteristic e.g. assigned or pending
+    pub status: Option<CodeableConcept>,
+}
 /// MedicinalProductPharmaceutical nested structure for the 'routeOfAdministration' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductPharmaceuticalRouteofadministration {
@@ -74,6 +85,15 @@ pub struct MedicinalProductPharmaceuticalRouteofadministration {
     #[serde(rename = "maxTreatmentPeriod")]
     pub max_treatment_period: Option<Duration>,
 }
+/// MedicinalProductPharmaceuticalRouteofadministration nested structure for the 'targetSpecies' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the species
+    pub code: CodeableConcept,
+}
 /// MedicinalProductPharmaceuticalRouteofadministrationTargetspecies nested structure for the 'withdrawalPeriod' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
@@ -91,26 +111,6 @@ pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithd
     #[serde(rename = "_supportingInformation")]
     pub _supporting_information: Option<Element>,
 }
-/// MedicinalProductPharmaceutical nested structure for the 'characteristics' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductPharmaceuticalCharacteristics {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A coded characteristic
-    pub code: CodeableConcept,
-    /// The status of characteristic e.g. assigned or pending
-    pub status: Option<CodeableConcept>,
-}
-/// MedicinalProductPharmaceuticalRouteofadministration nested structure for the 'targetSpecies' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the species
-    pub code: CodeableConcept,
-}
 
 impl Default for MedicinalProductPharmaceutical {
     fn default() -> Self {
@@ -123,6 +123,16 @@ impl Default for MedicinalProductPharmaceutical {
             device: Default::default(),
             characteristics: Default::default(),
             route_of_administration: Vec::new(),
+        }
+    }
+}
+
+impl Default for MedicinalProductPharmaceuticalCharacteristics {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            status: Default::default(),
         }
     }
 }
@@ -142,6 +152,15 @@ impl Default for MedicinalProductPharmaceuticalRouteofadministration {
     }
 }
 
+impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspeciesWithdrawalperiod {
     fn default() -> Self {
         Self {
@@ -150,25 +169,6 @@ impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspecie
             value: Default::default(),
             supporting_information: Default::default(),
             _supporting_information: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductPharmaceuticalCharacteristics {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            status: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductPharmaceuticalRouteofadministrationTargetspecies {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
         }
     }
 }

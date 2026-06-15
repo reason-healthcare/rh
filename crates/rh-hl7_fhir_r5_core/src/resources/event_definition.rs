@@ -719,11 +719,11 @@ impl crate::traits::event_definition::EventDefinitionMutators for EventDefinitio
 }
 
 impl crate::traits::event_definition::EventDefinitionExistence for EventDefinition {
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
-    }
     fn has_subject(&self) -> bool {
         self.subject_codeable_concept.is_some() || self.subject_reference.is_some()
+    }
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()

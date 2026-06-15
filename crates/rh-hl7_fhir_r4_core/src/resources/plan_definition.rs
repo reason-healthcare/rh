@@ -185,20 +185,20 @@ pub struct PlanDefinitionAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Relationship to another action
-    #[serde(rename = "relatedAction")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub related_action: Vec<PlanDefinitionActionRelatedaction>,
     /// Whether or not the action is applicable
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub condition: Vec<PlanDefinitionActionCondition>,
-    /// Who should participate in the action
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub participant: Vec<PlanDefinitionActionParticipant>,
     /// Dynamic aspects of the definition
     #[serde(rename = "dynamicValue")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dynamic_value: Vec<PlanDefinitionActionDynamicvalue>,
+    /// Who should participate in the action
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<PlanDefinitionActionParticipant>,
+    /// Relationship to another action
+    #[serde(rename = "relatedAction")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_action: Vec<PlanDefinitionActionRelatedaction>,
     /// User-visible prefix for the action (e.g. 1. or A.)
     pub prefix: Option<StringType>,
     /// Extension element for the 'prefix' primitive field. Contains metadata and extensions.
@@ -322,6 +322,73 @@ pub struct PlanDefinitionAction {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub action: Vec<StringType>,
 }
+/// PlanDefinitionAction nested structure for the 'condition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionCondition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// applicability | start | stop
+    pub kind: ActionConditionKind,
+    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
+    pub _kind: Option<Element>,
+    /// Boolean-valued expression
+    pub expression: Option<Expression>,
+}
+/// PlanDefinitionAction nested structure for the 'dynamicValue' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionDynamicvalue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The path to the element to be set dynamically
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// An expression that provides the dynamic value for the customization
+    pub expression: Option<Expression>,
+}
+/// PlanDefinitionAction nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// patient | practitioner | related-person | device
+    #[serde(rename = "type")]
+    pub type_: ActionParticipantType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// E.g. Nurse, Surgeon, Parent
+    ///
+    /// Binding: example (Defines roles played by participants for the action.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/action-participant-role
+    pub role: Option<CodeableConcept>,
+}
+/// PlanDefinitionAction nested structure for the 'relatedAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionRelatedaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What action is this related to
+    #[serde(rename = "actionId")]
+    pub action_id: StringType,
+    /// Extension element for the 'actionId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_actionId")]
+    pub _action_id: Option<Element>,
+    /// before-start | before | before-end | concurrent-with-start | concurrent | concurrent-with-end | after-start | after | after-end
+    pub relationship: ActionRelationshipType,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// Time offset for the relationship (Duration)
+    #[serde(rename = "offsetDuration")]
+    pub offset_duration: Option<Duration>,
+    /// Time offset for the relationship (Range)
+    #[serde(rename = "offsetRange")]
+    pub offset_range: Option<Range>,
+}
 /// PlanDefinition nested structure for the 'goal' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanDefinitionGoal {
@@ -371,29 +438,6 @@ pub struct PlanDefinitionGoal {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub documentation: Vec<RelatedArtifact>,
 }
-/// PlanDefinitionAction nested structure for the 'relatedAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionRelatedaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What action is this related to
-    #[serde(rename = "actionId")]
-    pub action_id: StringType,
-    /// Extension element for the 'actionId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_actionId")]
-    pub _action_id: Option<Element>,
-    /// before-start | before | before-end | concurrent-with-start | concurrent | concurrent-with-end | after-start | after | after-end
-    pub relationship: ActionRelationshipType,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// Time offset for the relationship (Duration)
-    #[serde(rename = "offsetDuration")]
-    pub offset_duration: Option<Duration>,
-    /// Time offset for the relationship (Range)
-    #[serde(rename = "offsetRange")]
-    pub offset_range: Option<Range>,
-}
 /// PlanDefinitionGoal nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanDefinitionGoalTarget {
@@ -417,50 +461,6 @@ pub struct PlanDefinitionGoalTarget {
     pub detail_codeable_concept: Option<CodeableConcept>,
     /// Reach goal within
     pub due: Option<Duration>,
-}
-/// PlanDefinitionAction nested structure for the 'condition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionCondition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// applicability | start | stop
-    pub kind: ActionConditionKind,
-    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
-    pub _kind: Option<Element>,
-    /// Boolean-valued expression
-    pub expression: Option<Expression>,
-}
-/// PlanDefinitionAction nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// patient | practitioner | related-person | device
-    #[serde(rename = "type")]
-    pub type_: ActionParticipantType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// E.g. Nurse, Surgeon, Parent
-    ///
-    /// Binding: example (Defines roles played by participants for the action.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/action-participant-role
-    pub role: Option<CodeableConcept>,
-}
-/// PlanDefinitionAction nested structure for the 'dynamicValue' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionDynamicvalue {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The path to the element to be set dynamically
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// An expression that provides the dynamic value for the customization
-    pub expression: Option<Expression>,
 }
 
 impl Default for PlanDefinition {
@@ -523,10 +523,10 @@ impl Default for PlanDefinitionAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            related_action: Default::default(),
             condition: Default::default(),
-            participant: Default::default(),
             dynamic_value: Default::default(),
+            participant: Default::default(),
+            related_action: Default::default(),
             prefix: Default::default(),
             _prefix: Default::default(),
             title: Default::default(),
@@ -573,17 +573,35 @@ impl Default for PlanDefinitionAction {
     }
 }
 
-impl Default for PlanDefinitionGoal {
+impl Default for PlanDefinitionActionCondition {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            target: Default::default(),
-            category: Default::default(),
-            description: CodeableConcept::default(),
-            priority: Default::default(),
-            start: Default::default(),
-            addresses: Default::default(),
-            documentation: Default::default(),
+            kind: Default::default(),
+            _kind: Default::default(),
+            expression: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionDynamicvalue {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            expression: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            role: Default::default(),
         }
     }
 }
@@ -602,6 +620,21 @@ impl Default for PlanDefinitionActionRelatedaction {
     }
 }
 
+impl Default for PlanDefinitionGoal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            category: Default::default(),
+            description: CodeableConcept::default(),
+            priority: Default::default(),
+            start: Default::default(),
+            addresses: Default::default(),
+            documentation: Default::default(),
+        }
+    }
+}
+
 impl Default for PlanDefinitionGoalTarget {
     fn default() -> Self {
         Self {
@@ -611,39 +644,6 @@ impl Default for PlanDefinitionGoalTarget {
             detail_range: Default::default(),
             detail_codeable_concept: Default::default(),
             due: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionCondition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            kind: Default::default(),
-            _kind: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            role: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionDynamicvalue {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            expression: Default::default(),
         }
     }
 }

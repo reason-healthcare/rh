@@ -98,12 +98,12 @@ pub struct MeasureReportGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Stratification results
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub stratifier: Vec<MeasureReportGroupStratifier>,
     /// The populations in the group
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub population: Vec<MeasureReportGroupPopulation>,
+    /// Stratification results
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stratifier: Vec<MeasureReportGroupStratifier>,
     /// Pointer to specific group from Measure
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -136,6 +136,38 @@ pub struct MeasureReportGroup {
     /// What score this group achieved (Duration)
     #[serde(rename = "measureScoreDuration")]
     pub measure_score_duration: Option<Duration>,
+}
+/// MeasureReportGroup nested structure for the 'population' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupPopulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Pointer to specific population from Measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population (e.g. initial, numerator, denominator, etc.).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    pub code: Option<CodeableConcept>,
+    /// Size of the population
+    pub count: Option<IntegerType>,
+    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
+    pub _count: Option<Element>,
+    /// For subject-list reports, the subject results in this population
+    #[serde(rename = "subjectResults")]
+    pub subject_results: Option<Reference>,
+    /// For subject-list reports, a subject result in this population
+    #[serde(rename = "subjectReport")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject_report: Vec<Reference>,
+    /// What individual(s) in the population
+    pub subjects: Option<Reference>,
 }
 /// MeasureReportGroup nested structure for the 'stratifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -196,38 +228,6 @@ pub struct MeasureReportGroupStratifierStratum {
     #[serde(rename = "measureScoreDuration")]
     pub measure_score_duration: Option<Duration>,
 }
-/// MeasureReportGroupStratifierStratum nested structure for the 'population' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifierStratumPopulation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Pointer to specific population from Measure
-    #[serde(rename = "linkId")]
-    pub link_id: Option<StringType>,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
-    ///
-    /// Binding: extensible (The type of population (e.g. initial, numerator, denominator, etc.).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
-    pub code: Option<CodeableConcept>,
-    /// Size of the population
-    pub count: Option<IntegerType>,
-    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
-    pub _count: Option<Element>,
-    /// For subject-list reports, the subject results in this population
-    #[serde(rename = "subjectResults")]
-    pub subject_results: Option<Reference>,
-    /// For subject-list reports, a subject result in this population
-    #[serde(rename = "subjectReport")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub subject_report: Vec<Reference>,
-    /// What individual(s) in the population
-    pub subjects: Option<Reference>,
-}
 /// MeasureReportGroupStratifierStratum nested structure for the 'component' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureReportGroupStratifierStratumComponent {
@@ -262,9 +262,9 @@ pub struct MeasureReportGroupStratifierStratumComponent {
     #[serde(rename = "valueReference")]
     pub value_reference: Reference,
 }
-/// MeasureReportGroup nested structure for the 'population' field
+/// MeasureReportGroupStratifierStratum nested structure for the 'population' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupPopulation {
+pub struct MeasureReportGroupStratifierStratumPopulation {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
@@ -329,8 +329,8 @@ impl Default for MeasureReportGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            stratifier: Default::default(),
             population: Default::default(),
+            stratifier: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             code: Default::default(),
@@ -341,6 +341,22 @@ impl Default for MeasureReportGroup {
             measure_score_period: Default::default(),
             measure_score_range: Default::default(),
             measure_score_duration: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureReportGroupPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            count: Default::default(),
+            _count: Default::default(),
+            subject_results: Default::default(),
+            subject_report: Default::default(),
+            subjects: Default::default(),
         }
     }
 }
@@ -375,22 +391,6 @@ impl Default for MeasureReportGroupStratifierStratum {
     }
 }
 
-impl Default for MeasureReportGroupStratifierStratumPopulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            link_id: Default::default(),
-            _link_id: Default::default(),
-            code: Default::default(),
-            count: Default::default(),
-            _count: Default::default(),
-            subject_results: Default::default(),
-            subject_report: Default::default(),
-            subjects: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureReportGroupStratifierStratumComponent {
     fn default() -> Self {
         Self {
@@ -407,7 +407,7 @@ impl Default for MeasureReportGroupStratifierStratumComponent {
     }
 }
 
-impl Default for MeasureReportGroupPopulation {
+impl Default for MeasureReportGroupStratifierStratumPopulation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),

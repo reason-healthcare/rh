@@ -110,19 +110,6 @@ pub struct RequestGroup {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub action: Vec<RequestGroupAction>,
 }
-/// RequestGroupAction nested structure for the 'condition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestGroupActionCondition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// applicability | start | stop
-    pub kind: ActionConditionKind,
-    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
-    pub _kind: Option<Element>,
-    /// Boolean-valued expression
-    pub expression: Option<Expression>,
-}
 /// RequestGroup nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestGroupAction {
@@ -228,6 +215,19 @@ pub struct RequestGroupAction {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub action: Vec<StringType>,
 }
+/// RequestGroupAction nested structure for the 'condition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestGroupActionCondition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// applicability | start | stop
+    pub kind: ActionConditionKind,
+    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
+    pub _kind: Option<Element>,
+    /// Boolean-valued expression
+    pub expression: Option<Expression>,
+}
 /// RequestGroupAction nested structure for the 'relatedAction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestGroupActionRelatedaction {
@@ -284,17 +284,6 @@ impl Default for RequestGroup {
     }
 }
 
-impl Default for RequestGroupActionCondition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            kind: Default::default(),
-            _kind: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
 impl Default for RequestGroupAction {
     fn default() -> Self {
         Self {
@@ -333,6 +322,17 @@ impl Default for RequestGroupAction {
             _cardinality_behavior: Default::default(),
             resource: Default::default(),
             action: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestGroupActionCondition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            kind: Default::default(),
+            _kind: Default::default(),
+            expression: Default::default(),
         }
     }
 }

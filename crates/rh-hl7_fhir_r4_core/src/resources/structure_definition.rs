@@ -168,9 +168,9 @@ pub struct StructureDefinitionContext {
     /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
     pub _expression: Option<Element>,
 }
-/// StructureDefinition nested structure for the 'snapshot' field
+/// StructureDefinition nested structure for the 'differential' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionSnapshot {
+pub struct StructureDefinitionDifferential {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
@@ -200,9 +200,9 @@ pub struct StructureDefinitionMapping {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
 }
-/// StructureDefinition nested structure for the 'differential' field
+/// StructureDefinition nested structure for the 'snapshot' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureDefinitionDifferential {
+pub struct StructureDefinitionSnapshot {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
@@ -275,7 +275,7 @@ impl Default for StructureDefinitionContext {
     }
 }
 
-impl Default for StructureDefinitionSnapshot {
+impl Default for StructureDefinitionDifferential {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -300,7 +300,7 @@ impl Default for StructureDefinitionMapping {
     }
 }
 
-impl Default for StructureDefinitionDifferential {
+impl Default for StructureDefinitionSnapshot {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),

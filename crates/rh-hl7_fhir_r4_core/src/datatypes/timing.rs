@@ -55,6 +55,54 @@ pub struct Timing {
     /// - ... and 6 more values
     pub code: Option<CodeableConcept>,
 }
+/// Day Of Month
+///
+/// When present, this extension indicate that the event actually only occurs on the specified days of the month, on the times as otherwise specified by the timing schedule.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/timing-dayOfMonth
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimingDayOfMonth {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Days of Cycle
+///
+/// Days of a possibly repeating cycle on which the action is to be performed. The cycle is defined by the first action with a timing element that is a parent of the daysOfCycle.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/timing-daysOfCycle
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimingDaysOfCycle {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// exact
+///
+/// If true, indicates that the specified times, frequencies, periods are expected to be adhered to as precisely as possible.  If false, indicates that a typical degree of variability based on institutional and/or patient convenience is acceptable.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/timing-exact
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimingExact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Timing nested structure for the 'repeat' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimingRepeat {
@@ -149,54 +197,6 @@ pub struct TimingRepeat {
     /// Extension element for the 'offset' primitive field. Contains metadata and extensions.
     pub _offset: Option<Element>,
 }
-/// Days of Cycle
-///
-/// Days of a possibly repeating cycle on which the action is to be performed. The cycle is defined by the first action with a timing element that is a parent of the daysOfCycle.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/timing-daysOfCycle
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimingDaysOfCycle {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Day Of Month
-///
-/// When present, this extension indicate that the event actually only occurs on the specified days of the month, on the times as otherwise specified by the timing schedule.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/timing-dayOfMonth
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimingDayOfMonth {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// exact
-///
-/// If true, indicates that the specified times, frequencies, periods are expected to be adhered to as precisely as possible.  If false, indicates that a typical degree of variability based on institutional and/or patient convenience is acceptable.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/timing-exact
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimingExact {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 
 impl Default for Timing {
     fn default() -> Self {
@@ -206,6 +206,30 @@ impl Default for Timing {
             _event: Default::default(),
             repeat: Default::default(),
             code: Default::default(),
+        }
+    }
+}
+
+impl Default for TimingDayOfMonth {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for TimingDaysOfCycle {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for TimingExact {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -245,30 +269,6 @@ impl Default for TimingRepeat {
             _when: Default::default(),
             offset: Default::default(),
             _offset: Default::default(),
-        }
-    }
-}
-
-impl Default for TimingDaysOfCycle {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for TimingDayOfMonth {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for TimingExact {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }

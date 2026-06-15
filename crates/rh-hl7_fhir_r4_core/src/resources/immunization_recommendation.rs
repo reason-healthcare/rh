@@ -37,27 +37,6 @@ pub struct ImmunizationRecommendation {
     /// Vaccine administration recommendations
     pub recommendation: Vec<ImmunizationRecommendationRecommendation>,
 }
-/// ImmunizationRecommendationRecommendation nested structure for the 'dateCriterion' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationRecommendationRecommendationDatecriterion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of date
-    ///
-    /// Binding: example (Classifies date criterion with respect to conveying information about a patient's vaccination status (e.g. due date, latest to give date, etc.).)
-    ///
-    /// Available values:
-    /// - `30981-5`
-    /// - `30980-7`
-    /// - `59777-3`
-    /// - `59778-1`
-    pub code: CodeableConcept,
-    /// Recommended date
-    pub value: DateTimeType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
 /// ImmunizationRecommendation nested structure for the 'recommendation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationRecommendationRecommendation {
@@ -146,6 +125,27 @@ pub struct ImmunizationRecommendationRecommendation {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub supporting_patient_information: Vec<Reference>,
 }
+/// ImmunizationRecommendationRecommendation nested structure for the 'dateCriterion' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationRecommendationRecommendationDatecriterion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of date
+    ///
+    /// Binding: example (Classifies date criterion with respect to conveying information about a patient's vaccination status (e.g. due date, latest to give date, etc.).)
+    ///
+    /// Available values:
+    /// - `30981-5`
+    /// - `30980-7`
+    /// - `59777-3`
+    /// - `59778-1`
+    pub code: CodeableConcept,
+    /// Recommended date
+    pub value: DateTimeType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
 
 impl Default for ImmunizationRecommendation {
     fn default() -> Self {
@@ -157,17 +157,6 @@ impl Default for ImmunizationRecommendation {
             _date: Default::default(),
             authority: Default::default(),
             recommendation: Vec::new(),
-        }
-    }
-}
-
-impl Default for ImmunizationRecommendationRecommendationDatecriterion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
         }
     }
 }
@@ -192,6 +181,17 @@ impl Default for ImmunizationRecommendationRecommendation {
             series_doses_string: Default::default(),
             supporting_immunization: Default::default(),
             supporting_patient_information: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationRecommendationRecommendationDatecriterion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
         }
     }
 }

@@ -103,6 +103,21 @@ pub struct AllergyIntolerance {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reaction: Vec<AllergyIntoleranceReaction>,
 }
+/// AllergyIntolerance nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AllergyIntoleranceParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub function: Option<CodeableConcept>,
+    /// Who or what participated in the activities related to the allergy or intolerance
+    pub actor: Reference,
+}
 /// AllergyIntolerance nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllergyIntoleranceReaction {
@@ -144,21 +159,6 @@ pub struct AllergyIntoleranceReaction {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// AllergyIntolerance nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AllergyIntoleranceParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub function: Option<CodeableConcept>,
-    /// Who or what participated in the activities related to the allergy or intolerance
-    pub actor: Reference,
-}
 
 impl Default for AllergyIntolerance {
     fn default() -> Self {
@@ -191,6 +191,16 @@ impl Default for AllergyIntolerance {
     }
 }
 
+impl Default for AllergyIntoleranceParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for AllergyIntoleranceReaction {
     fn default() -> Self {
         Self {
@@ -205,16 +215,6 @@ impl Default for AllergyIntoleranceReaction {
             _severity: Default::default(),
             exposure_route: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for AllergyIntoleranceParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
         }
     }
 }

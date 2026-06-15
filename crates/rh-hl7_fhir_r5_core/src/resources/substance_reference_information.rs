@@ -38,6 +38,36 @@ pub struct SubstanceReferenceInformation {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub target: Vec<SubstanceReferenceInformationTarget>,
 }
+/// SubstanceReferenceInformation nested structure for the 'gene' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationGene {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "geneSequenceOrigin")]
+    pub gene_sequence_origin: Option<CodeableConcept>,
+    /// Todo
+    pub gene: Option<CodeableConcept>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
+/// SubstanceReferenceInformation nested structure for the 'geneElement' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationGeneelement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    pub element: Option<Identifier>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
 /// SubstanceReferenceInformation nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceReferenceInformationTarget {
@@ -72,36 +102,6 @@ pub struct SubstanceReferenceInformationTarget {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source: Vec<Reference>,
 }
-/// SubstanceReferenceInformation nested structure for the 'gene' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGene {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "geneSequenceOrigin")]
-    pub gene_sequence_origin: Option<CodeableConcept>,
-    /// Todo
-    pub gene: Option<CodeableConcept>,
-    /// Todo
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source: Vec<Reference>,
-}
-/// SubstanceReferenceInformation nested structure for the 'geneElement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGeneelement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    pub element: Option<Identifier>,
-    /// Todo
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source: Vec<Reference>,
-}
 
 impl Default for SubstanceReferenceInformation {
     fn default() -> Self {
@@ -112,24 +112,6 @@ impl Default for SubstanceReferenceInformation {
             gene: Default::default(),
             gene_element: Default::default(),
             target: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceReferenceInformationTarget {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target: Default::default(),
-            type_: Default::default(),
-            interaction: Default::default(),
-            organism: Default::default(),
-            organism_type: Default::default(),
-            amount_quantity: Default::default(),
-            amount_range: Default::default(),
-            amount_string: Default::default(),
-            amount_type: Default::default(),
-            source: Default::default(),
         }
     }
 }
@@ -151,6 +133,24 @@ impl Default for SubstanceReferenceInformationGeneelement {
             base: BackboneElement::default(),
             type_: Default::default(),
             element: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceReferenceInformationTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            type_: Default::default(),
+            interaction: Default::default(),
+            organism: Default::default(),
+            organism_type: Default::default(),
+            amount_quantity: Default::default(),
+            amount_range: Default::default(),
+            amount_string: Default::default(),
+            amount_type: Default::default(),
             source: Default::default(),
         }
     }

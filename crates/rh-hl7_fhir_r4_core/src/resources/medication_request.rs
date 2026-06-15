@@ -956,11 +956,11 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
 }
 
 impl crate::traits::medication_request::MedicationRequestExistence for MedicationRequest {
-    fn has_reported(&self) -> bool {
-        self.reported_boolean.is_some() || self.reported_reference.is_some()
-    }
     fn has_medication(&self) -> bool {
         true
+    }
+    fn has_reported(&self) -> bool {
+        self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

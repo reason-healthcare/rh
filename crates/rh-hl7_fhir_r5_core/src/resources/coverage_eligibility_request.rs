@@ -82,57 +82,6 @@ pub struct CoverageEligibilityRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub item: Vec<CoverageEligibilityRequestItem>,
 }
-/// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestSupportinginfo {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information instance identifier
-    pub sequence: PositiveIntType,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Data to be provided
-    pub information: Reference,
-    /// Applies to all items
-    #[serde(rename = "appliesToAll")]
-    pub applies_to_all: Option<BooleanType>,
-    /// Extension element for the 'appliesToAll' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_appliesToAll")]
-    pub _applies_to_all: Option<Element>,
-}
-/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestItemDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Nature of illness or problem (CodeableConcept)
-    #[serde(rename = "diagnosisCodeableConcept")]
-    pub diagnosis_codeable_concept: Option<CodeableConcept>,
-    /// Nature of illness or problem (Reference)
-    #[serde(rename = "diagnosisReference")]
-    pub diagnosis_reference: Option<Reference>,
-}
-/// CoverageEligibilityRequest nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Applicable coverage
-    pub focal: Option<BooleanType>,
-    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
-    pub _focal: Option<Element>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Additional provider contract number
-    #[serde(rename = "businessArrangement")]
-    pub business_arrangement: Option<StringType>,
-    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_businessArrangement")]
-    pub _business_arrangement: Option<Element>,
-}
 /// CoverageEligibilityRequest nested structure for the 'event' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityRequestEvent {
@@ -152,6 +101,25 @@ pub struct CoverageEligibilityRequestEvent {
     /// Occurance date or period (Period)
     #[serde(rename = "whenPeriod")]
     pub when_period: Period,
+}
+/// CoverageEligibilityRequest nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Applicable coverage
+    pub focal: Option<BooleanType>,
+    /// Extension element for the 'focal' primitive field. Contains metadata and extensions.
+    pub _focal: Option<Element>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Additional provider contract number
+    #[serde(rename = "businessArrangement")]
+    pub business_arrangement: Option<StringType>,
+    /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_businessArrangement")]
+    pub _business_arrangement: Option<Element>,
 }
 /// CoverageEligibilityRequest nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,6 +171,38 @@ pub struct CoverageEligibilityRequestItem {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub detail: Vec<Reference>,
 }
+/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestItemDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Nature of illness or problem (CodeableConcept)
+    #[serde(rename = "diagnosisCodeableConcept")]
+    pub diagnosis_codeable_concept: Option<CodeableConcept>,
+    /// Nature of illness or problem (Reference)
+    #[serde(rename = "diagnosisReference")]
+    pub diagnosis_reference: Option<Reference>,
+}
+/// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestSupportinginfo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information instance identifier
+    pub sequence: PositiveIntType,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Data to be provided
+    pub information: Reference,
+    /// Applies to all items
+    #[serde(rename = "appliesToAll")]
+    pub applies_to_all: Option<BooleanType>,
+    /// Extension element for the 'appliesToAll' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_appliesToAll")]
+    pub _applies_to_all: Option<Element>,
+}
 
 impl Default for CoverageEligibilityRequest {
     fn default() -> Self {
@@ -231,25 +231,13 @@ impl Default for CoverageEligibilityRequest {
     }
 }
 
-impl Default for CoverageEligibilityRequestSupportinginfo {
+impl Default for CoverageEligibilityRequestEvent {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            information: Default::default(),
-            applies_to_all: Default::default(),
-            _applies_to_all: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityRequestItemDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            diagnosis_codeable_concept: Default::default(),
-            diagnosis_reference: Default::default(),
+            type_: Default::default(),
+            when_date_time: Default::default(),
+            when_period: Default::default(),
         }
     }
 }
@@ -263,17 +251,6 @@ impl Default for CoverageEligibilityRequestInsurance {
             coverage: Reference::default(),
             business_arrangement: Default::default(),
             _business_arrangement: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityRequestEvent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            when_date_time: Default::default(),
-            when_period: Default::default(),
         }
     }
 }
@@ -293,6 +270,29 @@ impl Default for CoverageEligibilityRequestItem {
             unit_price: Default::default(),
             facility: Default::default(),
             detail: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityRequestItemDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            diagnosis_codeable_concept: Default::default(),
+            diagnosis_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityRequestSupportinginfo {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            information: Default::default(),
+            applies_to_all: Default::default(),
+            _applies_to_all: Default::default(),
         }
     }
 }

@@ -831,6 +831,9 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
 }
 
 impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest {
+    fn has_as_needed(&self) -> bool {
+        self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
+    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
@@ -840,9 +843,6 @@ impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest 
         self.quantity_quantity.is_some()
             || self.quantity_ratio.is_some()
             || self.quantity_range.is_some()
-    }
-    fn has_as_needed(&self) -> bool {
-        self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

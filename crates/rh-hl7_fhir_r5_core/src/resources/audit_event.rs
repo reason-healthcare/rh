@@ -173,53 +173,6 @@ pub struct AuditEventEntity {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agent: Vec<StringType>,
 }
-/// AuditEvent nested structure for the 'source' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventSource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Logical source location within the enterprise
-    pub site: Option<Reference>,
-    /// The identity of source detecting the event
-    pub observer: Reference,
-    /// The type of source where event originated
-    ///
-    /// Binding: preferred (Code specifying the type of system that detected and recorded the event. Use of these codes is not required but is encouraged to maintain translation with DICOM AuditMessage schema.)
-    ///
-    /// Available values:
-    /// - `1`
-    /// - `2`
-    /// - `3`
-    /// - `4`
-    /// - `5`
-    /// - `6`
-    /// - `7`
-    /// - `8`
-    #[serde(rename = "type")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub type_: Vec<CodeableConcept>,
-}
-/// AuditEvent nested structure for the 'outcome' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventOutcome {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether the event succeeded or failed
-    ///
-    /// Binding: preferred (DICOM Audit Event Outcome)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome
-    pub code: Coding,
-    /// Additional outcome detail
-    ///
-    /// Binding: example (A code that provides details as the exact issue.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome-detail
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub detail: Vec<CodeableConcept>,
-}
 /// AuditEventEntity nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEventEntityDetail {
@@ -266,6 +219,53 @@ pub struct AuditEventEntityDetail {
     /// Property value (base64Binary)
     #[serde(rename = "valueBase64Binary")]
     pub value_base64_binary: Base64BinaryType,
+}
+/// AuditEvent nested structure for the 'outcome' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventOutcome {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether the event succeeded or failed
+    ///
+    /// Binding: preferred (DICOM Audit Event Outcome)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome
+    pub code: Coding,
+    /// Additional outcome detail
+    ///
+    /// Binding: example (A code that provides details as the exact issue.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-event-outcome-detail
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<CodeableConcept>,
+}
+/// AuditEvent nested structure for the 'source' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventSource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Logical source location within the enterprise
+    pub site: Option<Reference>,
+    /// The identity of source detecting the event
+    pub observer: Reference,
+    /// The type of source where event originated
+    ///
+    /// Binding: preferred (Code specifying the type of system that detected and recorded the event. Use of these codes is not required but is encouraged to maintain translation with DICOM AuditMessage schema.)
+    ///
+    /// Available values:
+    /// - `1`
+    /// - `2`
+    /// - `3`
+    /// - `4`
+    /// - `5`
+    /// - `6`
+    /// - `7`
+    /// - `8`
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
 }
 
 impl Default for AuditEvent {
@@ -329,27 +329,6 @@ impl Default for AuditEventEntity {
     }
 }
 
-impl Default for AuditEventSource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            site: Default::default(),
-            observer: Reference::default(),
-            type_: Default::default(),
-        }
-    }
-}
-
-impl Default for AuditEventOutcome {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Coding::default(),
-            detail: Default::default(),
-        }
-    }
-}
-
 impl Default for AuditEventEntityDetail {
     fn default() -> Self {
         Self {
@@ -366,6 +345,27 @@ impl Default for AuditEventEntityDetail {
             value_date_time: Default::default(),
             value_period: Default::default(),
             value_base64_binary: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventOutcome {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Coding::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventSource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            site: Default::default(),
+            observer: Reference::default(),
+            type_: Default::default(),
         }
     }
 }

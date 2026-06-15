@@ -114,17 +114,6 @@ pub struct PackagedProductDefinitionLegalstatusofsupply {
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
     pub jurisdiction: Option<CodeableConcept>,
 }
-/// PackagedProductDefinitionPackaging nested structure for the 'containedItem' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackagedProductDefinitionPackagingContaineditem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The actual item(s) of medication, as manufactured, or a device, or other medically related item (food, biologicals, raw materials, medical fluids, gases etc.), as contained in the package
-    pub item: CodeableReference,
-    /// The number of this type of item within this packaging or for continuous items such as liquids it is the quantity (for example 25ml). See also PackagedProductDefinition.containedItemQuantity (especially the long definition)
-    pub amount: Option<Quantity>,
-}
 /// PackagedProductDefinition nested structure for the 'packaging' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackagedProductDefinitionPackaging {
@@ -183,6 +172,17 @@ pub struct PackagedProductDefinitionPackaging {
     /// Allows containers (and parts of containers) within containers, still as a part of single packaged product
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub packaging: Vec<StringType>,
+}
+/// PackagedProductDefinitionPackaging nested structure for the 'containedItem' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackagedProductDefinitionPackagingContaineditem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The actual item(s) of medication, as manufactured, or a device, or other medically related item (food, biologicals, raw materials, medical fluids, gases etc.), as contained in the package
+    pub item: CodeableReference,
+    /// The number of this type of item within this packaging or for continuous items such as liquids it is the quantity (for example 25ml). See also PackagedProductDefinition.containedItemQuantity (especially the long definition)
+    pub amount: Option<Quantity>,
 }
 /// PackagedProductDefinitionPackaging nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -251,16 +251,6 @@ impl Default for PackagedProductDefinitionLegalstatusofsupply {
     }
 }
 
-impl Default for PackagedProductDefinitionPackagingContaineditem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            amount: Default::default(),
-        }
-    }
-}
-
 impl Default for PackagedProductDefinitionPackaging {
     fn default() -> Self {
         Self {
@@ -278,6 +268,16 @@ impl Default for PackagedProductDefinitionPackaging {
             shelf_life_storage: Default::default(),
             manufacturer: Default::default(),
             packaging: Default::default(),
+        }
+    }
+}
+
+impl Default for PackagedProductDefinitionPackagingContaineditem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            amount: Default::default(),
         }
     }
 }

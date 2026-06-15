@@ -102,22 +102,6 @@ pub struct DiagnosticReport {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub presented_form: Vec<Attachment>,
 }
-/// Summary Of
-///
-/// A summary report that points to subordinate target reports.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportSummaryOf {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Addendum Of
 ///
 /// The supplements or provides additional information for the target report.
@@ -130,38 +114,6 @@ pub struct DiagnosticReportSummaryOf {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagnosticReportAddendumOf {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Analysis
-///
-/// Knowledge-based comments on the effect of the sequence on patient's condition/medication reaction.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsAnalysis
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportGeneticsAnalysis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Risk
-///
-/// Provides a link to an assessment of prognosis or risk as informed by the diagnostic results (For example, genetic results and possibly by patient genetic family history information).  This extension is used when need RiskAssessment as an alternate choice  for `Observation.hasMember` or `DiagnosticReport.result`.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-risk
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportRisk {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -182,63 +134,18 @@ pub struct DiagnosticReportExtends {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// DiagnosticReport nested structure for the 'media' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportMedia {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Comment about the image (e.g. explanation)
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Reference to the image source
-    pub link: Reference,
-}
-/// References
+/// Analysis
 ///
-/// Additional bibliographic reference information about genetics, medications, clinical trials, etc. associated with knowledge-based information on genetics/genetic condition.
+/// Knowledge-based comments on the effect of the sequence on patient's condition/medication reaction.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsReferences
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsAnalysis
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportGeneticsReferences {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Replaces
-///
-/// The report replaces the target resource.  For example, when a final anatomic pathology report replaces a preliminary anatomic pathology report replaces  where the subsequent observation of case and report  may be on more or different material (specimen).  Note that  this is not same concept as` DiagnosticReport.status`  = preliminary of final, but industry definition of preliminary and final.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-replaces
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportReplaces {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// FamilyMemberHistory
-///
-/// Significant health events and conditions for a person related to the patient relevant in the context of care for the patient.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportGeneticsFamilyMemberHistory {
+pub struct DiagnosticReportGeneticsAnalysis {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -259,6 +166,38 @@ pub struct DiagnosticReportGeneticsAssessedCondition {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// FamilyMemberHistory
+///
+/// Significant health events and conditions for a person related to the patient relevant in the context of care for the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsFamilyMemberHistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// References
+///
+/// Additional bibliographic reference information about genetics, medications, clinical trials, etc. associated with knowledge-based information on genetics/genetic condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsReferences
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsReferences {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// locationPerformed
 ///
 /// Facility location where this report was prepared.
@@ -271,6 +210,67 @@ pub struct DiagnosticReportGeneticsAssessedCondition {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagnosticReportLocationPerformed {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// DiagnosticReport nested structure for the 'media' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportMedia {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Comment about the image (e.g. explanation)
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Reference to the image source
+    pub link: Reference,
+}
+/// Replaces
+///
+/// The report replaces the target resource.  For example, when a final anatomic pathology report replaces a preliminary anatomic pathology report replaces  where the subsequent observation of case and report  may be on more or different material (specimen).  Note that  this is not same concept as` DiagnosticReport.status`  = preliminary of final, but industry definition of preliminary and final.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-replaces
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportReplaces {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Risk
+///
+/// Provides a link to an assessment of prognosis or risk as informed by the diagnostic results (For example, genetic results and possibly by patient genetic family history information).  This extension is used when need RiskAssessment as an alternate choice  for `Observation.hasMember` or `DiagnosticReport.result`.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-risk
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportRisk {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Summary Of
+///
+/// A summary report that points to subordinate target reports.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportSummaryOf {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -306,7 +306,7 @@ impl Default for DiagnosticReport {
     }
 }
 
-impl Default for DiagnosticReportSummaryOf {
+impl Default for DiagnosticReportAddendumOf {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -314,7 +314,7 @@ impl Default for DiagnosticReportSummaryOf {
     }
 }
 
-impl Default for DiagnosticReportAddendumOf {
+impl Default for DiagnosticReportExtends {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -330,7 +330,7 @@ impl Default for DiagnosticReportGeneticsAnalysis {
     }
 }
 
-impl Default for DiagnosticReportRisk {
+impl Default for DiagnosticReportGeneticsAssessedCondition {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -338,7 +338,23 @@ impl Default for DiagnosticReportRisk {
     }
 }
 
-impl Default for DiagnosticReportExtends {
+impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsReferences {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportLocationPerformed {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -357,14 +373,6 @@ impl Default for DiagnosticReportMedia {
     }
 }
 
-impl Default for DiagnosticReportGeneticsReferences {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for DiagnosticReportReplaces {
     fn default() -> Self {
         Self {
@@ -373,7 +381,7 @@ impl Default for DiagnosticReportReplaces {
     }
 }
 
-impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
+impl Default for DiagnosticReportRisk {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -381,15 +389,7 @@ impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
     }
 }
 
-impl Default for DiagnosticReportGeneticsAssessedCondition {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for DiagnosticReportLocationPerformed {
+impl Default for DiagnosticReportSummaryOf {
     fn default() -> Self {
         Self {
             base: Extension::default(),

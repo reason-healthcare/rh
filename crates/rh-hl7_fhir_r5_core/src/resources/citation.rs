@@ -162,6 +162,69 @@ pub struct Citation {
     #[serde(rename = "citedArtifact")]
     pub cited_artifact: Option<CitationCitedartifact>,
 }
+/// Citation nested structure for the 'citedArtifact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationCitedartifact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Summary of the article or artifact
+    #[serde(rename = "abstract")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub abstract_: Vec<CitationCitedartifactAbstract>,
+    /// The assignment to an organizing scheme
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classification: Vec<CitationCitedartifactClassification>,
+    /// Attribution of authors and other contributors
+    pub contributorship: Option<CitationCitedartifactContributorship>,
+    /// The component of the article or artifact
+    pub part: Option<CitationCitedartifactPart>,
+    /// If multiple, used to represent alternative forms of the article that are not separate citations
+    #[serde(rename = "publicationForm")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub publication_form: Vec<CitationCitedartifactPublicationform>,
+    /// The artifact related to the cited artifact
+    #[serde(rename = "relatesTo")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relates_to: Vec<CitationCitedartifactRelatesto>,
+    /// An effective date or period for a status of the cited artifact
+    #[serde(rename = "statusDate")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub status_date: Vec<CitationCitedartifactStatusdate>,
+    /// The title details of the article or artifact
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub title: Vec<CitationCitedartifactTitle>,
+    /// The defined version of the cited artifact
+    pub version: Option<CitationCitedartifactVersion>,
+    /// Used for any URL for the article or artifact cited
+    #[serde(rename = "webLocation")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub web_location: Vec<CitationCitedartifactWeblocation>,
+    /// Unique identifier. May include DOI, PMID, PMCID, etc
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// Identifier not unique to the cited artifact. May include trial registry identifiers
+    #[serde(rename = "relatedIdentifier")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_identifier: Vec<Identifier>,
+    /// When the cited artifact was accessed
+    #[serde(rename = "dateAccessed")]
+    pub date_accessed: Option<DateTimeType>,
+    /// Extension element for the 'dateAccessed' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_dateAccessed")]
+    pub _date_accessed: Option<Element>,
+    /// The status of the cited artifact
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/cited-artifact-status-type
+    #[serde(rename = "currentState")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub current_state: Vec<CodeableConcept>,
+    /// Any additional information or content for the article or artifact
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
 /// CitationCitedartifact nested structure for the 'abstract' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CitationCitedartifactAbstract {
@@ -201,23 +264,6 @@ pub struct CitationCitedartifactAbstract {
     /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
     pub _copyright: Option<Element>,
 }
-/// Citation nested structure for the 'summary' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationSummary {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Format for display of the citation summary
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/citation-summary-style
-    pub style: Option<CodeableConcept>,
-    /// The human-readable display of the citation summary
-    pub text: StringType,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-}
 /// CitationCitedartifact nested structure for the 'classification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CitationCitedartifactClassification {
@@ -243,24 +289,37 @@ pub struct CitationCitedartifactClassification {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub artifact_assessment: Vec<Reference>,
 }
-/// Citation nested structure for the 'statusDate' field
+/// CitationCitedartifact nested structure for the 'contributorship' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationStatusdate {
+pub struct CitationCitedartifactContributorship {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Classification of the status
+    /// Indicates if the list includes all authors and/or contributors
+    pub complete: Option<BooleanType>,
+    /// Extension element for the 'complete' primitive field. Contains metadata and extensions.
+    pub _complete: Option<Element>,
+}
+/// CitationCitedartifact nested structure for the 'part' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationCitedartifactPart {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kind of component
     ///
-    /// Binding: example (No description)
+    /// Binding: extensible (No description)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/citation-status-type
-    pub activity: CodeableConcept,
-    /// Either occurred or expected
-    pub actual: Option<BooleanType>,
-    /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
-    pub _actual: Option<Element>,
-    /// When the status started and/or ended
-    pub period: Period,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/cited-artifact-part-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The specification of the component
+    pub value: Option<StringType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// The citation for the full article or artifact
+    #[serde(rename = "baseCitation")]
+    pub base_citation: Option<Reference>,
 }
 /// CitationCitedartifact nested structure for the 'publicationForm' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -360,123 +419,6 @@ pub struct CitationCitedartifactPublicationform {
     /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
     pub _copyright: Option<Element>,
 }
-/// CitationCitedartifact nested structure for the 'title' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationCitedartifactTitle {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The kind of title
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/title-type
-    #[serde(rename = "type")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub type_: Vec<CodeableConcept>,
-    /// Used to express the specific language
-    ///
-    /// Binding: preferred (A human language.)
-    ///
-    /// Available values:
-    /// - `ar`: Arabic
-    /// - `bg`: Bulgarian
-    /// - `bg-BG`: Bulgarian (Bulgaria)
-    /// - `bn`: Bengali
-    /// - `cs`: Czech
-    /// - `cs-CZ`: Czech (Czechia)
-    /// - `bs`: Bosnian
-    /// - `bs-BA`: Bosnian (Bosnia and Herzegovina)
-    /// - `da`: Danish
-    /// - `da-DK`: Danish (Denmark)
-    /// - ... and 72 more values
-    pub language: Option<StringType>,
-    /// The title of the article or artifact
-    pub text: StringType,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-}
-/// CitationCitedartifact nested structure for the 'webLocation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationCitedartifactWeblocation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code the reason for different URLs, e.g. abstract and full-text
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/artifact-url-classifier
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub classifier: Vec<CodeableConcept>,
-    /// The specific URL
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-}
-/// Citation nested structure for the 'citedArtifact' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationCitedartifact {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// An effective date or period for a status of the cited artifact
-    #[serde(rename = "statusDate")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub status_date: Vec<CitationCitedartifactStatusdate>,
-    /// The defined version of the cited artifact
-    pub version: Option<CitationCitedartifactVersion>,
-    /// Attribution of authors and other contributors
-    pub contributorship: Option<CitationCitedartifactContributorship>,
-    /// Summary of the article or artifact
-    #[serde(rename = "abstract")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub abstract_: Vec<CitationCitedartifactAbstract>,
-    /// The component of the article or artifact
-    pub part: Option<CitationCitedartifactPart>,
-    /// The artifact related to the cited artifact
-    #[serde(rename = "relatesTo")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub relates_to: Vec<CitationCitedartifactRelatesto>,
-    /// The title details of the article or artifact
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub title: Vec<CitationCitedartifactTitle>,
-    /// Used for any URL for the article or artifact cited
-    #[serde(rename = "webLocation")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub web_location: Vec<CitationCitedartifactWeblocation>,
-    /// The assignment to an organizing scheme
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub classification: Vec<CitationCitedartifactClassification>,
-    /// If multiple, used to represent alternative forms of the article that are not separate citations
-    #[serde(rename = "publicationForm")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub publication_form: Vec<CitationCitedartifactPublicationform>,
-    /// Unique identifier. May include DOI, PMID, PMCID, etc
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub identifier: Vec<Identifier>,
-    /// Identifier not unique to the cited artifact. May include trial registry identifiers
-    #[serde(rename = "relatedIdentifier")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub related_identifier: Vec<Identifier>,
-    /// When the cited artifact was accessed
-    #[serde(rename = "dateAccessed")]
-    pub date_accessed: Option<DateTimeType>,
-    /// Extension element for the 'dateAccessed' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_dateAccessed")]
-    pub _date_accessed: Option<Element>,
-    /// The status of the cited artifact
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/cited-artifact-status-type
-    #[serde(rename = "currentState")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub current_state: Vec<CodeableConcept>,
-    /// Any additional information or content for the article or artifact
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-}
 /// CitationCitedartifact nested structure for the 'relatesTo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CitationCitedartifactRelatesto {
@@ -517,52 +459,6 @@ pub struct CitationCitedartifactRelatesto {
     #[serde(rename = "resourceReference")]
     pub resource_reference: Option<Reference>,
 }
-/// CitationCitedartifact nested structure for the 'version' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationCitedartifactVersion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The version number or other version identifier
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// Citation for the main version of the cited artifact
-    #[serde(rename = "baseCitation")]
-    pub base_citation: Option<Reference>,
-}
-/// CitationCitedartifact nested structure for the 'contributorship' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationCitedartifactContributorship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Indicates if the list includes all authors and/or contributors
-    pub complete: Option<BooleanType>,
-    /// Extension element for the 'complete' primitive field. Contains metadata and extensions.
-    pub _complete: Option<Element>,
-}
-/// CitationCitedartifact nested structure for the 'part' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitationCitedartifactPart {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The kind of component
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/cited-artifact-part-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The specification of the component
-    pub value: Option<StringType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// The citation for the full article or artifact
-    #[serde(rename = "baseCitation")]
-    pub base_citation: Option<Reference>,
-}
 /// CitationCitedartifact nested structure for the 'statusDate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CitationCitedartifactStatusdate {
@@ -581,6 +477,74 @@ pub struct CitationCitedartifactStatusdate {
     pub _actual: Option<Element>,
     /// When the status started and/or ended
     pub period: Period,
+}
+/// CitationCitedartifact nested structure for the 'title' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationCitedartifactTitle {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kind of title
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/title-type
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
+    /// Used to express the specific language
+    ///
+    /// Binding: preferred (A human language.)
+    ///
+    /// Available values:
+    /// - `ar`: Arabic
+    /// - `bg`: Bulgarian
+    /// - `bg-BG`: Bulgarian (Bulgaria)
+    /// - `bn`: Bengali
+    /// - `cs`: Czech
+    /// - `cs-CZ`: Czech (Czechia)
+    /// - `bs`: Bosnian
+    /// - `bs-BA`: Bosnian (Bosnia and Herzegovina)
+    /// - `da`: Danish
+    /// - `da-DK`: Danish (Denmark)
+    /// - ... and 72 more values
+    pub language: Option<StringType>,
+    /// The title of the article or artifact
+    pub text: StringType,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+}
+/// CitationCitedartifact nested structure for the 'version' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationCitedartifactVersion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The version number or other version identifier
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// Citation for the main version of the cited artifact
+    #[serde(rename = "baseCitation")]
+    pub base_citation: Option<Reference>,
+}
+/// CitationCitedartifact nested structure for the 'webLocation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationCitedartifactWeblocation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code the reason for different URLs, e.g. abstract and full-text
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/artifact-url-classifier
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classifier: Vec<CodeableConcept>,
+    /// The specific URL
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
 }
 /// Citation nested structure for the 'classification' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -602,6 +566,42 @@ pub struct CitationClassification {
     /// ValueSet: http://hl7.org/fhir/ValueSet/citation-artifact-classifier
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub classifier: Vec<CodeableConcept>,
+}
+/// Citation nested structure for the 'statusDate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationStatusdate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Classification of the status
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/citation-status-type
+    pub activity: CodeableConcept,
+    /// Either occurred or expected
+    pub actual: Option<BooleanType>,
+    /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
+    pub _actual: Option<Element>,
+    /// When the status started and/or ended
+    pub period: Period,
+}
+/// Citation nested structure for the 'summary' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitationSummary {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Format for display of the citation summary
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/citation-summary-style
+    pub style: Option<CodeableConcept>,
+    /// The human-readable display of the citation summary
+    pub text: StringType,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
 }
 
 impl Default for Citation {
@@ -658,6 +658,30 @@ impl Default for Citation {
     }
 }
 
+impl Default for CitationCitedartifact {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            abstract_: Default::default(),
+            classification: Default::default(),
+            contributorship: Default::default(),
+            part: Default::default(),
+            publication_form: Default::default(),
+            relates_to: Default::default(),
+            status_date: Default::default(),
+            title: Default::default(),
+            version: Default::default(),
+            web_location: Default::default(),
+            identifier: Default::default(),
+            related_identifier: Default::default(),
+            date_accessed: Default::default(),
+            _date_accessed: Default::default(),
+            current_state: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
 impl Default for CitationCitedartifactAbstract {
     fn default() -> Self {
         Self {
@@ -668,17 +692,6 @@ impl Default for CitationCitedartifactAbstract {
             _text: Default::default(),
             copyright: Default::default(),
             _copyright: Default::default(),
-        }
-    }
-}
-
-impl Default for CitationSummary {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            style: Default::default(),
-            text: StringType::default(),
-            _text: Default::default(),
         }
     }
 }
@@ -694,14 +707,24 @@ impl Default for CitationCitedartifactClassification {
     }
 }
 
-impl Default for CitationStatusdate {
+impl Default for CitationCitedartifactContributorship {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            activity: Default::default(),
-            actual: Default::default(),
-            _actual: Default::default(),
-            period: Default::default(),
+            complete: Default::default(),
+            _complete: Default::default(),
+        }
+    }
+}
+
+impl Default for CitationCitedartifactPart {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            base_citation: Default::default(),
         }
     }
 }
@@ -740,53 +763,6 @@ impl Default for CitationCitedartifactPublicationform {
     }
 }
 
-impl Default for CitationCitedartifactTitle {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            language: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-        }
-    }
-}
-
-impl Default for CitationCitedartifactWeblocation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            classifier: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
-        }
-    }
-}
-
-impl Default for CitationCitedartifact {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            status_date: Default::default(),
-            version: Default::default(),
-            contributorship: Default::default(),
-            abstract_: Default::default(),
-            part: Default::default(),
-            relates_to: Default::default(),
-            title: Default::default(),
-            web_location: Default::default(),
-            classification: Default::default(),
-            publication_form: Default::default(),
-            identifier: Default::default(),
-            related_identifier: Default::default(),
-            date_accessed: Default::default(),
-            _date_accessed: Default::default(),
-            current_state: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
 impl Default for CitationCitedartifactRelatesto {
     fn default() -> Self {
         Self {
@@ -808,39 +784,6 @@ impl Default for CitationCitedartifactRelatesto {
     }
 }
 
-impl Default for CitationCitedartifactVersion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            base_citation: Default::default(),
-        }
-    }
-}
-
-impl Default for CitationCitedartifactContributorship {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            complete: Default::default(),
-            _complete: Default::default(),
-        }
-    }
-}
-
-impl Default for CitationCitedartifactPart {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            base_citation: Default::default(),
-        }
-    }
-}
-
 impl Default for CitationCitedartifactStatusdate {
     fn default() -> Self {
         Self {
@@ -853,12 +796,69 @@ impl Default for CitationCitedartifactStatusdate {
     }
 }
 
+impl Default for CitationCitedartifactTitle {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            language: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+        }
+    }
+}
+
+impl Default for CitationCitedartifactVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            base_citation: Default::default(),
+        }
+    }
+}
+
+impl Default for CitationCitedartifactWeblocation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            classifier: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
+        }
+    }
+}
+
 impl Default for CitationClassification {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
             classifier: Default::default(),
+        }
+    }
+}
+
+impl Default for CitationStatusdate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            activity: Default::default(),
+            actual: Default::default(),
+            _actual: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
+impl Default for CitationSummary {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            style: Default::default(),
+            text: StringType::default(),
+            _text: Default::default(),
         }
     }
 }

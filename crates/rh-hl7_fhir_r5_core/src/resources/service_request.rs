@@ -211,19 +211,6 @@ pub struct ServiceRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relevant_history: Vec<Reference>,
 }
-/// ServiceRequest nested structure for the 'patientInstruction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceRequestPatientinstruction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Patient or consumer-oriented instructions (markdown)
-    #[serde(rename = "instructionMarkdown")]
-    pub instruction_markdown: Option<StringType>,
-    /// Patient or consumer-oriented instructions (Reference)
-    #[serde(rename = "instructionReference")]
-    pub instruction_reference: Option<Reference>,
-}
 /// ServiceRequest nested structure for the 'orderDetail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceRequestOrderdetail {
@@ -269,6 +256,19 @@ pub struct ServiceRequestOrderdetailParameter {
     /// The value for the order detail (Period)
     #[serde(rename = "valuePeriod")]
     pub value_period: Period,
+}
+/// ServiceRequest nested structure for the 'patientInstruction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceRequestPatientinstruction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Patient or consumer-oriented instructions (markdown)
+    #[serde(rename = "instructionMarkdown")]
+    pub instruction_markdown: Option<StringType>,
+    /// Patient or consumer-oriented instructions (Reference)
+    #[serde(rename = "instructionReference")]
+    pub instruction_reference: Option<Reference>,
 }
 
 impl Default for ServiceRequest {
@@ -324,16 +324,6 @@ impl Default for ServiceRequest {
     }
 }
 
-impl Default for ServiceRequestPatientinstruction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            instruction_markdown: Default::default(),
-            instruction_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for ServiceRequestOrderdetail {
     fn default() -> Self {
         Self {
@@ -356,6 +346,16 @@ impl Default for ServiceRequestOrderdetailParameter {
             value_codeable_concept: Default::default(),
             value_string: Default::default(),
             value_period: Default::default(),
+        }
+    }
+}
+
+impl Default for ServiceRequestPatientinstruction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            instruction_markdown: Default::default(),
+            instruction_reference: Default::default(),
         }
     }
 }
@@ -994,15 +994,15 @@ impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest 
     fn has_as_needed(&self) -> bool {
         self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
     }
-    fn has_quantity(&self) -> bool {
-        self.quantity_quantity.is_some()
-            || self.quantity_ratio.is_some()
-            || self.quantity_range.is_some()
-    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
+    }
+    fn has_quantity(&self) -> bool {
+        self.quantity_quantity.is_some()
+            || self.quantity_ratio.is_some()
+            || self.quantity_range.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

@@ -112,73 +112,6 @@ pub struct MedicationKnowledge {
     /// Minimal definition information about the medication
     pub definitional: Option<MedicationKnowledgeDefinitional>,
 }
-/// MedicationKnowledge nested structure for the 'monitoringProgram' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMonitoringprogram {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of program under which the medication is monitored
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Name of the reviewing program
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'relatedMedicationKnowledge' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRelatedmedicationknowledge {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category of medicationKnowledge
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Associated documentation about the associated medication knowledge
-    pub reference: Vec<Reference>,
-}
-/// MedicationKnowledge nested structure for the 'packaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgePackaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Cost of the packaged medication
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub cost: Vec<StringType>,
-    /// The packaged medication that is being priced
-    #[serde(rename = "packagedProduct")]
-    pub packaged_product: Option<Reference>,
-}
-/// MedicationKnowledgeRegulatory nested structure for the 'substitution' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatorySubstitution {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specifies the type of substitution allowed
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Specifies if regulation allows for changes in the medication when dispensing
-    pub allowed: BooleanType,
-    /// Extension element for the 'allowed' primitive field. Contains metadata and extensions.
-    pub _allowed: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'indicationGuideline' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeIndicationguideline {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Guidelines for dosage of the medication
-    #[serde(rename = "dosingGuideline")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub dosing_guideline: Vec<MedicationKnowledgeIndicationguidelineDosingguideline>,
-    /// Indication for use that applies to the specific administration guideline
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub indication: Vec<CodeableReference>,
-}
 /// MedicationKnowledge nested structure for the 'cost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationKnowledgeCost {
@@ -203,120 +136,19 @@ pub struct MedicationKnowledgeCost {
     #[serde(rename = "costCodeableConcept")]
     pub cost_codeable_concept: CodeableConcept,
 }
-/// MedicationKnowledge nested structure for the 'medicineClassification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMedicineclassification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of category for the medication (for example, therapeutic classification, therapeutic sub-classification)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The source of the classification (string)
-    #[serde(rename = "sourceString")]
-    pub source_string: Option<StringType>,
-    /// The source of the classification (uri)
-    #[serde(rename = "sourceUri")]
-    pub source_uri: Option<StringType>,
-    /// Specific category assigned to the medication
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub classification: Vec<CodeableConcept>,
-}
-/// MedicationKnowledge nested structure for the 'storageGuideline' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeStorageguideline {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Setting or value of environment for adequate storage
-    #[serde(rename = "environmentalSetting")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub environmental_setting: Vec<MedicationKnowledgeStorageguidelineEnvironmentalsetting>,
-    /// Reference to additional information
-    pub reference: Option<StringType>,
-    /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
-    pub _reference: Option<Element>,
-    /// Additional storage notes
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-    /// Duration remains stable
-    #[serde(rename = "stabilityDuration")]
-    pub stability_duration: Option<Duration>,
-}
-/// MedicationKnowledge nested structure for the 'regulatory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specifies if changes are allowed when dispensing a medication from a regulatory perspective
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub substitution: Vec<MedicationKnowledgeRegulatorySubstitution>,
-    /// The maximum number of units of the medication that can be dispensed in a period
-    #[serde(rename = "maxDispense")]
-    pub max_dispense: Option<MedicationKnowledgeRegulatoryMaxdispense>,
-    /// Specifies the authority of the regulation
-    #[serde(rename = "regulatoryAuthority")]
-    pub regulatory_authority: Reference,
-    /// Specifies the schedule of a medication in jurisdiction
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub schedule: Vec<CodeableConcept>,
-}
-/// MedicationKnowledgeStorageguideline nested structure for the 'environmentalSetting' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeStorageguidelineEnvironmentalsetting {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Categorization of the setting
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Value of the setting (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Value of the setting (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Value of the setting (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-}
-/// MedicationKnowledge nested structure for the 'monograph' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMonograph {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The category of medication document
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Associated documentation about the medication
-    pub source: Option<Reference>,
-}
-/// MedicationKnowledgeRegulatory nested structure for the 'maxDispense' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatoryMaxdispense {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The maximum number of units of the medication that can be dispensed
-    pub quantity: Quantity,
-    /// The period that applies to the maximum number of units
-    pub period: Option<Duration>,
-}
 /// MedicationKnowledge nested structure for the 'definitional' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationKnowledgeDefinitional {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Active or inactive ingredient
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub ingredient: Vec<MedicationKnowledgeDefinitionalIngredient>,
     /// Specifies descriptive properties of the medicine
     #[serde(rename = "drugCharacteristic")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub drug_characteristic: Vec<MedicationKnowledgeDefinitionalDrugcharacteristic>,
+    /// Active or inactive ingredient
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<MedicationKnowledgeDefinitionalIngredient>,
     /// Definitional resources that provide more information about this medication
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub definition: Vec<Reference>,
@@ -335,63 +167,6 @@ pub struct MedicationKnowledgeDefinitional {
     #[serde(rename = "intendedRoute")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub intended_route: Vec<CodeableConcept>,
-}
-/// MedicationKnowledgeIndicationguidelineDosingguideline nested structure for the 'patientCharacteristic' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeIndicationguidelineDosingguidelinePatientcharacteristic {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Categorization of specific characteristic that is relevant to the administration guideline
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The specific characteristic (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: Option<CodeableConcept>,
-    /// The specific characteristic (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// The specific characteristic (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Option<Range>,
-}
-/// MedicationKnowledgeDefinitional nested structure for the 'ingredient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeDefinitionalIngredient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Substances contained in the medication
-    pub item: CodeableReference,
-    /// A code that defines the type of ingredient, active, base, etc
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-RoleClassIngredientEntity
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Quantity of ingredient present (Ratio)
-    #[serde(rename = "strengthRatio")]
-    pub strength_ratio: Option<Ratio>,
-    /// Quantity of ingredient present (CodeableConcept)
-    #[serde(rename = "strengthCodeableConcept")]
-    pub strength_codeable_concept: Option<CodeableConcept>,
-    /// Quantity of ingredient present (Quantity)
-    #[serde(rename = "strengthQuantity")]
-    pub strength_quantity: Option<Quantity>,
-}
-/// MedicationKnowledgeIndicationguideline nested structure for the 'dosingGuideline' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeIndicationguidelineDosingguideline {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Intention of the treatment
-    #[serde(rename = "treatmentIntent")]
-    pub treatment_intent: Option<CodeableConcept>,
-    /// Type of treatment the guideline applies to
-    #[serde(rename = "administrationTreatment")]
-    pub administration_treatment: Option<CodeableConcept>,
 }
 /// MedicationKnowledgeDefinitional nested structure for the 'drugCharacteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -422,6 +197,58 @@ pub struct MedicationKnowledgeDefinitionalDrugcharacteristic {
     #[serde(rename = "valueAttachment")]
     pub value_attachment: Option<Attachment>,
 }
+/// MedicationKnowledgeDefinitional nested structure for the 'ingredient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeDefinitionalIngredient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Substances contained in the medication
+    pub item: CodeableReference,
+    /// A code that defines the type of ingredient, active, base, etc
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-RoleClassIngredientEntity
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Quantity of ingredient present (Ratio)
+    #[serde(rename = "strengthRatio")]
+    pub strength_ratio: Option<Ratio>,
+    /// Quantity of ingredient present (CodeableConcept)
+    #[serde(rename = "strengthCodeableConcept")]
+    pub strength_codeable_concept: Option<CodeableConcept>,
+    /// Quantity of ingredient present (Quantity)
+    #[serde(rename = "strengthQuantity")]
+    pub strength_quantity: Option<Quantity>,
+}
+/// MedicationKnowledge nested structure for the 'indicationGuideline' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeIndicationguideline {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Guidelines for dosage of the medication
+    #[serde(rename = "dosingGuideline")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dosing_guideline: Vec<MedicationKnowledgeIndicationguidelineDosingguideline>,
+    /// Indication for use that applies to the specific administration guideline
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub indication: Vec<CodeableReference>,
+}
+/// MedicationKnowledgeIndicationguideline nested structure for the 'dosingGuideline' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeIndicationguidelineDosingguideline {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Intention of the treatment
+    #[serde(rename = "treatmentIntent")]
+    pub treatment_intent: Option<CodeableConcept>,
+    /// Type of treatment the guideline applies to
+    #[serde(rename = "administrationTreatment")]
+    pub administration_treatment: Option<CodeableConcept>,
+}
 /// MedicationKnowledgeIndicationguidelineDosingguideline nested structure for the 'dosage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationKnowledgeIndicationguidelineDosingguidelineDosage {
@@ -433,6 +260,179 @@ pub struct MedicationKnowledgeIndicationguidelineDosingguidelineDosage {
     pub type_: CodeableConcept,
     /// Dosage for the medication for the specific guidelines
     pub dosage: Vec<Dosage>,
+}
+/// MedicationKnowledgeIndicationguidelineDosingguideline nested structure for the 'patientCharacteristic' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeIndicationguidelineDosingguidelinePatientcharacteristic {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Categorization of specific characteristic that is relevant to the administration guideline
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The specific characteristic (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: Option<CodeableConcept>,
+    /// The specific characteristic (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// The specific characteristic (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Option<Range>,
+}
+/// MedicationKnowledge nested structure for the 'medicineClassification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMedicineclassification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of category for the medication (for example, therapeutic classification, therapeutic sub-classification)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The source of the classification (string)
+    #[serde(rename = "sourceString")]
+    pub source_string: Option<StringType>,
+    /// The source of the classification (uri)
+    #[serde(rename = "sourceUri")]
+    pub source_uri: Option<StringType>,
+    /// Specific category assigned to the medication
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classification: Vec<CodeableConcept>,
+}
+/// MedicationKnowledge nested structure for the 'monitoringProgram' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMonitoringprogram {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of program under which the medication is monitored
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Name of the reviewing program
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+}
+/// MedicationKnowledge nested structure for the 'monograph' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMonograph {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The category of medication document
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Associated documentation about the medication
+    pub source: Option<Reference>,
+}
+/// MedicationKnowledge nested structure for the 'packaging' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgePackaging {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Cost of the packaged medication
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cost: Vec<StringType>,
+    /// The packaged medication that is being priced
+    #[serde(rename = "packagedProduct")]
+    pub packaged_product: Option<Reference>,
+}
+/// MedicationKnowledge nested structure for the 'regulatory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The maximum number of units of the medication that can be dispensed in a period
+    #[serde(rename = "maxDispense")]
+    pub max_dispense: Option<MedicationKnowledgeRegulatoryMaxdispense>,
+    /// Specifies if changes are allowed when dispensing a medication from a regulatory perspective
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub substitution: Vec<MedicationKnowledgeRegulatorySubstitution>,
+    /// Specifies the authority of the regulation
+    #[serde(rename = "regulatoryAuthority")]
+    pub regulatory_authority: Reference,
+    /// Specifies the schedule of a medication in jurisdiction
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub schedule: Vec<CodeableConcept>,
+}
+/// MedicationKnowledgeRegulatory nested structure for the 'maxDispense' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatoryMaxdispense {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The maximum number of units of the medication that can be dispensed
+    pub quantity: Quantity,
+    /// The period that applies to the maximum number of units
+    pub period: Option<Duration>,
+}
+/// MedicationKnowledgeRegulatory nested structure for the 'substitution' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatorySubstitution {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specifies the type of substitution allowed
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Specifies if regulation allows for changes in the medication when dispensing
+    pub allowed: BooleanType,
+    /// Extension element for the 'allowed' primitive field. Contains metadata and extensions.
+    pub _allowed: Option<Element>,
+}
+/// MedicationKnowledge nested structure for the 'relatedMedicationKnowledge' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRelatedmedicationknowledge {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category of medicationKnowledge
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Associated documentation about the associated medication knowledge
+    pub reference: Vec<Reference>,
+}
+/// MedicationKnowledge nested structure for the 'storageGuideline' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeStorageguideline {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Setting or value of environment for adequate storage
+    #[serde(rename = "environmentalSetting")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub environmental_setting: Vec<MedicationKnowledgeStorageguidelineEnvironmentalsetting>,
+    /// Reference to additional information
+    pub reference: Option<StringType>,
+    /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
+    pub _reference: Option<Element>,
+    /// Additional storage notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// Duration remains stable
+    #[serde(rename = "stabilityDuration")]
+    pub stability_duration: Option<Duration>,
+}
+/// MedicationKnowledgeStorageguideline nested structure for the 'environmentalSetting' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeStorageguidelineEnvironmentalsetting {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Categorization of the setting
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Value of the setting (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Value of the setting (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Value of the setting (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
 }
 
 impl Default for MedicationKnowledge {
@@ -466,58 +466,6 @@ impl Default for MedicationKnowledge {
     }
 }
 
-impl Default for MedicationKnowledgeMonitoringprogram {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRelatedmedicationknowledge {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgePackaging {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            cost: Default::default(),
-            packaged_product: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRegulatorySubstitution {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            allowed: Default::default(),
-            _allowed: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeIndicationguideline {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            dosing_guideline: Default::default(),
-            indication: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicationKnowledgeCost {
     fn default() -> Self {
         Self {
@@ -532,119 +480,15 @@ impl Default for MedicationKnowledgeCost {
     }
 }
 
-impl Default for MedicationKnowledgeMedicineclassification {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            source_string: Default::default(),
-            source_uri: Default::default(),
-            classification: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeStorageguideline {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            environmental_setting: Default::default(),
-            reference: Default::default(),
-            _reference: Default::default(),
-            note: Default::default(),
-            stability_duration: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRegulatory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            substitution: Default::default(),
-            max_dispense: Default::default(),
-            regulatory_authority: Reference::default(),
-            schedule: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeStorageguidelineEnvironmentalsetting {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            value_codeable_concept: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeMonograph {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeRegulatoryMaxdispense {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            quantity: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicationKnowledgeDefinitional {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            ingredient: Default::default(),
             drug_characteristic: Default::default(),
+            ingredient: Default::default(),
             definition: Default::default(),
             dose_form: Default::default(),
             intended_route: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeIndicationguidelineDosingguidelinePatientcharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeDefinitionalIngredient {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            type_: Default::default(),
-            strength_ratio: Default::default(),
-            strength_codeable_concept: Default::default(),
-            strength_quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeIndicationguidelineDosingguideline {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            treatment_intent: Default::default(),
-            administration_treatment: Default::default(),
         }
     }
 }
@@ -663,12 +507,168 @@ impl Default for MedicationKnowledgeDefinitionalDrugcharacteristic {
     }
 }
 
+impl Default for MedicationKnowledgeDefinitionalIngredient {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            type_: Default::default(),
+            strength_ratio: Default::default(),
+            strength_codeable_concept: Default::default(),
+            strength_quantity: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeIndicationguideline {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            dosing_guideline: Default::default(),
+            indication: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeIndicationguidelineDosingguideline {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            treatment_intent: Default::default(),
+            administration_treatment: Default::default(),
+        }
+    }
+}
+
 impl Default for MedicationKnowledgeIndicationguidelineDosingguidelineDosage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
             dosage: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeIndicationguidelineDosingguidelinePatientcharacteristic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeMedicineclassification {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            source_string: Default::default(),
+            source_uri: Default::default(),
+            classification: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeMonitoringprogram {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeMonograph {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgePackaging {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            cost: Default::default(),
+            packaged_product: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            max_dispense: Default::default(),
+            substitution: Default::default(),
+            regulatory_authority: Reference::default(),
+            schedule: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatoryMaxdispense {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            quantity: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatorySubstitution {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            allowed: Default::default(),
+            _allowed: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRelatedmedicationknowledge {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeStorageguideline {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            environmental_setting: Default::default(),
+            reference: Default::default(),
+            _reference: Default::default(),
+            note: Default::default(),
+            stability_duration: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeStorageguidelineEnvironmentalsetting {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            value_codeable_concept: Default::default(),
         }
     }
 }

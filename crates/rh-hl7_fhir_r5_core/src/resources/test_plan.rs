@@ -132,6 +132,19 @@ pub struct TestPlan {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub test_case: Vec<TestPlanTestcase>,
 }
+/// TestPlan nested structure for the 'dependency' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestPlanDependency {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of the dependency criterium
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Link to predecessor test plans
+    pub predecessor: Option<Reference>,
+}
 /// TestPlan nested structure for the 'testCase' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestPlanTestcase {
@@ -144,14 +157,14 @@ pub struct TestPlanTestcase {
     /// Required criteria to execute the test case
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependency: Vec<TestPlanTestcaseDependency>,
-    /// The actual test to be executed
-    #[serde(rename = "testRun")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub test_run: Vec<TestPlanTestcaseTestrun>,
     /// The test data used in the test case
     #[serde(rename = "testData")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub test_data: Vec<TestPlanTestcaseTestdata>,
+    /// The actual test to be executed
+    #[serde(rename = "testRun")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub test_run: Vec<TestPlanTestcaseTestrun>,
     /// Sequence of test case in the test plan
     pub sequence: Option<IntegerType>,
     /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
@@ -177,19 +190,6 @@ pub struct TestPlanTestcaseAssertion {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub result: Vec<CodeableReference>,
 }
-/// TestPlan nested structure for the 'dependency' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestPlanDependency {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of the dependency criterium
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Link to predecessor test plans
-    pub predecessor: Option<Reference>,
-}
 /// TestPlanTestcase nested structure for the 'dependency' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestPlanTestcaseDependency {
@@ -202,17 +202,6 @@ pub struct TestPlanTestcaseDependency {
     pub _description: Option<Element>,
     /// Link to predecessor test plans
     pub predecessor: Option<Reference>,
-}
-/// TestPlanTestcase nested structure for the 'testRun' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestPlanTestcaseTestrun {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The narrative description of the tests
-    pub narrative: Option<StringType>,
-    /// Extension element for the 'narrative' primitive field. Contains metadata and extensions.
-    pub _narrative: Option<Element>,
 }
 /// TestPlanTestcase nested structure for the 'testData' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -231,6 +220,17 @@ pub struct TestPlanTestcaseTestdata {
     /// Pointer to a definition of test resources - narrative or structured e.g. synthetic data generation, etc (Reference)
     #[serde(rename = "sourceReference")]
     pub source_reference: Option<Reference>,
+}
+/// TestPlanTestcase nested structure for the 'testRun' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestPlanTestcaseTestrun {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The narrative description of the tests
+    pub narrative: Option<StringType>,
+    /// Extension element for the 'narrative' primitive field. Contains metadata and extensions.
+    pub _narrative: Option<Element>,
 }
 
 impl Default for TestPlan {
@@ -279,14 +279,25 @@ impl Default for TestPlan {
     }
 }
 
+impl Default for TestPlanDependency {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            predecessor: Default::default(),
+        }
+    }
+}
+
 impl Default for TestPlanTestcase {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             assertion: Default::default(),
             dependency: Default::default(),
-            test_run: Default::default(),
             test_data: Default::default(),
+            test_run: Default::default(),
             sequence: Default::default(),
             _sequence: Default::default(),
             scope: Default::default(),
@@ -305,17 +316,6 @@ impl Default for TestPlanTestcaseAssertion {
     }
 }
 
-impl Default for TestPlanDependency {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            predecessor: Default::default(),
-        }
-    }
-}
-
 impl Default for TestPlanTestcaseDependency {
     fn default() -> Self {
         Self {
@@ -323,16 +323,6 @@ impl Default for TestPlanTestcaseDependency {
             description: Default::default(),
             _description: Default::default(),
             predecessor: Default::default(),
-        }
-    }
-}
-
-impl Default for TestPlanTestcaseTestrun {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            narrative: Default::default(),
-            _narrative: Default::default(),
         }
     }
 }
@@ -345,6 +335,16 @@ impl Default for TestPlanTestcaseTestdata {
             content: Default::default(),
             source_string: Default::default(),
             source_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for TestPlanTestcaseTestrun {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            narrative: Default::default(),
+            _narrative: Default::default(),
         }
     }
 }

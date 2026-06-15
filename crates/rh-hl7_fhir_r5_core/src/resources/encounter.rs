@@ -162,91 +162,6 @@ pub struct Encounter {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub location: Vec<EncounterLocation>,
 }
-/// Encounter nested structure for the 'reason' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterReason {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What the reason value should be used for/as
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-reason-use
-    #[serde(rename = "use")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub use_: Vec<CodeableConcept>,
-    /// Reason the encounter takes place (core or reference)
-    ///
-    /// Binding: preferred (Reason why the encounter takes place.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-reason
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub value: Vec<CodeableReference>,
-}
-/// Encounter nested structure for the 'location' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterLocation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Location the encounter takes place
-    pub location: Reference,
-    /// planned | active | reserved | completed
-    pub status: Option<EncounterLocationStatus>,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The physical type of the location (usually the level in the location hierarchy - bed, room, ward, virtual etc.)
-    ///
-    /// Binding: example (Physical form of the location.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/location-form
-    pub form: Option<CodeableConcept>,
-    /// Time period during which the patient was present at the location
-    pub period: Option<Period>,
-}
-/// Encounter nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The diagnosis relevant to the encounter
-    ///
-    /// Binding: example (No description)
-    ///
-    /// Available values:
-    /// - `160245001`: No current problems or disability
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub condition: Vec<CodeableReference>,
-    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
-    ///
-    /// Binding: preferred (The type of diagnosis this condition represents.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-diagnosis-use
-    #[serde(rename = "use")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub use_: Vec<CodeableConcept>,
-}
-/// Encounter nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role of participant in encounter
-    ///
-    /// Binding: extensible (Role of participant in encounter.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-participant-type
-    #[serde(rename = "type")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub type_: Vec<CodeableConcept>,
-    /// Period of time during the encounter that the participant participated
-    pub period: Option<Period>,
-    /// The individual, device, or service participating in the encounter
-    pub actor: Option<Reference>,
-}
 /// Encounter nested structure for the 'admission' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterAdmission {
@@ -281,6 +196,91 @@ pub struct EncounterAdmission {
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-discharge-disposition
     #[serde(rename = "dischargeDisposition")]
     pub discharge_disposition: Option<CodeableConcept>,
+}
+/// Encounter nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The diagnosis relevant to the encounter
+    ///
+    /// Binding: example (No description)
+    ///
+    /// Available values:
+    /// - `160245001`: No current problems or disability
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condition: Vec<CodeableReference>,
+    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
+    ///
+    /// Binding: preferred (The type of diagnosis this condition represents.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-diagnosis-use
+    #[serde(rename = "use")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_: Vec<CodeableConcept>,
+}
+/// Encounter nested structure for the 'location' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterLocation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Location the encounter takes place
+    pub location: Reference,
+    /// planned | active | reserved | completed
+    pub status: Option<EncounterLocationStatus>,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The physical type of the location (usually the level in the location hierarchy - bed, room, ward, virtual etc.)
+    ///
+    /// Binding: example (Physical form of the location.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/location-form
+    pub form: Option<CodeableConcept>,
+    /// Time period during which the patient was present at the location
+    pub period: Option<Period>,
+}
+/// Encounter nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role of participant in encounter
+    ///
+    /// Binding: extensible (Role of participant in encounter.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-participant-type
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
+    /// Period of time during the encounter that the participant participated
+    pub period: Option<Period>,
+    /// The individual, device, or service participating in the encounter
+    pub actor: Option<Reference>,
+}
+/// Encounter nested structure for the 'reason' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterReason {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What the reason value should be used for/as
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-reason-use
+    #[serde(rename = "use")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_: Vec<CodeableConcept>,
+    /// Reason the encounter takes place (core or reference)
+    ///
+    /// Binding: preferred (Reason why the encounter takes place.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-reason
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value: Vec<CodeableReference>,
 }
 
 impl Default for Encounter {
@@ -322,12 +322,26 @@ impl Default for Encounter {
     }
 }
 
-impl Default for EncounterReason {
+impl Default for EncounterAdmission {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            pre_admission_identifier: Default::default(),
+            origin: Default::default(),
+            admit_source: Default::default(),
+            re_admission: Default::default(),
+            destination: Default::default(),
+            discharge_disposition: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            condition: Default::default(),
             use_: Default::default(),
-            value: Default::default(),
         }
     }
 }
@@ -345,16 +359,6 @@ impl Default for EncounterLocation {
     }
 }
 
-impl Default for EncounterDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            condition: Default::default(),
-            use_: Default::default(),
-        }
-    }
-}
-
 impl Default for EncounterParticipant {
     fn default() -> Self {
         Self {
@@ -366,16 +370,12 @@ impl Default for EncounterParticipant {
     }
 }
 
-impl Default for EncounterAdmission {
+impl Default for EncounterReason {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            pre_admission_identifier: Default::default(),
-            origin: Default::default(),
-            admit_source: Default::default(),
-            re_admission: Default::default(),
-            destination: Default::default(),
-            discharge_disposition: Default::default(),
+            use_: Default::default(),
+            value: Default::default(),
         }
     }
 }

@@ -859,9 +859,6 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
 }
 
 impl crate::traits::procedure::ProcedureExistence for Procedure {
-    fn has_reported(&self) -> bool {
-        self.reported_boolean.is_some() || self.reported_reference.is_some()
-    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
@@ -869,6 +866,9 @@ impl crate::traits::procedure::ProcedureExistence for Procedure {
             || self.occurrence_age.is_some()
             || self.occurrence_range.is_some()
             || self.occurrence_timing.is_some()
+    }
+    fn has_reported(&self) -> bool {
+        self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

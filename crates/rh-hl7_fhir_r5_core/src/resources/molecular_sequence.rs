@@ -57,6 +57,35 @@ pub struct MolecularSequence {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relative: Vec<MolecularSequenceRelative>,
 }
+/// MolecularSequence nested structure for the 'relative' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MolecularSequenceRelative {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Changes in sequence from the starting sequence
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edit: Vec<MolecularSequenceRelativeEdit>,
+    /// A sequence used as starting sequence
+    #[serde(rename = "startingSequence")]
+    pub starting_sequence: Option<MolecularSequenceRelativeStartingsequence>,
+    /// Ways of identifying nucleotides or amino acids within a sequence
+    ///
+    /// Binding: extensible (Genomic coordinate system.)
+    ///
+    /// ValueSet: http://loinc.org/LL5323-2/
+    #[serde(rename = "coordinateSystem")]
+    pub coordinate_system: CodeableConcept,
+    /// Indicates the order in which the sequence should be considered when putting multiple 'relative' elements together
+    #[serde(rename = "ordinalPosition")]
+    pub ordinal_position: Option<IntegerType>,
+    /// Extension element for the 'ordinalPosition' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_ordinalPosition")]
+    pub _ordinal_position: Option<Element>,
+    /// Indicates the nucleotide range in the composed sequence when multiple 'relative' elements are used together
+    #[serde(rename = "sequenceRange")]
+    pub sequence_range: Option<Range>,
+}
 /// MolecularSequenceRelative nested structure for the 'edit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MolecularSequenceRelativeEdit {
@@ -83,35 +112,6 @@ pub struct MolecularSequenceRelativeEdit {
     /// Extension element for the 'replacedSequence' primitive field. Contains metadata and extensions.
     #[serde(rename = "_replacedSequence")]
     pub _replaced_sequence: Option<Element>,
-}
-/// MolecularSequence nested structure for the 'relative' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MolecularSequenceRelative {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A sequence used as starting sequence
-    #[serde(rename = "startingSequence")]
-    pub starting_sequence: Option<MolecularSequenceRelativeStartingsequence>,
-    /// Changes in sequence from the starting sequence
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub edit: Vec<MolecularSequenceRelativeEdit>,
-    /// Ways of identifying nucleotides or amino acids within a sequence
-    ///
-    /// Binding: extensible (Genomic coordinate system.)
-    ///
-    /// ValueSet: http://loinc.org/LL5323-2/
-    #[serde(rename = "coordinateSystem")]
-    pub coordinate_system: CodeableConcept,
-    /// Indicates the order in which the sequence should be considered when putting multiple 'relative' elements together
-    #[serde(rename = "ordinalPosition")]
-    pub ordinal_position: Option<IntegerType>,
-    /// Extension element for the 'ordinalPosition' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_ordinalPosition")]
-    pub _ordinal_position: Option<Element>,
-    /// Indicates the nucleotide range in the composed sequence when multiple 'relative' elements are used together
-    #[serde(rename = "sequenceRange")]
-    pub sequence_range: Option<Range>,
 }
 /// MolecularSequenceRelative nested structure for the 'startingSequence' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,6 +179,20 @@ impl Default for MolecularSequence {
     }
 }
 
+impl Default for MolecularSequenceRelative {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            edit: Default::default(),
+            starting_sequence: Default::default(),
+            coordinate_system: CodeableConcept::default(),
+            ordinal_position: Default::default(),
+            _ordinal_position: Default::default(),
+            sequence_range: Default::default(),
+        }
+    }
+}
+
 impl Default for MolecularSequenceRelativeEdit {
     fn default() -> Self {
         Self {
@@ -191,20 +205,6 @@ impl Default for MolecularSequenceRelativeEdit {
             _replacement_sequence: Default::default(),
             replaced_sequence: Default::default(),
             _replaced_sequence: Default::default(),
-        }
-    }
-}
-
-impl Default for MolecularSequenceRelative {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            starting_sequence: Default::default(),
-            edit: Default::default(),
-            coordinate_system: CodeableConcept::default(),
-            ordinal_position: Default::default(),
-            _ordinal_position: Default::default(),
-            sequence_range: Default::default(),
         }
     }
 }

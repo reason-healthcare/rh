@@ -69,6 +69,19 @@ pub struct Ingredient {
     /// The substance that comprises this ingredient
     pub substance: IngredientSubstance,
 }
+/// Ingredient nested structure for the 'manufacturer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IngredientManufacturer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// allowed | possible | actual
+    pub role: Option<IngredientManufacturerRole>,
+    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
+    pub _role: Option<Element>,
+    /// An organization that manufactures this ingredient
+    pub manufacturer: Reference,
+}
 /// Ingredient nested structure for the 'substance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngredientSubstance {
@@ -84,19 +97,6 @@ pub struct IngredientSubstance {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
     pub code: CodeableReference,
-}
-/// Ingredient nested structure for the 'manufacturer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IngredientManufacturer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// allowed | possible | actual
-    pub role: Option<IngredientManufacturerRole>,
-    /// Extension element for the 'role' primitive field. Contains metadata and extensions.
-    pub _role: Option<Element>,
-    /// An organization that manufactures this ingredient
-    pub manufacturer: Reference,
 }
 /// IngredientSubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,16 +178,6 @@ impl Default for Ingredient {
     }
 }
 
-impl Default for IngredientSubstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            strength: Default::default(),
-            code: CodeableReference::default(),
-        }
-    }
-}
-
 impl Default for IngredientManufacturer {
     fn default() -> Self {
         Self {
@@ -195,6 +185,16 @@ impl Default for IngredientManufacturer {
             role: Default::default(),
             _role: Default::default(),
             manufacturer: Reference::default(),
+        }
+    }
+}
+
+impl Default for IngredientSubstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: Default::default(),
+            code: CodeableReference::default(),
         }
     }
 }

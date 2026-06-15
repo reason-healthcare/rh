@@ -225,6 +225,39 @@ pub struct ObservationDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub component: Vec<ObservationDefinitionComponent>,
 }
+/// ObservationDefinition nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationDefinitionComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of observation
+    ///
+    /// Binding: example (Codes identifying names of simple observations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
+    pub code: CodeableConcept,
+    /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
+    #[serde(rename = "permittedDataType")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_data_type: Vec<PermittedDataType>,
+    /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_permittedDataType")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _permitted_data_type: Vec<Element>,
+    /// Unit for quantitative results
+    ///
+    /// Binding: preferred (Codes identifying units of measure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
+    #[serde(rename = "permittedUnit")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_unit: Vec<Coding>,
+    /// Set of qualified values for observation results
+    #[serde(rename = "qualifiedValue")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualified_value: Vec<StringType>,
+}
 /// ObservationDefinition nested structure for the 'qualifiedValue' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObservationDefinitionQualifiedvalue {
@@ -294,39 +327,6 @@ pub struct ObservationDefinitionQualifiedvalue {
     #[serde(rename = "_criticalCodedValueSet")]
     pub _critical_coded_value_set: Option<Element>,
 }
-/// ObservationDefinition nested structure for the 'component' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationDefinitionComponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of observation
-    ///
-    /// Binding: example (Codes identifying names of simple observations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
-    pub code: CodeableConcept,
-    /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
-    #[serde(rename = "permittedDataType")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub permitted_data_type: Vec<PermittedDataType>,
-    /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_permittedDataType")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub _permitted_data_type: Vec<Element>,
-    /// Unit for quantitative results
-    ///
-    /// Binding: preferred (Codes identifying units of measure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
-    #[serde(rename = "permittedUnit")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub permitted_unit: Vec<Coding>,
-    /// Set of qualified values for observation results
-    #[serde(rename = "qualifiedValue")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub qualified_value: Vec<StringType>,
-}
 
 impl Default for ObservationDefinition {
     fn default() -> Self {
@@ -393,6 +393,19 @@ impl Default for ObservationDefinition {
     }
 }
 
+impl Default for ObservationDefinitionComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            permitted_data_type: Default::default(),
+            _permitted_data_type: Default::default(),
+            permitted_unit: Default::default(),
+            qualified_value: Default::default(),
+        }
+    }
+}
+
 impl Default for ObservationDefinitionQualifiedvalue {
     fn default() -> Self {
         Self {
@@ -416,19 +429,6 @@ impl Default for ObservationDefinitionQualifiedvalue {
             _abnormal_coded_value_set: Default::default(),
             critical_coded_value_set: Default::default(),
             _critical_coded_value_set: Default::default(),
-        }
-    }
-}
-
-impl Default for ObservationDefinitionComponent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            permitted_data_type: Default::default(),
-            _permitted_data_type: Default::default(),
-            permitted_unit: Default::default(),
-            qualified_value: Default::default(),
         }
     }
 }

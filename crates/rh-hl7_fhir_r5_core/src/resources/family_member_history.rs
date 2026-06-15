@@ -141,6 +141,62 @@ pub struct FamilyMemberHistory {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub procedure: Vec<FamilyMemberHistoryProcedure>,
 }
+/// FamilyMemberHistory nested structure for the 'condition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilyMemberHistoryCondition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Condition suffered by relation
+    ///
+    /// Binding: example (Identification of the Condition or diagnosis.)
+    ///
+    /// Available values:
+    /// - `160245001`: No current problems or disability
+    pub code: CodeableConcept,
+    /// deceased | permanent disability | etc
+    ///
+    /// Binding: example (The result of the condition for the patient; e.g. death, permanent disability, temporary disability, etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/condition-outcome
+    pub outcome: Option<CodeableConcept>,
+    /// Whether the condition contributed to the cause of death
+    #[serde(rename = "contributedToDeath")]
+    pub contributed_to_death: Option<BooleanType>,
+    /// Extension element for the 'contributedToDeath' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_contributedToDeath")]
+    pub _contributed_to_death: Option<Element>,
+    /// When condition first manifested (Age)
+    #[serde(rename = "onsetAge")]
+    pub onset_age: Option<Age>,
+    /// When condition first manifested (Range)
+    #[serde(rename = "onsetRange")]
+    pub onset_range: Option<Range>,
+    /// When condition first manifested (Period)
+    #[serde(rename = "onsetPeriod")]
+    pub onset_period: Option<Period>,
+    /// When condition first manifested (string)
+    #[serde(rename = "onsetString")]
+    pub onset_string: Option<StringType>,
+    /// Extra information about condition
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// FamilyMemberHistory nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilyMemberHistoryParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub function: Option<CodeableConcept>,
+    /// Who or what participated in the activities related to the family member history
+    pub actor: Reference,
+}
 /// FamilyMemberHistory nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FamilyMemberHistoryProcedure {
@@ -181,62 +237,6 @@ pub struct FamilyMemberHistoryProcedure {
     #[serde(rename = "performedDateTime")]
     pub performed_date_time: Option<DateTimeType>,
     /// Extra information about the procedure
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub note: Vec<Annotation>,
-}
-/// FamilyMemberHistory nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FamilyMemberHistoryParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub function: Option<CodeableConcept>,
-    /// Who or what participated in the activities related to the family member history
-    pub actor: Reference,
-}
-/// FamilyMemberHistory nested structure for the 'condition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FamilyMemberHistoryCondition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Condition suffered by relation
-    ///
-    /// Binding: example (Identification of the Condition or diagnosis.)
-    ///
-    /// Available values:
-    /// - `160245001`: No current problems or disability
-    pub code: CodeableConcept,
-    /// deceased | permanent disability | etc
-    ///
-    /// Binding: example (The result of the condition for the patient; e.g. death, permanent disability, temporary disability, etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/condition-outcome
-    pub outcome: Option<CodeableConcept>,
-    /// Whether the condition contributed to the cause of death
-    #[serde(rename = "contributedToDeath")]
-    pub contributed_to_death: Option<BooleanType>,
-    /// Extension element for the 'contributedToDeath' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_contributedToDeath")]
-    pub _contributed_to_death: Option<Element>,
-    /// When condition first manifested (Age)
-    #[serde(rename = "onsetAge")]
-    pub onset_age: Option<Age>,
-    /// When condition first manifested (Range)
-    #[serde(rename = "onsetRange")]
-    pub onset_range: Option<Range>,
-    /// When condition first manifested (Period)
-    #[serde(rename = "onsetPeriod")]
-    pub onset_period: Option<Period>,
-    /// When condition first manifested (string)
-    #[serde(rename = "onsetString")]
-    pub onset_string: Option<StringType>,
-    /// Extra information about condition
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
@@ -282,7 +282,7 @@ impl Default for FamilyMemberHistory {
     }
 }
 
-impl Default for FamilyMemberHistoryProcedure {
+impl Default for FamilyMemberHistoryCondition {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -290,11 +290,10 @@ impl Default for FamilyMemberHistoryProcedure {
             outcome: Default::default(),
             contributed_to_death: Default::default(),
             _contributed_to_death: Default::default(),
-            performed_age: Default::default(),
-            performed_range: Default::default(),
-            performed_period: Default::default(),
-            performed_string: Default::default(),
-            performed_date_time: Default::default(),
+            onset_age: Default::default(),
+            onset_range: Default::default(),
+            onset_period: Default::default(),
+            onset_string: Default::default(),
             note: Default::default(),
         }
     }
@@ -310,7 +309,7 @@ impl Default for FamilyMemberHistoryParticipant {
     }
 }
 
-impl Default for FamilyMemberHistoryCondition {
+impl Default for FamilyMemberHistoryProcedure {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -318,10 +317,11 @@ impl Default for FamilyMemberHistoryCondition {
             outcome: Default::default(),
             contributed_to_death: Default::default(),
             _contributed_to_death: Default::default(),
-            onset_age: Default::default(),
-            onset_range: Default::default(),
-            onset_period: Default::default(),
-            onset_string: Default::default(),
+            performed_age: Default::default(),
+            performed_range: Default::default(),
+            performed_period: Default::default(),
+            performed_string: Default::default(),
+            performed_date_time: Default::default(),
             note: Default::default(),
         }
     }
@@ -812,6 +812,9 @@ impl crate::traits::family_member_history::FamilyMemberHistoryMutators for Famil
 }
 
 impl crate::traits::family_member_history::FamilyMemberHistoryExistence for FamilyMemberHistory {
+    fn has_age(&self) -> bool {
+        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
+    }
     fn has_born(&self) -> bool {
         self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
     }
@@ -821,9 +824,6 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
             || self.deceased_range.is_some()
             || self.deceased_date.is_some()
             || self.deceased_string.is_some()
-    }
-    fn has_age(&self) -> bool {
-        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
     }
     fn has_identifier(&self) -> bool {
         !self.identifier.is_empty()

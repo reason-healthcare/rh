@@ -139,61 +139,6 @@ pub struct Device {
     /// The parent device
     pub parent: Option<Reference>,
 }
-/// Device nested structure for the 'version' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceVersion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of the device version
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// A single component of the device version
-    pub component: Option<Identifier>,
-    /// The version text
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// Device nested structure for the 'udiCarrier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceUdicarrier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Mandatory fixed portion of UDI
-    #[serde(rename = "deviceIdentifier")]
-    pub device_identifier: Option<StringType>,
-    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_deviceIdentifier")]
-    pub _device_identifier: Option<Element>,
-    /// UDI Issuing Organization
-    pub issuer: Option<StringType>,
-    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
-    pub _issuer: Option<Element>,
-    /// Regional UDI authority
-    pub jurisdiction: Option<StringType>,
-    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
-    pub _jurisdiction: Option<Element>,
-    /// UDI Machine Readable Barcode String
-    #[serde(rename = "carrierAIDC")]
-    pub carrier_a_i_d_c: Option<Base64BinaryType>,
-    /// Extension element for the 'carrierAIDC' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_carrierAIDC")]
-    pub _carrier_a_i_d_c: Option<Element>,
-    /// UDI Human Readable Barcode String
-    #[serde(rename = "carrierHRF")]
-    pub carrier_h_r_f: Option<StringType>,
-    /// Extension element for the 'carrierHRF' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_carrierHRF")]
-    pub _carrier_h_r_f: Option<Element>,
-    /// barcode | rfid | manual +
-    #[serde(rename = "entryType")]
-    pub entry_type: Option<UdiEntryType>,
-    /// Extension element for the 'entryType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_entryType")]
-    pub _entry_type: Option<Element>,
-}
 /// Device nested structure for the 'deviceName' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDevicename {
@@ -258,6 +203,61 @@ pub struct DeviceSpecialization {
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
 }
+/// Device nested structure for the 'udiCarrier' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceUdicarrier {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Mandatory fixed portion of UDI
+    #[serde(rename = "deviceIdentifier")]
+    pub device_identifier: Option<StringType>,
+    /// Extension element for the 'deviceIdentifier' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_deviceIdentifier")]
+    pub _device_identifier: Option<Element>,
+    /// UDI Issuing Organization
+    pub issuer: Option<StringType>,
+    /// Extension element for the 'issuer' primitive field. Contains metadata and extensions.
+    pub _issuer: Option<Element>,
+    /// Regional UDI authority
+    pub jurisdiction: Option<StringType>,
+    /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
+    pub _jurisdiction: Option<Element>,
+    /// UDI Machine Readable Barcode String
+    #[serde(rename = "carrierAIDC")]
+    pub carrier_a_i_d_c: Option<Base64BinaryType>,
+    /// Extension element for the 'carrierAIDC' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_carrierAIDC")]
+    pub _carrier_a_i_d_c: Option<Element>,
+    /// UDI Human Readable Barcode String
+    #[serde(rename = "carrierHRF")]
+    pub carrier_h_r_f: Option<StringType>,
+    /// Extension element for the 'carrierHRF' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_carrierHRF")]
+    pub _carrier_h_r_f: Option<Element>,
+    /// barcode | rfid | manual +
+    #[serde(rename = "entryType")]
+    pub entry_type: Option<UdiEntryType>,
+    /// Extension element for the 'entryType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_entryType")]
+    pub _entry_type: Option<Element>,
+}
+/// Device nested structure for the 'version' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceVersion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of the device version
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// A single component of the device version
+    pub component: Option<Identifier>,
+    /// The version text
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
 
 impl Default for Device {
     fn default() -> Self {
@@ -303,38 +303,6 @@ impl Default for Device {
     }
 }
 
-impl Default for DeviceVersion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            component: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceUdicarrier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            device_identifier: Default::default(),
-            _device_identifier: Default::default(),
-            issuer: Default::default(),
-            _issuer: Default::default(),
-            jurisdiction: Default::default(),
-            _jurisdiction: Default::default(),
-            carrier_a_i_d_c: Default::default(),
-            _carrier_a_i_d_c: Default::default(),
-            carrier_h_r_f: Default::default(),
-            _carrier_h_r_f: Default::default(),
-            entry_type: Default::default(),
-            _entry_type: Default::default(),
-        }
-    }
-}
-
 impl Default for DeviceDevicename {
     fn default() -> Self {
         Self {
@@ -373,6 +341,38 @@ impl Default for DeviceSpecialization {
             system_type: CodeableConcept::default(),
             version: Default::default(),
             _version: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceUdicarrier {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            device_identifier: Default::default(),
+            _device_identifier: Default::default(),
+            issuer: Default::default(),
+            _issuer: Default::default(),
+            jurisdiction: Default::default(),
+            _jurisdiction: Default::default(),
+            carrier_a_i_d_c: Default::default(),
+            _carrier_a_i_d_c: Default::default(),
+            carrier_h_r_f: Default::default(),
+            _carrier_h_r_f: Default::default(),
+            entry_type: Default::default(),
+            _entry_type: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceVersion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            component: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
         }
     }
 }

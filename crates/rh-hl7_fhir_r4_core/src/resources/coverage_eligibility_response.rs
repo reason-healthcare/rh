@@ -87,6 +87,38 @@ pub struct CoverageEligibilityResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub error: Vec<CoverageEligibilityResponseError>,
 }
+/// CoverageEligibilityResponse nested structure for the 'error' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseError {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Error code detailing processing issues
+    ///
+    /// Binding: example (The error codes for adjudication processing.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
+    pub code: CodeableConcept,
+}
+/// CoverageEligibilityResponse nested structure for the 'insurance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityResponseInsurance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Benefits and authorization details
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<CoverageEligibilityResponseInsuranceItem>,
+    /// Insurance information
+    pub coverage: Reference,
+    /// Coverage inforce indicator
+    pub inforce: Option<BooleanType>,
+    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
+    pub _inforce: Option<Element>,
+    /// When the benefits are applicable
+    #[serde(rename = "benefitPeriod")]
+    pub benefit_period: Option<Period>,
+}
 /// CoverageEligibilityResponseInsurance nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItem {
@@ -166,25 +198,6 @@ pub struct CoverageEligibilityResponseInsuranceItem {
     #[serde(rename = "_authorizationUrl")]
     pub _authorization_url: Option<Element>,
 }
-/// CoverageEligibilityResponse nested structure for the 'insurance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseInsurance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Benefits and authorization details
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub item: Vec<CoverageEligibilityResponseInsuranceItem>,
-    /// Insurance information
-    pub coverage: Reference,
-    /// Coverage inforce indicator
-    pub inforce: Option<BooleanType>,
-    /// Extension element for the 'inforce' primitive field. Contains metadata and extensions.
-    pub _inforce: Option<Element>,
-    /// When the benefits are applicable
-    #[serde(rename = "benefitPeriod")]
-    pub benefit_period: Option<Period>,
-}
 /// CoverageEligibilityResponseInsuranceItem nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityResponseInsuranceItemBenefit {
@@ -217,19 +230,6 @@ pub struct CoverageEligibilityResponseInsuranceItemBenefit {
     #[serde(rename = "usedMoney")]
     pub used_money: Option<Money>,
 }
-/// CoverageEligibilityResponse nested structure for the 'error' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityResponseError {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Error code detailing processing issues
-    ///
-    /// Binding: example (The error codes for adjudication processing.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-error
-    pub code: CodeableConcept,
-}
 
 impl Default for CoverageEligibilityResponse {
     fn default() -> Self {
@@ -261,6 +261,28 @@ impl Default for CoverageEligibilityResponse {
     }
 }
 
+impl Default for CoverageEligibilityResponseError {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+        }
+    }
+}
+
+impl Default for CoverageEligibilityResponseInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            coverage: Reference::default(),
+            inforce: Default::default(),
+            _inforce: Default::default(),
+            benefit_period: Default::default(),
+        }
+    }
+}
+
 impl Default for CoverageEligibilityResponseInsuranceItem {
     fn default() -> Self {
         Self {
@@ -287,19 +309,6 @@ impl Default for CoverageEligibilityResponseInsuranceItem {
     }
 }
 
-impl Default for CoverageEligibilityResponseInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            coverage: Reference::default(),
-            inforce: Default::default(),
-            _inforce: Default::default(),
-            benefit_period: Default::default(),
-        }
-    }
-}
-
 impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
     fn default() -> Self {
         Self {
@@ -311,15 +320,6 @@ impl Default for CoverageEligibilityResponseInsuranceItemBenefit {
             used_unsigned_int: Default::default(),
             used_string: Default::default(),
             used_money: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityResponseError {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
         }
     }
 }

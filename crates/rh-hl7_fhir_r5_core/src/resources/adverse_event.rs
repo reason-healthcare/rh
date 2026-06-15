@@ -132,54 +132,16 @@ pub struct AdverseEvent {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note: Vec<Annotation>,
 }
-/// AdverseEventSuspectentity nested structure for the 'causality' field
+/// AdverseEvent nested structure for the 'contributingFactor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventSuspectentityCausality {
+pub struct AdverseEventContributingfactor {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Method of evaluating the relatedness of the suspected entity to the event
-    ///
-    /// Binding: example (TODO.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-method
-    #[serde(rename = "assessmentMethod")]
-    pub assessment_method: Option<CodeableConcept>,
-    /// Result of the assessment regarding the relatedness of the suspected entity to the event
-    ///
-    /// Binding: example (Codes for the assessment of whether the entity caused the event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-assess
-    #[serde(rename = "entityRelatedness")]
-    pub entity_relatedness: Option<CodeableConcept>,
-    /// Author of the information on the possible cause of the event
-    pub author: Option<Reference>,
-}
-/// AdverseEvent nested structure for the 'suspectEntity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventSuspectentity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information on the possible cause of the event
-    pub causality: Option<AdverseEventSuspectentityCausality>,
-    /// Refers to the specific entity that caused the adverse event (CodeableConcept)
-    #[serde(rename = "instanceCodeableConcept")]
-    pub instance_codeable_concept: CodeableConcept,
-    /// Refers to the specific entity that caused the adverse event (Reference)
-    #[serde(rename = "instanceReference")]
-    pub instance_reference: Reference,
-}
-/// AdverseEvent nested structure for the 'preventiveAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventPreventiveaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Action that contributed to avoiding the adverse event (Reference)
+    /// Item suspected to have increased the probability or severity of the adverse event (Reference)
     #[serde(rename = "itemReference")]
     pub item_reference: Reference,
-    /// Action that contributed to avoiding the adverse event (CodeableConcept)
+    /// Item suspected to have increased the probability or severity of the adverse event (CodeableConcept)
     #[serde(rename = "itemCodeableConcept")]
     pub item_codeable_concept: CodeableConcept,
 }
@@ -215,6 +177,19 @@ pub struct AdverseEventParticipant {
     /// Who was involved in the adverse event or the potential adverse event
     pub actor: Reference,
 }
+/// AdverseEvent nested structure for the 'preventiveAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdverseEventPreventiveaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Action that contributed to avoiding the adverse event (Reference)
+    #[serde(rename = "itemReference")]
+    pub item_reference: Reference,
+    /// Action that contributed to avoiding the adverse event (CodeableConcept)
+    #[serde(rename = "itemCodeableConcept")]
+    pub item_codeable_concept: CodeableConcept,
+}
 /// AdverseEvent nested structure for the 'supportingInfo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdverseEventSupportinginfo {
@@ -228,18 +203,43 @@ pub struct AdverseEventSupportinginfo {
     #[serde(rename = "itemCodeableConcept")]
     pub item_codeable_concept: CodeableConcept,
 }
-/// AdverseEvent nested structure for the 'contributingFactor' field
+/// AdverseEvent nested structure for the 'suspectEntity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventContributingfactor {
+pub struct AdverseEventSuspectentity {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Item suspected to have increased the probability or severity of the adverse event (Reference)
-    #[serde(rename = "itemReference")]
-    pub item_reference: Reference,
-    /// Item suspected to have increased the probability or severity of the adverse event (CodeableConcept)
-    #[serde(rename = "itemCodeableConcept")]
-    pub item_codeable_concept: CodeableConcept,
+    /// Information on the possible cause of the event
+    pub causality: Option<AdverseEventSuspectentityCausality>,
+    /// Refers to the specific entity that caused the adverse event (CodeableConcept)
+    #[serde(rename = "instanceCodeableConcept")]
+    pub instance_codeable_concept: CodeableConcept,
+    /// Refers to the specific entity that caused the adverse event (Reference)
+    #[serde(rename = "instanceReference")]
+    pub instance_reference: Reference,
+}
+/// AdverseEventSuspectentity nested structure for the 'causality' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdverseEventSuspectentityCausality {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Method of evaluating the relatedness of the suspected entity to the event
+    ///
+    /// Binding: example (TODO.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-method
+    #[serde(rename = "assessmentMethod")]
+    pub assessment_method: Option<CodeableConcept>,
+    /// Result of the assessment regarding the relatedness of the suspected entity to the event
+    ///
+    /// Binding: example (Codes for the assessment of whether the entity caused the event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-assess
+    #[serde(rename = "entityRelatedness")]
+    pub entity_relatedness: Option<CodeableConcept>,
+    /// Author of the information on the possible cause of the event
+    pub author: Option<Reference>,
 }
 
 impl Default for AdverseEvent {
@@ -281,29 +281,7 @@ impl Default for AdverseEvent {
     }
 }
 
-impl Default for AdverseEventSuspectentityCausality {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            assessment_method: Default::default(),
-            entity_relatedness: Default::default(),
-            author: Default::default(),
-        }
-    }
-}
-
-impl Default for AdverseEventSuspectentity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            causality: Default::default(),
-            instance_codeable_concept: Default::default(),
-            instance_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for AdverseEventPreventiveaction {
+impl Default for AdverseEventContributingfactor {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -333,6 +311,16 @@ impl Default for AdverseEventParticipant {
     }
 }
 
+impl Default for AdverseEventPreventiveaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item_reference: Default::default(),
+            item_codeable_concept: Default::default(),
+        }
+    }
+}
+
 impl Default for AdverseEventSupportinginfo {
     fn default() -> Self {
         Self {
@@ -343,12 +331,24 @@ impl Default for AdverseEventSupportinginfo {
     }
 }
 
-impl Default for AdverseEventContributingfactor {
+impl Default for AdverseEventSuspectentity {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            item_reference: Default::default(),
-            item_codeable_concept: Default::default(),
+            causality: Default::default(),
+            instance_codeable_concept: Default::default(),
+            instance_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for AdverseEventSuspectentityCausality {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            assessment_method: Default::default(),
+            entity_relatedness: Default::default(),
+            author: Default::default(),
         }
     }
 }

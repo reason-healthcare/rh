@@ -217,25 +217,6 @@ pub struct Measure {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub supplemental_data: Vec<MeasureSupplementaldata>,
 }
-/// MeasureGroup nested structure for the 'population' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureGroupPopulation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
-    ///
-    /// Binding: extensible (The type of population.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
-    pub code: Option<CodeableConcept>,
-    /// The human readable description of this population criteria
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// The criteria that defines this population
-    pub criteria: Expression,
-}
 /// Measure nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeasureGroup {
@@ -254,6 +235,25 @@ pub struct MeasureGroup {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
+}
+/// MeasureGroup nested structure for the 'population' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureGroupPopulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    pub code: Option<CodeableConcept>,
+    /// The human readable description of this population criteria
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// The criteria that defines this population
+    pub criteria: Expression,
 }
 /// MeasureGroup nested structure for the 'stratifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -381,18 +381,6 @@ impl Default for Measure {
     }
 }
 
-impl Default for MeasureGroupPopulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            criteria: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureGroup {
     fn default() -> Self {
         Self {
@@ -402,6 +390,18 @@ impl Default for MeasureGroup {
             code: Default::default(),
             description: Default::default(),
             _description: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureGroupPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            criteria: Default::default(),
         }
     }
 }

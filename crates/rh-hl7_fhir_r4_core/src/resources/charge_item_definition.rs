@@ -138,20 +138,6 @@ pub struct ChargeItemDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub property_group: Vec<ChargeItemDefinitionPropertygroup>,
 }
-/// ChargeItemDefinition nested structure for the 'propertyGroup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChargeItemDefinitionPropertygroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub price_component: Vec<ChargeItemDefinitionPropertygroupPricecomponent>,
-    /// Conditions under which the priceComponent is applicable
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub applicability: Vec<StringType>,
-}
 /// ChargeItemDefinition nested structure for the 'applicability' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChargeItemDefinitionApplicability {
@@ -170,6 +156,20 @@ pub struct ChargeItemDefinitionApplicability {
     pub expression: Option<StringType>,
     /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
     pub _expression: Option<Element>,
+}
+/// ChargeItemDefinition nested structure for the 'propertyGroup' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChargeItemDefinitionPropertygroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub price_component: Vec<ChargeItemDefinitionPropertygroupPricecomponent>,
+    /// Conditions under which the priceComponent is applicable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub applicability: Vec<StringType>,
 }
 /// ChargeItemDefinitionPropertygroup nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,16 +237,6 @@ impl Default for ChargeItemDefinition {
     }
 }
 
-impl Default for ChargeItemDefinitionPropertygroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            price_component: Default::default(),
-            applicability: Default::default(),
-        }
-    }
-}
-
 impl Default for ChargeItemDefinitionApplicability {
     fn default() -> Self {
         Self {
@@ -257,6 +247,16 @@ impl Default for ChargeItemDefinitionApplicability {
             _language: Default::default(),
             expression: Default::default(),
             _expression: Default::default(),
+        }
+    }
+}
+
+impl Default for ChargeItemDefinitionPropertygroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            price_component: Default::default(),
+            applicability: Default::default(),
         }
     }
 }

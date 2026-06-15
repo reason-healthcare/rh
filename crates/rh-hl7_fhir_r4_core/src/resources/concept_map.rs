@@ -109,10 +109,10 @@ pub struct ConceptMapGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// What to do when there is no mapping for the source concept
-    pub unmapped: Option<ConceptMapGroupUnmapped>,
     /// Mappings for a concept from the source set
     pub element: Vec<ConceptMapGroupElement>,
+    /// What to do when there is no mapping for the source concept
+    pub unmapped: Option<ConceptMapGroupUnmapped>,
     /// Source system where concepts to be mapped are defined
     pub source: Option<StringType>,
     /// Extension element for the 'source' primitive field. Contains metadata and extensions.
@@ -133,6 +133,21 @@ pub struct ConceptMapGroup {
     /// Extension element for the 'targetVersion' primitive field. Contains metadata and extensions.
     #[serde(rename = "_targetVersion")]
     pub _target_version: Option<Element>,
+}
+/// ConceptMapGroup nested structure for the 'element' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies element being mapped
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Display for the code
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
 }
 /// ConceptMapGroupElement nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -206,21 +221,6 @@ pub struct ConceptMapGroupUnmapped {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
 }
-/// ConceptMapGroup nested structure for the 'element' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies element being mapped
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Display for the code
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-}
 
 impl Default for ConceptMap {
     fn default() -> Self {
@@ -265,8 +265,8 @@ impl Default for ConceptMapGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            unmapped: Default::default(),
             element: Vec::new(),
+            unmapped: Default::default(),
             source: Default::default(),
             _source: Default::default(),
             source_version: Default::default(),
@@ -275,6 +275,18 @@ impl Default for ConceptMapGroup {
             _target: Default::default(),
             target_version: Default::default(),
             _target_version: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
         }
     }
 }
@@ -324,18 +336,6 @@ impl Default for ConceptMapGroupUnmapped {
             _display: Default::default(),
             url: Default::default(),
             _url: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
         }
     }
 }

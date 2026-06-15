@@ -44,24 +44,39 @@ pub struct SubstanceNucleicAcid {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub subunit: Vec<SubstanceNucleicAcidSubunit>,
 }
-/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
+/// SubstanceNucleicAcid nested structure for the 'subunit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunitSugar {
+pub struct SubstanceNucleicAcidSubunit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
-    pub identifier: Option<Identifier>,
-    /// The name of the sugar or sugar-like component that make up the nucleotide
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
-    #[serde(rename = "residueSite")]
-    pub residue_site: Option<StringType>,
-    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_residueSite")]
-    pub _residue_site: Option<Element>,
+    /// The linkages between sugar residues will also be captured
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub linkage: Vec<SubstanceNucleicAcidSubunitLinkage>,
+    /// 5.3.6.8.1 Sugar ID (Mandatory)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sugar: Vec<SubstanceNucleicAcidSubunitSugar>,
+    /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
+    pub subunit: Option<IntegerType>,
+    /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
+    pub _subunit: Option<Element>,
+    /// Actual nucleotide sequence notation from 5' to 3' end using standard single letter codes. In addition to the base sequence, sugar and type of phosphate or non-phosphate linkage should also be captured
+    pub sequence: Option<StringType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// The length of the sequence shall be captured
+    pub length: Option<IntegerType>,
+    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
+    pub _length: Option<Element>,
+    /// (TBC)
+    #[serde(rename = "sequenceAttachment")]
+    pub sequence_attachment: Option<Attachment>,
+    /// The nucleotide present at the 5’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the first position in the sequence. A separate representation would be redundant
+    #[serde(rename = "fivePrime")]
+    pub five_prime: Option<CodeableConcept>,
+    /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
+    #[serde(rename = "threePrime")]
+    pub three_prime: Option<CodeableConcept>,
 }
 /// SubstanceNucleicAcidSubunit nested structure for the 'linkage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,39 +101,24 @@ pub struct SubstanceNucleicAcidSubunitLinkage {
     #[serde(rename = "_residueSite")]
     pub _residue_site: Option<Element>,
 }
-/// SubstanceNucleicAcid nested structure for the 'subunit' field
+/// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunit {
+pub struct SubstanceNucleicAcidSubunitSugar {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// 5.3.6.8.1 Sugar ID (Mandatory)
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub sugar: Vec<SubstanceNucleicAcidSubunitSugar>,
-    /// The linkages between sugar residues will also be captured
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub linkage: Vec<SubstanceNucleicAcidSubunitLinkage>,
-    /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
-    pub subunit: Option<IntegerType>,
-    /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
-    pub _subunit: Option<Element>,
-    /// Actual nucleotide sequence notation from 5' to 3' end using standard single letter codes. In addition to the base sequence, sugar and type of phosphate or non-phosphate linkage should also be captured
-    pub sequence: Option<StringType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// The length of the sequence shall be captured
-    pub length: Option<IntegerType>,
-    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
-    pub _length: Option<Element>,
-    /// (TBC)
-    #[serde(rename = "sequenceAttachment")]
-    pub sequence_attachment: Option<Attachment>,
-    /// The nucleotide present at the 5’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the first position in the sequence. A separate representation would be redundant
-    #[serde(rename = "fivePrime")]
-    pub five_prime: Option<CodeableConcept>,
-    /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
-    #[serde(rename = "threePrime")]
-    pub three_prime: Option<CodeableConcept>,
+    /// The Substance ID of the sugar or sugar-like component that make up the nucleotide
+    pub identifier: Option<Identifier>,
+    /// The name of the sugar or sugar-like component that make up the nucleotide
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The residues that contain a given sugar will be captured. The order of given residues will be captured in the 5‘-3‘direction consistent with the base sequences listed above
+    #[serde(rename = "residueSite")]
+    pub residue_site: Option<StringType>,
+    /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_residueSite")]
+    pub _residue_site: Option<Element>,
 }
 
 impl Default for SubstanceNucleicAcid {
@@ -136,15 +136,21 @@ impl Default for SubstanceNucleicAcid {
     }
 }
 
-impl Default for SubstanceNucleicAcidSubunitSugar {
+impl Default for SubstanceNucleicAcidSubunit {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            identifier: Default::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            residue_site: Default::default(),
-            _residue_site: Default::default(),
+            linkage: Default::default(),
+            sugar: Default::default(),
+            subunit: Default::default(),
+            _subunit: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            length: Default::default(),
+            _length: Default::default(),
+            sequence_attachment: Default::default(),
+            five_prime: Default::default(),
+            three_prime: Default::default(),
         }
     }
 }
@@ -164,21 +170,15 @@ impl Default for SubstanceNucleicAcidSubunitLinkage {
     }
 }
 
-impl Default for SubstanceNucleicAcidSubunit {
+impl Default for SubstanceNucleicAcidSubunitSugar {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            sugar: Default::default(),
-            linkage: Default::default(),
-            subunit: Default::default(),
-            _subunit: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            length: Default::default(),
-            _length: Default::default(),
-            sequence_attachment: Default::default(),
-            five_prime: Default::default(),
-            three_prime: Default::default(),
+            identifier: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            residue_site: Default::default(),
+            _residue_site: Default::default(),
         }
     }
 }

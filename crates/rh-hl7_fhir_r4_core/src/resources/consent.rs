@@ -89,6 +89,38 @@ pub struct Consent {
     /// Constraints to the base Consent.policyRule
     pub provision: Option<ConsentProvision>,
 }
+/// Location of Access restriction
+///
+/// Restricts this exception to only apply a specific location as defined.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-location
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentLocation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Disclosure Notification Endpoint
+///
+/// Endpoint for sending Disclosure notifications in the form of FHIR AuditEvent records.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-NotificationEndpoint
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentNotificationEndpoint {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Consent nested structure for the 'policy' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsentPolicy {
@@ -110,12 +142,12 @@ pub struct ConsentProvision {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Data controlled by this rule
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub data: Vec<ConsentProvisionData>,
     /// Who|what controlled by this rule (or group, by role)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub actor: Vec<ConsentProvisionActor>,
+    /// Data controlled by this rule
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<ConsentProvisionData>,
     /// deny | permit
     #[serde(rename = "type")]
     pub type_: Option<ConsentProvisionType>,
@@ -168,103 +200,6 @@ pub struct ConsentProvision {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub provision: Vec<StringType>,
 }
-/// Consent nested structure for the 'verification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentVerification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Has been verified
-    pub verified: BooleanType,
-    /// Extension element for the 'verified' primitive field. Contains metadata and extensions.
-    pub _verified: Option<Element>,
-    /// Person who verified
-    #[serde(rename = "verifiedWith")]
-    pub verified_with: Option<Reference>,
-    /// When consent verified
-    #[serde(rename = "verificationDate")]
-    pub verification_date: Option<DateTimeType>,
-    /// Extension element for the 'verificationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_verificationDate")]
-    pub _verification_date: Option<Element>,
-}
-/// Disclosure Notification Endpoint
-///
-/// Endpoint for sending Disclosure notifications in the form of FHIR AuditEvent records.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-NotificationEndpoint
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentNotificationEndpoint {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// ConsentProvision nested structure for the 'data' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionData {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// instance | related | dependents | authoredby
-    pub meaning: ConsentDataMeaning,
-    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
-    pub _meaning: Option<Element>,
-    /// The actual data reference
-    pub reference: Reference,
-}
-/// Location of Access restriction
-///
-/// Restricts this exception to only apply a specific location as defined.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-location
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentLocation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Witness
-///
-/// Any witness to the consent.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Witness
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentWitness {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Transcriber
-///
-/// Any person/thing who transcribed the consent into the system.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Transcriber
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentTranscriber {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// ConsentProvision nested structure for the 'actor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsentProvisionActor {
@@ -291,6 +226,71 @@ pub struct ConsentProvisionActor {
     /// Resource for the actor (or group, by role)
     pub reference: Reference,
 }
+/// ConsentProvision nested structure for the 'data' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentProvisionData {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// instance | related | dependents | authoredby
+    pub meaning: ConsentDataMeaning,
+    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
+    pub _meaning: Option<Element>,
+    /// The actual data reference
+    pub reference: Reference,
+}
+/// Transcriber
+///
+/// Any person/thing who transcribed the consent into the system.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Transcriber
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentTranscriber {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Consent nested structure for the 'verification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentVerification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Has been verified
+    pub verified: BooleanType,
+    /// Extension element for the 'verified' primitive field. Contains metadata and extensions.
+    pub _verified: Option<Element>,
+    /// Person who verified
+    #[serde(rename = "verifiedWith")]
+    pub verified_with: Option<Reference>,
+    /// When consent verified
+    #[serde(rename = "verificationDate")]
+    pub verification_date: Option<DateTimeType>,
+    /// Extension element for the 'verificationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_verificationDate")]
+    pub _verification_date: Option<Element>,
+}
+/// Witness
+///
+/// Any witness to the consent.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Witness
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentWitness {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for Consent {
     fn default() -> Self {
@@ -316,6 +316,22 @@ impl Default for Consent {
     }
 }
 
+impl Default for ConsentLocation {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConsentNotificationEndpoint {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for ConsentPolicy {
     fn default() -> Self {
         Self {
@@ -332,8 +348,8 @@ impl Default for ConsentProvision {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            data: Default::default(),
             actor: Default::default(),
+            data: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
             period: Default::default(),
@@ -344,6 +360,35 @@ impl Default for ConsentProvision {
             code: Default::default(),
             data_period: Default::default(),
             provision: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionActor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionData {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            meaning: Default::default(),
+            _meaning: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentTranscriber {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -361,55 +406,10 @@ impl Default for ConsentVerification {
     }
 }
 
-impl Default for ConsentNotificationEndpoint {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ConsentProvisionData {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            meaning: Default::default(),
-            _meaning: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ConsentLocation {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for ConsentWitness {
     fn default() -> Self {
         Self {
             base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ConsentTranscriber {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ConsentProvisionActor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            reference: Default::default(),
         }
     }
 }

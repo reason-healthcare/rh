@@ -16,18 +16,18 @@ pub struct ValuesetSystem {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Value Set System Title
+/// ValueSet System Name
 ///
 /// The human-readable name for the code system.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/valueset-systemTitle
+/// - URL: http://hl7.org/fhir/StructureDefinition/valueset-systemName
 /// - Version: 5.1.0-snapshot1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValuesetSystemTitle {
+pub struct ValuesetSystemName {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -48,18 +48,18 @@ pub struct ValuesetSystemRef {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// ValueSet System Name
+/// Value Set System Title
 ///
 /// The human-readable name for the code system.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/valueset-systemName
+/// - URL: http://hl7.org/fhir/StructureDefinition/valueset-systemTitle
 /// - Version: 5.1.0-snapshot1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValuesetSystemName {
+pub struct ValuesetSystemTitle {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,

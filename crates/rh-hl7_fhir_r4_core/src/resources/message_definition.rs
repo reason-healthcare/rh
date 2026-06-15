@@ -138,6 +138,21 @@ pub struct MessageDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub _graph: Vec<Element>,
 }
+/// MessageDefinition nested structure for the 'allowedResponse' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDefinitionAllowedresponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to allowed message definition response
+    pub message: StringType,
+    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
+    pub _message: Option<Element>,
+    /// When should this response be used
+    pub situation: Option<StringType>,
+    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
+    pub _situation: Option<Element>,
+}
 /// MessageDefinition nested structure for the 'focus' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageDefinitionFocus {
@@ -160,21 +175,6 @@ pub struct MessageDefinitionFocus {
     pub max: Option<StringType>,
     /// Extension element for the 'max' primitive field. Contains metadata and extensions.
     pub _max: Option<Element>,
-}
-/// MessageDefinition nested structure for the 'allowedResponse' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageDefinitionAllowedresponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to allowed message definition response
-    pub message: StringType,
-    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
-    pub _message: Option<Element>,
-    /// When should this response be used
-    pub situation: Option<StringType>,
-    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
-    pub _situation: Option<Element>,
 }
 
 impl Default for MessageDefinition {
@@ -227,6 +227,18 @@ impl Default for MessageDefinition {
     }
 }
 
+impl Default for MessageDefinitionAllowedresponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            situation: Default::default(),
+            _situation: Default::default(),
+        }
+    }
+}
+
 impl Default for MessageDefinitionFocus {
     fn default() -> Self {
         Self {
@@ -239,18 +251,6 @@ impl Default for MessageDefinitionFocus {
             _min: Default::default(),
             max: Default::default(),
             _max: Default::default(),
-        }
-    }
-}
-
-impl Default for MessageDefinitionAllowedresponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            situation: Default::default(),
-            _situation: Default::default(),
         }
     }
 }

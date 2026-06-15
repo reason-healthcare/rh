@@ -137,6 +137,22 @@ pub struct DeviceDefinitionCapability {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub description: Vec<CodeableConcept>,
 }
+/// DeviceDefinition nested structure for the 'deviceName' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceDefinitionDevicename {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The name of the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
+    #[serde(rename = "type")]
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
 /// DeviceDefinition nested structure for the 'material' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceDefinitionMaterial {
@@ -156,21 +172,23 @@ pub struct DeviceDefinitionMaterial {
     #[serde(rename = "_allergenicIndicator")]
     pub _allergenic_indicator: Option<Element>,
 }
-/// DeviceDefinition nested structure for the 'deviceName' field
+/// DeviceDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionDevicename {
+pub struct DeviceDefinitionProperty {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The name of the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
+    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
     #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
+    pub type_: CodeableConcept,
+    /// Property value as a quantity
+    #[serde(rename = "valueQuantity")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_quantity: Vec<Quantity>,
+    /// Property value as a code, e.g., NTP4 (synced to NTP)
+    #[serde(rename = "valueCode")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_code: Vec<CodeableConcept>,
 }
 /// DeviceDefinition nested structure for the 'specialization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,24 +227,6 @@ pub struct DeviceDefinitionUdideviceidentifier {
     pub jurisdiction: StringType,
     /// Extension element for the 'jurisdiction' primitive field. Contains metadata and extensions.
     pub _jurisdiction: Option<Element>,
-}
-/// DeviceDefinition nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDefinitionProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Property value as a quantity
-    #[serde(rename = "valueQuantity")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub value_quantity: Vec<Quantity>,
-    /// Property value as a code, e.g., NTP4 (synced to NTP)
-    #[serde(rename = "valueCode")]
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub value_code: Vec<CodeableConcept>,
 }
 
 impl Default for DeviceDefinition {
@@ -274,6 +274,18 @@ impl Default for DeviceDefinitionCapability {
     }
 }
 
+impl Default for DeviceDefinitionDevicename {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
 impl Default for DeviceDefinitionMaterial {
     fn default() -> Self {
         Self {
@@ -287,14 +299,13 @@ impl Default for DeviceDefinitionMaterial {
     }
 }
 
-impl Default for DeviceDefinitionDevicename {
+impl Default for DeviceDefinitionProperty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
             type_: Default::default(),
-            _type: Default::default(),
+            value_quantity: Default::default(),
+            value_code: Default::default(),
         }
     }
 }
@@ -321,17 +332,6 @@ impl Default for DeviceDefinitionUdideviceidentifier {
             _issuer: Default::default(),
             jurisdiction: Default::default(),
             _jurisdiction: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceDefinitionProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_quantity: Default::default(),
-            value_code: Default::default(),
         }
     }
 }

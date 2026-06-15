@@ -41,6 +41,23 @@ pub struct SubstanceReferenceInformation {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub target: Vec<SubstanceReferenceInformationTarget>,
 }
+/// SubstanceReferenceInformation nested structure for the 'classification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationClassification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub domain: Option<CodeableConcept>,
+    /// Todo
+    pub classification: Option<CodeableConcept>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subtype: Vec<CodeableConcept>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
 /// SubstanceReferenceInformation nested structure for the 'gene' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceReferenceInformationGene {
@@ -52,6 +69,21 @@ pub struct SubstanceReferenceInformationGene {
     pub gene_sequence_origin: Option<CodeableConcept>,
     /// Todo
     pub gene: Option<CodeableConcept>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
+/// SubstanceReferenceInformation nested structure for the 'geneElement' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationGeneelement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    pub element: Option<Identifier>,
     /// Todo
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source: Vec<Reference>,
@@ -90,38 +122,6 @@ pub struct SubstanceReferenceInformationTarget {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source: Vec<Reference>,
 }
-/// SubstanceReferenceInformation nested structure for the 'geneElement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGeneelement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    pub element: Option<Identifier>,
-    /// Todo
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source: Vec<Reference>,
-}
-/// SubstanceReferenceInformation nested structure for the 'classification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationClassification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub domain: Option<CodeableConcept>,
-    /// Todo
-    pub classification: Option<CodeableConcept>,
-    /// Todo
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub subtype: Vec<CodeableConcept>,
-    /// Todo
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source: Vec<Reference>,
-}
 
 impl Default for SubstanceReferenceInformation {
     fn default() -> Self {
@@ -137,12 +137,35 @@ impl Default for SubstanceReferenceInformation {
     }
 }
 
+impl Default for SubstanceReferenceInformationClassification {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            domain: Default::default(),
+            classification: Default::default(),
+            subtype: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceReferenceInformationGene {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             gene_sequence_origin: Default::default(),
             gene: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceReferenceInformationGeneelement {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            element: Default::default(),
             source: Default::default(),
         }
     }
@@ -161,29 +184,6 @@ impl Default for SubstanceReferenceInformationTarget {
             amount_range: Default::default(),
             amount_string: Default::default(),
             amount_type: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceReferenceInformationGeneelement {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            element: Default::default(),
-            source: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceReferenceInformationClassification {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            domain: Default::default(),
-            classification: Default::default(),
-            subtype: Default::default(),
             source: Default::default(),
         }
     }

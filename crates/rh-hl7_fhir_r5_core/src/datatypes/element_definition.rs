@@ -769,40 +769,48 @@ pub struct ElementDefinition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mapping: Vec<Element>,
 }
-/// ElementDefinition nested structure for the 'constraint' field
+/// ElementDefinition nested structure for the 'base' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionConstraint {
+pub struct ElementDefinitionBase {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Target of 'condition' reference above
-    pub key: StringType,
-    /// Extension element for the 'key' primitive field. Contains metadata and extensions.
-    pub _key: Option<Element>,
-    /// Why this constraint is necessary or appropriate
-    pub requirements: Option<StringType>,
-    /// Extension element for the 'requirements' primitive field. Contains metadata and extensions.
-    pub _requirements: Option<Element>,
-    /// error | warning
-    pub severity: ConstraintSeverity,
-    /// Extension element for the 'severity' primitive field. Contains metadata and extensions.
-    pub _severity: Option<Element>,
-    /// Suppress warning or hint in profile
-    pub suppress: Option<BooleanType>,
-    /// Extension element for the 'suppress' primitive field. Contains metadata and extensions.
-    pub _suppress: Option<Element>,
-    /// Human description of constraint
-    pub human: StringType,
-    /// Extension element for the 'human' primitive field. Contains metadata and extensions.
-    pub _human: Option<Element>,
-    /// FHIRPath expression of constraint
-    pub expression: Option<StringType>,
-    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
-    /// Reference to original source of constraint
-    pub source: Option<StringType>,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
+    /// Path that identifies the base element
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// Min cardinality of the base element
+    pub min: UnsignedIntType,
+    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
+    pub _min: Option<Element>,
+    /// Max cardinality of the base element
+    pub max: StringType,
+    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
+    pub _max: Option<Element>,
+}
+/// ElementDefinition nested structure for the 'binding' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDefinitionBinding {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// required | extensible | preferred | example
+    pub strength: BindingStrength,
+    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
+    pub _strength: Option<Element>,
+    /// Intended use of codes in the bound value set
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Source of value set
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+    /// Additional Bindings - more rules about the binding
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional: Vec<Element>,
 }
 /// ElementDefinitionBinding nested structure for the 'additional' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -838,46 +846,40 @@ pub struct ElementDefinitionBindingAdditional {
     /// Extension element for the 'any' primitive field. Contains metadata and extensions.
     pub _any: Option<Element>,
 }
-/// ElementDefinition nested structure for the 'base' field
+/// ElementDefinition nested structure for the 'constraint' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionBase {
+pub struct ElementDefinitionConstraint {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Path that identifies the base element
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// Min cardinality of the base element
-    pub min: UnsignedIntType,
-    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
-    pub _min: Option<Element>,
-    /// Max cardinality of the base element
-    pub max: StringType,
-    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
-    pub _max: Option<Element>,
-}
-/// ElementDefinition nested structure for the 'slicing' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionSlicing {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Element values that are used to distinguish the slices
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub discriminator: Vec<Element>,
-    /// Text description of how slicing works (or not)
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// If elements must be in same order as slices
-    pub ordered: Option<BooleanType>,
-    /// Extension element for the 'ordered' primitive field. Contains metadata and extensions.
-    pub _ordered: Option<Element>,
-    /// closed | open | openAtEnd
-    pub rules: ResourceSlicingRules,
-    /// Extension element for the 'rules' primitive field. Contains metadata and extensions.
-    pub _rules: Option<Element>,
+    /// Target of 'condition' reference above
+    pub key: StringType,
+    /// Extension element for the 'key' primitive field. Contains metadata and extensions.
+    pub _key: Option<Element>,
+    /// Why this constraint is necessary or appropriate
+    pub requirements: Option<StringType>,
+    /// Extension element for the 'requirements' primitive field. Contains metadata and extensions.
+    pub _requirements: Option<Element>,
+    /// error | warning
+    pub severity: ConstraintSeverity,
+    /// Extension element for the 'severity' primitive field. Contains metadata and extensions.
+    pub _severity: Option<Element>,
+    /// Suppress warning or hint in profile
+    pub suppress: Option<BooleanType>,
+    /// Extension element for the 'suppress' primitive field. Contains metadata and extensions.
+    pub _suppress: Option<Element>,
+    /// Human description of constraint
+    pub human: StringType,
+    /// Extension element for the 'human' primitive field. Contains metadata and extensions.
+    pub _human: Option<Element>,
+    /// FHIRPath expression of constraint
+    pub expression: Option<StringType>,
+    /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
+    pub _expression: Option<Element>,
+    /// Reference to original source of constraint
+    pub source: Option<StringType>,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
 }
 /// ElementDefinition nested structure for the 'example' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1052,6 +1054,67 @@ pub struct ElementDefinitionExample {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
+/// ElementDefinition nested structure for the 'mapping' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDefinitionMapping {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to mapping declaration
+    pub identity: StringType,
+    /// Extension element for the 'identity' primitive field. Contains metadata and extensions.
+    pub _identity: Option<Element>,
+    /// Computable language of mapping
+    pub language: Option<StringType>,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// Details of the mapping
+    pub map: StringType,
+    /// Extension element for the 'map' primitive field. Contains metadata and extensions.
+    pub _map: Option<Element>,
+    /// Comments about the mapping or its use
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+}
+/// ElementDefinition nested structure for the 'slicing' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDefinitionSlicing {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Element values that are used to distinguish the slices
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub discriminator: Vec<Element>,
+    /// Text description of how slicing works (or not)
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// If elements must be in same order as slices
+    pub ordered: Option<BooleanType>,
+    /// Extension element for the 'ordered' primitive field. Contains metadata and extensions.
+    pub _ordered: Option<Element>,
+    /// closed | open | openAtEnd
+    pub rules: ResourceSlicingRules,
+    /// Extension element for the 'rules' primitive field. Contains metadata and extensions.
+    pub _rules: Option<Element>,
+}
+/// ElementDefinitionSlicing nested structure for the 'discriminator' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementDefinitionSlicingDiscriminator {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// value | exists | type | profile | position
+    #[serde(rename = "type")]
+    pub type_: DiscriminatorType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Path to element value
+    pub path: StringType,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+}
 /// ElementDefinition nested structure for the 'type' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementDefinitionType {
@@ -1090,69 +1153,6 @@ pub struct ElementDefinitionType {
     pub versioning: Option<ReferenceVersionRules>,
     /// Extension element for the 'versioning' primitive field. Contains metadata and extensions.
     pub _versioning: Option<Element>,
-}
-/// ElementDefinition nested structure for the 'mapping' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionMapping {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to mapping declaration
-    pub identity: StringType,
-    /// Extension element for the 'identity' primitive field. Contains metadata and extensions.
-    pub _identity: Option<Element>,
-    /// Computable language of mapping
-    pub language: Option<StringType>,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// Details of the mapping
-    pub map: StringType,
-    /// Extension element for the 'map' primitive field. Contains metadata and extensions.
-    pub _map: Option<Element>,
-    /// Comments about the mapping or its use
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-}
-/// ElementDefinition nested structure for the 'binding' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionBinding {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// required | extensible | preferred | example
-    pub strength: BindingStrength,
-    /// Extension element for the 'strength' primitive field. Contains metadata and extensions.
-    pub _strength: Option<Element>,
-    /// Intended use of codes in the bound value set
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Source of value set
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<StringType>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-    /// Additional Bindings - more rules about the binding
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub additional: Vec<Element>,
-}
-/// ElementDefinitionSlicing nested structure for the 'discriminator' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ElementDefinitionSlicingDiscriminator {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// value | exists | type | profile | position
-    #[serde(rename = "type")]
-    pub type_: DiscriminatorType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Path to element value
-    pub path: StringType,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
 }
 
 impl Default for ElementDefinition {
@@ -1399,24 +1399,31 @@ impl Default for ElementDefinition {
     }
 }
 
-impl Default for ElementDefinitionConstraint {
+impl Default for ElementDefinitionBase {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            key: StringType::default(),
-            _key: Default::default(),
-            requirements: Default::default(),
-            _requirements: Default::default(),
-            severity: ConstraintSeverity::default(),
-            _severity: Default::default(),
-            suppress: Default::default(),
-            _suppress: Default::default(),
-            human: StringType::default(),
-            _human: Default::default(),
-            expression: Default::default(),
-            _expression: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
+            path: StringType::default(),
+            _path: Default::default(),
+            min: UnsignedIntType::default(),
+            _min: Default::default(),
+            max: StringType::default(),
+            _max: Default::default(),
+        }
+    }
+}
+
+impl Default for ElementDefinitionBinding {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            strength: BindingStrength::default(),
+            _strength: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+            additional: Default::default(),
         }
     }
 }
@@ -1440,31 +1447,24 @@ impl Default for ElementDefinitionBindingAdditional {
     }
 }
 
-impl Default for ElementDefinitionBase {
+impl Default for ElementDefinitionConstraint {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            path: StringType::default(),
-            _path: Default::default(),
-            min: UnsignedIntType::default(),
-            _min: Default::default(),
-            max: StringType::default(),
-            _max: Default::default(),
-        }
-    }
-}
-
-impl Default for ElementDefinitionSlicing {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            discriminator: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            ordered: Default::default(),
-            _ordered: Default::default(),
-            rules: ResourceSlicingRules::default(),
-            _rules: Default::default(),
+            key: StringType::default(),
+            _key: Default::default(),
+            requirements: Default::default(),
+            _requirements: Default::default(),
+            severity: ConstraintSeverity::default(),
+            _severity: Default::default(),
+            suppress: Default::default(),
+            _suppress: Default::default(),
+            human: StringType::default(),
+            _human: Default::default(),
+            expression: Default::default(),
+            _expression: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
         }
     }
 }
@@ -1533,24 +1533,6 @@ impl Default for ElementDefinitionExample {
     }
 }
 
-impl Default for ElementDefinitionType {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: StringType::default(),
-            _code: Default::default(),
-            profile: Default::default(),
-            _profile: Default::default(),
-            target_profile: Default::default(),
-            _target_profile: Default::default(),
-            aggregation: Default::default(),
-            _aggregation: Default::default(),
-            versioning: Default::default(),
-            _versioning: Default::default(),
-        }
-    }
-}
-
 impl Default for ElementDefinitionMapping {
     fn default() -> Self {
         Self {
@@ -1567,17 +1549,17 @@ impl Default for ElementDefinitionMapping {
     }
 }
 
-impl Default for ElementDefinitionBinding {
+impl Default for ElementDefinitionSlicing {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            strength: BindingStrength::default(),
-            _strength: Default::default(),
+            discriminator: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-            additional: Default::default(),
+            ordered: Default::default(),
+            _ordered: Default::default(),
+            rules: ResourceSlicingRules::default(),
+            _rules: Default::default(),
         }
     }
 }
@@ -1590,6 +1572,24 @@ impl Default for ElementDefinitionSlicingDiscriminator {
             _type: Default::default(),
             path: Default::default(),
             _path: Default::default(),
+        }
+    }
+}
+
+impl Default for ElementDefinitionType {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: StringType::default(),
+            _code: Default::default(),
+            profile: Default::default(),
+            _profile: Default::default(),
+            target_profile: Default::default(),
+            _target_profile: Default::default(),
+            aggregation: Default::default(),
+            _aggregation: Default::default(),
+            versioning: Default::default(),
+            _versioning: Default::default(),
         }
     }
 }

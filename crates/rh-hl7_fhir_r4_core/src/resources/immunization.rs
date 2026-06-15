@@ -230,23 +230,6 @@ pub struct ImmunizationPerformer {
     /// Individual or organization who was performing
     pub actor: Reference,
 }
-/// Immunization nested structure for the 'reaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationReaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When reaction started
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Additional information on reaction
-    pub detail: Option<Reference>,
-    /// Indicates self-reported reaction
-    pub reported: Option<BooleanType>,
-    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
-    pub _reported: Option<Element>,
-}
 /// Immunization nested structure for the 'protocolApplied' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImmunizationProtocolapplied {
@@ -288,6 +271,23 @@ pub struct ImmunizationProtocolapplied {
     /// Recommended number of doses for immunity (string)
     #[serde(rename = "seriesDosesString")]
     pub series_doses_string: Option<StringType>,
+}
+/// Immunization nested structure for the 'reaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationReaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// When reaction started
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Additional information on reaction
+    pub detail: Option<Reference>,
+    /// Indicates self-reported reaction
+    pub reported: Option<BooleanType>,
+    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
+    pub _reported: Option<Element>,
 }
 
 impl Default for Immunization {
@@ -359,19 +359,6 @@ impl Default for ImmunizationPerformer {
     }
 }
 
-impl Default for ImmunizationReaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            detail: Default::default(),
-            reported: Default::default(),
-            _reported: Default::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationProtocolapplied {
     fn default() -> Self {
         Self {
@@ -384,6 +371,19 @@ impl Default for ImmunizationProtocolapplied {
             dose_number_string: Default::default(),
             series_doses_positive_int: Default::default(),
             series_doses_string: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationReaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            detail: Default::default(),
+            reported: Default::default(),
+            _reported: Default::default(),
         }
     }
 }

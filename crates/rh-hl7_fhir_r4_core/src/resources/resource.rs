@@ -44,6 +44,22 @@ pub struct Resource {
     /// Extension element for the 'language' primitive field. Contains metadata and extensions.
     pub _language: Option<Element>,
 }
+/// Approval Date
+///
+/// The date on which the asset content was approved by the publisher. Approval happens once when the content is officially approved for usage.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/resource-approvalDate
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceApprovalDate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Effective Period
 ///
 /// The period during which the resource content was or is planned to be effective.
@@ -56,22 +72,6 @@ pub struct Resource {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceEffectivePeriod {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// pertains to goal
-///
-/// Indicates that the resource is related to either the measurement, achievement or progress towards the referenced goal.  For example, a Procedure to exercise pertainsToGoal of losing weight.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/resource-pertainsToGoal
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourcePertainsToGoal {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -92,18 +92,18 @@ pub struct ResourceLastReviewDate {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Approval Date
+/// pertains to goal
 ///
-/// The date on which the asset content was approved by the publisher. Approval happens once when the content is officially approved for usage.
+/// Indicates that the resource is related to either the measurement, achievement or progress towards the referenced goal.  For example, a Procedure to exercise pertainsToGoal of losing weight.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/resource-approvalDate
+/// - URL: http://hl7.org/fhir/StructureDefinition/resource-pertainsToGoal
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceApprovalDate {
+pub struct ResourcePertainsToGoal {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -122,7 +122,7 @@ impl Default for Resource {
     }
 }
 
-impl Default for ResourceEffectivePeriod {
+impl Default for ResourceApprovalDate {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -130,7 +130,7 @@ impl Default for ResourceEffectivePeriod {
     }
 }
 
-impl Default for ResourcePertainsToGoal {
+impl Default for ResourceEffectivePeriod {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -146,7 +146,7 @@ impl Default for ResourceLastReviewDate {
     }
 }
 
-impl Default for ResourceApprovalDate {
+impl Default for ResourcePertainsToGoal {
     fn default() -> Self {
         Self {
             base: Extension::default(),
