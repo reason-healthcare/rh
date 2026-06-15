@@ -47,7 +47,13 @@ pub struct RustField {
     pub name: String,
     pub field_type: RustType,
     pub doc_comment: Option<String>,
+    /// True when the field has 0..1 cardinality (min=0, max=1) → `Option<T>`
     pub is_optional: bool,
+    /// True when the field has *..* cardinality (max > 1 or max="*") → `Vec<T>`
+    /// When both is_optional and is_repeating are true (0..*), the field is emitted
+    /// as `Vec<T>` with `#[serde(default, skip_serializing_if = "Vec::is_empty")]`
+    /// instead of `Option<Vec<T>>`, because absent ⇔ empty in FHIR JSON.
+    pub is_repeating: bool,
     pub is_public: bool,
     pub serde_attributes: Vec<String>,
     /// If set, this field should be rendered as a macro call instead of a regular field
@@ -61,6 +67,7 @@ impl RustField {
             field_type,
             doc_comment: None,
             is_optional: false,
+            is_repeating: false,
             is_public: true,
             serde_attributes: Vec::new(),
             macro_call: None,
@@ -77,6 +84,7 @@ impl RustField {
             field_type: RustType::Custom("MacroCall".to_string()), // Placeholder type
             doc_comment: None,
             is_optional: false,
+            is_repeating: false,
             is_public: true,
             serde_attributes: Vec::new(),
             macro_call: Some(macro_call),
@@ -98,6 +106,11 @@ impl RustField {
 
     pub fn optional(mut self) -> Self {
         self.is_optional = true;
+        self
+    }
+
+    pub fn repeating(mut self) -> Self {
+        self.is_repeating = true;
         self
     }
 

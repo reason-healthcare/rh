@@ -165,7 +165,21 @@ impl TokenGenerator {
         }
 
         let name = format_ident!("{}", field.name);
-        let field_type = self.generate_type(&field.field_type, field.is_optional);
+
+        // For 0..* cardinality fields, emit Vec<T> with serde(default, skip_serializing_if)
+        // instead of Option<Vec<T>>, because absent ⇔ empty in FHIR JSON.
+        let field_type = if field.is_repeating {
+            // The field_type is already RustType::Vec(inner) for regular array fields,
+            // or RustType::Custom for companion extension fields. Extract the inner
+            // type so we emit Vec<inner> instead of Option<Vec<inner>> or Vec<Vec<inner>>.
+            let inner = match &field.field_type {
+                RustType::Vec(inner) => self.generate_type(inner, false),
+                other => self.generate_type(other, false),
+            };
+            quote! { Vec<#inner> }
+        } else {
+            self.generate_type(&field.field_type, field.is_optional)
+        };
 
         // Generate documentation
         let doc_attrs = if let Some(doc) = &field.doc_comment {
@@ -187,7 +201,8 @@ impl TokenGenerator {
         };
 
         // Generate serde attributes
-        let serde_attrs: Vec<TokenStream> = field
+        // For repeating optional fields (0..*), add default + skip_serializing_if
+        let mut serde_attrs: Vec<TokenStream> = field
             .serde_attributes
             .iter()
             .map(|attr| {
@@ -197,6 +212,15 @@ impl TokenGenerator {
                 quote! { #[#attr_tokens] }
             })
             .collect();
+
+        if field.is_repeating && field.is_optional {
+            // 0..* cardinality: Vec<T> with serde(default, skip_serializing_if = "Vec::is_empty")
+            let default_attr: TokenStream =
+                "serde(default, skip_serializing_if = \"Vec::is_empty\")"
+                    .parse()
+                    .expect("codegen bug: invalid serde attribute for repeating field");
+            serde_attrs.push(quote! { #[#default_attr] });
+        }
 
         // Generate visibility
         let vis = if field.is_public {
