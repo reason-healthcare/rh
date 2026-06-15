@@ -136,11 +136,24 @@ impl<'a> StructGenerator<'a> {
                 continue;
             }
 
-            let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+            let field_path = element
+                .path
+                .strip_prefix(&format!("{base_path}."))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: element path '{}' does not start with '{base_path}.'",
+                        element.path
+                    )
+                });
 
             if field_path.contains('.') {
                 // This is a nested field - collect it for nested struct generation
-                let nested_field_name = field_path.split('.').next().unwrap();
+                let nested_field_name = field_path.split('.').next().unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: field path '{}' contains '.' but has no prefix segment",
+                        field_path
+                    )
+                });
                 nested_structs_info
                     .entry(nested_field_name.to_string())
                     .or_insert_with(Vec::new)
@@ -278,11 +291,24 @@ impl<'a> StructGenerator<'a> {
                 continue;
             }
 
-            let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+            let field_path = element
+                .path
+                .strip_prefix(&format!("{base_path}."))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: element path '{}' does not start with '{base_path}.'",
+                        element.path
+                    )
+                });
 
             if field_path.contains('.') {
                 // This is a sub-nested field - collect it for recursive nested struct generation
-                let sub_nested_field_name = field_path.split('.').next().unwrap();
+                let sub_nested_field_name = field_path.split('.').next().unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: field path '{}' contains '.' but has no prefix segment",
+                        field_path
+                    )
+                });
                 sub_nested_structs
                     .entry(sub_nested_field_name.to_string())
                     .or_insert_with(Vec::new)
@@ -361,11 +387,15 @@ impl<'a> StructGenerator<'a> {
                     let sub_field_path = element
                         .path
                         .strip_prefix(&format!("{sub_base_path}."))
-                        .unwrap();
+                        .unwrap_or_else(|| {
+                            panic!("codegen bug: element path '{}' does not start with '{sub_base_path}.'", element.path)
+                        });
 
                     if sub_field_path.contains('.') {
                         // This is a further sub-nested field - collect it for recursive generation
-                        let sub_sub_nested_field_name = sub_field_path.split('.').next().unwrap();
+                        let sub_sub_nested_field_name = sub_field_path.split('.').next().unwrap_or_else(|| {
+                            panic!("codegen bug: field path '{}' contains '.' but has no prefix segment", sub_field_path)
+                        });
                         sub_sub_nested_structs
                             .entry(sub_sub_nested_field_name.to_string())
                             .or_default()
@@ -501,11 +531,24 @@ impl<'a> StructGenerator<'a> {
                     continue;
                 }
 
-                let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+                let field_path = element
+                    .path
+                    .strip_prefix(&format!("{base_path}."))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "codegen bug: element path '{}' does not start with '{base_path}.'",
+                            element.path
+                        )
+                    });
 
                 if field_path.contains('.') {
                     // This is a further nested field - collect it for recursive generation
-                    let sub_nested_field_name = field_path.split('.').next().unwrap();
+                    let sub_nested_field_name = field_path.split('.').next().unwrap_or_else(|| {
+                        panic!(
+                            "codegen bug: field path '{}' contains '.' but has no prefix segment",
+                            field_path
+                        )
+                    });
                     sub_nested_structs
                         .entry(sub_nested_field_name.to_string())
                         .or_default()

@@ -44,7 +44,9 @@ impl TokenGenerator {
 
         // Add imports
         for import in &module.imports {
-            let import_tokens: TokenStream = import.parse().expect("Invalid import statement");
+            let import_tokens: TokenStream = import
+                .parse()
+                .expect("codegen bug: invalid import statement in module imports");
             tokens.extend(quote! {
                 use #import_tokens;
             });
@@ -191,7 +193,7 @@ impl TokenGenerator {
             .map(|attr| {
                 let attr_tokens: TokenStream = format!("serde({attr})")
                     .parse()
-                    .expect("Invalid serde attribute");
+                    .expect("codegen bug: invalid serde attribute");
                 quote! { #[#attr_tokens] }
             })
             .collect();
@@ -362,7 +364,9 @@ impl TokenGenerator {
                     || name.contains('\'')
                 {
                     // Parse as a type expression
-                    let type_tokens: TokenStream = name.parse().expect("Invalid type expression");
+                    let type_tokens: TokenStream = name
+                        .parse()
+                        .expect("codegen bug: invalid type expression in Custom RustType");
                     quote! { #type_tokens }
                 } else {
                     let ident = format_ident!("{}", name);

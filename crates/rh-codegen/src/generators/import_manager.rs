@@ -68,11 +68,11 @@ impl ImportManager {
                     // For trait types like "DomainResourceAccessors", extract the base name
                     // and use it for the module path: crate::traits::domain_resource::DomainResourceAccessors
                     let base_name = if super_trait.ends_with("Accessors") {
-                        super_trait.strip_suffix("Accessors").unwrap()
+                        super_trait.strip_suffix("Accessors").unwrap_or(super_trait)
                     } else if super_trait.ends_with("Mutators") {
-                        super_trait.strip_suffix("Mutators").unwrap()
+                        super_trait.strip_suffix("Mutators").unwrap_or(super_trait)
                     } else if super_trait.ends_with("Existence") {
-                        super_trait.strip_suffix("Existence").unwrap()
+                        super_trait.strip_suffix("Existence").unwrap_or(super_trait)
                     } else {
                         super_trait
                     };

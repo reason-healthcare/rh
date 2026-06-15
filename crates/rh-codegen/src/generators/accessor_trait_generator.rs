@@ -92,7 +92,12 @@ impl AccessorTraitGenerator {
         type_mapper: &mut TypeMapper,
     ) -> CodegenResult<Option<RustTraitMethod>> {
         let path_parts: Vec<&str> = element.path.split('.').collect();
-        let field_name = path_parts.last().unwrap().to_string();
+        let field_name = path_parts
+            .last()
+            .ok_or_else(|| crate::CodegenError::MissingField {
+                field: format!("element path has no field segment: {}", element.path),
+            })?
+            .to_string();
         let rust_field_name = crate::naming::Naming::field_name(&field_name);
 
         let is_optional = element.min.unwrap_or(0) == 0;

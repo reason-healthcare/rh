@@ -457,7 +457,7 @@ impl<'a> FileGenerator<'a> {
         for import in &imports {
             let import_token: proc_macro2::TokenStream = format!("use {import};")
                 .parse()
-                .expect("Invalid import statement");
+                .expect("codegen bug: invalid import statement in generated file imports");
             import_tokens.extend(import_token);
         }
 
@@ -861,8 +861,9 @@ impl<'a> FileGenerator<'a> {
 
         // Add imports
         for import in &imports {
-            let import_token: proc_macro2::TokenStream =
-                format!("use {import};").parse().expect("Invalid import");
+            let import_token: proc_macro2::TokenStream = format!("use {import};")
+                .parse()
+                .expect("codegen bug: invalid import statement in struct-only file");
             all_tokens.extend(import_token);
         }
 
@@ -1150,7 +1151,15 @@ pub use crate::traits::{trait_module_name}::{{
         for element in elements {
             // Match elements like "AuditEvent.source.observer"
             if element.path.starts_with(&format!("{base_path}.")) {
-                let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+                let field_path = element
+                    .path
+                    .strip_prefix(&format!("{base_path}."))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "codegen bug: element path '{}' does not start with '{base_path}.'",
+                            element.path
+                        )
+                    });
                 // Only direct fields (no dots in remaining path)
                 if !field_path.contains('.') && !field_path.ends_with("[x]") {
                     if let Some(min) = element.min {
