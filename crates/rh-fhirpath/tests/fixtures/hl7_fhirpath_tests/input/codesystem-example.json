@@ -89,6 +89,16 @@
           },
           "value": "Obdurate Labs uses this with both kinds of units..."
         }
+      ],
+      "concept": [
+        {
+          "code": "chol-mmol",
+          "display": "SChol (mmol/L)"
+        },
+        {
+          "code": "chol-mass",
+          "display": "SChol (mg/L)"
+        }
       ]
     }
   ]

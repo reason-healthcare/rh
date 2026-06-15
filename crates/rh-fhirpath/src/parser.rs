@@ -395,12 +395,18 @@ fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
     ))
 }
 
-// Parse unary expressions (-, not)
+// Parse unary expressions (-, +, not)
 fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
     alt((
         map(preceded(ws(char('-')), parse_unary_expression), |expr| {
             Expression::Polarity {
                 operator: PolarityOperator::Minus,
+                operand: Box::new(expr),
+            }
+        }),
+        map(preceded(ws(char('+')), parse_unary_expression), |expr| {
+            Expression::Polarity {
+                operator: PolarityOperator::Plus,
                 operand: Box::new(expr),
             }
         }),

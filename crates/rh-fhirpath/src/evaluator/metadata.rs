@@ -144,6 +144,34 @@ pub fn apply_fhir_typing(
                     fhir_type: FhirPrimitiveType::Boolean,
                 };
             }
+            (serde_json::Value::Array(arr), FhirFieldType::Complex(type_name)) => {
+                // Return each array element as a TypedObject, always as a Collection
+                // (even for single items, to match the behavior of from_json on arrays)
+                let items: Vec<FhirPathValue> = arr
+                    .iter()
+                    .map(|item| {
+                        if item.is_object() {
+                            FhirPathValue::TypedObject {
+                                value: item.clone(),
+                                fhir_type: type_name.to_string(),
+                            }
+                        } else {
+                            FhirPathValue::from_json(item)
+                        }
+                    })
+                    .collect();
+                return if items.is_empty() {
+                    FhirPathValue::Empty
+                } else {
+                    FhirPathValue::Collection(items)
+                };
+            }
+            (serde_json::Value::Object(_), FhirFieldType::Complex(type_name)) => {
+                return FhirPathValue::TypedObject {
+                    value: value.clone(),
+                    fhir_type: type_name.to_string(),
+                };
+            }
             _ => {}
         }
     } else {

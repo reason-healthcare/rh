@@ -304,7 +304,8 @@ fn test_is_function_with_empty_collection() {
         .evaluate(&ast, &context)
         .expect("Failed to evaluate");
 
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    // per FHIRPath spec: {} is Type = {} (empty propagates)
+    assert_eq!(result, FhirPathValue::Empty);
 }
 
 #[test]

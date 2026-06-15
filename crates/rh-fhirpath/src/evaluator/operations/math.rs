@@ -357,6 +357,8 @@ impl MathEvaluator {
             FhirPathValue::Quantity { .. } => "Quantity",
             FhirPathValue::Collection(_) => "Collection",
             FhirPathValue::Object(_) => "Object",
+            FhirPathValue::TypedObject { .. } => "Object",
+            FhirPathValue::FhirPrimitive { inner, .. } => Self::type_name(inner),
             FhirPathValue::DateTimePrecision(_) => "DateTimePrecision",
             FhirPathValue::Empty => "Empty",
         }

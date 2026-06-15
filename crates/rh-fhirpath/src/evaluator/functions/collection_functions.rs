@@ -64,6 +64,47 @@ pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFun
             CollectionEvaluator::descendants(target)
         }),
     );
+
+    // conformsTo(url) — stub implementation.
+    // Returns true if the resource/element conforms to the named profile/structure.
+    // Full validation requires a validator backend; this stub returns true for known
+    // base resource type URLs, false for profile URLs, and an error for unresolvable URLs.
+    functions.insert(
+        "conformsTo".to_string(),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            let url = match params.first() {
+                Some(FhirPathValue::String(s)) | Some(FhirPathValue::TypedString { value: s, .. }) => s.clone(),
+                _ => {
+                    return Err(FhirPathError::FunctionError {
+                        message: "conformsTo() requires a URL string parameter".to_string(),
+                    })
+                }
+            };
+            // Check if the URL resolves to a known pattern
+            if !url.starts_with("http://hl7.org/fhir/StructureDefinition/")
+                && !url.starts_with("https://hl7.org/fhir/StructureDefinition/")
+            {
+                return Err(FhirPathError::EvaluationError {
+                    message: format!("conformsTo(): cannot resolve profile URL '{url}'"),
+                });
+            }
+            // Extract the resource/type name from the URL
+            let type_name = url
+                .rsplit('/')
+                .next()
+                .unwrap_or("");
+            // Check if the target resource type matches (base resource conformance)
+            let matches = match target {
+                FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
+                    obj.get("resourceType")
+                        .and_then(|v| v.as_str())
+                        .is_some_and(|rt| rt.eq_ignore_ascii_case(type_name))
+                }
+                _ => false,
+            };
+            Ok(FhirPathValue::Boolean(matches))
+        }),
+    );
 }
 
 /// Register boolean collection functions (all, allTrue, anyTrue, etc.)

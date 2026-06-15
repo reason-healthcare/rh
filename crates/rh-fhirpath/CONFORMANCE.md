@@ -38,15 +38,15 @@ Every case is categorized as one of:
 A machine-readable summary is written to
 `target/hl7_fhirpath_conformance.json` on every run.
 
-### 1.1 Current results (2026-06-14, waves 26–31)
+### 1.1 Current results (2026-06-14, waves 26–32)
 
 | Metric | Count | % |
 |---|---|---|
 | Total | 935 | 100% |
-| Pass | 913 | 97.6% |
-| Wrong answer | 15 | 1.6% |
-| Parse error | 1 | 0.1% |
-| Eval error | 5 | 0.5% |
+| Pass | 923 | 98.7% |
+| Wrong answer | 10 | 1.1% |
+| Parse error | 0 | 0.0% |
+| Eval error | 1 | 0.1% |
 | Skipped | 1 | 0.1% |
 
 History:
@@ -68,6 +68,7 @@ History:
 | 2026-06-14 | 907 (97.0%) | 19 | 1 | 7 | Waves 26–29: quantity `~` uses precision-aware equivalence; `FhirPathValue::TypedString` carries FHIR primitive type provenance (code/id/uri/url/canonical); `is()` follows FHIR type hierarchy; `as()`/`ofType()` use exact type match; `type()` returns FHIR namespace for TypedString; `matches()` uses single-line (dotall) mode; `iif()` errors on multi-element collections. 9 inheritance tests fixed, 2 misc tests fixed (testQuantity4, testMatchesSingleLineMode1, testIif10). |
 | 2026-06-14 | 909 (97.2%) | 19 | 1 | 5 | Wave 30: quantity unit algebra for `Quantity * Quantity` and cross-dimension `Quantity / Quantity`. Operands are normalized to base UCUM units before composing the result unit (`2.0 'cm' * 2.0 'm' -> 0.040 'm2'`, `4.0 'g' / 2.0 'm' -> 2 'g/m'`). `testQuantity9/10` flipped from eval-error to pass. |
 | 2026-06-14 | 913 (97.6%) | 15 | 1 | 5 | Wave 31: `TypedBoolean` and `TypedDateTime` now preserve FHIR primitive provenance for JSON booleans and `dateTime`/`instant` values, choice-type primitive promotion returns typed FHIR values, `type()/is()/as()/ofType()` distinguish `boolean` vs `Boolean` and `FHIR.Patient` correctly, and `getValue()` / `iif()` accept the new typed primitives. Fixed HL7 `testType9/10/11/12/13/14/18/19/21/23/A1/A3/A4` plus the previous `Observation.issued is instant` type gap. |
+| 2026-06-14 | 923 (98.7%) | 10 | 0 | 1 | Wave 32: unary `+` parser; `$index` in `select()`/`where()`; `is` returns empty for empty input (spec-correct); `codesystem-example` fixture updated with nested `chol` sub-concepts (fixes `testCombine1`); `TypedObject` variant tracks FHIR complex type names enabling `ofType(HumanName)`, `value is Age`, `value is Quantity` (FHIR complex type hierarchy); `FhirPrimitive` wrapper enables `extension()` on primitive fields (`_birthDate` sibling); `%ext-` variable expansion to StructureDefinition URLs; `conformsTo()` stub function; `as()` errors on multi-element collections (spec-correct). Cleared 5 wrong answers, 1 parse error, 4 eval errors. Baseline shrunk from 15 → 10 wrong answers. |
 
 ### 1.2 Regression policy
 
@@ -99,13 +100,8 @@ successful **non-empty** result as a wrong answer.
 
 | Cluster | Cases | Notes |
 |---|---|---|
-| `highBoundary()`/`lowBoundary()`/`precision()` | 5 | Need decimal precision support |
-| Polymorphic choice-type access | 2 | Strict semantic-error handling for explicit `valueQuantity` / `value.exists()` remains |
-| Primitive extensions / explicit primitive choice access | 2 | `_primitive` sibling navigation still missing |
-| `defineVariable`/`$this` ordering | 1 | Semantic error expected |
-| `extension()` on primitives | 1 | Not yet implemented |
-| `combine().isDistinct()` | 1 | `isDistinct()` semantics |
-| `ofType(HumanName)` on collection | 1 | Complex type resolution |
-| `conformsTo()` | 2 | Validator-backed hook not implemented |
-| `$index` in projection | 1 | Index invocation remains unimplemented |
-| Remaining parse error | 1 | Unary `+` prefix not supported |
+| `highBoundary()`/`lowBoundary()`/`precision()` | 5 | Need decimal precision support (f64 drops trailing zeros) |
+| Polymorphic choice-type access (strict) | 2 | `testPolymorphismB`/`testPolymorphicsB`: strict semantic-error for explicit `valueQuantity` access |
+| `testDollarOrderNotAllowed` | 1 | `skip()` after `children()` in strict mode |
+| `testDateTimeGreaterThanDate2` | 1 | Timezone flaky: `now()` UTC vs `today()` local date |
+| `testExtension2` | 1 | `extension(%ext-...)` eval error: `%ext-` variable resolves but `extension()` on primitive still has edge case |

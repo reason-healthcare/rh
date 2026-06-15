@@ -37,6 +37,17 @@ pub enum FhirPathValue {
     DateTimePrecision(DateTimePrecision),
     Collection(Vec<FhirPathValue>),
     Object(Value),
+    /// A FHIR complex object carrying its declared FHIR type name (e.g. "HumanName").
+    TypedObject {
+        value: Value,
+        fhir_type: String,
+    },
+    /// A FHIR primitive value that also carries the `_fieldName` extension data
+    /// (extensions array from the companion `_fieldName` sibling in FHIR JSON).
+    FhirPrimitive {
+        inner: Box<FhirPathValue>,
+        extensions: serde_json::Map<String, Value>,
+    },
     Empty,
 }
 
@@ -140,6 +151,20 @@ impl FhirPathValue {
                         .all(|(x, y)| Self::equals_static(x, y))
             }
             (FhirPathValue::Object(a), FhirPathValue::Object(b)) => a == b,
+            (FhirPathValue::TypedObject { value: a, fhir_type: ta }, FhirPathValue::TypedObject { value: b, fhir_type: tb }) => {
+                ta == tb && a == b
+            }
+            (FhirPathValue::TypedObject { value: a, .. }, FhirPathValue::Object(b))
+            | (FhirPathValue::Object(a), FhirPathValue::TypedObject { value: b, .. }) => a == b,
+            (FhirPathValue::FhirPrimitive { inner: a, .. }, other)
+            | (other, FhirPathValue::FhirPrimitive { inner: a, .. })
+                if !matches!(other, FhirPathValue::FhirPrimitive { .. }) =>
+            {
+                Self::equals_static(a, other)
+            }
+            (FhirPathValue::FhirPrimitive { inner: a, .. }, FhirPathValue::FhirPrimitive { inner: b, .. }) => {
+                Self::equals_static(a, b)
+            }
             (
                 FhirPathValue::Quantity {
                     value: v1,
@@ -167,6 +192,7 @@ impl FhirPathValue {
         match self {
             FhirPathValue::Boolean(b) => *b,
             FhirPathValue::TypedBoolean { value, .. } => *value,
+            FhirPathValue::FhirPrimitive { inner, .. } => inner.is_truthy(),
             FhirPathValue::Empty => false,
             FhirPathValue::Collection(items) => !items.is_empty(),
             _ => true,
@@ -256,6 +282,8 @@ impl FhirPathValue {
                 Value::Array(json_items)
             }
             FhirPathValue::Object(obj) => obj.clone(),
+            FhirPathValue::TypedObject { value, .. } => value.clone(),
+            FhirPathValue::FhirPrimitive { inner, .. } => inner.to_json(),
             FhirPathValue::Empty => Value::Null,
         }
     }

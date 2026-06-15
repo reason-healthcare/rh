@@ -66,7 +66,8 @@ fn extension_function(
     }
 
     let url = match &params[0] {
-        FhirPathValue::String(s) => s,
+        FhirPathValue::String(s) => s.as_str(),
+        FhirPathValue::TypedString { value, .. } => value.as_str(),
         _ => {
             return Err(FhirPathError::TypeError {
                 message: "extension() parameter must be a string URL".to_string(),
@@ -103,6 +104,23 @@ fn extension_function(
 
             // No extensions found
             Ok(FhirPathValue::Collection(vec![]))
+        }
+        FhirPathValue::FhirPrimitive { extensions, .. } => {
+            // Primitive value with extension data — search the extensions array
+            let ext_array = extensions.get("extension")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            let matching: Vec<FhirPathValue> = ext_array
+                .iter()
+                .filter(|ext| {
+                    ext.get("url")
+                        .and_then(|u| u.as_str())
+                        .is_some_and(|u| u == url)
+                })
+                .map(FhirPathValue::from_json)
+                .collect();
+            Ok(FhirPathValue::Collection(matching))
         }
         _ => {
             // Target is not an object that can have extensions

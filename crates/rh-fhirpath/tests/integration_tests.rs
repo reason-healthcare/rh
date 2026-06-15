@@ -258,8 +258,8 @@ mod tests {
                 // Collection results are expected for array properties
                 println!("✓ Got collection for name property");
             }
-            FhirPathValue::Object(_) => {
-                // Might also be returned as an object
+            FhirPathValue::Object(_) | FhirPathValue::TypedObject { .. } => {
+                // Might also be returned as an object or typed object (HumanName)
                 println!("✓ Got object for name property");
             }
             _ => {
@@ -305,7 +305,7 @@ mod tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
 
         match result {
-            FhirPathValue::Object(name_obj) => {
+            FhirPathValue::Object(name_obj) | FhirPathValue::TypedObject { value: name_obj, .. } => {
                 // Verify it's the first name object with "official" use
                 if let Some(serde_json::Value::String(use_str)) = name_obj.get("use") {
                     assert_eq!(use_str, "official");
@@ -323,7 +323,7 @@ mod tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
 
         match result {
-            FhirPathValue::Object(name_obj) => {
+            FhirPathValue::Object(name_obj) | FhirPathValue::TypedObject { value: name_obj, .. } => {
                 // Verify it's the second name object with "usual" use
                 if let Some(serde_json::Value::String(use_str)) = name_obj.get("use") {
                     assert_eq!(use_str, "usual");

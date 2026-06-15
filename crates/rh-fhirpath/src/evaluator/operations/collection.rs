@@ -655,7 +655,7 @@ impl CollectionEvaluator {
     /// The ordering of children is undefined and may vary between platforms
     pub fn children(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Object(obj) => {
+            FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                 let mut children = Vec::new();
 
                 // Iterate through all properties of the object
@@ -671,6 +671,7 @@ impl CollectionEvaluator {
                     Ok(FhirPathValue::Collection(children))
                 }
             }
+            FhirPathValue::FhirPrimitive { inner, .. } => Self::children(inner),
             FhirPathValue::Collection(items) => {
                 let mut all_children = Vec::new();
 
@@ -722,7 +723,7 @@ impl CollectionEvaluator {
         descendants: &mut Vec<FhirPathValue>,
     ) -> FhirPathResult<()> {
         match target {
-            FhirPathValue::Object(obj) => {
+            FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                 // Get immediate children first
                 if let Some(object_map) = obj.as_object() {
                     for value in object_map.values() {
@@ -744,6 +745,9 @@ impl CollectionEvaluator {
                         }
                     }
                 }
+            }
+            FhirPathValue::FhirPrimitive { inner, .. } => {
+                Self::collect_descendants(inner, descendants)?;
             }
             FhirPathValue::Collection(items) => {
                 // For collections passed directly to descendants() (the input collection),
@@ -837,6 +841,9 @@ impl CollectionEvaluator {
             }
             // Objects need deep comparison
             (FhirPathValue::Object(a), FhirPathValue::Object(b)) => a == b,
+            (FhirPathValue::TypedObject { value: a, .. }, FhirPathValue::TypedObject { value: b, .. }) => a == b,
+            (FhirPathValue::TypedObject { value: a, .. }, FhirPathValue::Object(b))
+            | (FhirPathValue::Object(a), FhirPathValue::TypedObject { value: b, .. }) => a == b,
             // Collections need element-wise comparison (order doesn't matter for sets)
             (FhirPathValue::Collection(a), FhirPathValue::Collection(b)) => {
                 if a.len() != b.len() {

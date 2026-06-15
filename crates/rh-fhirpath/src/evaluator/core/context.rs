@@ -24,6 +24,8 @@ pub struct EvaluationContext {
     pub this_value: Option<FhirPathValue>,
     /// Running accumulator for `aggregate()` — the `$total` variable.
     pub total_value: Option<FhirPathValue>,
+    /// Current iteration index for `$index` variable (set by select(), where(), etc.)
+    pub index_value: Option<i64>,
     /// External constants
     pub constants: HashMap<String, FhirPathValue>,
     /// Trace logs collected during evaluation
@@ -38,6 +40,7 @@ impl EvaluationContext {
             root: resource,
             this_value: None,
             total_value: None,
+            index_value: None,
             constants: HashMap::new(),
             trace_logs: Rc::new(RefCell::new(Vec::new())),
         }
@@ -70,6 +73,7 @@ impl EvaluationContext {
             current,
             this_value: self.this_value.clone(),
             total_value: self.total_value.clone(),
+            index_value: self.index_value,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
         }
@@ -82,6 +86,20 @@ impl EvaluationContext {
             current: this_value.to_json(),
             this_value: Some(this_value),
             total_value: self.total_value.clone(),
+            index_value: self.index_value, // preserve $index from outer iteration context
+            constants: self.constants.clone(),
+            trace_logs: self.trace_logs.clone(),
+        }
+    }
+
+    /// Create a new context with `$this` and `$index` set (for select(), where()).
+    pub fn with_this_and_index(&self, this_value: FhirPathValue, index: i64) -> Self {
+        Self {
+            root: self.root.clone(),
+            current: this_value.to_json(),
+            this_value: Some(this_value),
+            total_value: self.total_value.clone(),
+            index_value: Some(index),
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
         }
@@ -96,6 +114,7 @@ impl EvaluationContext {
             current: self.current.clone(),
             this_value: Some(this_value),
             total_value: self.total_value.clone(),
+            index_value: self.index_value,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
         }
@@ -112,6 +131,7 @@ impl EvaluationContext {
             current: this_value.to_json(),
             this_value: Some(this_value),
             total_value: Some(total_value),
+            index_value: None,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
         }

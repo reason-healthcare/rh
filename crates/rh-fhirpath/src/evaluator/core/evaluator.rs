@@ -32,7 +32,8 @@ impl FhirPathEvaluator {
         expression: &FhirPathExpression,
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
-        self.evaluate_expression(&expression.root, context)
+        let result = self.evaluate_expression(&expression.root, context)?;
+        Ok(strip_fhir_primitive(result))
     }
 
     /// Evaluate an expression against a context
@@ -45,21 +46,33 @@ impl FhirPathEvaluator {
             Expression::Term(term) => self.evaluate_term(term, context),
             Expression::Invocation { left, invocation } => {
                 let left_result = self.evaluate_expression(left, context)?;
-                self.evaluate_invocation(&left_result, invocation, context)
+                // FhirPrimitive carries _fieldName extension data only needed by
+                // extension().  For all other invocations, strip to the inner value
+                // so the rest of the evaluator doesn't need to handle the wrapper.
+                let is_extension_call = matches!(
+                    invocation,
+                    Invocation::Function { name, .. } if name == "extension"
+                );
+                let effective_left = if is_extension_call {
+                    left_result
+                } else {
+                    strip_fhir_primitive(left_result)
+                };
+                self.evaluate_invocation(&effective_left, invocation, context)
             }
             Expression::Indexer { left, index } => {
-                let left_result = self.evaluate_expression(left, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
                 let index_result = self.evaluate_expression(index, context)?;
                 CollectionEvaluator::evaluate_indexer(&left_result, &index_result)
             }
             Expression::Union { left, right } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 CollectionEvaluator::evaluate_union(&left_result, &right_result)
             }
             Expression::And { left, right } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ComparisonEvaluator::evaluate_and(&left_result, &right_result)
             }
             Expression::Or {
@@ -67,13 +80,13 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ComparisonEvaluator::evaluate_or(&left_result, operator, &right_result)
             }
             Expression::Implies { left, right } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ComparisonEvaluator::evaluate_implies(&left_result, &right_result)
             }
             Expression::Equality {
@@ -81,8 +94,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ComparisonEvaluator::evaluate_equality(&left_result, operator, &right_result)
             }
             Expression::Inequality {
@@ -90,8 +103,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ComparisonEvaluator::evaluate_inequality(&left_result, operator, &right_result)
             }
             Expression::Membership {
@@ -99,8 +112,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ComparisonEvaluator::evaluate_membership(&left_result, operator, &right_result)
             }
             Expression::Additive {
@@ -108,8 +121,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ArithmeticEvaluator::evaluate_additive(&left_result, operator, &right_result)
             }
             Expression::Multiplicative {
@@ -117,12 +130,12 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                let right_result = self.evaluate_expression(right, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
+                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
                 ArithmeticEvaluator::evaluate_multiplicative(&left_result, operator, &right_result)
             }
             Expression::Polarity { operator, operand } => {
-                let operand_result = self.evaluate_expression(operand, context)?;
+                let operand_result = strip_fhir_primitive(self.evaluate_expression(operand, context)?);
                 ArithmeticEvaluator::evaluate_polarity(operator, &operand_result)
             }
             Expression::Type {
@@ -130,7 +143,7 @@ impl FhirPathEvaluator {
                 operator,
                 type_specifier,
             } => {
-                let left_result = self.evaluate_expression(left, context)?;
+                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
                 TypeEvaluator::evaluate_type_operation(&left_result, operator, type_specifier)
             }
         }
@@ -241,9 +254,15 @@ impl FhirPathEvaluator {
                     Ok(FhirPathValue::Object(context.current.clone()))
                 }
             }
-            Invocation::Index => Err(FhirPathError::EvaluationError {
-                message: "$index not implemented yet".to_string(),
-            }),
+            Invocation::Index => {
+                if let Some(idx) = context.index_value {
+                    Ok(FhirPathValue::Integer(idx))
+                } else {
+                    Err(FhirPathError::EvaluationError {
+                        message: "$index is only available inside select(), where(), or similar iteration functions".to_string(),
+                    })
+                }
+            }
             Invocation::Total => {
                 if let Some(total) = &context.total_value {
                     Ok(total.clone())
@@ -262,7 +281,7 @@ impl FhirPathEvaluator {
         member: &str,
     ) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Object(obj) => {
+            FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                 // Extract resource type for metadata lookup
                 let resource_type = obj
                     .get("resourceType")
@@ -274,24 +293,39 @@ impl FhirPathEvaluator {
                 if let Some(ref resource_type_str) = resource_type {
                     if resource_type_str == member {
                         // The member matches the resourceType, return the object itself
-                        return Ok(FhirPathValue::Object(obj.clone()));
+                        return Ok(target.clone());
                     }
                 }
 
                 if let Some(value) = obj.get(member) {
+                    // Check for a `_fieldName` sibling carrying extension data for primitives
+                    let underscore_key = format!("_{member}");
+                    let ext_sibling = obj.get(&underscore_key)
+                        .and_then(|v| v.as_object())
+                        .cloned();
+
                     // Apply FHIR type metadata if we have resource type information
-                    if let Some(ref rt) = resource_type {
-                        return Ok(crate::evaluator::metadata::apply_fhir_typing(
-                            value, rt, member,
-                        ));
+                    let typed = if let Some(ref rt) = resource_type {
+                        crate::evaluator::metadata::apply_fhir_typing(value, rt, member)
+                    } else {
+                        FhirPathValue::from_json(value)
+                    };
+
+                    // Wrap in FhirPrimitive if there's extension sibling data
+                    if let Some(ext_map) = ext_sibling {
+                        // Only wrap if the value is a primitive (not a collection/object)
+                        if !matches!(typed, FhirPathValue::Object(_) | FhirPathValue::Collection(_)) {
+                            return Ok(FhirPathValue::FhirPrimitive {
+                                inner: Box::new(typed),
+                                extensions: ext_map,
+                            });
+                        }
                     }
-                    Ok(FhirPathValue::from_json(value))
+                    Ok(typed)
                 } else {
                     // Check for FHIR choice type polymorphic access (e.g., value[x])
                     if let Some(obj_map) = obj.as_object() {
                         for (key, value) in obj_map {
-                            // "value" matches "valueBoolean" / "valueQuantity" etc.,
-                            // but not "valueFoo" with lowercase next char.
                             if key.starts_with(member)
                                 && key.len() > member.len()
                                 && key
@@ -300,10 +334,6 @@ impl FhirPathEvaluator {
                                     .is_some_and(|c| c.is_uppercase())
                             {
                                 let suffix = &key[member.len()..];
-                                // For complex-type suffixes (Quantity, etc.) build the
-                                // matching FhirPathValue variant directly so downstream
-                                // `is(Quantity)`/`as(Quantity)`/`.unit` work. For
-                                // primitive suffixes the metadata-typing path handles it.
                                 if let Some(typed) = construct_typed_choice_value(suffix, value) {
                                     return Ok(typed);
                                 }
@@ -318,6 +348,10 @@ impl FhirPathEvaluator {
                     }
                     Ok(FhirPathValue::Empty)
                 }
+            }
+            FhirPathValue::FhirPrimitive { inner, .. } => {
+                // Delegate member access to the inner value
+                self.evaluate_member_access(inner, member)
             }
             FhirPathValue::Collection(items) => {
                 let mut result_items = Vec::new();
@@ -394,9 +428,9 @@ impl FhirPathEvaluator {
             FhirPathValue::Collection(items) => {
                 let mut filtered_items = Vec::new();
 
-                for item in items {
-                    // Create new context with current item as $this
-                    let item_context = context.with_this_value(item.clone());
+                for (idx, item) in items.iter().enumerate() {
+                    // Create new context with current item as $this and $index
+                    let item_context = context.with_this_and_index(item.clone(), idx as i64);
 
                     // Evaluate the criteria expression in the item context
                     let criteria_result = self.evaluate_expression(criteria_expr, &item_context)?;
@@ -634,9 +668,9 @@ impl FhirPathEvaluator {
             FhirPathValue::Collection(items) => {
                 let mut selected_items = Vec::new();
 
-                for item in items {
-                    // Create new context with current item as $this
-                    let item_context = context.with_this_value(item.clone());
+                for (idx, item) in items.iter().enumerate() {
+                    // Create new context with current item as $this and index as $index
+                    let item_context = context.with_this_and_index(item.clone(), idx as i64);
 
                     // Evaluate the projection expression in the item context
                     let projection_result =
@@ -994,6 +1028,18 @@ fn collect_member_chain(expr: &Expression, out: &mut Vec<String>) -> Option<()> 
     }
 }
 
+/// Strip a `FhirPrimitive` wrapper to its inner value.
+/// Makes FhirPrimitive transparent in all operations except `extension()`.
+fn strip_fhir_primitive(value: FhirPathValue) -> FhirPathValue {
+    match value {
+        FhirPathValue::FhirPrimitive { inner, .. } => *inner,
+        FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items.into_iter().map(strip_fhir_primitive).collect())
+        }
+        other => other,
+    }
+}
+
 /// Build a typed `FhirPathValue` for a FHIR choice-type field based on the
 /// type suffix of its JSON key (e.g. `valueQuantity` → suffix "Quantity").
 ///
@@ -1003,7 +1049,7 @@ fn collect_member_chain(expr: &Expression, out: &mut Vec<String>) -> Option<()> 
 fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Option<FhirPathValue> {
     use serde_json::Value;
     match suffix {
-        "Quantity" | "Age" | "Distance" | "Duration" | "Count" | "Money" => {
+        "Quantity" => {
             let obj = value.as_object()?;
             let num = obj.get("value")?.as_f64()?;
             let unit = obj
@@ -1012,6 +1058,14 @@ fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Opti
                 .or_else(|| obj.get("code").and_then(Value::as_str))
                 .map(str::to_string);
             Some(FhirPathValue::Quantity { value: num, unit })
+        }
+        // Quantity profiles: return as TypedObject so that `is Age`, `is Quantity`
+        // (subtype), and member access (`.value`, `.unit`) all work correctly.
+        "Age" | "Distance" | "Duration" | "Count" | "Money" => {
+            Some(FhirPathValue::TypedObject {
+                value: value.clone(),
+                fhir_type: suffix.to_string(),
+            })
         }
         "Boolean" => value.as_bool().map(|b| FhirPathValue::TypedBoolean {
             value: b,
