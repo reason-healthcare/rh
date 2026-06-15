@@ -1,6 +1,8 @@
 //! Temperature unit conversion integration tests
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use serde_json::json;
 
 #[test]
@@ -14,7 +16,7 @@ fn test_temperature_unit_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
-            assert_eq!(*value, 37.0);
+            assert_eq!(*value, Decimal::from_str_exact("37.0").unwrap());
             assert_eq!(*unit, Some("Cel".to_string()));
         }
     }
@@ -23,7 +25,7 @@ fn test_temperature_unit_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
-            assert_eq!(*value, 98.6);
+            assert_eq!(*value, Decimal::from_str_exact("98.6").unwrap());
             assert_eq!(*unit, Some("[degF]".to_string()));
         }
     }
@@ -32,7 +34,7 @@ fn test_temperature_unit_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
-            assert_eq!(*value, 310.15);
+            assert_eq!(*value, Decimal::from_str_exact("310.15").unwrap());
             assert_eq!(*unit, Some("K".to_string()));
         }
     }
@@ -43,7 +45,7 @@ fn test_temperature_unit_conversions() {
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
             // Now with Celsius base: 20°C + 5°C = 25°C (intuitive!)
-            assert!((value - 25.0).abs() < 0.01);
+            assert!((value.to_f64().unwrap() - 25.0).abs() < 0.01);
             assert_eq!(*unit, Some("Cel".to_string()));
         }
     }
@@ -54,7 +56,7 @@ fn test_temperature_unit_conversions() {
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
             // 100°F - 32°F = 68°F (result stays in Fahrenheit, left operand's unit)
-            assert!((value - 68.0).abs() < 0.01);
+            assert!((value.to_f64().unwrap() - 68.0).abs() < 0.01);
             assert_eq!(*unit, Some("[degF]".to_string()));
         }
     }
@@ -65,7 +67,7 @@ fn test_temperature_unit_conversions() {
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
             // 0°C + 273.15K: 0°C + 0°C = 0°C
-            assert!((value - 0.0).abs() < 0.01);
+            assert!((value.to_f64().unwrap() - 0.0).abs() < 0.01);
             assert_eq!(*unit, Some("Cel".to_string()));
         }
     }
@@ -75,7 +77,7 @@ fn test_temperature_unit_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Collection(values) = result {
         if let FhirPathValue::Quantity { value, unit } = &values[0] {
-            assert_eq!(*value, 200.0);
+            assert_eq!(*value, Decimal::from_str_exact("200.0").unwrap());
             assert_eq!(*unit, Some("Cel".to_string()));
         }
     }

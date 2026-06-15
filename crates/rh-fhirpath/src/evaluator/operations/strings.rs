@@ -9,7 +9,7 @@ impl StringEvaluator {
     fn is_empty(v: &FhirPathValue) -> bool {
         match v {
             FhirPathValue::Empty => true,
-            FhirPathValue::Collection(c) => c.is_empty(),
+            FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => c.is_empty(),
             _ => false,
         }
     }
@@ -20,8 +20,16 @@ impl StringEvaluator {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::Integer(s.len() as i64)),
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) if items.is_empty() => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) if items.len() == 1 => Self::length(&items[0]),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::length(&items[0])
+            }
             _ => Err(FhirPathError::TypeError {
                 message: "length() can only be called on String values".to_string(),
             }),
@@ -360,8 +368,16 @@ impl StringEvaluator {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::String(s.trim().to_string())),
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) if items.is_empty() => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) if items.len() == 1 => Self::trim(&items[0]),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::trim(&items[0])
+            }
             _ => Err(FhirPathError::TypeError {
                 message: "trim() can only be called on String values".to_string(),
             }),
@@ -407,7 +423,7 @@ impl StringEvaluator {
         delimiter: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
         let collection = match target {
-            FhirPathValue::Collection(items) => items,
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => items,
             _ => {
                 return Err(FhirPathError::TypeError {
                     message: "join() can only be called on Collection values".to_string(),

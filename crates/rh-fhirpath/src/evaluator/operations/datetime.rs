@@ -7,6 +7,7 @@
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, Timelike, Utc};
+use rust_decimal::Decimal;
 
 /// Helper function to parse datetime strings with timezone handling
 fn parse_datetime_str(dt_str: &str) -> Result<DateTime<chrono::FixedOffset>, chrono::ParseError> {
@@ -241,7 +242,8 @@ impl DateTimeEvaluator {
                         message: format!("Invalid datetime format: {dt_str}"),
                     })?;
                 let offset_seconds = datetime.offset().local_minus_utc() as f64;
-                let offset_hours = offset_seconds / 3600.0;
+                let offset_hours =
+                    Decimal::from_f64_retain(offset_seconds / 3600.0).unwrap_or(Decimal::ZERO);
                 Ok(FhirPathValue::Number(offset_hours))
             }
             _ => Err(FhirPathError::TypeError {
@@ -480,17 +482,17 @@ mod tests {
         // UTC timezone
         let datetime_utc = FhirPathValue::DateTime("2023-07-15T14:30:25.123Z".to_string());
         let result = DateTimeEvaluator::timezone_offset_of(&datetime_utc).unwrap();
-        assert_eq!(result, FhirPathValue::Number(0.0));
+        assert_eq!(result, FhirPathValue::Number(Decimal::ZERO));
 
         // EST timezone (-5 hours)
         let datetime_est = FhirPathValue::DateTime("2023-07-15T14:30:25.123-05:00".to_string());
         let result = DateTimeEvaluator::timezone_offset_of(&datetime_est).unwrap();
-        assert_eq!(result, FhirPathValue::Number(-5.0));
+        assert_eq!(result, FhirPathValue::Number(Decimal::from(-5)));
 
         // CEST timezone (+2 hours)
         let datetime_cest = FhirPathValue::DateTime("2023-07-15T14:30:25.123+02:00".to_string());
         let result = DateTimeEvaluator::timezone_offset_of(&datetime_cest).unwrap();
-        assert_eq!(result, FhirPathValue::Number(2.0));
+        assert_eq!(result, FhirPathValue::Number(Decimal::from(2)));
     }
 
     #[test]

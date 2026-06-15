@@ -5,26 +5,23 @@ use crate::error::*;
 use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
+use rust_decimal::prelude::*;
+use rust_decimal::Decimal;
 
 /// Round the result of decimal arithmetic to the number of fractional digits
-/// of the less-precise input. This compensates for f64 rounding artefacts
-/// when both inputs have a small, well-defined precision (e.g. `1.8 - 1.2 →
-/// 0.5999…` rounds to `0.6` because both inputs have 1 decimal place).
-fn round_to_decimal_precision(result: f64, a: f64, b: f64) -> f64 {
+/// of the less-precise input. This compensates for rounding artefacts when
+/// both inputs have a small, well-defined precision (e.g. `1.8 - 1.2 → 0.6`).
+fn round_to_decimal_precision(result: Decimal, a: Decimal, b: Decimal) -> Decimal {
     let prec = decimal_places(a).min(decimal_places(b));
     if prec == 0 {
         return result;
     }
-    let scale = 10f64.powi(prec as i32);
+    let scale = Decimal::from_str_exact("10").unwrap().powi(prec as i64);
     (result * scale).round() / scale
 }
 
-fn decimal_places(n: f64) -> u8 {
-    let s = format!("{n}");
-    match s.split_once('.') {
-        Some((_, frac)) => frac.trim_end_matches('0').len().min(15) as u8,
-        None => 0,
-    }
+fn decimal_places(n: Decimal) -> u8 {
+    n.scale() as u8
 }
 
 /// Split a datetime literal into its `(base, tz_suffix)` components.
@@ -101,10 +98,10 @@ impl ArithmeticEvaluator {
                 Ok(FhirPathValue::Number(a + b))
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                Ok(FhirPathValue::Number(*a as f64 + b))
+                Ok(FhirPathValue::Number(Decimal::from(*a) + b))
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
-                Ok(FhirPathValue::Number(a + *b as f64))
+                Ok(FhirPathValue::Number(a + Decimal::from(*b)))
             }
             (FhirPathValue::String(a), FhirPathValue::String(b)) => {
                 Ok(FhirPathValue::String(format!("{a}{b}")))
@@ -127,7 +124,6 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n))
             | (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
                 if unit.is_none() {
-                    // Only allow if quantity has no unit (dimensionless)
                     Ok(FhirPathValue::Quantity {
                         value: value + n,
                         unit: None,
@@ -141,9 +137,8 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i))
             | (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 if unit.is_none() {
-                    // Only allow if quantity has no unit (dimensionless)
                     Ok(FhirPathValue::Quantity {
-                        value: value + (*i as f64),
+                        value: value + Decimal::from(*i),
                         unit: None,
                     })
                 } else {
@@ -185,7 +180,7 @@ impl ArithmeticEvaluator {
                         ),
                     })
                 } else if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_date(date_str, &precision, *value as i64)
+                    Self::add_precision_to_date(date_str, &precision, value.to_i64().unwrap_or(0))
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!("Cannot add quantity with unit '{unit_str}' to date"),
@@ -209,7 +204,7 @@ impl ArithmeticEvaluator {
                         ),
                     })
                 } else if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_date(date_str, &precision, *value as i64)
+                    Self::add_precision_to_date(date_str, &precision, value.to_i64().unwrap_or(0))
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!("Cannot add quantity with unit '{unit_str}' to date"),
@@ -224,7 +219,11 @@ impl ArithmeticEvaluator {
                 },
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_datetime(datetime_str, &precision, *value as i64)
+                    Self::add_precision_to_datetime(
+                        datetime_str,
+                        &precision,
+                        value.to_i64().unwrap_or(0),
+                    )
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!("Cannot add quantity with unit '{unit_str}' to datetime"),
@@ -239,7 +238,11 @@ impl ArithmeticEvaluator {
                 FhirPathValue::DateTime(datetime_str),
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_datetime(datetime_str, &precision, *value as i64)
+                    Self::add_precision_to_datetime(
+                        datetime_str,
+                        &precision,
+                        value.to_i64().unwrap_or(0),
+                    )
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!("Cannot add quantity with unit '{unit_str}' to datetime"),
@@ -381,10 +384,10 @@ impl ArithmeticEvaluator {
                 round_to_decimal_precision(a - b, *a, *b),
             )),
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                Ok(FhirPathValue::Number(*a as f64 - b))
+                Ok(FhirPathValue::Number(Decimal::from(*a) - b))
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
-                Ok(FhirPathValue::Number(a - *b as f64))
+                Ok(FhirPathValue::Number(a - Decimal::from(*b)))
             }
             // Quantity arithmetic - with automatic unit conversion
             (
@@ -428,7 +431,7 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) => {
                 if unit.is_none() {
                     Ok(FhirPathValue::Quantity {
-                        value: value - (*i as f64),
+                        value: value - Decimal::from(*i),
                         unit: None,
                     })
                 } else {
@@ -440,7 +443,7 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 if unit.is_none() {
                     Ok(FhirPathValue::Quantity {
-                        value: (*i as f64) - value,
+                        value: Decimal::from(*i) - value,
                         unit: None,
                     })
                 } else {
@@ -466,7 +469,11 @@ impl ArithmeticEvaluator {
                 },
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_date(date_str, &precision, -(*value as i64))
+                    Self::add_precision_to_date(
+                        date_str,
+                        &precision,
+                        -(value.to_i64().unwrap_or(0)),
+                    )
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!(
@@ -483,7 +490,11 @@ impl ArithmeticEvaluator {
                 },
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_datetime(datetime_str, &precision, -(*value as i64))
+                    Self::add_precision_to_datetime(
+                        datetime_str,
+                        &precision,
+                        -(value.to_i64().unwrap_or(0)),
+                    )
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!(
@@ -563,10 +574,10 @@ impl ArithmeticEvaluator {
                 Ok(FhirPathValue::Number(a * b))
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                Ok(FhirPathValue::Number(*a as f64 * b))
+                Ok(FhirPathValue::Number(Decimal::from(*a) * b))
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
-                Ok(FhirPathValue::Number(a * *b as f64))
+                Ok(FhirPathValue::Number(a * Decimal::from(*b)))
             }
             // Quantity multiplication by scalars
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Number(n))
@@ -577,7 +588,7 @@ impl ArithmeticEvaluator {
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i))
             | (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
                 let converter = UnitConverter::new();
-                Ok(converter.multiply_by_scalar(*value, unit, *i as f64))
+                Ok(converter.multiply_by_scalar(*value, unit, Decimal::from(*i)))
             }
             (
                 FhirPathValue::Quantity {
@@ -608,29 +619,29 @@ impl ArithmeticEvaluator {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    // Division always returns a Number (float) in FHIRPath
-                    Ok(FhirPathValue::Number(*a as f64 / *b as f64))
+                    // Division always returns a Number (decimal) in FHIRPath
+                    Ok(FhirPathValue::Number(Decimal::from(*a) / Decimal::from(*b)))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
-                if *b == 0.0 {
+                if *b == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(a / b))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                if *b == 0.0 {
+                if *b == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(*a as f64 / b))
+                    Ok(FhirPathValue::Number(Decimal::from(*a) / b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(a / *b as f64))
+                    Ok(FhirPathValue::Number(a / Decimal::from(*b)))
                 }
             }
             // Quantity division by scalars
@@ -640,11 +651,11 @@ impl ArithmeticEvaluator {
             }
             (FhirPathValue::Quantity { value, unit }, FhirPathValue::Integer(i)) => {
                 let converter = UnitConverter::new();
-                converter.divide_by_scalar(*value, unit, *i as f64)
+                converter.divide_by_scalar(*value, unit, Decimal::from(*i))
             }
             // Number/Integer divided by Quantity (result is different unit)
             (FhirPathValue::Number(n), FhirPathValue::Quantity { value, unit }) => {
-                if *value == 0.0 {
+                if *value == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else if unit.is_none() {
                     Ok(FhirPathValue::Number(n / value))
@@ -656,10 +667,10 @@ impl ArithmeticEvaluator {
                 }
             }
             (FhirPathValue::Integer(i), FhirPathValue::Quantity { value, unit }) => {
-                if *value == 0.0 {
+                if *value == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else if unit.is_none() {
-                    Ok(FhirPathValue::Number((*i as f64) / value))
+                    Ok(FhirPathValue::Number(Decimal::from(*i) / value))
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: "Division of integer by quantity with units is not supported"
@@ -701,24 +712,30 @@ impl ArithmeticEvaluator {
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
-                if *b == 0.0 {
+                if *b == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Integer((a / b).trunc() as i64))
+                    Ok(FhirPathValue::Integer(
+                        (a / b).trunc().to_i64().unwrap_or(0),
+                    ))
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                if *b == 0.0 {
+                if *b == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Integer((*a as f64 / b).trunc() as i64))
+                    Ok(FhirPathValue::Integer(
+                        (Decimal::from(*a) / b).trunc().to_i64().unwrap_or(0),
+                    ))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Integer((a / *b as f64).trunc() as i64))
+                    Ok(FhirPathValue::Integer(
+                        (a / Decimal::from(*b)).trunc().to_i64().unwrap_or(0),
+                    ))
                 }
             }
             _ => Err(FhirPathError::EvaluationError {
@@ -741,7 +758,7 @@ impl ArithmeticEvaluator {
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
-                if *b == 0.0 {
+                if *b == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
                     Ok(FhirPathValue::Number(round_to_decimal_precision(
@@ -752,17 +769,17 @@ impl ArithmeticEvaluator {
                 }
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                if *b == 0.0 {
+                if *b == Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(*a as f64 % b))
+                    Ok(FhirPathValue::Number(Decimal::from(*a) % b))
                 }
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(a % *b as f64))
+                    Ok(FhirPathValue::Number(a % Decimal::from(*b)))
                 }
             }
             _ => Err(FhirPathError::EvaluationError {

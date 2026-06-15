@@ -1,6 +1,7 @@
 //! Tests for date/time arithmetic operations
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::Decimal;
 use serde_json::json;
 
 #[cfg(test)]
@@ -248,7 +249,7 @@ mod datetime_arithmetic_tests {
 
         // Should create a quantity representing the compound duration
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 6.0);
+            assert_eq!(value, Decimal::from_str_exact("6.0").unwrap());
             assert_eq!(unit, Some("month".to_string()));
             println!("✓ 6 months creates quantity: value={value}, unit={unit:?}");
         } else {

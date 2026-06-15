@@ -1,6 +1,7 @@
 //! Comprehensive tests for toQuantity() and convertsToQuantity() functions
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::Decimal;
 use serde_json::json;
 
 #[test]
@@ -14,7 +15,7 @@ fn test_to_quantity_basic_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.0);
+            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
             // FHIRPath spec: toQuantity defaults to UCUM unit "1".
             assert_eq!(unit.as_deref(), Some("1"));
         }
@@ -26,7 +27,7 @@ fn test_to_quantity_basic_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 2.5);
+            assert_eq!(value, Decimal::from_str_exact("2.5").unwrap());
             // FHIRPath spec: toQuantity defaults to UCUM unit "1".
             assert_eq!(unit.as_deref(), Some("1"));
         }
@@ -38,7 +39,7 @@ fn test_to_quantity_basic_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.0);
+            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
             // FHIRPath spec: toQuantity defaults to UCUM unit "1".
             assert_eq!(unit.as_deref(), Some("1"));
         }
@@ -57,7 +58,7 @@ fn test_to_quantity_with_unit_parameter() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.0);
+            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -68,7 +69,7 @@ fn test_to_quantity_with_unit_parameter() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 37.2);
+            assert_eq!(value, Decimal::from_str_exact("37.2").unwrap());
             assert_eq!(unit, Some("Cel".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -79,7 +80,7 @@ fn test_to_quantity_with_unit_parameter() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 100.0);
+            assert_eq!(value, Decimal::from_str_exact("100.0").unwrap());
             assert_eq!(unit, Some("mm[Hg]".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -98,7 +99,7 @@ fn test_to_quantity_string_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.7);
+            assert_eq!(value, Decimal::from_str_exact("42.7").unwrap());
             // FHIRPath spec: toQuantity defaults to UCUM unit "1".
             assert_eq!(unit.as_deref(), Some("1"));
         }
@@ -110,7 +111,7 @@ fn test_to_quantity_string_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.7);
+            assert_eq!(value, Decimal::from_str_exact("42.7").unwrap());
             assert_eq!(unit, Some("L".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -121,7 +122,7 @@ fn test_to_quantity_string_conversions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 5.0);
+            assert_eq!(value, Decimal::from_str_exact("5.0").unwrap());
             assert_eq!(unit, Some("g".to_string())); // Should use parameter unit
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -139,7 +140,7 @@ fn test_to_quantity_existing_quantity() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 5.0);
+            assert_eq!(value, Decimal::from_str_exact("5.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -150,7 +151,7 @@ fn test_to_quantity_existing_quantity() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 5.0);
+            assert_eq!(value, Decimal::from_str_exact("5.0").unwrap());
             assert_eq!(unit, Some("g".to_string())); // Should use parameter unit
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -161,7 +162,7 @@ fn test_to_quantity_existing_quantity() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.0);
+            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
             assert_eq!(unit, Some("kg".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -185,7 +186,7 @@ fn test_to_quantity_edge_cases() {
     assert_eq!(
         result,
         FhirPathValue::Quantity {
-            value: 1.0,
+            value: Decimal::from_str_exact("1.0").unwrap(),
             unit: Some("1".to_string()),
         }
     );
@@ -205,7 +206,7 @@ fn test_to_quantity_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.0);
+            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -216,7 +217,7 @@ fn test_to_quantity_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 42.0);
+            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
             // FHIRPath spec: toQuantity defaults to UCUM unit "1".
             assert_eq!(unit.as_deref(), Some("1")); // Invalid unit parameter ignored
         }
@@ -342,7 +343,7 @@ fn test_quantity_conversion_with_unit_parameters() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 100.0);
+            assert_eq!(value, Decimal::from_str_exact("100.0").unwrap());
             assert_eq!(unit, Some("mm[Hg]".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
@@ -352,7 +353,7 @@ fn test_quantity_conversion_with_unit_parameters() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, 98.6);
+            assert_eq!(value, Decimal::from_str_exact("98.6").unwrap());
             assert_eq!(unit, Some("[degF]".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),

@@ -20,6 +20,8 @@ use std::path::{Path, PathBuf};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 
 const FIXTURES: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -29,23 +31,7 @@ const FIXTURES: &str = concat!(
 /// Wrong answers present at harness introduction (baseline 2026-06-12).
 /// Shrink-only: fixing one means removing it here. Adding to this list is a
 /// conformance regression and must not happen.
-const KNOWN_WRONG_ANSWERS: &[&str] = &[
-    "HighBoundary::HighBoundaryDecimal12",
-    "HighBoundary::HighBoundaryDecimal15",
-    "HighBoundary::HighBoundaryDecimal16",
-    "LowBoundary::LowBoundaryDecimal11",
-    "LowBoundary::LowBoundaryDecimal15",
-    "Precision::PrecisionDecimal",
-    "polymorphics::testPolymorphicsB",
-    "testCombine()::testCombine1",
-    "testDollar::testDollarOrderNotAllowed",
-    "testExtension::testExtension1",
-    "testInheritance::testFHIRPathAsFunction22",
-    "testInheritance::testFHIRPathIsFunction8",
-    "testInheritance::testFHIRPathIsFunction9",
-    "testObservations::testPolymorphismB",
-    "testObservations::testPolymorphismIsA3",
-];
+const KNOWN_WRONG_ANSWERS: &[&str] = &[];
 
 #[derive(Debug, Clone)]
 struct TestCase {
@@ -56,6 +42,8 @@ struct TestCase {
     invalid: Option<String>,
     predicate: bool,
     outputs: Vec<(String, String)>, // (type, value)
+    mode: Option<String>,
+    check_ordered_functions: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -106,6 +94,11 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                             invalid: attrs.get("invalid").cloned(),
                             predicate: attrs.get("predicate").map(|p| p == "true") == Some(true),
                             outputs: Vec::new(),
+                            mode: attrs.get("mode").cloned(),
+                            check_ordered_functions: attrs
+                                .get("checkOrderedFunctions")
+                                .map(|p| p == "true")
+                                .unwrap_or(false),
                         });
                     }
                     "expression" => {
@@ -214,20 +207,20 @@ fn matches_expected(actual: &FhirPathValue, expected_type: &str, expected: &str)
         ),
         "integer" => match actual {
             FhirPathValue::Integer(i) | FhirPathValue::Long(i) => expected.parse::<i64>() == Ok(*i),
-            FhirPathValue::Number(n) if n.fract() == 0.0 => {
-                expected.parse::<i64>() == Ok(*n as i64)
+            FhirPathValue::Number(n) if n.fract() == Decimal::ZERO => {
+                expected.parse::<i64>().ok() == n.to_i64()
             }
             _ => false,
         },
         "decimal" => {
-            let expected_num: f64 = match expected.parse() {
-                Ok(n) => n,
+            let expected_dec = match Decimal::from_str_exact(expected) {
+                Ok(d) => d,
                 Err(_) => return false,
             };
             match actual {
-                FhirPathValue::Number(n) => (n - expected_num).abs() < 1e-9,
+                FhirPathValue::Number(n) => n == &expected_dec,
                 FhirPathValue::Integer(i) | FhirPathValue::Long(i) => {
-                    (*i as f64 - expected_num).abs() < 1e-9
+                    Decimal::from(*i) == expected_dec
                 }
                 _ => false,
             }
@@ -252,15 +245,14 @@ fn matches_expected(actual: &FhirPathValue, expected_type: &str, expected: &str)
         }
         "Quantity" => match actual {
             FhirPathValue::Quantity { value, unit } => {
-                // Compare numerically: "1.58650000 'cm'" == 1.5865 'cm'.
                 let (num_str, unit_str) = match expected.split_once(' ') {
                     Some((n, u)) => (n, Some(u.trim().trim_matches('\''))),
                     None => (expected, None),
                 };
-                let Ok(expected_num) = num_str.parse::<f64>() else {
+                let Ok(expected_num) = Decimal::from_str_exact(num_str) else {
                     return false;
                 };
-                (value - expected_num).abs() < 1e-9
+                value == &expected_num
                     && match (unit, unit_str) {
                         (Some(u), Some(e)) => u == e,
                         (None, None) => true,
@@ -307,7 +299,10 @@ fn run_case(
         }
     };
 
-    let context = EvaluationContext::new(resource.clone());
+    let mut context = EvaluationContext::new(resource.clone());
+    context.strict_mode =
+        case.mode.as_deref() == Some("strict") || case.invalid.as_deref() == Some("semantic");
+    context.check_ordered_functions = case.check_ordered_functions;
     let result = match evaluator.evaluate(&parsed, &context) {
         Ok(r) => r,
         Err(e) => {

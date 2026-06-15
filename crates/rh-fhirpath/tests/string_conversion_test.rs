@@ -176,7 +176,7 @@ fn test_string_conversion_edge_cases() {
 
     let expr = parser.parse("123.450.toString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::String("123.45".to_string()));
+    assert_eq!(result, FhirPathValue::String("123.450".to_string()));
 }
 
 #[test]

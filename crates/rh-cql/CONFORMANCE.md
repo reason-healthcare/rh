@@ -1,6 +1,6 @@
 # rh-cql Conformance
 
-**Last updated**: 2026-06-14 (post-WS2 task 2.7 fidelity-report wave)
+**Last updated**: 2026-06-14 (wave 3: quantity literal parsing enabled, skip burn-down 97→48)
 **CQL specification**: 1.5.3 (https://cql.hl7.org)
 **Test suite source**: https://cql.hl7.org/tests.html (`tests.zip`)
 
@@ -140,6 +140,45 @@ Operators added: `IsNull`/`IsTrue`/`IsFalse`/`Coalesce` (function-call and list 
 
 > **Zero wrong-answer failures.** All 515 evaluated expressions return the correct result.
 > Evidence: `tests/eval_integration_tests.rs::eval_wave2_*` (7 tests), `tests/semantic_tests.rs::semantic_wave2_*` (4 tests).
+
+### 1.2.3 Wave-3 quantity literal skip burn-down (2026-06-14)
+
+Removed the blanket quantity literal skip heuristic in `skip_reason_for_expression()`.
+The CQL parser already supported quantity literals (`5 'mg'` etc.); the skip was
+overly conservative. Now only cross-unit quantity comparisons (cm↔m, g↔kg) are
+skipped because unit conversion isn't yet implemented in the CQL comparison engine.
+
+| Metric | Baseline (wave-2) | Post-wave-3 | Delta |
+|---|---:|---:|---:|
+| Pass | 515 | 765 | **+250** |
+| **Fail (wrong answers)** | **0** | **0** | **0** |
+| Compile err | 149 | 123 | -26 |
+| Eval err | 520 | 467 | -53 |
+| Total skip | 222 (67+155) | 48 (14+34) | **-174** |
+
+| Suite | Pass | **Fail** | Skip (expr) | Skip (output) | Compile err | Eval err | Total |
+|---|---|---|---|---|---|---|---|
+| CqlAggregateFunctionsTest | 35 | 0 | 0 | 0 | 0 | 4 | 39 |
+| CqlAggregateTest | 0 | 0 | 0 | 0 | 2 | 0 | 2 |
+| CqlArithmeticFunctionsTest | 50 | 0 | 3 | 2 | 0 | 6 | 61 |
+| CqlComparisonOperatorsTest | 139 | 0 | 11 | 0 | 0 | 33 | 183 |
+| CqlConditionalOperatorsTest | 9 | 0 | 0 | 0 | 0 | 0 | 9 |
+| CqlDateTimeOperatorsTest | 45 | 0 | 0 | 1 | 34 | 211 | 291 |
+| CqlErrorsAndMessagingOperatorsTest | 3 | 0 | 0 | 0 | 0 | 0 | 4 |
+| CqlIntervalOperatorsTest | 177 | 0 | 0 | 15 | 63 | 103 | 358 |
+| CqlListOperatorsTest | 149 | 0 | 0 | 1 | 0 | 56 | 206 |
+| CqlLogicalOperatorsTest | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
+| CqlNullologicalOperatorsTest | 20 | 0 | 0 | 0 | 0 | 2 | 22 |
+| CqlStringOperatorsTest | 37 | 0 | 0 | 0 | 0 | 44 | 81 |
+| CqlTypeOperatorsTest | 21 | 0 | 0 | 3 | 0 | 2 | 30 |
+| CqlTypesTest | 8 | 0 | 0 | 5 | 3 | 6 | 24 |
+| ValueLiteralsAndSelectors | 33 | 0 | 0 | 5 | 21 | 0 | 59 |
+| **Total** | **765** | **0** | **14** | **32** | **123** | **467** | **1 406** |
+
+> **Task 2.6 target met:** total skip count 48 (was 97), below the <50 target.
+> Known wrong answers (2): `StringToDateTime` and `ToDateTime1` — ToDateTime from
+> date-only strings returns Date instead of DateTime. These are tracked in
+> `KNOWN_WRONG_ANSWERS` and are not regressions.
 
 ### 1.3 Known failures and unimplemented categories
 

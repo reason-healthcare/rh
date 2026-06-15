@@ -1,5 +1,6 @@
 //! Abstract Syntax Tree (AST) types for FHIRPath expressions
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -110,8 +111,8 @@ pub enum Literal {
     Boolean(bool),
     /// String literal
     String(String),
-    /// Number literal
-    Number(f64),
+    /// Decimal literal (preserves trailing zeros for precision operations)
+    Number(Decimal),
     /// Integer literal
     Integer(i64),
     /// Long number literal (explicit L suffix)
@@ -123,7 +124,10 @@ pub enum Literal {
     /// Time literal
     Time(String),
     /// Quantity literal (number with unit)
-    Quantity { value: f64, unit: Option<String> },
+    Quantity {
+        value: Decimal,
+        unit: Option<String>,
+    },
     /// DateTime precision unit literal
     DateTimePrecision(DateTimePrecision),
 }

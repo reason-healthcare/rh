@@ -58,7 +58,7 @@ pub fn register_datetime_functions(functions: &mut HashMap<String, FhirPathFunct
                 });
             }
             match target {
-                FhirPathValue::Collection(items) => {
+                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                     let mut results = Vec::new();
                     for item in items {
                         results.push(DateTimeEvaluator::year_of(item)?);

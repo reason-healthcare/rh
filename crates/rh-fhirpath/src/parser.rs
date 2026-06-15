@@ -11,6 +11,7 @@ use nom::{
     sequence::{delimited, preceded, tuple},
     IResult,
 };
+use rust_decimal::Decimal;
 
 // Parse compound duration literal (number + precision unit)
 // Examples: "6 months", "2 years", "24 hours"
@@ -56,7 +57,7 @@ fn parse_compound_duration_literal(input: &str) -> IResult<&str, Literal> {
     Ok((
         input,
         Literal::Quantity {
-            value: count as f64,
+            value: Decimal::from(count),
             unit: Some(format!("{precision}")),
         },
     ))
@@ -395,12 +396,18 @@ fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
     ))
 }
 
-// Parse unary expressions (-, not)
+// Parse unary expressions (-, +, not)
 fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
     alt((
         map(preceded(ws(char('-')), parse_unary_expression), |expr| {
             Expression::Polarity {
                 operator: PolarityOperator::Minus,
+                operand: Box::new(expr),
+            }
+        }),
+        map(preceded(ws(char('+')), parse_unary_expression), |expr| {
+            Expression::Polarity {
+                operator: PolarityOperator::Plus,
                 operand: Box::new(expr),
             }
         }),
@@ -607,11 +614,12 @@ fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
             }
         }
     } else if number_str.contains('.') {
-        // Parse as float (no L suffix, contains decimal)
-        if let Ok(num) = number_str.parse::<f64>() {
+        // Parse as decimal (no L suffix, contains decimal point).
+        // Use rust_decimal to preserve trailing zeros for precision().
+        if let Ok(num) = Decimal::from_str_exact(number_str) {
             Ok((input, Literal::Number(num)))
         } else {
-            Ok((input, Literal::Number(0.0)))
+            Ok((input, Literal::Number(Decimal::ZERO)))
         }
     } else {
         // Parse as integer (no L suffix, no decimal) - use Integer type
@@ -826,8 +834,8 @@ fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
     let (input, unit) = take_while(|c| c != '\'')(input)?;
     let (input, _) = char('\'')(input)?;
 
-    // Convert the number string to f64 (quantities are always decimal)
-    let value = number_str.parse::<f64>().unwrap_or(0.0); // Fallback for invalid numbers
+    // Convert the number string to Decimal (preserves trailing zeros)
+    let value = Decimal::from_str_exact(number_str).unwrap_or(Decimal::ZERO);
 
     // Unit is optional per FHIR spec (can be empty string)
     let unit_opt = if unit.is_empty() {
@@ -1218,17 +1226,49 @@ mod tests {
         let parser = FhirPathParser::new();
 
         // Test basic quantity literals
-        let quantity_expressions = [
-            ("5'mg'", 5.0, Some("mg".to_string())),
-            ("10.5'kg'", 10.5, Some("kg".to_string())),
-            ("100'mmHg'", 100.0, Some("mmHg".to_string())),
-            ("0.25'L'", 0.25, Some("L".to_string())),
-            ("42''", 42.0, None), // Empty unit
+        let quantity_expressions: Vec<(&str, Decimal, Option<String>)> = vec![
+            (
+                "5'mg'",
+                Decimal::from_str_exact("5.0").unwrap(),
+                Some("mg".to_string()),
+            ),
+            (
+                "10.5'kg'",
+                Decimal::from_str_exact("10.5").unwrap(),
+                Some("kg".to_string()),
+            ),
+            (
+                "100'mmHg'",
+                Decimal::from_str_exact("100.0").unwrap(),
+                Some("mmHg".to_string()),
+            ),
+            (
+                "0.25'L'",
+                Decimal::from_str_exact("0.25").unwrap(),
+                Some("L".to_string()),
+            ),
+            ("42''", Decimal::from_str_exact("42.0").unwrap(), None),
             // Test quantity literals with space before unit
-            ("15 'mm[Hg]'", 15.0, Some("mm[Hg]".to_string())),
-            ("37.2 'Cel'", 37.2, Some("Cel".to_string())),
-            ("5 'mg'", 5.0, Some("mg".to_string())),
-            ("2.5 'kg'", 2.5, Some("kg".to_string())),
+            (
+                "15 'mm[Hg]'",
+                Decimal::from_str_exact("15.0").unwrap(),
+                Some("mm[Hg]".to_string()),
+            ),
+            (
+                "37.2 'Cel'",
+                Decimal::from_str_exact("37.2").unwrap(),
+                Some("Cel".to_string()),
+            ),
+            (
+                "5 'mg'",
+                Decimal::from_str_exact("5.0").unwrap(),
+                Some("mg".to_string()),
+            ),
+            (
+                "2.5 'kg'",
+                Decimal::from_str_exact("2.5").unwrap(),
+                Some("kg".to_string()),
+            ),
         ];
 
         for (expr_str, expected_value, expected_unit) in quantity_expressions {
@@ -1266,7 +1306,7 @@ mod tests {
                     if let Expression::Term(Term::Literal(Literal::Quantity { value, unit })) =
                         operand.as_ref()
                     {
-                        assert_eq!(*value, 2.5);
+                        assert_eq!(*value, Decimal::from_str_exact("2.5").unwrap());
                         assert_eq!(*unit, Some("degC".to_string()));
                     } else {
                         panic!(

@@ -10,7 +10,7 @@
 |---|---|---|
 | WS0 Hygiene | ✅ done (2026-06-12) | 0.4: ffq **deleted** (not gated) — it depended on a nonexistent `rh-ffq` crate and could never compile. 0.5: `clippy::unwrap_used` deferred until WS1 (1.1) / WS4 (4.6) unwrap cleanups land, since `just lint` runs `-D warnings`; `unsafe_code = "forbid"` + `clippy.all = "warn"` are in place. |
 | WS1 Foundation | ✅ done (2026-06-12) | 1.1: audit found all remaining unwraps were test-only; added `#![cfg_attr(not(test), warn(clippy::unwrap_used))]` guard. 1.4: `generate_snapshot` now returns `Arc<Snapshot>` (28 ns cache hits vs deep clone); bench at `benches/snapshot.rs` (cold 600-element merge ~424 µs). 1.5: merger uses borrowed `Cow` index — no upfront clones of base elements or key strings. 1.7: packager's foundation `http` feature + tokio dep were entirely unused — **removed** rather than feature-gated. **Bonus fix:** `StructureDefinition.base_definition` was missing `#[serde(rename = "baseDefinition")]` — profiles loaded from real FHIR JSON silently lost their base and produced differential-only snapshots; fixed + regression test. |
-| WS2 Conformance | 🔶 partial (2026-06-14) | **Done:** 2.1 HL7 FHIRPath suite vendored (937 cases) + harness `tests/hl7_conformance.rs` with summary JSON; baseline 564/935 pass (60.3%) and shrink-only known-wrong-answer gating. 2.2 `CONFORMANCE.md` + `SPEC_COVERAGE.md` created and kept current. 2.4 clinical age operators complete. 2.5 Ratio literals, ToRatio, 1-arg Combine, Message, Children, Descendants complete. 2.6 CQL HL7 burn-down waves 1–2 landed: 552→733 pass, 244→97 skip, 0 failures. 2.7 fixed-corpus ELM fidelity diff landed in `pipeline_comparison_tests.rs`, with Java-vs-Rust metadata reporting documented in `crates/rh-cql/CONFORMANCE.md`. 2.8 68 FSH parser unit tests added and 3 parser bugs fixed. 2.9 FSH fixture corpus expanded to 61 files. 2.10 stale audit claim closed with no code changes. **FHIRPath waves 3–31:** 564→913 pass (60.3%→97.6%), wrong answers 120→15, parse errors 79→1, eval errors 171→5. Recent waves: 26 quantity `~` precision-aware equivalence; 27 FHIR type provenance for string-like primitives; 29 `matches()` single-line mode + multi-item `iif()` error; 30 quantity unit algebra (`2.0 'cm' * 2.0 'm' -> 0.040 'm2'`, `4.0 'g' / 2.0 'm' -> 2 'g/m'`); **31 typed boolean/dateTime provenance** for JSON booleans and `dateTime`/`instant`, plus FHIR-vs-System `type()/is()/as()/ofType()` correctness. **Pending FHIRPath work:** primitive extension siblings (`testExtension1/2`), strict polymorphic invalid cases (`testPolymorphismB`, `testPolymorphicsB`), collection semantics (`testCombine1`, `testDollarOrderNotAllowed`, `testIndex`), decimal trailing-zero boundary precision (`LowBoundary*`, `HighBoundary*`, `PrecisionDecimal`, `testPeriodInvariantNew`), `conformsTo()`, unary `+1 < +2`, and one inheritance/strictness cluster around explicit primitive choice access. **Pending non-FHIRPath WS2 work:** CQL skip burn-down (97 → <50 target). |
+| WS2 Conformance | 🔶 partial (2026-06-15) | **Done:** 2.1 HL7 FHIRPath suite vendored (937 cases) + harness `tests/hl7_conformance.rs` with summary JSON; baseline 564/935 pass (60.3%) and shrink-only known-wrong-answer gating. 2.2 `CONFORMANCE.md` + `SPEC_COVERAGE.md` created and kept current. 2.4 clinical age operators complete. 2.5 Ratio literals, ToRatio, 1-arg Combine, Message, Children, Descendants complete. 2.6 CQL HL7 burn-down waves 1–2 landed: 552→733 pass, 244→97 skip, 0 failures. 2.7 fixed-corpus ELM fidelity diff landed in `pipeline_comparison_tests.rs`, with Java-vs-Rust metadata reporting documented in `crates/rh-cql/CONFORMANCE.md`. 2.8 68 FSH parser unit tests added and 3 parser bugs fixed. 2.9 FSH fixture corpus expanded to 61 files. 2.10 stale audit claim closed with no code changes. **FHIRPath waves 3–35:** 564→934 pass (60.3%→99.9%), wrong answers 120→0, parse errors 79→0, eval errors 171→0. Wave 34 (2026-06-15): strict polymorphic choice-type access enforced; `checkOrderedFunctions`/`UnorderedCollection` for order-dependent function guards; `boundary_decimal` near-zero truncation fix. All 7 wrong answers eliminated — zero wrong-answer baseline achieved. Wave 35 (2026-06-15): `boundary()` dispatches String values to temporal boundary functions; Date strings produce DateTime boundaries for cross-type comparison. Last eval-error eliminated — **zero eval-errors achieved.** Only remaining non-pass is 1 skipped test (missing `patient-name-extensions.json`, not published by HL7). **Pending non-FHIRPath WS2 work:** CQL skip burn-down complete (97→48, target met) |
 | WS3 CLI | ✅ done |3.1-3.7 all complete |
 | WS4 Codegen | ⬜ not started | |
 | WS5 Performance | ⬜ not started | |
@@ -25,44 +25,41 @@
 
 | Crate | Architecture | Conformance | Perf posture | Error handling | Docs sync | Tests | Grade |
 |---|---|---|---|---|---|---|---|
-| rh-foundation | Clean, feature-gated | n/a | Snapshot clone-heavy | RwLock `.unwrap()` panics | Good | 73 unit, no integration | B+ |
+| rh-foundation | Clean, feature-gated | n/a | Arc snapshots, Cow merge | ✅ No panics (WS0/WS1) | Good | Integration + unit | A- |
 | rh-codegen | Works; 5 god-files >1000 LOC | n/a (output-validated) | Single-threaded | 26 unwrap/expect | "In Progress" section stale | Sparse (2 integration) | B- |
-| rh-fhirpath | Modular, 10.5k LOC evaluator | **No official HL7 suite** | No parse cache, clone-heavy | Good error enum, weak spans | Good; pass-rate unrecorded | 446 cases, 51 files | B |
+| rh-fhirpath | Modular, 10.5k LOC evaluator | **933/935 pass (99.8%), 0 wrong** | No parse cache, clone-heavy | Good error enum, weak spans | CONFORMANCE.md + SPEC_COVERAGE.md | 935 HL7 + unit | A- |
 | rh-cql | Excellent 3-stage pipeline | **92% (161/175 ops), 475 HL7 tests pass, 0 wrong answers** | Benchmarked, no lib cache | Panics in assertion paths | Excellent (CONFORMANCE.md, SPEC_COVERAGE.md) | Strong + golden files | A- |
-| rh-fsh | Clean 4-stage (parse→tank→resolve→export) | 30/30 SUSHI compat fixtures | rayon export, benchmarked | 10 unwraps | Good | Integration-heavy, no parser unit tests | B+ |
+| rh-fsh | Clean 4-stage (parse→tank→resolve→export) | 30/30 SUSHI compat fixtures | rayon export, benchmarked | 10 unwraps | Good + 68 parser unit tests | Integration-heavy, parser unit tests | B+ |
 | rh-packager | Clean, focused | n/a | Sync I/O, fine | Good | Good | 127 tests | A- |
 | rh-vcl | Clean, WASM-ready | Full grammar per spec | Zero-copy parser | Clean | Minor WASM fn-name drift | 76 tests, comprehensive | A- |
-| rh-cli | Thin-ish but inconsistent | n/a | n/a | anyhow-only, exit(1) always | 6+ stale entries | 2 of 9 commands tested | C+ |
+| rh-cli | Consistent output framework | n/a | n/a | Typed exit codes, envelope | Good | All 9 commands tested | B+ |
 | Generated R4/R5 | Idiomatic, 3-tier traits | n/a | Compile-time heavy | n/a | Generic READMEs | R5 smoke test only | B |
 
 **Systemic strengths:** consistent thiserror-in-libraries pattern; workspace dependency inheritance (with one critical exception); CI with `clippy -D warnings`, fmt, audit, platform matrix; criterion benches in 3 crates; openspec-based change tracking already in use.
 
 **Systemic weaknesses:**
-1. **CLI is the weakest layer** — inconsistent flags, prose mixed with JSON, uniform `exit(1)`, no `--quiet`/`NO_COLOR`/TTY detection, 4 duplicated REPL implementations, business logic (formatting, REPLs, test runners) living in the app.
-2. **No machine-verifiable conformance for FHIRPath** (unlike CQL, which is the model to copy).
-3. **WASM exists but is not productized** — no npm packages, no CI wasm builds, no shared pattern; `rh-foundation`'s WASM claim in README is overstated (feature exists, no exports).
-4. **Docs drift** — ARCHITECTURE.md dependency graph is missing 3 crates; MSRV contradiction (1.70 vs 1.91); R5 marked 🔜 though shipped.
+1. **Codegen god-files and unwrap density** — 5 files >1000 LOC, 26 non-test unwraps; needs split + error types (WS4).
+2. **WASM exists but is not productized** — no npm packages, no CI wasm builds, no shared pattern; `rh-foundation`'s WASM feature is infrastructure-only (WS6).
+3. **Docs drift** — ARCHITECTURE.md dependency graph may lag behind crate changes; MSRV should be enforced in CI (WS7).
 
 ### Verified critical defects (fix first)
 
-| ID | Defect | Evidence |
-|---|---|---|
-| C1 | `rh-hl7_fhir_r5_core/Cargo.toml:14` hardcodes an **absolute path to another developer's machine**: `rh-foundation = { path = "/Users/bkaney/projects/reason-healthcare/rh/crates/rh-foundation" }`. Crate also bypasses workspace inheritance (version `0.1.0`, authors `["FHIR Code Generator"]`, no `rust-version`). | Verified by reading the file |
-| C2 | `MemoryStore` RwLock `.unwrap()` in ~10 places (`rh-foundation/src/memory/mod.rs:120,131,144,151,160,165,170,175,199,204`) — lock poisoning panics the process. | Foundation audit |
-| C3 | `apps/rh-cli/src/ffq.rs` (305 lines) fully implemented but **not wired** into the `Commands` enum — dead shipping code. | Verified: no `ffq` references in `main.rs` |
-| C4 | README.md:12 claims rh-foundation "supports WebAssembly targets"; the `wasm` feature only adds a panic hook, no exports, and `io.rs` has unguarded `std::fs`. | Infra audit |
+| ID | Defect | Evidence | Status |
+|---|---|---|---|
+| C1 | `rh-hl7_fhir_r5_core/Cargo.toml:14` hardcodes an **absolute path to another developer's machine**: `rh-foundation = { path = "/Users/bkaney/projects/reason-healthcare/rh/crates/rh-foundation" }`. Crate also bypasses workspace inheritance (version `0.1.0`, authors `["FHIR Code Generator"]`, no `rust-version`). | Verified by reading the file | ✅ Fixed (WS0) |
+| C2 | `MemoryStore` RwLock `.unwrap()` in ~10 places (`rh-foundation/src/memory/mod.rs:120,131,144,151,160,165,170,175,199,204`) — lock poisoning panics the process. | Foundation audit | ✅ Fixed (WS0) |
+| C3 | `apps/rh-cli/src/ffq.rs` (305 lines) fully implemented but **not wired** into the `Commands` enum — dead shipping code. | Verified: no `ffq` references in `main.rs` | ✅ Deleted (WS0) |
+| C4 | README.md:12 claims rh-foundation "supports WebAssembly targets"; the `wasm` feature only adds a panic hook, no exports, and `io.rs` has unguarded `std::fs`. | Infra audit | ✅ Fixed (WS0) |
 
 ### Corrected dependency graph (ARCHITECTURE.md must be replaced with this)
 
 ```
-Layer 0 (leaf): rh-foundation, rh-hl7_fhir_r4_core, rh-hl7_fhir_r5_core*
+Layer 0 (leaf): rh-foundation, rh-hl7_fhir_r4_core, rh-hl7_fhir_r5_core
 Layer 1: rh-codegen (→foundation), rh-fsh (→foundation), rh-vcl (→foundation),
          rh-fhirpath (→foundation, r4_core), rh-cql (→foundation)
 Layer 2: rh-validator (→foundation[http], fhirpath)
 Layer 3: rh-packager (→foundation, fhirpath, vcl, validator)
 Layer 4: rh-cli (→ all)
-
-* rh-hl7_fhir_r5_core currently broken w.r.t. workspace (C1)
 ```
 
 ---
@@ -139,8 +136,7 @@ Depends on WS0. Blocks WS5 (snapshot perf propagates to validator/packager) and 
 
 Independent of WS1/WS3. Must land **before** WS5 perf work (regression safety net).
 
-**Status 2026-06-14:** 2.1 ✅ · 2.2 ✅ · 2.4 ✅ · 2.5 ✅ · 2.6 ✅ (waves 1–2 done; further skip burn-down remaining) · 2.7 ✅ (fixed-corpus Java-vs-Rust metadata diff documented and tested) · 2.8 ✅ · 2.9 ✅ · 2.10 ✅ (no-op, stale audit claim) · 2.3 waves 1–31 done; sub-waves remaining (primitive extension siblings, strict polymorphic invalids, collection semantics, decimal boundary precision, `conformsTo()`, unary plus parsing, explicit primitive choice strictness). WS5 regression net is in place at 913/935 (97.6%). See Progress Tracking for details.
-
+**Status 2026-06-15:** 2.1 ✅ · 2.2 ✅ · 2.4 ✅ · 2.5 ✅ · 2.6 ✅ (waves 1–2 done; further skip burn-down remaining) · 2.7 ✅ (fixed-corpus Java-vs-Rust metadata diff documented and tested) · 2.8 ✅ · 2.9 ✅ · 2.10 ✅ (no-op, stale audit claim) · 2.3 waves 1–35 done. WS5 regression net is in place at 934/935 (99.9%) with **zero wrong answers and zero eval-errors**. Only 1 skipped test remains (missing HL7 fixture). WS2 is effectively complete.
 ### 5.1 FHIRPath: adopt the official HL7 test suite (the big gap)
 rh-cql already demonstrates the target pattern: vendored official suite + categorized results (pass / compile-error / eval-error / skipped) + CI assertion of no wrong-answer regressions + `CONFORMANCE.md`. Replicate exactly for FHIRPath.
 

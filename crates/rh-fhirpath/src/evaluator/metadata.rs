@@ -7,6 +7,7 @@
 
 use crate::evaluator::types::FhirPathValue;
 use rh_hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType};
+use rust_decimal::Decimal;
 
 /// Get the FHIR type for a field in a resource
 ///
@@ -56,9 +57,8 @@ pub fn typed_value_from_string(value: String, field_type: &FhirFieldType) -> Fhi
                     .unwrap_or_else(|_| FhirPathValue::String(value))
             }
             FhirPrimitiveType::Decimal => {
-                // Try to parse as decimal
-                value
-                    .parse::<f64>()
+                // Try to parse as decimal (preserves trailing zeros)
+                Decimal::from_str_exact(&value)
                     .map(FhirPathValue::Number)
                     .unwrap_or_else(|_| FhirPathValue::String(value))
             }
@@ -142,6 +142,34 @@ pub fn apply_fhir_typing(
                 return FhirPathValue::TypedBoolean {
                     value: *b,
                     fhir_type: FhirPrimitiveType::Boolean,
+                };
+            }
+            (serde_json::Value::Array(arr), FhirFieldType::Complex(type_name)) => {
+                // Return each array element as a TypedObject, always as a Collection
+                // (even for single items, to match the behavior of from_json on arrays)
+                let items: Vec<FhirPathValue> = arr
+                    .iter()
+                    .map(|item| {
+                        if item.is_object() {
+                            FhirPathValue::TypedObject {
+                                value: item.clone(),
+                                fhir_type: type_name.to_string(),
+                            }
+                        } else {
+                            FhirPathValue::from_json(item)
+                        }
+                    })
+                    .collect();
+                return if items.is_empty() {
+                    FhirPathValue::Empty
+                } else {
+                    FhirPathValue::Collection(items)
+                };
+            }
+            (serde_json::Value::Object(_), FhirFieldType::Complex(type_name)) => {
+                return FhirPathValue::TypedObject {
+                    value: value.clone(),
+                    fhir_type: type_name.to_string(),
                 };
             }
             _ => {}
@@ -394,7 +422,7 @@ mod tests {
         let value = typed_value_from_string("4.14159".to_string(), &field_type);
 
         match value {
-            FhirPathValue::Number(n) => assert!((n - 4.14159).abs() < 0.00001),
+            FhirPathValue::Number(n) => assert_eq!(n, Decimal::from_str_exact("4.14159").unwrap()),
             _ => panic!("Expected Number value for Decimal"),
         }
     }

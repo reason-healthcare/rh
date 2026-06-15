@@ -8,6 +8,8 @@ use crate::evaluator::operations::temporal::{
     compare_parts, equals_parts, parse_temporal, TemporalParts,
 };
 use crate::evaluator::types::FhirPathValue;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 
 /// Comparison operations handler
 pub struct ComparisonEvaluator;
@@ -96,7 +98,9 @@ impl ComparisonEvaluator {
         fn is_empty_collection(v: &FhirPathValue) -> bool {
             match v {
                 FhirPathValue::Empty => true,
-                FhirPathValue::Collection(c) => c.is_empty(),
+                FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => {
+                    c.is_empty()
+                }
                 _ => false,
             }
         }
@@ -158,8 +162,8 @@ impl ComparisonEvaluator {
                 }
                 EqualityOperator::Equivalent | EqualityOperator::NotEquivalent => {
                     match (
-                        converter.to_base_unit(*v1, u1),
-                        converter.to_base_unit(*v2, u2),
+                        converter.to_base_unit(v1.to_f64().unwrap_or(0.0), u1),
+                        converter.to_base_unit(v2.to_f64().unwrap_or(0.0), u2),
                     ) {
                         (Ok((base_a, _)), Ok((base_b, _))) => {
                             let equiv = quantity_equivalent(base_a, base_b);
@@ -316,9 +320,13 @@ impl ComparisonEvaluator {
         use FhirPathValue::*;
         match (left, right) {
             (String(a), String(b)) => string_equivalent(a, b),
-            (Number(a), Number(b)) => numbers_equivalent(*a, *b),
-            (Integer(a), Number(b)) | (Long(a), Number(b)) => numbers_equivalent(*a as f64, *b),
-            (Number(a), Integer(b)) | (Number(a), Long(b)) => numbers_equivalent(*a, *b as f64),
+            (Number(a), Number(b)) => decimal_equivalent(a, b),
+            (Integer(a), Number(b)) | (Long(a), Number(b)) => {
+                decimal_equivalent(&Decimal::from(*a), b)
+            }
+            (Number(a), Integer(b)) | (Number(a), Long(b)) => {
+                decimal_equivalent(a, &Decimal::from(*b))
+            }
             (
                 Quantity {
                     value: va,
@@ -334,15 +342,20 @@ impl ComparisonEvaluator {
                 // significant-digit precision of the less-precise value.
                 use crate::evaluator::operations::units::UnitConverter;
                 let converter = UnitConverter::new();
-                let Ok((base_a, _)) = converter.to_base_unit(*va, ua) else {
+                let va_f64 = va.to_f64().unwrap_or(0.0);
+                let vb_f64 = vb.to_f64().unwrap_or(0.0);
+                let Ok((base_a, _)) = converter.to_base_unit(va_f64, ua) else {
                     return false;
                 };
-                let Ok((base_b, _)) = converter.to_base_unit(*vb, ub) else {
+                let Ok((base_b, _)) = converter.to_base_unit(vb_f64, ub) else {
                     return false;
                 };
                 quantity_equivalent(base_a, base_b)
             }
-            (Collection(a), Collection(b)) => {
+            (Collection(a), Collection(b))
+            | (Collection(a), UnorderedCollection(b))
+            | (UnorderedCollection(a), Collection(b))
+            | (UnorderedCollection(a), UnorderedCollection(b)) => {
                 if a.len() != b.len() {
                     return false;
                 }
@@ -399,22 +412,17 @@ fn normalize_for_equivalence(s: &str) -> String {
 
 /// Decimal equivalence: round both operands to the smaller fractional-digit
 /// precision and compare. `1.2 / 1.8 ~ 0.67` succeeds because 0.666… rounded
-/// to two digits equals 0.67.
-fn numbers_equivalent(a: f64, b: f64) -> bool {
+/// to two digits equals 0.67.  With `Decimal`, scale() gives the number of
+/// fractional digits (preserving trailing zeros).
+fn decimal_equivalent(a: &Decimal, b: &Decimal) -> bool {
     if a == b {
         return true;
     }
-    let precision = fractional_digits(b);
-    let scale = 10f64.powi(precision as i32);
-    (a * scale).round() == (b * scale).round()
-}
-
-fn fractional_digits(n: f64) -> u8 {
-    let s = format!("{n}");
-    match s.split_once('.') {
-        Some((_, frac)) => frac.len().min(15) as u8,
-        None => 0,
+    let prec = a.scale().min(b.scale());
+    if prec == 0 {
+        return a == b;
     }
+    a.round_dp(prec) == b.round_dp(prec)
 }
 
 /// Quantity equivalence: compare base values at the precision of the less
@@ -456,7 +464,7 @@ fn unwrap_singleton<'a>(
     v: &'a FhirPathValue,
     buf: &'a mut Option<FhirPathValue>,
 ) -> &'a FhirPathValue {
-    if let FhirPathValue::Collection(items) = v {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = v {
         if items.len() == 1 {
             *buf = Some(items[0].clone());
             return buf.as_ref().unwrap();
@@ -472,8 +480,16 @@ fn bool_three_valued(v: &FhirPathValue) -> Option<bool> {
     match v {
         FhirPathValue::Boolean(b) => Some(*b),
         FhirPathValue::Empty => None,
-        FhirPathValue::Collection(items) if items.is_empty() => None,
-        FhirPathValue::Collection(items) if items.len() == 1 => bool_three_valued(&items[0]),
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+            if items.is_empty() =>
+        {
+            None
+        }
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+            if items.len() == 1 =>
+        {
+            bool_three_valued(&items[0])
+        }
         _ => Some(v.to_boolean()),
     }
 }

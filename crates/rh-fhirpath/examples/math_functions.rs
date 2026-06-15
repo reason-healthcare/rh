@@ -297,7 +297,7 @@ fn format_result(result: &FhirPathValue) -> String {
     match result {
         FhirPathValue::Integer(i) => i.to_string(),
         FhirPathValue::Number(n) => {
-            if n.fract() == 0.0 {
+            if n.fract() == rust_decimal::Decimal::ZERO {
                 format!("{n:.1}")
             } else {
                 format!("{n:.6}")

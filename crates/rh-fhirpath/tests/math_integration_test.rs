@@ -1,6 +1,8 @@
 //! Integration tests for math functions in FHIRPath expressions
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use serde_json::json;
 
 #[cfg(test)]
@@ -19,7 +21,10 @@ mod math_integration_tests {
 
         let expr = parser.parse("(-3.15).abs()").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(3.15));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("3.15").unwrap())
+        );
     }
 
     #[test]
@@ -60,11 +65,17 @@ mod math_integration_tests {
 
         let expr = parser.parse("(16).sqrt()").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(4.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("4.0").unwrap())
+        );
 
         let expr = parser.parse("(2.25).sqrt()").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(1.5));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("1.5").unwrap())
+        );
     }
 
     #[test]
@@ -96,7 +107,7 @@ mod math_integration_tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
         // sqrt(2) ≈ computed value
         if let FhirPathValue::Number(n) = result {
-            assert!((n - 2.0_f64.sqrt()).abs() < 1e-10);
+            assert!((n.to_f64().unwrap() - 2.0_f64.sqrt()).abs() < 1e-10);
         } else {
             panic!("Expected Number result");
         }
@@ -111,12 +122,18 @@ mod math_integration_tests {
         // Round with precision
         let expr = parser.parse("(3.15159).round(2)").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(3.15));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("3.15").unwrap())
+        );
 
         // Round without precision (defaults to 0)
         let expr = parser.parse("(3.7).round()").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(4.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("4.0").unwrap())
+        );
     }
 
     #[test]
@@ -129,7 +146,7 @@ mod math_integration_tests {
         let expr = parser.parse("(2.718281828459045).ln()").unwrap(); // e
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Number(n) = result {
-            assert!((n - 1.0).abs() < 1e-10);
+            assert!((n.to_f64().unwrap() - 1.0).abs() < 1e-10);
         } else {
             panic!("Expected Number result");
         }
@@ -137,12 +154,18 @@ mod math_integration_tests {
         // Logarithm with base 10
         let expr = parser.parse("(100).log(10)").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(2.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("2.0").unwrap())
+        );
 
         // Logarithm with base 2
         let expr = parser.parse("(8).log(2)").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(3.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("3.0").unwrap())
+        );
     }
 
     #[test]
@@ -155,14 +178,17 @@ mod math_integration_tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Number(n) = result {
             // e ≈ computed value
-            assert!((n - 1.0_f64.exp()).abs() < 1e-10);
+            assert!((n.to_f64().unwrap() - 1.0_f64.exp()).abs() < 1e-10);
         } else {
             panic!("Expected Number result");
         }
 
         let expr = parser.parse("(0).exp()").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(1.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("1.0").unwrap())
+        );
     }
 
     #[test]

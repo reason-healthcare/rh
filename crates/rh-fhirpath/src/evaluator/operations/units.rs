@@ -5,6 +5,8 @@
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 
 /// Unit converter for UCUM codes
@@ -477,9 +479,9 @@ impl UnitConverter {
     /// Add two quantities with automatic unit conversion
     pub fn add_quantities(
         &self,
-        left_value: f64,
+        left_value: Decimal,
         left_unit: &Option<String>,
-        right_value: f64,
+        right_value: Decimal,
         right_unit: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
         if !self.are_units_compatible(left_unit, right_unit) {
@@ -490,18 +492,20 @@ impl UnitConverter {
             });
         }
 
-        // Convert both to base units
-        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, _right_base_unit) = self.to_base_unit(right_value, right_unit)?;
+        // Convert both to base units (using f64 for unit conversion math)
+        let left_f64 = left_value.to_f64().unwrap_or(0.0);
+        let right_f64 = right_value.to_f64().unwrap_or(0.0);
+        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
+        let (right_base, _right_base_unit) = self.to_base_unit(right_f64, right_unit)?;
 
         // Add the base values
         let result_base = left_base + right_base;
 
         // Convert back to the left operand's unit (maintain left operand unit for result)
-        let result_value = self.convert_from_base_unit(result_base, &left_base_unit, left_unit)?;
+        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, left_unit)?;
 
         Ok(FhirPathValue::Quantity {
-            value: result_value,
+            value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
             unit: left_unit.clone(),
         })
     }
@@ -509,9 +513,9 @@ impl UnitConverter {
     /// Subtract two quantities with automatic unit conversion
     pub fn subtract_quantities(
         &self,
-        left_value: f64,
+        left_value: Decimal,
         left_unit: &Option<String>,
-        right_value: f64,
+        right_value: Decimal,
         right_unit: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
         if !self.are_units_compatible(left_unit, right_unit) {
@@ -522,18 +526,17 @@ impl UnitConverter {
             });
         }
 
-        // Convert both to base units
-        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, _) = self.to_base_unit(right_value, right_unit)?;
+        let left_f64 = left_value.to_f64().unwrap_or(0.0);
+        let right_f64 = right_value.to_f64().unwrap_or(0.0);
+        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
+        let (right_base, _) = self.to_base_unit(right_f64, right_unit)?;
 
-        // Subtract the base values
         let result_base = left_base - right_base;
 
-        // Convert back to the left operand's unit
-        let result_value = self.convert_from_base_unit(result_base, &left_base_unit, left_unit)?;
+        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, left_unit)?;
 
         Ok(FhirPathValue::Quantity {
-            value: result_value,
+            value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
             unit: left_unit.clone(),
         })
     }
@@ -541,9 +544,9 @@ impl UnitConverter {
     /// Multiply a quantity by a scalar
     pub fn multiply_by_scalar(
         &self,
-        value: f64,
+        value: Decimal,
         unit: &Option<String>,
-        scalar: f64,
+        scalar: Decimal,
     ) -> FhirPathValue {
         FhirPathValue::Quantity {
             value: value * scalar,
@@ -553,17 +556,20 @@ impl UnitConverter {
 
     pub fn multiply_quantities(
         &self,
-        left_value: f64,
+        left_value: Decimal,
         left_unit: &Option<String>,
-        right_value: f64,
+        right_value: Decimal,
         right_unit: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
-        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, right_base_unit) = self.to_base_unit(right_value, right_unit)?;
+        let left_f64 = left_value.to_f64().unwrap_or(0.0);
+        let right_f64 = right_value.to_f64().unwrap_or(0.0);
+        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
+        let (right_base, right_base_unit) = self.to_base_unit(right_f64, right_unit)?;
 
+        let result_f64 = left_base * right_base;
         let unit = compose_product_unit(&left_base_unit, &right_base_unit);
         Ok(FhirPathValue::Quantity {
-            value: left_base * right_base,
+            value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
             unit,
         })
     }
@@ -571,11 +577,11 @@ impl UnitConverter {
     /// Divide a quantity by a scalar
     pub fn divide_by_scalar(
         &self,
-        value: f64,
+        value: Decimal,
         unit: &Option<String>,
-        scalar: f64,
+        scalar: Decimal,
     ) -> FhirPathResult<FhirPathValue> {
-        if scalar == 0.0 {
+        if scalar == Decimal::ZERO {
             return Err(FhirPathError::EvaluationError {
                 message: "Division by zero".to_string(),
             });
@@ -591,9 +597,9 @@ impl UnitConverter {
     /// Returns -1 if left < right, 0 if equal, 1 if left > right
     pub fn compare_quantities(
         &self,
-        left_value: f64,
+        left_value: Decimal,
         left_unit: &Option<String>,
-        right_value: f64,
+        right_value: Decimal,
         right_unit: &Option<String>,
     ) -> FhirPathResult<i32> {
         if !self.are_units_compatible(left_unit, right_unit) {
@@ -604,11 +610,11 @@ impl UnitConverter {
             });
         }
 
-        // Convert both to base units for comparison
-        let (left_base, _) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, _) = self.to_base_unit(right_value, right_unit)?;
+        let left_f64 = left_value.to_f64().unwrap_or(0.0);
+        let right_f64 = right_value.to_f64().unwrap_or(0.0);
+        let (left_base, _) = self.to_base_unit(left_f64, left_unit)?;
+        let (right_base, _) = self.to_base_unit(right_f64, right_unit)?;
 
-        // Compare the base values
         if left_base < right_base {
             Ok(-1)
         } else if left_base > right_base {
@@ -621,32 +627,33 @@ impl UnitConverter {
     /// Divide two quantities (same units result in dimensionless)
     pub fn divide_quantities(
         &self,
-        left_value: f64,
+        left_value: Decimal,
         left_unit: &Option<String>,
-        right_value: f64,
+        right_value: Decimal,
         right_unit: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
-        if right_value == 0.0 {
+        if right_value == Decimal::ZERO {
             return Err(FhirPathError::EvaluationError {
                 message: "Division by zero".to_string(),
             });
         }
 
-        // Convert both to base units
-        let (left_base, left_base_unit) = self.to_base_unit(left_value, left_unit)?;
-        let (right_base, right_base_unit) = self.to_base_unit(right_value, right_unit)?;
+        let left_f64 = left_value.to_f64().unwrap_or(0.0);
+        let right_f64 = right_value.to_f64().unwrap_or(0.0);
+        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
+        let (right_base, right_base_unit) = self.to_base_unit(right_f64, right_unit)?;
 
         let result = left_base / right_base;
 
         if self.are_units_compatible(&left_base_unit, &right_base_unit) {
             return Ok(FhirPathValue::Quantity {
-                value: result,
+                value: Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
                 unit: Some("1".to_string()),
             });
         }
 
         Ok(FhirPathValue::Quantity {
-            value: result,
+            value: Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
             unit: compose_quotient_unit(&left_base_unit, &right_base_unit),
         })
     }
@@ -690,17 +697,23 @@ fn compose_quotient_unit(left: &Option<String>, right: &Option<String>) -> Optio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::prelude::ToPrimitive;
+    use rust_decimal::Decimal;
 
     #[test]
     fn test_mass_conversion() {
         let converter = UnitConverter::new();
 
-        // Test kilogram to gram addition
         let result = converter
-            .add_quantities(1.0, &Some("kg".to_string()), 500.0, &Some("g".to_string()))
+            .add_quantities(
+                Decimal::from_str_exact("1.0").unwrap(),
+                &Some("kg".to_string()),
+                Decimal::from_str_exact("500.0").unwrap(),
+                &Some("g".to_string()),
+            )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 1.5); // 1kg + 0.5kg = 1.5kg
+            assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
             assert_eq!(unit, Some("kg".to_string()));
         } else {
             panic!("Expected Quantity result");
@@ -711,12 +724,16 @@ mod tests {
     fn test_length_conversion() {
         let converter = UnitConverter::new();
 
-        // Test meter to centimeter addition
         let result = converter
-            .add_quantities(1.0, &Some("m".to_string()), 50.0, &Some("cm".to_string()))
+            .add_quantities(
+                Decimal::from_str_exact("1.0").unwrap(),
+                &Some("m".to_string()),
+                Decimal::from_str_exact("50.0").unwrap(),
+                &Some("cm".to_string()),
+            )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 1.5); // 1m + 0.5m = 1.5m
+            assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
             assert_eq!(unit, Some("m".to_string()));
         } else {
             panic!("Expected Quantity result");
@@ -727,9 +744,12 @@ mod tests {
     fn test_incompatible_units() {
         let converter = UnitConverter::new();
 
-        // Test adding mass and length (should fail)
-        let result =
-            converter.add_quantities(1.0, &Some("kg".to_string()), 1.0, &Some("m".to_string()));
+        let result = converter.add_quantities(
+            Decimal::from_str_exact("1.0").unwrap(),
+            &Some("kg".to_string()),
+            Decimal::from_str_exact("1.0").unwrap(),
+            &Some("m".to_string()),
+        );
         assert!(result.is_err());
     }
 
@@ -737,12 +757,16 @@ mod tests {
     fn test_division() {
         let converter = UnitConverter::new();
 
-        // Test same units division — result is dimensionless with unit "1".
         let result = converter
-            .divide_quantities(10.0, &Some("kg".to_string()), 5.0, &Some("kg".to_string()))
+            .divide_quantities(
+                Decimal::from_str_exact("10.0").unwrap(),
+                &Some("kg".to_string()),
+                Decimal::from_str_exact("5.0").unwrap(),
+                &Some("kg".to_string()),
+            )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 2.0);
+            assert_eq!(value, Decimal::from_str_exact("2.0").unwrap());
             assert_eq!(unit.as_deref(), Some("1"));
         } else {
             panic!("Expected Quantity result with unit '1', got {result:?}");
@@ -754,10 +778,15 @@ mod tests {
         let converter = UnitConverter::new();
 
         let result = converter
-            .multiply_quantities(2.0, &Some("cm".to_string()), 2.0, &Some("m".to_string()))
+            .multiply_quantities(
+                Decimal::from_str_exact("2.0").unwrap(),
+                &Some("cm".to_string()),
+                Decimal::from_str_exact("2.0").unwrap(),
+                &Some("m".to_string()),
+            )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 0.04);
+            assert!((value.to_f64().unwrap() - 0.04).abs() < 0.001);
             assert_eq!(unit.as_deref(), Some("m2"));
         } else {
             panic!("Expected Quantity result");
@@ -769,10 +798,15 @@ mod tests {
         let converter = UnitConverter::new();
 
         let result = converter
-            .divide_quantities(4.0, &Some("g".to_string()), 2.0, &Some("m".to_string()))
+            .divide_quantities(
+                Decimal::from_str_exact("4.0").unwrap(),
+                &Some("g".to_string()),
+                Decimal::from_str_exact("2.0").unwrap(),
+                &Some("m".to_string()),
+            )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 2.0);
+            assert_eq!(value, Decimal::from_str_exact("2.0").unwrap());
             assert_eq!(unit.as_deref(), Some("g/m"));
         } else {
             panic!("Expected Quantity result");
@@ -783,10 +817,13 @@ mod tests {
     fn test_scalar_operations() {
         let converter = UnitConverter::new();
 
-        // Test scalar multiplication
-        let result = converter.multiply_by_scalar(5.0, &Some("mg".to_string()), 2.0);
+        let result = converter.multiply_by_scalar(
+            Decimal::from_str_exact("5.0").unwrap(),
+            &Some("mg".to_string()),
+            Decimal::from_str_exact("2.0").unwrap(),
+        );
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 10.0);
+            assert_eq!(value, Decimal::from_str_exact("10.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result");
@@ -797,47 +834,46 @@ mod tests {
     fn test_temperature_conversion() {
         let converter = UnitConverter::new();
 
-        // Test Celsius to Kelvin conversion: 0°C + 0K = -273.15°C
-        let result = converter
-            .add_quantities(0.0, &Some("Cel".to_string()), 0.0, &Some("K".to_string()))
-            .unwrap();
-        if let FhirPathValue::Quantity { value, unit } = result {
-            // 0°C + 0K: 0°C + (-273.15°C) = -273.15°C
-            assert!((value - (-273.15)).abs() < 0.01);
-            assert_eq!(unit, Some("Cel".to_string()));
-        } else {
-            panic!("Expected Quantity result");
-        }
-
-        // Test same unit temperature addition
         let result = converter
             .add_quantities(
-                20.0,
+                Decimal::from_str_exact("0.0").unwrap(),
                 &Some("Cel".to_string()),
-                5.0,
-                &Some("Cel".to_string()),
+                Decimal::from_str_exact("0.0").unwrap(),
+                &Some("K".to_string()),
             )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            // Note: Now with Celsius as base unit, this is simply 20°C + 5°C = 25°C
-            assert!((value - 25.0).abs() < 0.01);
+            assert!((value.to_f64().unwrap() - (-273.15)).abs() < 0.01);
             assert_eq!(unit, Some("Cel".to_string()));
         } else {
             panic!("Expected Quantity result");
         }
 
-        // Test temperature subtraction
         let result = converter
-            .subtract_quantities(
-                100.0,
+            .add_quantities(
+                Decimal::from_str_exact("20.0").unwrap(),
                 &Some("Cel".to_string()),
-                0.0,
+                Decimal::from_str_exact("5.0").unwrap(),
                 &Some("Cel".to_string()),
             )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            // 100°C - 0°C = 100°C
-            assert!((value - 100.0).abs() < 0.01);
+            assert!((value.to_f64().unwrap() - 25.0).abs() < 0.01);
+            assert_eq!(unit, Some("Cel".to_string()));
+        } else {
+            panic!("Expected Quantity result");
+        }
+
+        let result = converter
+            .subtract_quantities(
+                Decimal::from_str_exact("100.0").unwrap(),
+                &Some("Cel".to_string()),
+                Decimal::from_str_exact("0.0").unwrap(),
+                &Some("Cel".to_string()),
+            )
+            .unwrap();
+        if let FhirPathValue::Quantity { value, unit } = result {
+            assert!((value.to_f64().unwrap() - 100.0).abs() < 0.01);
             assert_eq!(unit, Some("Cel".to_string()));
         } else {
             panic!("Expected Quantity result");
@@ -848,32 +884,26 @@ mod tests {
     fn test_temperature_specific_conversions() {
         let converter = UnitConverter::new();
 
-        // Test freezing point of water: 0°C = 32°F = 273.15K
-        // Test 0°C to Celsius (base unit)
         let (celsius_val, _) = converter
             .to_base_unit(0.0, &Some("Cel".to_string()))
             .unwrap();
         assert!((celsius_val - 0.0).abs() < 0.01);
 
-        // Test 32°F to Celsius
         let (celsius_val, _) = converter
             .to_base_unit(32.0, &Some("[degF]".to_string()))
             .unwrap();
         assert!((celsius_val - 0.0).abs() < 0.01);
 
-        // Test 273.15K to Celsius
         let (celsius_val, _) = converter
             .to_base_unit(273.15, &Some("K".to_string()))
             .unwrap();
         assert!((celsius_val - 0.0).abs() < 0.01);
 
-        // Test Celsius to Kelvin
         let kelvin_val = converter
             .convert_from_base_unit(0.0, &Some("Cel".to_string()), &Some("K".to_string()))
             .unwrap();
         assert!((kelvin_val - 273.15).abs() < 0.01);
 
-        // Test Celsius to Fahrenheit
         let fahrenheit_val = converter
             .convert_from_base_unit(0.0, &Some("Cel".to_string()), &Some("[degF]".to_string()))
             .unwrap();
