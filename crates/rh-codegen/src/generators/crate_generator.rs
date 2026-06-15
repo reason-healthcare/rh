@@ -729,6 +729,69 @@ pub fn parse_package_metadata(package_json_path: &Path) -> Result<(String, Strin
     Ok((canonical, author, description))
 }
 
+impl<'a> crate::generators::file_generator::FileGenerator<'a> {
+    pub fn generate_complete_crate<P: AsRef<Path>>(
+        &self,
+        output_dir: P,
+        crate_name: &str,
+        _structures: &[crate::fhir_types::StructureDefinition],
+    ) -> crate::CodegenResult<()> {
+        let output_dir = output_dir.as_ref();
+
+        let src_dir = output_dir.join("src");
+        fs::create_dir_all(&src_dir)?;
+
+        let primitives_dir = src_dir.join("primitives");
+        let datatypes_dir = src_dir.join("datatypes");
+        let extensions_dir = src_dir.join("extensions");
+        let resource_dir = src_dir.join("resource");
+        let traits_dir = src_dir.join("traits");
+
+        fs::create_dir_all(&primitives_dir)?;
+        fs::create_dir_all(&datatypes_dir)?;
+        fs::create_dir_all(&extensions_dir)?;
+        fs::create_dir_all(&resource_dir)?;
+        fs::create_dir_all(&traits_dir)?;
+
+        self.generate_lib_file(src_dir.join("lib.rs"))?;
+        self.generate_macros_file(src_dir.join("macros.rs"))?;
+        self.generate_combined_primitives_file(&[], primitives_dir.join("mod.rs"))?;
+
+        let cargo_toml_path = output_dir.join("Cargo.toml");
+        if !cargo_toml_path.exists() {
+            self.generate_cargo_toml(&cargo_toml_path, crate_name)?;
+        }
+
+        self.generate_module_file(&datatypes_dir, &[])?;
+        self.generate_module_file(&extensions_dir, &[])?;
+        self.generate_module_file(&resource_dir, &[])?;
+        self.generate_module_file(&traits_dir, &[])?;
+
+        Ok(())
+    }
+
+    pub(crate) fn generate_cargo_toml<P: AsRef<Path>>(
+        &self,
+        cargo_path: P,
+        crate_name: &str,
+    ) -> crate::CodegenResult<()> {
+        let cargo_content = format!(
+            r#"[package]
+name = "{crate_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = {{ version = "1.0", features = ["derive"] }}
+serde_json = "1.0"
+"#
+        );
+
+        fs::write(cargo_path, cargo_content)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
