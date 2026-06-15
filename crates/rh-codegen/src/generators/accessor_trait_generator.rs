@@ -53,6 +53,19 @@ impl AccessorTraitGenerator {
 
         self.add_choice_type_accessor_methods(rust_trait, structure_def)?;
 
+        // Add extension_by_url default helper for DomainResource and Element
+        if structure_def.name == "DomainResource" || structure_def.name == "Element" {
+            rust_trait.add_method(
+                RustTraitMethod::new("extension_by_url".to_string())
+                    .with_return_type(RustType::Custom("Option<&crate::datatypes::extension::Extension>".to_string()))
+                    .with_parameter("url".to_string(), RustType::Custom("&str".to_string()))
+                    .with_default_implementation(
+                        "self.extension().iter().find(|e| e.url == url)".to_string(),
+                    )
+                    .with_doc("Find an extension by its URL. Returns the first matching extension, or None if not found.".to_string()),
+            );
+        }
+
         Ok(())
     }
 

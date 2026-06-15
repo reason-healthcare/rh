@@ -221,11 +221,17 @@ regen-r5:
             rm -rf "$entry"
         fi
     done
-    # Regenerate
+    # Regenerate core types
     cargo run -p rh-cli -- codegen hl7.fhir.r5.core 5.0.0 \
         --output "$OUTPUT" \
         --crate-name rh-hl7-fhir-r5-core \
         --force
+    # Regenerate R5 extensions (hl7.fhir.uv.extensions provides ~560 extension definitions)
+    echo "Adding R5 extensions from hl7.fhir.uv.extensions..."
+    cargo run -p rh-cli -- codegen hl7.fhir.uv.extensions 5.1.0-snapshot1 \
+        --output "$OUTPUT" \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force 2>/dev/null || echo "Warning: R5 extensions package not available, skipping"
     # Restore tests
     if [ -d "$TEST_BACKUP" ] && [ "$(ls -A "$TEST_BACKUP" 2>/dev/null)" ]; then
         mkdir -p "$OUTPUT/tests"
