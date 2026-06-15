@@ -645,7 +645,7 @@ fn generate_readme_md(
     content.push_str(
         "- **prelude.rs** - Commonly used traits (ValidatableResource, ResourceMutators, etc.)\n",
     );
-    content.push_str("- **metadata.rs** - Type metadata and path resolution functions\n\n");
+    content.push_str("- **metadata/** - Type metadata split by category (resources, datatypes, primitives) for faster incremental compilation\n\n");
 
     content.push_str("## Regenerating This Crate\n\n");
     content.push_str("To regenerate this crate with updated FHIR definitions:\n\n");

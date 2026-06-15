@@ -1,13 +1,58 @@
 //! Metadata generation for FHIR types
 //!
-//! This module generates a metadata.rs file containing type information for all FHIR resources
-//! and datatypes. This metadata enables runtime path resolution like "Patient.name.given" -> string.
+//! This module generates metadata module files containing type information for all FHIR resources
+//! and datatypes. The metadata is split by category (resources, datatypes, primitives, profiles)
+//! to improve incremental compile times.
+//!
+//! This metadata enables runtime path resolution like "Patient.name.given" -> string.
 
 use crate::fhir_types::{ElementDefinition, StructureDefinition};
 use crate::metadata::{
     FhirFieldType, FhirPrimitiveType, FieldInfo, MetadataRegistry, TypeMetadata,
 };
 use std::collections::HashMap;
+
+/// Category for partitioning metadata types into separate files
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MetadataCategory {
+    Resources,
+    Datatypes,
+    Primitives,
+    Profiles,
+    Other,
+}
+
+impl MetadataCategory {
+    fn module_name(self) -> &'static str {
+        match self {
+            Self::Resources => "resources",
+            Self::Datatypes => "datatypes",
+            Self::Primitives => "primitives",
+            Self::Profiles => "profiles",
+            Self::Other => "other",
+        }
+    }
+
+    fn doc_label(self) -> &'static str {
+        match self {
+            Self::Resources => "FHIR resources",
+            Self::Datatypes => "FHIR datatypes",
+            Self::Primitives => "FHIR primitive types",
+            Self::Profiles => "FHIR profiles",
+            Self::Other => "other FHIR types",
+        }
+    }
+}
+
+/// Classify a StructureDefinition into a metadata category
+fn classify_metadata(sd: &StructureDefinition) -> MetadataCategory {
+    match sd.kind.as_str() {
+        "resource" => MetadataCategory::Resources,
+        "complex-type" => MetadataCategory::Datatypes,
+        "primitive-type" => MetadataCategory::Primitives,
+        _ => MetadataCategory::Other,
+    }
+}
 
 /// Build metadata registry from StructureDefinitions
 pub fn build_metadata_registry(structure_defs: &[StructureDefinition]) -> MetadataRegistry {
@@ -357,6 +402,212 @@ fn generate_registry_map(
     }
 
     code.push_str("};\n");
+}
+
+/// Generate split metadata files organized by category (resources, datatypes, primitives, profiles).
+///
+/// Returns a map from filename (relative to metadata dir) to file content.
+/// Categories: resources.rs, datatypes.rs, primitives.rs, profiles.rs, other.rs, mod.rs
+pub fn generate_metadata_code_split(
+    registry: &MetadataRegistry,
+    structure_defs: &[StructureDefinition],
+) -> HashMap<String, String> {
+    let mut files = HashMap::new();
+
+    // Build name -> category mapping from structure definitions
+    let mut name_to_category: HashMap<&str, MetadataCategory> = HashMap::new();
+    for sd in structure_defs {
+        name_to_category.insert(&sd.name, classify_metadata(sd));
+    }
+
+    // Partition types by category
+    let mut categories: HashMap<MetadataCategory, Vec<(&String, &TypeMetadata)>> = HashMap::new();
+    for (type_name, type_metadata) in &registry.types {
+        let category = name_to_category
+            .get(type_name.as_str())
+            .copied()
+            .unwrap_or(MetadataCategory::Other);
+        categories
+            .entry(category)
+            .or_default()
+            .push((type_name, type_metadata));
+    }
+
+    // Track all generated const names across categories for the main registry
+    let mut all_generated_consts = std::collections::HashSet::new();
+
+    // Generate each category file
+    let category_order = [
+        MetadataCategory::Resources,
+        MetadataCategory::Datatypes,
+        MetadataCategory::Primitives,
+        MetadataCategory::Profiles,
+        MetadataCategory::Other,
+    ];
+
+    for &category in &category_order {
+        let types = categories.get(&category).cloned().unwrap_or_default();
+        if types.is_empty() {
+            continue;
+        }
+
+        let mut code = String::new();
+        code.push_str(&format!(
+            "//! Field metadata for {}\n\nuse phf::{{phf_map, Map}};\nuse super::*;\n\n",
+            category.doc_label()
+        ));
+
+        let mut category_consts = std::collections::HashSet::new();
+
+        for (type_name, type_metadata) in &types {
+            let sanitized_name: String = type_name
+                .chars()
+                .map(|c| if c.is_alphanumeric() { c } else { '_' })
+                .collect();
+            let const_name = format!("{}_FIELDS", sanitized_name.to_uppercase());
+
+            if category_consts.contains(&const_name) {
+                continue;
+            }
+
+            generate_type_map(&mut code, type_name, type_metadata);
+            category_consts.insert(const_name.clone());
+            all_generated_consts.insert(const_name);
+        }
+
+        let filename = format!("{}.rs", category.module_name());
+        files.insert(filename, code);
+    }
+
+    // Generate mod.rs that re-exports everything and contains the main registry + helper functions
+    let mut mod_code = String::new();
+    mod_code.push_str(
+        r#"//! FHIR type metadata
+//!
+//! This module provides compile-time metadata about FHIR types, enabling
+//! path resolution like "Patient.name.given" -> FhirPrimitiveType::String.
+//!
+//! Generated automatically - do not edit manually.
+
+pub use phf;
+use phf::{phf_map, Map};
+
+"#,
+    );
+
+    // Declare sub-modules
+    for &category in &category_order {
+        let filename = format!("{}.rs", category.module_name());
+        if files.contains_key(&filename) {
+            mod_code.push_str(&format!("mod {};\n", category.module_name()));
+            mod_code.push_str(&format!("pub use {}::*;\n", category.module_name()));
+        }
+    }
+
+    mod_code.push('\n');
+
+    // Generate FhirPrimitiveType enum in mod.rs (used by all categories)
+    mod_code.push_str(
+        r#"/// FHIR primitive types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FhirPrimitiveType {
+    Boolean,
+    Integer,
+    String,
+    Date,
+    DateTime,
+    Instant,
+    Time,
+    Decimal,
+    Uri,
+    Url,
+    Canonical,
+    Code,
+    Oid,
+    Id,
+    Markdown,
+    Base64Binary,
+    UnsignedInt,
+    PositiveInt,
+}
+
+"#,
+    );
+
+    // Generate FhirFieldType enum
+    mod_code.push_str(
+        r#"/// FHIR field type (primitive, complex, reference, or backbone element)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FhirFieldType {
+    Primitive(FhirPrimitiveType),
+    Complex(&'static str),
+    Reference,
+    BackboneElement(&'static str),
+}
+
+"#,
+    );
+
+    // Generate FieldInfo struct
+    mod_code.push_str(
+        r#"/// Information about a field in a FHIR resource or datatype
+#[derive(Debug, Clone)]
+pub struct FieldInfo {
+    pub field_type: FhirFieldType,
+    pub min: u32,
+    pub max: Option<u32>,
+    pub is_choice_type: bool,
+}
+
+"#,
+    );
+
+    // Generate the main registry that pulls from all categories
+    generate_registry_map(&mut mod_code, &registry.types, &all_generated_consts);
+
+    mod_code.push_str(
+        r#"
+/// Get field information for a specific field in a type
+pub fn get_field_info(type_name: &str, field_name: &str) -> Option<&'static FieldInfo> {
+    FHIR_TYPE_REGISTRY
+        .get(type_name)
+        .and_then(|fields| fields.get(field_name))
+}
+
+/// Resolve a nested path like "Patient.name.given" to its field type
+pub fn resolve_path(path: &str) -> Option<&'static FhirFieldType> {
+    let parts: Vec<&str> = path.split('.').collect();
+    if parts.is_empty() {
+        return None;
+    }
+
+    let mut current_type_name = parts[0];
+
+    for (idx, &field_name) in parts[1..].iter().enumerate() {
+        let field_info = get_field_info(current_type_name, field_name)?;
+
+        // If this is the last field, return its type
+        if idx == parts.len() - 2 {
+            return Some(&field_info.field_type);
+        }
+
+        // Otherwise, navigate to the next type
+        match &field_info.field_type {
+            FhirFieldType::Complex(type_name) | FhirFieldType::BackboneElement(type_name) => {
+                current_type_name = type_name;
+            }
+            _ => return None, // Can't navigate further
+        }
+    }
+
+    None
+}
+"#,
+    );
+
+    files.insert("mod.rs".to_string(), mod_code);
+
+    files
 }
 
 #[cfg(test)]

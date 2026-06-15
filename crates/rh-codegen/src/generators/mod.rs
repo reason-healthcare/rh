@@ -51,7 +51,9 @@ pub use file_generator::FileGenerator;
 pub use file_io_manager::FileIoManager;
 pub use import_manager::ImportManager;
 pub use invariant_generator::InvariantGenerator;
-pub use metadata_generator::{build_metadata_registry, generate_metadata_code};
+pub use metadata_generator::{
+    build_metadata_registry, generate_metadata_code, generate_metadata_code_split, MetadataCategory,
+};
 pub use mutator_trait_generator::MutatorTraitGenerator;
 pub use naming_manager::NamingManager;
 pub use nested_struct_generator::NestedStructGenerator;

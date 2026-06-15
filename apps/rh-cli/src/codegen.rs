@@ -410,14 +410,35 @@ fn process_json_files_organized(
 
     info!("Generated ValueSet enums to: {}", bindings_dir.display());
 
-    // Phase 2.5: Generate metadata module
+    // Phase 2.5: Generate metadata module (split by category for faster incremental compilation)
     info!("Generating metadata module...");
     let metadata_registry = rh_codegen::generators::build_metadata_registry(&structure_definitions);
-    let metadata_code = rh_codegen::generators::generate_metadata_code(&metadata_registry);
-    let metadata_path = output_dir.join("src").join("metadata.rs");
-    fs::write(&metadata_path, metadata_code)
-        .map_err(|e| anyhow::anyhow!("Failed to write metadata.rs: {e}"))?;
-    info!("Generated metadata module to: {}", metadata_path.display());
+    let metadata_files = rh_codegen::generators::generate_metadata_code_split(
+        &metadata_registry,
+        &structure_definitions,
+    );
+    let metadata_dir = output_dir.join("src").join("metadata");
+
+    // Remove old single-file metadata.rs if it exists (migration from monolith to split)
+    let old_metadata_file = output_dir.join("src").join("metadata.rs");
+    if old_metadata_file.exists() {
+        fs::remove_file(&old_metadata_file)
+            .map_err(|e| anyhow::anyhow!("Failed to remove old metadata.rs: {e}"))?;
+        info!("Removed old monolithic metadata.rs");
+    }
+
+    fs::create_dir_all(&metadata_dir)
+        .map_err(|e| anyhow::anyhow!("Failed to create metadata directory: {e}"))?;
+    for (filename, content) in &metadata_files {
+        let file_path = metadata_dir.join(filename);
+        fs::write(&file_path, content)
+            .map_err(|e| anyhow::anyhow!("Failed to write metadata/{}: {e}", filename))?;
+    }
+    info!(
+        "Generated {} metadata files to: {}",
+        metadata_files.len(),
+        metadata_dir.display()
+    );
 
     // Phase 3: Finalize crate by regenerating all mod.rs files
     info!("Phase 3: Finalizing crate structure...");
