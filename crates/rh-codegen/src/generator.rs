@@ -358,13 +358,8 @@ impl CodeGenerator {
     }
 
     /// Generate a mod.rs file that re-exports all the enum modules
-    pub fn generate_enums_mod_file<P: AsRef<Path>>(&self, enums_dir: P) -> CodegenResult<()> {
-        // Create an EnumGenerator with access to the cached enums
-        let mut value_set_manager = self.value_set_manager.clone(); // Need to clone for borrow checker
-        let mut enum_cache = self.enum_cache.clone();
-        let enum_generator = EnumGenerator::new(&mut value_set_manager, &mut enum_cache);
-
-        // Create FileGenerator and delegate
+    pub fn generate_enums_mod_file<P: AsRef<Path>>(&mut self, enums_dir: P) -> CodegenResult<()> {
+        let enum_generator = EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
         let file_generator = FileGenerator::new(&self.config, &self.token_generator);
         file_generator.generate_enums_mod_file(enums_dir, &enum_generator)
     }
