@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use crate::config::CodegenConfig;
 use crate::fhir_types::StructureDefinition;
@@ -24,15 +25,21 @@ use crate::CodegenResult;
 // Re-export from file_generator for backward compatibility
 pub use crate::generators::file_generator::FhirTypeCategory;
 
+/// Thread-safe type cache key
+pub type TypeCacheKey = String;
+
 /// Main code generator struct that orchestrates specialized generators
+///
+/// Uses `Arc<Mutex<>>` for shared mutable state to enable parallel generation
+/// of independent StructureDefinitions via rayon.
 pub struct CodeGenerator {
     config: CodegenConfig,
     /// Cache of previously generated types to avoid regenerating the same struct
-    type_cache: HashMap<String, RustStruct>,
+    type_cache: Arc<Mutex<HashMap<TypeCacheKey, RustStruct>>>,
     /// Cache of generated enums for value set bindings
-    enum_cache: HashMap<String, RustEnum>,
+    enum_cache: Arc<Mutex<HashMap<String, RustEnum>>>,
     /// ValueSet manager for handling ValueSet operations
-    value_set_manager: ValueSetManager,
+    value_set_manager: Arc<Mutex<ValueSetManager>>,
     /// Token generator for generating Rust code
     token_generator: TokenGenerator,
 }
@@ -45,9 +52,9 @@ impl CodeGenerator {
 
         Self {
             config,
-            type_cache: HashMap::new(),
-            enum_cache: HashMap::new(),
-            value_set_manager,
+            type_cache: Arc::new(Mutex::new(HashMap::new())),
+            enum_cache: Arc::new(Mutex::new(HashMap::new())),
+            value_set_manager: Arc::new(Mutex::new(value_set_manager)),
             token_generator,
         }
     }
@@ -62,9 +69,9 @@ impl CodeGenerator {
 
         Self {
             config,
-            type_cache: HashMap::new(),
-            enum_cache: HashMap::new(),
-            value_set_manager,
+            type_cache: Arc::new(Mutex::new(HashMap::new())),
+            enum_cache: Arc::new(Mutex::new(HashMap::new())),
+            value_set_manager: Arc::new(Mutex::new(value_set_manager)),
             token_generator,
         }
     }
@@ -85,11 +92,16 @@ impl CodeGenerator {
         // Register the type in the TypeRegistry based on its StructureDefinition
         TypeRegistry::register_from_structure_definition(structure_def);
 
-        let mut struct_generator = StructGenerator::new(
-            &self.config,
-            &mut self.type_cache,
-            &mut self.value_set_manager,
-        );
+        let mut type_cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+        let mut value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
+        let mut struct_generator =
+            StructGenerator::new(&self.config, &mut type_cache, &mut value_set_manager);
         let rust_struct = struct_generator.generate_struct(structure_def)?;
 
         Ok(rust_struct)
@@ -124,7 +136,11 @@ impl CodeGenerator {
         structure_def: &StructureDefinition,
         rust_struct: RustStruct,
     ) -> CodegenResult<RustStruct> {
-        let mut primitive_generator = PrimitiveGenerator::new(&self.config, &mut self.type_cache);
+        let mut type_cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+        let mut primitive_generator = PrimitiveGenerator::new(&self.config, &mut type_cache);
         primitive_generator.generate_primitive_type_struct(structure_def, rust_struct)
     }
 
@@ -143,7 +159,11 @@ impl CodeGenerator {
         &mut self,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<RustStruct> {
-        let mut primitive_generator = PrimitiveGenerator::new(&self.config, &mut self.type_cache);
+        let mut type_cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+        let mut primitive_generator = PrimitiveGenerator::new(&self.config, &mut type_cache);
         primitive_generator.generate_primitive_element_struct(structure_def)
     }
 
@@ -155,11 +175,16 @@ impl CodeGenerator {
         nested_elements: &[crate::fhir_types::ElementDefinition],
         parent_structure_def: &StructureDefinition,
     ) -> CodegenResult<Option<crate::rust_types::RustStruct>> {
-        let mut nested_struct_generator = NestedStructGenerator::new(
-            &self.config,
-            &mut self.type_cache,
-            &mut self.value_set_manager,
-        );
+        let mut type_cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+        let mut value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
+        let mut nested_struct_generator =
+            NestedStructGenerator::new(&self.config, &mut type_cache, &mut value_set_manager);
         nested_struct_generator.generate_nested_struct(
             parent_struct_name,
             nested_field_name,
@@ -173,8 +198,16 @@ impl CodeGenerator {
         &mut self,
         element: &crate::fhir_types::ElementDefinition,
     ) -> CodegenResult<Option<crate::rust_types::RustField>> {
+        let type_cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+        let mut value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
         let mut field_generator =
-            FieldGenerator::new(&self.config, &self.type_cache, &mut self.value_set_manager);
+            FieldGenerator::new(&self.config, &type_cache, &mut value_set_manager);
         field_generator.create_field_from_element(element)
     }
 
@@ -190,8 +223,13 @@ impl CodeGenerator {
         base_output_dir: P,
     ) -> CodegenResult<()> {
         let rust_struct = self.generate_struct(structure_def)?;
-        let nested_structs =
-            FileIoManager::collect_nested_structs(&rust_struct.name, &self.type_cache);
+        let nested_structs = {
+            let type_cache = self
+                .type_cache
+                .lock()
+                .expect("codegen bug: type_cache lock poisoned");
+            FileIoManager::collect_nested_structs(&rust_struct.name, &type_cache)
+        };
 
         let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
         file_io_manager.generate_to_organized_directories(
@@ -252,8 +290,13 @@ impl CodeGenerator {
         } else {
             // Generate the main struct for non-primitive types
             let rust_struct = self.generate_struct(structure_def)?;
-            let nested_structs =
-                FileIoManager::collect_nested_structs(&rust_struct.name, &self.type_cache);
+            let nested_structs = {
+                let type_cache = self
+                    .type_cache
+                    .lock()
+                    .expect("codegen bug: type_cache lock poisoned");
+                FileIoManager::collect_nested_structs(&rust_struct.name, &type_cache)
+            };
             let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
 
             file_io_manager.generate_to_file(
@@ -335,7 +378,13 @@ impl CodeGenerator {
             // Get the ValueSet URL to generate enum name
             if let Some(url) = json_value.get("url").and_then(|v| v.as_str()) {
                 // Generate enum name using the same logic as the enum generator
-                let enum_name = self.value_set_manager.generate_enum_name(url);
+                let enum_name = {
+                    let value_set_manager = self
+                        .value_set_manager
+                        .lock()
+                        .expect("codegen bug: value_set_manager lock poisoned");
+                    value_set_manager.generate_enum_name(url)
+                };
 
                 // Pre-register this enum in the TypeRegistry
                 crate::generators::type_registry::TypeRegistry::register_type_classification_only(
@@ -350,8 +399,16 @@ impl CodeGenerator {
 
     /// Generate all ValueSet enums to separate files in the specified directory
     pub fn generate_enum_files<P: AsRef<Path>>(&mut self, enums_dir: P) -> CodegenResult<()> {
-        let enum_generator = EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
-        let token_generator = crate::generators::token_generator::TokenGenerator::new();
+        let mut value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
+        let mut enum_cache = self
+            .enum_cache
+            .lock()
+            .expect("codegen bug: enum_cache lock poisoned");
+        let enum_generator = EnumGenerator::new(&mut value_set_manager, &mut enum_cache);
+        let token_generator = TokenGenerator::new();
         let file_generator = FileGenerator::new(&self.config, &token_generator);
 
         file_generator.generate_enum_files(enums_dir, &enum_generator)
@@ -359,7 +416,15 @@ impl CodeGenerator {
 
     /// Generate a mod.rs file that re-exports all the enum modules
     pub fn generate_enums_mod_file<P: AsRef<Path>>(&mut self, enums_dir: P) -> CodegenResult<()> {
-        let enum_generator = EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
+        let mut value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
+        let mut enum_cache = self
+            .enum_cache
+            .lock()
+            .expect("codegen bug: enum_cache lock poisoned");
+        let enum_generator = EnumGenerator::new(&mut value_set_manager, &mut enum_cache);
         let file_generator = FileGenerator::new(&self.config, &self.token_generator);
         file_generator.generate_enums_mod_file(enums_dir, &enum_generator)
     }
@@ -369,8 +434,15 @@ impl CodeGenerator {
         &mut self,
         value_set_url: &str,
     ) -> CodegenResult<Option<RustEnum>> {
-        let mut enum_generator =
-            EnumGenerator::new(&mut self.value_set_manager, &mut self.enum_cache);
+        let mut value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
+        let mut enum_cache = self
+            .enum_cache
+            .lock()
+            .expect("codegen bug: enum_cache lock poisoned");
+        let mut enum_generator = EnumGenerator::new(&mut value_set_manager, &mut enum_cache);
         let result = enum_generator.generate_enum_for_value_set(value_set_url)?;
 
         Ok(result)
@@ -378,12 +450,39 @@ impl CodeGenerator {
 
     /// Check if any ValueSet enums have been generated
     pub fn has_cached_enums(&self) -> bool {
-        TypeUtilities::has_cached_enums(&self.value_set_manager)
+        let value_set_manager = self
+            .value_set_manager
+            .lock()
+            .expect("codegen bug: value_set_manager lock poisoned");
+        TypeUtilities::has_cached_enums(&value_set_manager)
     }
 
     /// Convert a FHIR resource type name to filename using snake_case
     pub fn to_filename(&self, structure_def: &StructureDefinition) -> String {
         crate::naming::Naming::filename(structure_def)
+    }
+
+    /// Pre-generate base definitions (Element, BackboneElement, DomainResource, Resource)
+    /// to ensure they're in the type_cache before parallel generation begins.
+    ///
+    /// These core FHIR types are referenced by virtually every other type, so generating
+    /// them first eliminates lock contention during the parallel phase and avoids
+    /// redundant re-generation attempts.
+    pub fn pre_generate_base_definitions(&mut self, structure_defs: &[StructureDefinition]) {
+        let base_names = ["Element", "BackboneElement", "DomainResource", "Resource"];
+
+        let base_defs: Vec<_> = structure_defs
+            .iter()
+            .filter(|sd| base_names.contains(&sd.name.as_str()))
+            .collect();
+
+        for base_def in base_defs {
+            let name = base_def.name.clone();
+            match self.generate_struct(base_def) {
+                Ok(_) => tracing::debug!("Pre-generated base definition: {name}"),
+                Err(e) => tracing::warn!("Failed to pre-generate base definition {name}: {e}"),
+            }
+        }
     }
 
     /// Generate a trait file directly from a RustTrait object
@@ -395,6 +494,176 @@ impl CodeGenerator {
         // Create FileGenerator and delegate
         let file_generator = FileGenerator::new(&self.config, &self.token_generator);
         file_generator.generate_trait_file_from_trait(rust_trait, output_path)
+    }
+
+    /// Get a clone of the shared type cache (for reading generated structs)
+    pub fn type_cache_snapshot(&self) -> HashMap<TypeCacheKey, RustStruct> {
+        let cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+        cache.clone()
+    }
+
+    /// Generate Rust structs for multiple StructureDefinitions in parallel using rayon.
+    ///
+    /// This processes the CPU-intensive struct generation phase in parallel while
+    /// maintaining thread-safe access to shared state via `Arc<Mutex<>>`.
+    /// Returns a vector of (StructureDefinition, Result<RustStruct>) pairs.
+    ///
+    /// # Performance
+    ///
+    /// On a machine with N cores, this typically achieves ~N× speedup for the
+    /// struct generation phase compared to sequential processing, as each
+    /// StructureDefinition's struct generation is largely independent.
+    ///
+    /// The TypeRegistry must be fully populated (Phase 1 complete) before calling this.
+    pub fn generate_structs_parallel(
+        &self,
+        structure_defs: &[StructureDefinition],
+    ) -> Vec<(String, CodegenResult<RustStruct>)> {
+        use rayon::prelude::*;
+
+        let config = self.config.clone();
+        let type_cache = Arc::clone(&self.type_cache);
+        let value_set_manager = Arc::clone(&self.value_set_manager);
+
+        structure_defs
+            .par_iter()
+            .map(|structure_def| {
+                let name = structure_def.name.clone();
+
+                // Skip logical models and retired definitions
+                if structure_def.kind == "logical" {
+                    return (
+                        name,
+                        Err(crate::CodegenError::Generation {
+                            message: format!("Skipping LogicalModel '{}'", structure_def.name),
+                        }),
+                    );
+                }
+                if structure_def.status == "retired" {
+                    return (
+                        name,
+                        Err(crate::CodegenError::Generation {
+                            message: format!("Skipping retired '{}'", structure_def.name),
+                        }),
+                    );
+                }
+
+                let mut type_cache_guard = type_cache
+                    .lock()
+                    .expect("codegen bug: type_cache lock poisoned");
+                let mut value_set_manager_guard = value_set_manager
+                    .lock()
+                    .expect("codegen bug: value_set_manager lock poisoned");
+
+                let mut struct_generator = StructGenerator::new(
+                    &config,
+                    &mut type_cache_guard,
+                    &mut value_set_manager_guard,
+                );
+
+                let result = struct_generator.generate_struct(structure_def);
+                (name, result)
+            })
+            .collect()
+    }
+
+    /// Generate files for all generated structs in the type cache.
+    ///
+    /// This is the I/O phase that writes generated Rust code to disk.
+    /// It should be called after `generate_structs_parallel` (or sequential generation)
+    /// has populated the type cache.
+    pub fn write_all_generated_files<P: AsRef<Path>>(
+        &self,
+        structure_defs: &[StructureDefinition],
+        base_output_dir: P,
+    ) -> Vec<CodegenResult<()>> {
+        let base_dir = base_output_dir.as_ref();
+        let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
+        let type_cache = self
+            .type_cache
+            .lock()
+            .expect("codegen bug: type_cache lock poisoned");
+
+        let mut results = Vec::with_capacity(structure_defs.len());
+
+        for structure_def in structure_defs {
+            if structure_def.kind == "logical" || structure_def.status == "retired" {
+                continue;
+            }
+
+            let struct_name = crate::naming::Naming::struct_name(structure_def);
+
+            if let Some(rust_struct) = type_cache.get(&struct_name) {
+                let nested_structs =
+                    FileIoManager::collect_nested_structs(&struct_name, &type_cache);
+
+                let result = file_io_manager.generate_to_organized_directories(
+                    structure_def,
+                    base_dir,
+                    rust_struct,
+                    &nested_structs,
+                );
+                results.push(result);
+            }
+        }
+
+        results
+    }
+
+    /// Generate trait files for all resources and profiles in parallel.
+    ///
+    /// This writes trait files for resources/profiles that have been generated.
+    pub fn write_all_trait_files<P: AsRef<Path>>(
+        &self,
+        structure_defs: &[StructureDefinition],
+        base_output_dir: P,
+    ) -> Vec<CodegenResult<()>> {
+        let base_dir = base_output_dir.as_ref();
+        let file_io_manager = FileIoManager::new(&self.config, &self.token_generator);
+        let mut results = Vec::with_capacity(structure_defs.len());
+
+        for structure_def in structure_defs {
+            if structure_def.kind == "logical" || structure_def.status == "retired" {
+                continue;
+            }
+
+            let category = file_io_manager.classify_fhir_structure_def(structure_def);
+            if category != FhirTypeCategory::Resource && category != FhirTypeCategory::Profile {
+                continue;
+            }
+
+            let crate_lib_name = self
+                .config
+                .crate_name
+                .as_deref()
+                .map(|n| n.replace('-', "_"))
+                .unwrap_or_else(|| "hl7_fhir_r4_core".to_string());
+            let mut trait_generator = TraitGenerator::new_with_crate_name(crate_lib_name);
+
+            let categories = ["Accessors", "Mutators", "Existence"];
+            let mut traits = Vec::new();
+            for category in &categories {
+                match trait_generator.generate_trait(structure_def, category) {
+                    Ok(t) => traits.push(t),
+                    Err(e) => {
+                        results.push(Err(e));
+                        continue;
+                    }
+                }
+            }
+
+            let result = file_io_manager.generate_traits_to_organized_directory(
+                structure_def,
+                base_dir,
+                &traits,
+            );
+            results.push(result);
+        }
+
+        results
     }
 }
 
@@ -576,11 +845,15 @@ mod tests {
 
         // Check that the nested BundleEntry struct was generated and cached
         assert!(
-            generator.type_cache.contains_key("BundleEntry"),
+            generator.type_cache_snapshot().contains_key("BundleEntry"),
             "BundleEntry struct should be generated"
         );
 
-        let bundle_entry_struct = generator.type_cache.get("BundleEntry").unwrap();
+        let bundle_entry_struct = generator
+            .type_cache_snapshot()
+            .get("BundleEntry")
+            .unwrap()
+            .clone();
         assert_eq!(bundle_entry_struct.name, "BundleEntry");
 
         // Check that BundleEntry has the expected fields

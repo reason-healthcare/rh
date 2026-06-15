@@ -362,26 +362,40 @@ fn process_json_files_organized(
         }
     }
 
+    // Phase 1.5: Pre-generate base definitions (Element, BackboneElement, DomainResource, Resource)
+    // to populate the type_cache before parallel generation, reducing lock contention
+    info!("Pre-generating base definitions...");
+    generator.pre_generate_base_definitions(&structure_definitions);
+
     // Phase 2: Generate code for all StructureDefinitions
     info!(
-        "Phase 2: Generating code for {} StructureDefinitions...",
+        "Phase 2: Generating code for {} StructureDefinitions (parallel)...",
         structure_definitions.len()
     );
-    for structure_def in &structure_definitions {
-        // Use the library function to generate structure and traits
-        match rh_codegen::generate_organized_directories_with_traits(
-            generator,
-            structure_def,
-            output_dir,
-        ) {
-            Ok(()) => {
-                info!("Generated {} with traits", structure_def.name);
-            }
-            Err(e) => {
-                warn!("Failed to generate {}: {}", structure_def.name, e);
-            }
+
+    // Generate all structs in parallel using rayon
+    let results = generator.generate_structs_parallel(&structure_definitions);
+    let success_count = results.iter().filter(|(_, r)| r.is_ok()).count();
+    let error_count = results.len() - success_count;
+    for (name, result) in &results {
+        match result {
+            Ok(_) => info!("Generated {name}"),
+            Err(e) => warn!("Failed to generate {name}: {e}"),
         }
     }
+    info!("Phase 2 complete: {success_count} succeeded, {error_count} failed");
+
+    // Write all generated structs to files
+    info!("Writing generated struct files...");
+    let write_results = generator.write_all_generated_files(&structure_definitions, output_dir);
+    let write_success = write_results.iter().filter(|r| r.is_ok()).count();
+    info!("Wrote {write_success} struct files");
+
+    // Write all trait files for resources and profiles
+    info!("Writing trait files...");
+    let trait_results = generator.write_all_trait_files(&structure_definitions, output_dir);
+    let trait_success = trait_results.iter().filter(|r| r.is_ok()).count();
+    info!("Wrote {trait_success} trait files");
 
     // Generate ValueSet enums before finalizing module files
     info!("Generating ValueSet enums...");
