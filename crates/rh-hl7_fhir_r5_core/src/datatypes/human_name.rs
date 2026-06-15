@@ -33,17 +33,23 @@ pub struct HumanName {
     /// Extension element for the 'family' primitive field. Contains metadata and extensions.
     pub _family: Option<Element>,
     /// Given names (not always 'first'). Includes middle names
-    pub given: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub given: Vec<StringType>,
     /// Extension element for the 'given' primitive field. Contains metadata and extensions.
-    pub _given: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _given: Vec<Element>,
     /// Parts that come before the name
-    pub prefix: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prefix: Vec<StringType>,
     /// Extension element for the 'prefix' primitive field. Contains metadata and extensions.
-    pub _prefix: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _prefix: Vec<Element>,
     /// Parts that come after the name
-    pub suffix: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suffix: Vec<StringType>,
     /// Extension element for the 'suffix' primitive field. Contains metadata and extensions.
-    pub _suffix: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _suffix: Vec<Element>,
     /// Time period when name was/is in use
     pub period: Option<Period>,
 }

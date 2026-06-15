@@ -32,9 +32,11 @@ pub struct DataRequirement {
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
     /// The profile of the required data
-    pub profile: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub profile: Vec<StringType>,
     /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _profile: Vec<Element>,
     /// E.g. Patient, Practitioner, RelatedPerson, Organization, Location, Device (CodeableConcept)
     #[serde(rename = "subjectCodeableConcept")]
     pub subject_codeable_concept: Option<CodeableConcept>,
@@ -43,22 +45,27 @@ pub struct DataRequirement {
     pub subject_reference: Option<Reference>,
     /// Indicates specific structure elements that are referenced by the knowledge module
     #[serde(rename = "mustSupport")]
-    pub must_support: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub must_support: Vec<StringType>,
     /// Extension element for the 'mustSupport' primitive field. Contains metadata and extensions.
     #[serde(rename = "_mustSupport")]
-    pub _must_support: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _must_support: Vec<Element>,
     /// What codes are expected
     #[serde(rename = "codeFilter")]
-    pub code_filter: Option<Vec<Element>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code_filter: Vec<Element>,
     /// What dates/date ranges are expected
     #[serde(rename = "dateFilter")]
-    pub date_filter: Option<Vec<Element>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub date_filter: Vec<Element>,
     /// Number of results
     pub limit: Option<PositiveIntType>,
     /// Extension element for the 'limit' primitive field. Contains metadata and extensions.
     pub _limit: Option<Element>,
     /// Order of the results
-    pub sort: Option<Vec<Element>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sort: Vec<Element>,
 }
 /// DataRequirement nested structure for the 'codeFilter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,7 +90,8 @@ pub struct DataRequirementCodefilter {
     #[serde(rename = "_valueSet")]
     pub _value_set: Option<Element>,
     /// What code is expected
-    pub code: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<Coding>,
 }
 /// DataRequirement nested structure for the 'dateFilter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]

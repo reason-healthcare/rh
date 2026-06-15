@@ -49,13 +49,17 @@ pub struct OperationOutcomeIssue {
     /// Extension element for the 'diagnostics' primitive field. Contains metadata and extensions.
     pub _diagnostics: Option<Element>,
     /// Deprecated: Path of element(s) related to issue
-    pub location: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<StringType>,
     /// Extension element for the 'location' primitive field. Contains metadata and extensions.
-    pub _location: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _location: Vec<Element>,
     /// FHIRPath of element(s) related to issue
-    pub expression: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub expression: Vec<StringType>,
     /// Extension element for the 'expression' primitive field. Contains metadata and extensions.
-    pub _expression: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _expression: Vec<Element>,
 }
 
 impl Default for OperationOutcome {
@@ -222,13 +226,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for OperationOutcom
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -243,44 +247,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for OperationOutcome
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -290,16 +282,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for OperationOutcom
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 

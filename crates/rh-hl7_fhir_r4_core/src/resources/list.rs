@@ -4,6 +4,7 @@ use crate::datatypes::annotation::Annotation;
 use crate::datatypes::backbone_element::BackboneElement;
 use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::element::Element;
+use crate::datatypes::extension::Extension;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::reference::Reference;
 use crate::primitives::boolean::BooleanType;
@@ -27,7 +28,8 @@ pub struct List {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// current | retired | entered-in-error
     pub status: ListStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -64,9 +66,11 @@ pub struct List {
     #[serde(rename = "orderedBy")]
     pub ordered_by: Option<CodeableConcept>,
     /// Comments about the list
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Entries in the list
-    pub entry: Option<Vec<ListEntry>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry: Vec<ListEntry>,
     /// Why list is empty
     ///
     /// Binding: preferred (If a list is empty, why it is empty.)
@@ -97,6 +101,22 @@ pub struct ListEntry {
     pub _date: Option<Element>,
     /// Actual entry
     pub item: Reference,
+}
+/// changeBase
+///
+/// Reference to the List that a "change" list is asserting changes with respect to.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/list-changeBase
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListChangeBase {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for List {
@@ -134,6 +154,14 @@ impl Default for ListEntry {
             date: Default::default(),
             _date: Default::default(),
             item: Reference::default(),
+        }
+    }
+}
+
+impl Default for ListChangeBase {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -279,13 +307,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for List {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -300,44 +328,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for List {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -347,22 +363,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for List {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::list::ListAccessors for List {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ListStatus {
         self.status.clone()
@@ -392,10 +405,10 @@ impl crate::traits::list::ListAccessors for List {
         self.ordered_by.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn entry(&self) -> &[ListEntry] {
-        self.entry.as_deref().unwrap_or(&[])
+        self.entry.as_slice()
     }
     fn empty_reason(&self) -> Option<CodeableConcept> {
         self.empty_reason.clone()
@@ -408,12 +421,12 @@ impl crate::traits::list::ListMutators for List {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ListStatus) -> Self {
@@ -463,22 +476,22 @@ impl crate::traits::list::ListMutators for List {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_entry(self, value: Vec<ListEntry>) -> Self {
         let mut resource = self.clone();
-        resource.entry = Some(value);
+        resource.entry = value;
         resource
     }
     fn add_entry(self, item: ListEntry) -> Self {
         let mut resource = self.clone();
-        resource.entry.get_or_insert_with(Vec::new).push(item);
+        resource.entry.push(item);
         resource
     }
     fn set_empty_reason(self, value: CodeableConcept) -> Self {
@@ -490,7 +503,7 @@ impl crate::traits::list::ListMutators for List {
 
 impl crate::traits::list::ListExistence for List {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -520,10 +533,10 @@ impl crate::traits::list::ListExistence for List {
         self.ordered_by.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_entry(&self) -> bool {
-        self.entry.as_ref().is_some_and(|v| !v.is_empty())
+        !self.entry.is_empty()
     }
     fn has_empty_reason(&self) -> bool {
         self.empty_reason.is_some()

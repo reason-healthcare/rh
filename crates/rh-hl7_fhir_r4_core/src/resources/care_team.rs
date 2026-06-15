@@ -26,7 +26,8 @@ pub struct CareTeam {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this team
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// proposed | active | suspended | inactive | entered-in-error
     pub status: Option<CareTeamStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -36,7 +37,8 @@ pub struct CareTeam {
     /// Binding: example (Indicates the type of care team.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/care-team-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Name of the team, such as crisis assessment team
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -48,24 +50,30 @@ pub struct CareTeam {
     /// Time period team covers
     pub period: Option<Period>,
     /// Members of the team
-    pub participant: Option<Vec<CareTeamParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<CareTeamParticipant>,
     /// Why the care team exists
     ///
     /// Binding: example (Indicates the reason for the care team.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Why the care team exists
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Organization responsible for the care team
     #[serde(rename = "managingOrganization")]
-    pub managing_organization: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub managing_organization: Vec<Reference>,
     /// A contact detail for the care team (that applies to all members)
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// Comments made about the CareTeam
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// CareTeam nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,7 +86,8 @@ pub struct CareTeamParticipant {
     /// Binding: example (Indicates specific responsibility of an individual within the care team, such as "Primary physician", "Team coordinator", "Caregiver", etc.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/participant-role
-    pub role: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub role: Vec<CodeableConcept>,
     /// Who is involved
     pub member: Option<Reference>,
     /// Organization of the practitioner
@@ -258,13 +267,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CareTeam {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -279,44 +288,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CareTeam {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -326,28 +323,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for CareTeam {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::care_team::CareTeamAccessors for CareTeam {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Option<CareTeamStatus> {
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn name(&self) -> Option<StringType> {
         self.name.clone()
@@ -362,22 +356,22 @@ impl crate::traits::care_team::CareTeamAccessors for CareTeam {
         self.period.clone()
     }
     fn participant(&self) -> &[CareTeamParticipant] {
-        self.participant.as_deref().unwrap_or(&[])
+        self.participant.as_slice()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn managing_organization(&self) -> &[Reference] {
-        self.managing_organization.as_deref().unwrap_or(&[])
+        self.managing_organization.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -387,12 +381,12 @@ impl crate::traits::care_team::CareTeamMutators for CareTeam {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: CareTeamStatus) -> Self {
@@ -402,12 +396,12 @@ impl crate::traits::care_team::CareTeamMutators for CareTeam {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_name(self, value: String) -> Self {
@@ -432,81 +426,75 @@ impl crate::traits::care_team::CareTeamMutators for CareTeam {
     }
     fn set_participant(self, value: Vec<CareTeamParticipant>) -> Self {
         let mut resource = self.clone();
-        resource.participant = Some(value);
+        resource.participant = value;
         resource
     }
     fn add_participant(self, item: CareTeamParticipant) -> Self {
         let mut resource = self.clone();
-        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource.participant.push(item);
         resource
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_managing_organization(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.managing_organization = Some(value);
+        resource.managing_organization = value;
         resource
     }
     fn add_managing_organization(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .managing_organization
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.managing_organization.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::care_team::CareTeamExistence for CareTeam {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_name(&self) -> bool {
         self.name.is_some()
@@ -521,26 +509,22 @@ impl crate::traits::care_team::CareTeamExistence for CareTeam {
         self.period.is_some()
     }
     fn has_participant(&self) -> bool {
-        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.participant.is_empty()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_managing_organization(&self) -> bool {
-        self.managing_organization
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.managing_organization.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

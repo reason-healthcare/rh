@@ -30,7 +30,8 @@ pub struct Account {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Account number
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | inactive | entered-in-error | on-hold | unknown
     pub status: AccountStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -54,12 +55,14 @@ pub struct Account {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// The entity that caused the expenses
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// Transaction window
     #[serde(rename = "servicePeriod")]
     pub service_period: Option<Period>,
     /// The party(s) that are responsible for covering the payment of this account, and what order should they be applied to the account
-    pub coverage: Option<Vec<AccountCoverage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage: Vec<AccountCoverage>,
     /// Entity managing the Account
     pub owner: Option<Reference>,
     /// Explanation of purpose/use
@@ -67,18 +70,23 @@ pub struct Account {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The parties ultimately responsible for balancing the Account
-    pub guarantor: Option<Vec<AccountGuarantor>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub guarantor: Vec<AccountGuarantor>,
     /// The list of diagnoses relevant to this account
-    pub diagnosis: Option<Vec<AccountDiagnosis>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnosis: Vec<AccountDiagnosis>,
     /// The list of procedures relevant to this account
-    pub procedure: Option<Vec<AccountProcedure>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub procedure: Vec<AccountProcedure>,
     /// Other associated accounts related to this account
     #[serde(rename = "relatedAccount")]
-    pub related_account: Option<Vec<AccountRelatedaccount>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_account: Vec<AccountRelatedaccount>,
     /// The base or default currency
     pub currency: Option<CodeableConcept>,
     /// Calculated account balance(s)
-    pub balance: Option<Vec<AccountBalance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub balance: Vec<AccountBalance>,
     /// Time the balance amount was calculated
     #[serde(rename = "calculatedAt")]
     pub calculated_at: Option<InstantType>,
@@ -112,14 +120,34 @@ pub struct AccountProcedure {
     ///
     /// Binding: example (Usage for the specific procedure - e.g. billing)
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Package Code specific for billing
     ///
     /// Binding: example (Local or Regional package codes, e.g. DRGs)
     #[serde(rename = "packageCode")]
-    pub package_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub package_code: Vec<CodeableConcept>,
     /// Any devices that were associated with the procedure
-    pub device: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<Reference>,
+}
+/// Account nested structure for the 'guarantor' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountGuarantor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Responsible entity
+    pub party: Reference,
+    /// Credit or other hold applied
+    #[serde(rename = "onHold")]
+    pub on_hold: Option<BooleanType>,
+    /// Extension element for the 'onHold' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_onHold")]
+    pub _on_hold: Option<Element>,
+    /// Guarantee account during
+    pub period: Option<Period>,
 }
 /// Account nested structure for the 'relatedAccount' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -135,6 +163,31 @@ pub struct AccountRelatedaccount {
     pub relationship: Option<CodeableConcept>,
     /// Reference to an associated Account
     pub account: Reference,
+}
+/// Account nested structure for the 'balance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountBalance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who is expected to pay this part of the balance
+    ///
+    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/account-aggregate
+    pub aggregate: Option<CodeableConcept>,
+    /// current | 30 | 60 | 90 | 120
+    ///
+    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/account-balance-term
+    pub term: Option<CodeableConcept>,
+    /// Estimated balance
+    pub estimate: Option<BooleanType>,
+    /// Extension element for the 'estimate' primitive field. Contains metadata and extensions.
+    pub _estimate: Option<Element>,
+    /// Calculated amount
+    pub amount: Money,
 }
 /// Account nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,7 +218,8 @@ pub struct AccountDiagnosis {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-diagnosis-use
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Diagnosis present on Admission
     #[serde(rename = "onAdmission")]
     pub on_admission: Option<BooleanType>,
@@ -176,32 +230,8 @@ pub struct AccountDiagnosis {
     ///
     /// Binding: example (Local or Regional package codes, e.g. DRGs)
     #[serde(rename = "packageCode")]
-    pub package_code: Option<Vec<CodeableConcept>>,
-}
-/// Account nested structure for the 'balance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountBalance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who is expected to pay this part of the balance
-    ///
-    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/account-aggregate
-    pub aggregate: Option<CodeableConcept>,
-    /// current | 30 | 60 | 90 | 120
-    ///
-    /// Binding: extensible (Indicates the balance was outstanding at the given age.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/account-balance-term
-    pub term: Option<CodeableConcept>,
-    /// Estimated balance
-    pub estimate: Option<BooleanType>,
-    /// Extension element for the 'estimate' primitive field. Contains metadata and extensions.
-    pub _estimate: Option<Element>,
-    /// Calculated amount
-    pub amount: Money,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub package_code: Vec<CodeableConcept>,
 }
 /// Account nested structure for the 'coverage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -215,23 +245,6 @@ pub struct AccountCoverage {
     pub priority: Option<PositiveIntType>,
     /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
     pub _priority: Option<Element>,
-}
-/// Account nested structure for the 'guarantor' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountGuarantor {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Responsible entity
-    pub party: Reference,
-    /// Credit or other hold applied
-    #[serde(rename = "onHold")]
-    pub on_hold: Option<BooleanType>,
-    /// Extension element for the 'onHold' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_onHold")]
-    pub _on_hold: Option<Element>,
-    /// Guarantee account during
-    pub period: Option<Period>,
 }
 
 impl Default for Account {
@@ -279,12 +292,37 @@ impl Default for AccountProcedure {
     }
 }
 
+impl Default for AccountGuarantor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            party: Reference::default(),
+            on_hold: Default::default(),
+            _on_hold: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
 impl Default for AccountRelatedaccount {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             relationship: Default::default(),
             account: Default::default(),
+        }
+    }
+}
+
+impl Default for AccountBalance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            aggregate: Default::default(),
+            term: Default::default(),
+            estimate: Default::default(),
+            _estimate: Default::default(),
+            amount: Money::default(),
         }
     }
 }
@@ -306,19 +344,6 @@ impl Default for AccountDiagnosis {
     }
 }
 
-impl Default for AccountBalance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            aggregate: Default::default(),
-            term: Default::default(),
-            estimate: Default::default(),
-            _estimate: Default::default(),
-            amount: Money::default(),
-        }
-    }
-}
-
 impl Default for AccountCoverage {
     fn default() -> Self {
         Self {
@@ -326,18 +351,6 @@ impl Default for AccountCoverage {
             coverage: Reference::default(),
             priority: Default::default(),
             _priority: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountGuarantor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            party: Reference::default(),
-            on_hold: Default::default(),
-            _on_hold: Default::default(),
-            period: Default::default(),
         }
     }
 }
@@ -533,13 +546,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Account {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -554,44 +567,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Account {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -601,22 +602,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Account {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::account::AccountAccessors for Account {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> AccountStatus {
         self.status.clone()
@@ -631,13 +629,13 @@ impl crate::traits::account::AccountAccessors for Account {
         self.name.clone()
     }
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn service_period(&self) -> Option<Period> {
         self.service_period.clone()
     }
     fn coverage(&self) -> &[AccountCoverage] {
-        self.coverage.as_deref().unwrap_or(&[])
+        self.coverage.as_slice()
     }
     fn owner(&self) -> Option<Reference> {
         self.owner.clone()
@@ -646,22 +644,22 @@ impl crate::traits::account::AccountAccessors for Account {
         self.description.clone()
     }
     fn guarantor(&self) -> &[AccountGuarantor] {
-        self.guarantor.as_deref().unwrap_or(&[])
+        self.guarantor.as_slice()
     }
     fn diagnosis(&self) -> &[AccountDiagnosis] {
-        self.diagnosis.as_deref().unwrap_or(&[])
+        self.diagnosis.as_slice()
     }
     fn procedure(&self) -> &[AccountProcedure] {
-        self.procedure.as_deref().unwrap_or(&[])
+        self.procedure.as_slice()
     }
     fn related_account(&self) -> &[AccountRelatedaccount] {
-        self.related_account.as_deref().unwrap_or(&[])
+        self.related_account.as_slice()
     }
     fn currency(&self) -> Option<CodeableConcept> {
         self.currency.clone()
     }
     fn balance(&self) -> &[AccountBalance] {
-        self.balance.as_deref().unwrap_or(&[])
+        self.balance.as_slice()
     }
     fn calculated_at(&self) -> Option<InstantType> {
         self.calculated_at.clone()
@@ -674,12 +672,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: AccountStatus) -> Self {
@@ -704,12 +702,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_service_period(self, value: Period) -> Self {
@@ -719,12 +717,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_coverage(self, value: Vec<AccountCoverage>) -> Self {
         let mut resource = self.clone();
-        resource.coverage = Some(value);
+        resource.coverage = value;
         resource
     }
     fn add_coverage(self, item: AccountCoverage) -> Self {
         let mut resource = self.clone();
-        resource.coverage.get_or_insert_with(Vec::new).push(item);
+        resource.coverage.push(item);
         resource
     }
     fn set_owner(self, value: Reference) -> Self {
@@ -739,45 +737,42 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_guarantor(self, value: Vec<AccountGuarantor>) -> Self {
         let mut resource = self.clone();
-        resource.guarantor = Some(value);
+        resource.guarantor = value;
         resource
     }
     fn add_guarantor(self, item: AccountGuarantor) -> Self {
         let mut resource = self.clone();
-        resource.guarantor.get_or_insert_with(Vec::new).push(item);
+        resource.guarantor.push(item);
         resource
     }
     fn set_diagnosis(self, value: Vec<AccountDiagnosis>) -> Self {
         let mut resource = self.clone();
-        resource.diagnosis = Some(value);
+        resource.diagnosis = value;
         resource
     }
     fn add_diagnosis(self, item: AccountDiagnosis) -> Self {
         let mut resource = self.clone();
-        resource.diagnosis.get_or_insert_with(Vec::new).push(item);
+        resource.diagnosis.push(item);
         resource
     }
     fn set_procedure(self, value: Vec<AccountProcedure>) -> Self {
         let mut resource = self.clone();
-        resource.procedure = Some(value);
+        resource.procedure = value;
         resource
     }
     fn add_procedure(self, item: AccountProcedure) -> Self {
         let mut resource = self.clone();
-        resource.procedure.get_or_insert_with(Vec::new).push(item);
+        resource.procedure.push(item);
         resource
     }
     fn set_related_account(self, value: Vec<AccountRelatedaccount>) -> Self {
         let mut resource = self.clone();
-        resource.related_account = Some(value);
+        resource.related_account = value;
         resource
     }
     fn add_related_account(self, item: AccountRelatedaccount) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_account
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_account.push(item);
         resource
     }
     fn set_currency(self, value: CodeableConcept) -> Self {
@@ -787,12 +782,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_balance(self, value: Vec<AccountBalance>) -> Self {
         let mut resource = self.clone();
-        resource.balance = Some(value);
+        resource.balance = value;
         resource
     }
     fn add_balance(self, item: AccountBalance) -> Self {
         let mut resource = self.clone();
-        resource.balance.get_or_insert_with(Vec::new).push(item);
+        resource.balance.push(item);
         resource
     }
     fn set_calculated_at(self, value: String) -> Self {
@@ -804,7 +799,7 @@ impl crate::traits::account::AccountMutators for Account {
 
 impl crate::traits::account::AccountExistence for Account {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -819,13 +814,13 @@ impl crate::traits::account::AccountExistence for Account {
         self.name.is_some()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_service_period(&self) -> bool {
         self.service_period.is_some()
     }
     fn has_coverage(&self) -> bool {
-        self.coverage.as_ref().is_some_and(|v| !v.is_empty())
+        !self.coverage.is_empty()
     }
     fn has_owner(&self) -> bool {
         self.owner.is_some()
@@ -834,22 +829,22 @@ impl crate::traits::account::AccountExistence for Account {
         self.description.is_some()
     }
     fn has_guarantor(&self) -> bool {
-        self.guarantor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.guarantor.is_empty()
     }
     fn has_diagnosis(&self) -> bool {
-        self.diagnosis.as_ref().is_some_and(|v| !v.is_empty())
+        !self.diagnosis.is_empty()
     }
     fn has_procedure(&self) -> bool {
-        self.procedure.as_ref().is_some_and(|v| !v.is_empty())
+        !self.procedure.is_empty()
     }
     fn has_related_account(&self) -> bool {
-        self.related_account.as_ref().is_some_and(|v| !v.is_empty())
+        !self.related_account.is_empty()
     }
     fn has_currency(&self) -> bool {
         self.currency.is_some()
     }
     fn has_balance(&self) -> bool {
-        self.balance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.balance.is_empty()
     }
     fn has_calculated_at(&self) -> bool {
         self.calculated_at.is_some()

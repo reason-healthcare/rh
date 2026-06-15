@@ -34,10 +34,12 @@ pub struct MedicationRequest {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External ids for this request
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// A plan or request that is fulfilled in whole or in part by this medication request
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Reference to an order/prescription that is being replaced by this MedicationRequest
     #[serde(rename = "priorPrescription")]
     pub prior_prescription: Option<Reference>,
@@ -70,7 +72,8 @@ pub struct MedicationRequest {
     /// Binding: example (A coded concept identifying where the medication is to be consumed or administered.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/medicationrequest-admin-location
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// routine | urgent | asap | stat
     pub priority: Option<RequestPriority>,
     /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
@@ -91,12 +94,14 @@ pub struct MedicationRequest {
     pub subject: Reference,
     /// The person or organization who provided the information about this request, if the source is someone other than the requestor
     #[serde(rename = "informationSource")]
-    pub information_source: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub information_source: Vec<Reference>,
     /// Encounter created as part of encounter/admission/stay
     pub encounter: Option<Reference>,
     /// Information to support fulfilling of the medication
     #[serde(rename = "supportingInformation")]
-    pub supporting_information: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_information: Vec<Reference>,
     /// When request was initially authored
     #[serde(rename = "authoredOn")]
     pub authored_on: Option<DateTimeType>,
@@ -117,9 +122,11 @@ pub struct MedicationRequest {
     #[serde(rename = "performerType")]
     pub performer_type: Option<CodeableConcept>,
     /// Intended performer of administration
-    pub performer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<Reference>,
     /// Intended type of device for the administration
-    pub device: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<CodeableReference>,
     /// Person who entered the request
     pub recorder: Option<Reference>,
     /// Reason or indication for ordering or not ordering the medication
@@ -128,7 +135,8 @@ pub struct MedicationRequest {
     ///
     /// Available values:
     /// - `160245001`: No current problems or disability
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Overall pattern of medication administration
     ///
     /// Binding: extensible (Identifies the overall pattern of medication administratio.)
@@ -137,9 +145,11 @@ pub struct MedicationRequest {
     #[serde(rename = "courseOfTherapyType")]
     pub course_of_therapy_type: Option<CodeableConcept>,
     /// Associated insurance coverage
-    pub insurance: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<Reference>,
     /// Information about the prescription
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Full representation of the dosage instructions
     #[serde(rename = "renderedDosageInstruction")]
     pub rendered_dosage_instruction: Option<StringType>,
@@ -151,7 +161,8 @@ pub struct MedicationRequest {
     pub effective_dose_period: Option<Period>,
     /// Specific instructions for how the medication should be taken
     #[serde(rename = "dosageInstruction")]
-    pub dosage_instruction: Option<Vec<Dosage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dosage_instruction: Vec<Dosage>,
     /// Medication supply authorization
     #[serde(rename = "dispenseRequest")]
     pub dispense_request: Option<MedicationRequestDispenserequest>,
@@ -159,7 +170,8 @@ pub struct MedicationRequest {
     pub substitution: Option<MedicationRequestSubstitution>,
     /// A list of events of interest in the lifecycle
     #[serde(rename = "eventHistory")]
-    pub event_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event_history: Vec<Reference>,
 }
 /// MedicationRequest nested structure for the 'dispenseRequest' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,7 +203,8 @@ pub struct MedicationRequestDispenserequest {
     pub dispenser: Option<Reference>,
     /// Additional information for the dispenser
     #[serde(rename = "dispenserInstruction")]
-    pub dispenser_instruction: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dispenser_instruction: Vec<Annotation>,
     /// Type of adherence packaging to use for the dispense
     ///
     /// Binding: example (No description)
@@ -588,13 +601,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicationReque
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -609,44 +622,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicationReques
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -656,25 +657,22 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicationReque
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::medication_request::MedicationRequestAccessors for MedicationRequest {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn prior_prescription(&self) -> Option<Reference> {
         self.prior_prescription.clone()
@@ -695,7 +693,7 @@ impl crate::traits::medication_request::MedicationRequestAccessors for Medicatio
         self.intent.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn priority(&self) -> Option<RequestPriority> {
         self.priority.clone()
@@ -710,13 +708,13 @@ impl crate::traits::medication_request::MedicationRequestAccessors for Medicatio
         self.subject.clone()
     }
     fn information_source(&self) -> &[Reference] {
-        self.information_source.as_deref().unwrap_or(&[])
+        self.information_source.as_slice()
     }
     fn encounter(&self) -> Option<Reference> {
         self.encounter.clone()
     }
     fn supporting_information(&self) -> &[Reference] {
-        self.supporting_information.as_deref().unwrap_or(&[])
+        self.supporting_information.as_slice()
     }
     fn authored_on(&self) -> Option<DateTimeType> {
         self.authored_on.clone()
@@ -731,25 +729,25 @@ impl crate::traits::medication_request::MedicationRequestAccessors for Medicatio
         self.performer_type.clone()
     }
     fn performer(&self) -> &[Reference] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn device(&self) -> &[CodeableReference] {
-        self.device.as_deref().unwrap_or(&[])
+        self.device.as_slice()
     }
     fn recorder(&self) -> Option<Reference> {
         self.recorder.clone()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn course_of_therapy_type(&self) -> Option<CodeableConcept> {
         self.course_of_therapy_type.clone()
     }
     fn insurance(&self) -> &[Reference] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn rendered_dosage_instruction(&self) -> Option<StringType> {
         self.rendered_dosage_instruction.clone()
@@ -758,7 +756,7 @@ impl crate::traits::medication_request::MedicationRequestAccessors for Medicatio
         self.effective_dose_period.clone()
     }
     fn dosage_instruction(&self) -> &[Dosage] {
-        self.dosage_instruction.as_deref().unwrap_or(&[])
+        self.dosage_instruction.as_slice()
     }
     fn dispense_request(&self) -> Option<MedicationRequestDispenserequest> {
         self.dispense_request.clone()
@@ -767,7 +765,7 @@ impl crate::traits::medication_request::MedicationRequestAccessors for Medicatio
         self.substitution.clone()
     }
     fn event_history(&self) -> &[Reference] {
-        self.event_history.as_deref().unwrap_or(&[])
+        self.event_history.as_slice()
     }
 }
 
@@ -777,22 +775,22 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_prior_prescription(self, value: Reference) -> Self {
@@ -827,12 +825,12 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_priority(self, value: RequestPriority) -> Self {
@@ -857,15 +855,12 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_information_source(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.information_source = Some(value);
+        resource.information_source = value;
         resource
     }
     fn add_information_source(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .information_source
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.information_source.push(item);
         resource
     }
     fn set_encounter(self, value: Reference) -> Self {
@@ -875,15 +870,12 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_supporting_information(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_information = Some(value);
+        resource.supporting_information = value;
         resource
     }
     fn add_supporting_information(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_information
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_information.push(item);
         resource
     }
     fn set_authored_on(self, value: String) -> Self {
@@ -908,22 +900,22 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_performer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_device(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.device = Some(value);
+        resource.device = value;
         resource
     }
     fn add_device(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.device.get_or_insert_with(Vec::new).push(item);
+        resource.device.push(item);
         resource
     }
     fn set_recorder(self, value: Reference) -> Self {
@@ -933,12 +925,12 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_course_of_therapy_type(self, value: CodeableConcept) -> Self {
@@ -948,22 +940,22 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_insurance(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_rendered_dosage_instruction(self, value: String) -> Self {
@@ -978,15 +970,12 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_dosage_instruction(self, value: Vec<Dosage>) -> Self {
         let mut resource = self.clone();
-        resource.dosage_instruction = Some(value);
+        resource.dosage_instruction = value;
         resource
     }
     fn add_dosage_instruction(self, item: Dosage) -> Self {
         let mut resource = self.clone();
-        resource
-            .dosage_instruction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.dosage_instruction.push(item);
         resource
     }
     fn set_dispense_request(self, value: MedicationRequestDispenserequest) -> Self {
@@ -1001,25 +990,22 @@ impl crate::traits::medication_request::MedicationRequestMutators for Medication
     }
     fn set_event_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.event_history = Some(value);
+        resource.event_history = value;
         resource
     }
     fn add_event_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .event_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.event_history.push(item);
         resource
     }
 }
 
 impl crate::traits::medication_request::MedicationRequestExistence for MedicationRequest {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_prior_prescription(&self) -> bool {
         self.prior_prescription.is_some()
@@ -1040,7 +1026,7 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_priority(&self) -> bool {
         self.priority.is_some()
@@ -1055,17 +1041,13 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
         true
     }
     fn has_information_source(&self) -> bool {
-        self.information_source
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.information_source.is_empty()
     }
     fn has_encounter(&self) -> bool {
         self.encounter.is_some()
     }
     fn has_supporting_information(&self) -> bool {
-        self.supporting_information
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.supporting_information.is_empty()
     }
     fn has_authored_on(&self) -> bool {
         self.authored_on.is_some()
@@ -1080,25 +1062,25 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
         self.performer_type.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_device(&self) -> bool {
-        self.device.as_ref().is_some_and(|v| !v.is_empty())
+        !self.device.is_empty()
     }
     fn has_recorder(&self) -> bool {
         self.recorder.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_course_of_therapy_type(&self) -> bool {
         self.course_of_therapy_type.is_some()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_rendered_dosage_instruction(&self) -> bool {
         self.rendered_dosage_instruction.is_some()
@@ -1107,9 +1089,7 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
         self.effective_dose_period.is_some()
     }
     fn has_dosage_instruction(&self) -> bool {
-        self.dosage_instruction
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.dosage_instruction.is_empty()
     }
     fn has_dispense_request(&self) -> bool {
         self.dispense_request.is_some()
@@ -1118,7 +1098,7 @@ impl crate::traits::medication_request::MedicationRequestExistence for Medicatio
         self.substitution.is_some()
     }
     fn has_event_history(&self) -> bool {
-        self.event_history.as_ref().is_some_and(|v| !v.is_empty())
+        !self.event_history.is_empty()
     }
 }
 

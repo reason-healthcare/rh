@@ -28,7 +28,8 @@ pub struct Subscription {
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// Contact details for source (e.g. troubleshooting)
-    pub contact: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactPoint>,
     /// When to automatically delete the subscription
     pub end: Option<InstantType>,
     /// Extension element for the 'end' primitive field. Contains metadata and extensions.
@@ -68,9 +69,11 @@ pub struct SubscriptionChannel {
     /// Extension element for the 'payload' primitive field. Contains metadata and extensions.
     pub _payload: Option<Element>,
     /// Usage depends on the channel type
-    pub header: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub header: Vec<StringType>,
     /// Extension element for the 'header' primitive field. Contains metadata and extensions.
-    pub _header: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _header: Vec<Element>,
 }
 
 impl Default for Subscription {
@@ -251,13 +254,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Subscription {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -272,44 +275,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Subscription {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -319,16 +310,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Subscription {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -337,7 +325,7 @@ impl crate::traits::subscription::SubscriptionAccessors for Subscription {
         self.status.clone()
     }
     fn contact(&self) -> &[ContactPoint] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn end(&self) -> Option<InstantType> {
         self.end.clone()
@@ -367,12 +355,12 @@ impl crate::traits::subscription::SubscriptionMutators for Subscription {
     }
     fn set_contact(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_end(self, value: String) -> Self {
@@ -407,7 +395,7 @@ impl crate::traits::subscription::SubscriptionExistence for Subscription {
         true
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_end(&self) -> bool {
         self.end.is_some()

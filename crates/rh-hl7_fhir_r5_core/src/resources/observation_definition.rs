@@ -74,20 +74,23 @@ pub struct ObservationDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the ObservationDefinition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Content intends to support these contexts
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for this ObservationDefinition (if applicable)
     ///
     /// Binding: extensible (Codes for country, country subdivision and region for indicating where a resource is intended to be used.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this ObservationDefinition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -119,18 +122,23 @@ pub struct ObservationDefinition {
     pub effective_period: Option<Period>,
     /// Based on FHIR definition of another observation
     #[serde(rename = "derivedFromCanonical")]
-    pub derived_from_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from_canonical: Vec<StringType>,
     /// Extension element for the 'derivedFromCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFromCanonical")]
-    pub _derived_from_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from_canonical: Vec<Element>,
     /// Based on external definition
     #[serde(rename = "derivedFromUri")]
-    pub derived_from_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from_uri: Vec<StringType>,
     /// Extension element for the 'derivedFromUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFromUri")]
-    pub _derived_from_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from_uri: Vec<Element>,
     /// Type of subject for the defined observation
-    pub subject: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<CodeableConcept>,
     /// Desired kind of performer for such kind of observation
     #[serde(rename = "performerType")]
     pub performer_type: Option<CodeableConcept>,
@@ -139,7 +147,8 @@ pub struct ObservationDefinition {
     /// Binding: example (Codes for high level observation categories.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/observation-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Type of observation
     ///
     /// Binding: example (Codes identifying names of simple observations.)
@@ -148,10 +157,12 @@ pub struct ObservationDefinition {
     pub code: CodeableConcept,
     /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
     #[serde(rename = "permittedDataType")]
-    pub permitted_data_type: Option<Vec<PermittedDataType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_data_type: Vec<PermittedDataType>,
     /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_permittedDataType")]
-    pub _permitted_data_type: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _permitted_data_type: Vec<Element>,
     /// Multiple results allowed for conforming observations
     #[serde(rename = "multipleResultsAllowed")]
     pub multiple_results_allowed: Option<BooleanType>,
@@ -183,9 +194,11 @@ pub struct ObservationDefinition {
     /// ValueSet: http://hl7.org/fhir/ValueSet/observation-methods
     pub method: Option<CodeableConcept>,
     /// Kind of specimen used by this type of observation
-    pub specimen: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specimen: Vec<Reference>,
     /// Measurement device or model of device
-    pub device: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<Reference>,
     /// The preferred name to be used when reporting the observation results
     #[serde(rename = "preferredReportName")]
     pub preferred_report_name: Option<StringType>,
@@ -198,15 +211,19 @@ pub struct ObservationDefinition {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
     #[serde(rename = "permittedUnit")]
-    pub permitted_unit: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_unit: Vec<Coding>,
     /// Set of qualified values for observation results
     #[serde(rename = "qualifiedValue")]
-    pub qualified_value: Option<Vec<ObservationDefinitionQualifiedvalue>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualified_value: Vec<ObservationDefinitionQualifiedvalue>,
     /// Definitions of related resources belonging to this kind of observation group
     #[serde(rename = "hasMember")]
-    pub has_member: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub has_member: Vec<Reference>,
     /// Component results
-    pub component: Option<Vec<ObservationDefinitionComponent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub component: Vec<ObservationDefinitionComponent>,
 }
 /// ObservationDefinition nested structure for the 'qualifiedValue' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,7 +246,8 @@ pub struct ObservationDefinitionQualifiedvalue {
     /// - `248152002`
     /// - `77386006`
     #[serde(rename = "appliesTo")]
-    pub applies_to: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub applies_to: Vec<CodeableConcept>,
     /// male | female | other | unknown
     pub gender: Option<AdministrativeGender>,
     /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
@@ -290,20 +308,24 @@ pub struct ObservationDefinitionComponent {
     pub code: CodeableConcept,
     /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
     #[serde(rename = "permittedDataType")]
-    pub permitted_data_type: Option<Vec<PermittedDataType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_data_type: Vec<PermittedDataType>,
     /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_permittedDataType")]
-    pub _permitted_data_type: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _permitted_data_type: Vec<Element>,
     /// Unit for quantitative results
     ///
     /// Binding: preferred (Codes identifying units of measure.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/ucum-units
     #[serde(rename = "permittedUnit")]
-    pub permitted_unit: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_unit: Vec<Coding>,
     /// Set of qualified values for observation results
     #[serde(rename = "qualifiedValue")]
-    pub qualified_value: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualified_value: Vec<StringType>,
 }
 
 impl Default for ObservationDefinition {
@@ -748,13 +770,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ObservationDefi
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -769,44 +791,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ObservationDefin
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -816,16 +826,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ObservationDefi
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -860,16 +867,16 @@ impl crate::traits::observation_definition::ObservationDefinitionAccessors
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -890,25 +897,25 @@ impl crate::traits::observation_definition::ObservationDefinitionAccessors
         self.effective_period.clone()
     }
     fn derived_from_canonical(&self) -> &[StringType] {
-        self.derived_from_canonical.as_deref().unwrap_or(&[])
+        self.derived_from_canonical.as_slice()
     }
     fn derived_from_uri(&self) -> &[StringType] {
-        self.derived_from_uri.as_deref().unwrap_or(&[])
+        self.derived_from_uri.as_slice()
     }
     fn subject(&self) -> &[CodeableConcept] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn performer_type(&self) -> Option<CodeableConcept> {
         self.performer_type.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
     }
     fn permitted_data_type(&self) -> &[PermittedDataType] {
-        self.permitted_data_type.as_deref().unwrap_or(&[])
+        self.permitted_data_type.as_slice()
     }
     fn multiple_results_allowed(&self) -> Option<BooleanType> {
         self.multiple_results_allowed
@@ -920,25 +927,25 @@ impl crate::traits::observation_definition::ObservationDefinitionAccessors
         self.method.clone()
     }
     fn specimen(&self) -> &[Reference] {
-        self.specimen.as_deref().unwrap_or(&[])
+        self.specimen.as_slice()
     }
     fn device(&self) -> &[Reference] {
-        self.device.as_deref().unwrap_or(&[])
+        self.device.as_slice()
     }
     fn preferred_report_name(&self) -> Option<StringType> {
         self.preferred_report_name.clone()
     }
     fn permitted_unit(&self) -> &[Coding] {
-        self.permitted_unit.as_deref().unwrap_or(&[])
+        self.permitted_unit.as_slice()
     }
     fn qualified_value(&self) -> &[ObservationDefinitionQualifiedvalue] {
-        self.qualified_value.as_deref().unwrap_or(&[])
+        self.qualified_value.as_slice()
     }
     fn has_member(&self) -> &[Reference] {
-        self.has_member.as_deref().unwrap_or(&[])
+        self.has_member.as_slice()
     }
     fn component(&self) -> &[ObservationDefinitionComponent] {
-        self.component.as_deref().unwrap_or(&[])
+        self.component.as_slice()
     }
 }
 
@@ -995,12 +1002,12 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1010,25 +1017,22 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1063,38 +1067,32 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_derived_from_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from_canonical = Some(value);
+        resource.derived_from_canonical = value;
         resource
     }
     fn add_derived_from_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from_canonical.push(item);
         resource
     }
     fn set_derived_from_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from_uri = Some(value);
+        resource.derived_from_uri = value;
         resource
     }
     fn add_derived_from_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from_uri.push(item);
         resource
     }
     fn set_subject(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_performer_type(self, value: CodeableConcept) -> Self {
@@ -1104,12 +1102,12 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -1119,15 +1117,12 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_permitted_data_type(self, value: Vec<PermittedDataType>) -> Self {
         let mut resource = self.clone();
-        resource.permitted_data_type = Some(value);
+        resource.permitted_data_type = value;
         resource
     }
     fn add_permitted_data_type(self, item: PermittedDataType) -> Self {
         let mut resource = self.clone();
-        resource
-            .permitted_data_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.permitted_data_type.push(item);
         resource
     }
     fn set_multiple_results_allowed(self, value: bool) -> Self {
@@ -1147,22 +1142,22 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_specimen(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.specimen = Some(value);
+        resource.specimen = value;
         resource
     }
     fn add_specimen(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.specimen.get_or_insert_with(Vec::new).push(item);
+        resource.specimen.push(item);
         resource
     }
     fn set_device(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.device = Some(value);
+        resource.device = value;
         resource
     }
     fn add_device(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.device.get_or_insert_with(Vec::new).push(item);
+        resource.device.push(item);
         resource
     }
     fn set_preferred_report_name(self, value: String) -> Self {
@@ -1172,48 +1167,42 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_permitted_unit(self, value: Vec<Coding>) -> Self {
         let mut resource = self.clone();
-        resource.permitted_unit = Some(value);
+        resource.permitted_unit = value;
         resource
     }
     fn add_permitted_unit(self, item: Coding) -> Self {
         let mut resource = self.clone();
-        resource
-            .permitted_unit
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.permitted_unit.push(item);
         resource
     }
     fn set_qualified_value(self, value: Vec<ObservationDefinitionQualifiedvalue>) -> Self {
         let mut resource = self.clone();
-        resource.qualified_value = Some(value);
+        resource.qualified_value = value;
         resource
     }
     fn add_qualified_value(self, item: ObservationDefinitionQualifiedvalue) -> Self {
         let mut resource = self.clone();
-        resource
-            .qualified_value
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.qualified_value.push(item);
         resource
     }
     fn set_has_member(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.has_member = Some(value);
+        resource.has_member = value;
         resource
     }
     fn add_has_member(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.has_member.get_or_insert_with(Vec::new).push(item);
+        resource.has_member.push(item);
         resource
     }
     fn set_component(self, value: Vec<ObservationDefinitionComponent>) -> Self {
         let mut resource = self.clone();
-        resource.component = Some(value);
+        resource.component = value;
         resource
     }
     fn add_component(self, item: ObservationDefinitionComponent) -> Self {
         let mut resource = self.clone();
-        resource.component.get_or_insert_with(Vec::new).push(item);
+        resource.component.push(item);
         resource
     }
 }
@@ -1252,16 +1241,16 @@ impl crate::traits::observation_definition::ObservationDefinitionExistence
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1282,31 +1271,25 @@ impl crate::traits::observation_definition::ObservationDefinitionExistence
         self.effective_period.is_some()
     }
     fn has_derived_from_canonical(&self) -> bool {
-        self.derived_from_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.derived_from_canonical.is_empty()
     }
     fn has_derived_from_uri(&self) -> bool {
-        self.derived_from_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.derived_from_uri.is_empty()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_performer_type(&self) -> bool {
         self.performer_type.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         true
     }
     fn has_permitted_data_type(&self) -> bool {
-        self.permitted_data_type
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.permitted_data_type.is_empty()
     }
     fn has_multiple_results_allowed(&self) -> bool {
         self.multiple_results_allowed.is_some()
@@ -1318,25 +1301,25 @@ impl crate::traits::observation_definition::ObservationDefinitionExistence
         self.method.is_some()
     }
     fn has_specimen(&self) -> bool {
-        self.specimen.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specimen.is_empty()
     }
     fn has_device(&self) -> bool {
-        self.device.as_ref().is_some_and(|v| !v.is_empty())
+        !self.device.is_empty()
     }
     fn has_preferred_report_name(&self) -> bool {
         self.preferred_report_name.is_some()
     }
     fn has_permitted_unit(&self) -> bool {
-        self.permitted_unit.as_ref().is_some_and(|v| !v.is_empty())
+        !self.permitted_unit.is_empty()
     }
     fn has_qualified_value(&self) -> bool {
-        self.qualified_value.as_ref().is_some_and(|v| !v.is_empty())
+        !self.qualified_value.is_empty()
     }
     fn has_has_member(&self) -> bool {
-        self.has_member.as_ref().is_some_and(|v| !v.is_empty())
+        !self.has_member.is_empty()
     }
     fn has_component(&self) -> bool {
-        self.component.as_ref().is_some_and(|v| !v.is_empty())
+        !self.component.is_empty()
     }
 }
 

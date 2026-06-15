@@ -41,7 +41,8 @@ pub struct StructureMap {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the structure map
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the structure map
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -77,20 +78,23 @@ pub struct StructureMap {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the structure map
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for structure map (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this structure map is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -106,45 +110,20 @@ pub struct StructureMap {
     #[serde(rename = "_copyrightLabel")]
     pub _copyright_label: Option<Element>,
     /// Structure Definition used by this map
-    pub structure: Option<Vec<StructureMapStructure>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub structure: Vec<StructureMapStructure>,
     /// Other maps used by this map (canonical URLs)
-    pub import: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub import: Vec<StringType>,
     /// Extension element for the 'import' primitive field. Contains metadata and extensions.
-    pub _import: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _import: Vec<Element>,
     /// Definition of the constant value used in the map rules
     #[serde(rename = "const")]
-    pub const_: Option<Vec<StructureMapConst>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub const_: Vec<StructureMapConst>,
     /// Named sections for reader convenience
     pub group: Vec<StructureMapGroup>,
-}
-/// StructureMap nested structure for the 'group' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Transform Rule from source to target
-    pub rule: Option<Vec<StructureMapGroupRule>>,
-    /// Named instance provided when invoking the map
-    pub input: Vec<StructureMapGroupInput>,
-    /// Human-readable label
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Another group that this group adds rules to
-    pub extends: Option<StringType>,
-    /// Extension element for the 'extends' primitive field. Contains metadata and extensions.
-    pub _extends: Option<Element>,
-    /// types | type-and-types
-    #[serde(rename = "typeMode")]
-    pub type_mode: Option<MapGroupTypeMode>,
-    /// Extension element for the 'typeMode' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_typeMode")]
-    pub _type_mode: Option<Element>,
-    /// Additional description/explanation for group
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
 }
 /// StructureMapGroupRule nested structure for the 'dependent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -234,10 +213,12 @@ pub struct StructureMapGroupRuleTarget {
     pub _variable: Option<Element>,
     /// first | share | last | single
     #[serde(rename = "listMode")]
-    pub list_mode: Option<Vec<MapTargetListMode>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub list_mode: Vec<MapTargetListMode>,
     /// Extension element for the 'listMode' primitive field. Contains metadata and extensions.
     #[serde(rename = "_listMode")]
-    pub _list_mode: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _list_mode: Vec<Element>,
     /// Internal rule reference for shared list items
     #[serde(rename = "listRuleId")]
     pub list_rule_id: Option<StringType>,
@@ -249,19 +230,32 @@ pub struct StructureMapGroupRuleTarget {
     /// Extension element for the 'transform' primitive field. Contains metadata and extensions.
     pub _transform: Option<Element>,
 }
-/// StructureMapGroup nested structure for the 'rule' field
+/// StructureMap nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StructureMapGroupRule {
+pub struct StructureMapGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Name of the rule for internal references
-    pub name: Option<StringType>,
+    /// Named instance provided when invoking the map
+    pub input: Vec<StructureMapGroupInput>,
+    /// Transform Rule from source to target
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rule: Vec<StructureMapGroupRule>,
+    /// Human-readable label
+    pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
-    /// Rules contained in this rule
-    pub rule: Option<Vec<StringType>>,
-    /// Documentation for this instance of data
+    /// Another group that this group adds rules to
+    pub extends: Option<StringType>,
+    /// Extension element for the 'extends' primitive field. Contains metadata and extensions.
+    pub _extends: Option<Element>,
+    /// types | type-and-types
+    #[serde(rename = "typeMode")]
+    pub type_mode: Option<MapGroupTypeMode>,
+    /// Extension element for the 'typeMode' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_typeMode")]
+    pub _type_mode: Option<Element>,
+    /// Additional description/explanation for group
     pub documentation: Option<StringType>,
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
@@ -362,6 +356,24 @@ pub struct StructureMapStructure {
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
 }
+/// StructureMapGroup nested structure for the 'rule' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureMapGroupRule {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of the rule for internal references
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Rules contained in this rule
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rule: Vec<StringType>,
+    /// Documentation for this instance of data
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
 
 impl Default for StructureMap {
     fn default() -> Self {
@@ -402,24 +414,6 @@ impl Default for StructureMap {
             _import: Default::default(),
             const_: Default::default(),
             group: Vec::new(),
-        }
-    }
-}
-
-impl Default for StructureMapGroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            rule: Default::default(),
-            input: Vec::new(),
-            name: StringType::default(),
-            _name: Default::default(),
-            extends: Default::default(),
-            _extends: Default::default(),
-            type_mode: Default::default(),
-            _type_mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
         }
     }
 }
@@ -487,13 +481,18 @@ impl Default for StructureMapGroupRuleTarget {
     }
 }
 
-impl Default for StructureMapGroupRule {
+impl Default for StructureMapGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
+            input: Vec::new(),
             rule: Default::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            extends: Default::default(),
+            _extends: Default::default(),
+            type_mode: Default::default(),
+            _type_mode: Default::default(),
             documentation: Default::default(),
             _documentation: Default::default(),
         }
@@ -552,6 +551,19 @@ impl Default for StructureMapStructure {
             _mode: Default::default(),
             alias: Default::default(),
             _alias: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for StructureMapGroupRule {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            rule: Default::default(),
             documentation: Default::default(),
             _documentation: Default::default(),
         }
@@ -909,13 +921,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for StructureMap {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -930,44 +942,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for StructureMap {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -977,16 +977,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for StructureMap {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -995,7 +992,7 @@ impl crate::traits::structure_map::StructureMapAccessors for StructureMap {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -1019,16 +1016,16 @@ impl crate::traits::structure_map::StructureMapAccessors for StructureMap {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -1040,13 +1037,13 @@ impl crate::traits::structure_map::StructureMapAccessors for StructureMap {
         self.copyright_label.clone()
     }
     fn structure(&self) -> &[StructureMapStructure] {
-        self.structure.as_deref().unwrap_or(&[])
+        self.structure.as_slice()
     }
     fn import(&self) -> &[StringType] {
-        self.import.as_deref().unwrap_or(&[])
+        self.import.as_slice()
     }
     fn const_(&self) -> &[StructureMapConst] {
-        self.const_.as_deref().unwrap_or(&[])
+        self.const_.as_slice()
     }
     fn group(&self) -> &[StructureMapGroup] {
         &self.group
@@ -1064,12 +1061,12 @@ impl crate::traits::structure_map::StructureMapMutators for StructureMap {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1109,12 +1106,12 @@ impl crate::traits::structure_map::StructureMapMutators for StructureMap {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1124,25 +1121,22 @@ impl crate::traits::structure_map::StructureMapMutators for StructureMap {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1162,32 +1156,32 @@ impl crate::traits::structure_map::StructureMapMutators for StructureMap {
     }
     fn set_structure(self, value: Vec<StructureMapStructure>) -> Self {
         let mut resource = self.clone();
-        resource.structure = Some(value);
+        resource.structure = value;
         resource
     }
     fn add_structure(self, item: StructureMapStructure) -> Self {
         let mut resource = self.clone();
-        resource.structure.get_or_insert_with(Vec::new).push(item);
+        resource.structure.push(item);
         resource
     }
     fn set_import(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.import = Some(value);
+        resource.import = value;
         resource
     }
     fn add_import(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.import.get_or_insert_with(Vec::new).push(item);
+        resource.import.push(item);
         resource
     }
     fn set_const_(self, value: Vec<StructureMapConst>) -> Self {
         let mut resource = self.clone();
-        resource.const_ = Some(value);
+        resource.const_ = value;
         resource
     }
     fn add_const_(self, item: StructureMapConst) -> Self {
         let mut resource = self.clone();
-        resource.const_.get_or_insert_with(Vec::new).push(item);
+        resource.const_.push(item);
         resource
     }
     fn set_group(self, value: Vec<StructureMapGroup>) -> Self {
@@ -1210,7 +1204,7 @@ impl crate::traits::structure_map::StructureMapExistence for StructureMap {
         true
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1234,16 +1228,16 @@ impl crate::traits::structure_map::StructureMapExistence for StructureMap {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1255,13 +1249,13 @@ impl crate::traits::structure_map::StructureMapExistence for StructureMap {
         self.copyright_label.is_some()
     }
     fn has_structure(&self) -> bool {
-        self.structure.as_ref().is_some_and(|v| !v.is_empty())
+        !self.structure.is_empty()
     }
     fn has_import(&self) -> bool {
-        self.import.as_ref().is_some_and(|v| !v.is_empty())
+        !self.import.is_empty()
     }
     fn has_const_(&self) -> bool {
-        self.const_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.const_.is_empty()
     }
     fn has_group(&self) -> bool {
         !self.group.is_empty()

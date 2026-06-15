@@ -27,7 +27,8 @@ pub struct ImagingStudy {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Identifiers for the whole study
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// registered | available | cancelled | entered-in-error | unknown
     pub status: ImagingstudyStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -37,7 +38,8 @@ pub struct ImagingStudy {
     /// Binding: extensible (Type of acquired data in the instance.)
     ///
     /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html
-    pub modality: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modality: Vec<Coding>,
     /// Who or what is the subject of the study
     pub subject: Reference,
     /// Encounter with which this imaging study is associated
@@ -48,13 +50,16 @@ pub struct ImagingStudy {
     pub _started: Option<Element>,
     /// Request fulfilled
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Referring physician
     pub referrer: Option<Reference>,
     /// Who interpreted images
-    pub interpreter: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interpreter: Vec<Reference>,
     /// Study access endpoint
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
     /// Number of Study Related Series
     #[serde(rename = "numberOfSeries")]
     pub number_of_series: Option<UnsignedIntType>,
@@ -76,7 +81,8 @@ pub struct ImagingStudy {
     ///
     /// ValueSet: http://www.rsna.org/RadLex_Playbook.aspx
     #[serde(rename = "procedureCode")]
-    pub procedure_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub procedure_code: Vec<CodeableConcept>,
     /// Where ImagingStudy occurred
     pub location: Option<Reference>,
     /// Why the study was requested
@@ -85,77 +91,42 @@ pub struct ImagingStudy {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/procedure-reason
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Why was study performed
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// User-defined comments
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Institution-generated description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Each study has one or more series of instances
-    pub series: Option<Vec<ImagingStudySeries>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub series: Vec<ImagingStudySeries>,
 }
-/// ImagingStudy nested structure for the 'series' field
+/// ImagingStudySeries nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingStudySeries {
+pub struct ImagingStudySeriesPerformer {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A single SOP instance from the series
-    pub instance: Option<Vec<ImagingStudySeriesInstance>>,
-    /// Who performed the series
-    pub performer: Option<Vec<ImagingStudySeriesPerformer>>,
-    /// DICOM Series Instance UID for the series
-    pub uid: StringType,
-    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
-    pub _uid: Option<Element>,
-    /// Numeric identifier of this series
-    pub number: Option<UnsignedIntType>,
-    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
-    pub _number: Option<Element>,
-    /// The modality of the instances in the series
+    /// Type of performance
     ///
-    /// Binding: extensible (Type of acquired data in the instance.)
-    ///
-    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html
-    pub modality: Coding,
-    /// A short human readable summary of the series
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Number of Series Related Instances
-    #[serde(rename = "numberOfInstances")]
-    pub number_of_instances: Option<UnsignedIntType>,
-    /// Extension element for the 'numberOfInstances' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfInstances")]
-    pub _number_of_instances: Option<Element>,
-    /// Series access endpoint
-    pub endpoint: Option<Vec<Reference>>,
-    /// Body part examined
-    ///
-    /// Binding: example (Codes describing anatomical locations. May include laterality.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/body-site
-    #[serde(rename = "bodySite")]
-    pub body_site: Option<Coding>,
-    /// Body part laterality
-    ///
-    /// Binding: example (Codes describing body site laterality (left, right, etc.).)
+    /// Binding: extensible (The type of involvement of the performer.)
     ///
     /// Available values:
-    /// - `419161000`: Unilateral left
-    /// - `419465000`: Unilateral right
-    /// - `51440002`: Bilateral
-    pub laterality: Option<Coding>,
-    /// Specimen imaged
-    pub specimen: Option<Vec<Reference>>,
-    /// When the series started
-    pub started: Option<DateTimeType>,
-    /// Extension element for the 'started' primitive field. Contains metadata and extensions.
-    pub _started: Option<Element>,
+    /// - `CON`: consultant
+    /// - `VRF`: verifier
+    /// - `PRF`: performer
+    /// - `SPRF`: secondary performer
+    /// - `REF`: referrer
+    pub function: Option<CodeableConcept>,
+    /// Who performed the series
+    pub actor: Reference,
 }
 /// ImagingStudySeries nested structure for the 'instance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -183,25 +154,68 @@ pub struct ImagingStudySeriesInstance {
     /// Extension element for the 'title' primitive field. Contains metadata and extensions.
     pub _title: Option<Element>,
 }
-/// ImagingStudySeries nested structure for the 'performer' field
+/// ImagingStudy nested structure for the 'series' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingStudySeriesPerformer {
+pub struct ImagingStudySeries {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of performance
+    /// A single SOP instance from the series
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instance: Vec<ImagingStudySeriesInstance>,
+    /// Who performed the series
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<ImagingStudySeriesPerformer>,
+    /// DICOM Series Instance UID for the series
+    pub uid: StringType,
+    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
+    pub _uid: Option<Element>,
+    /// Numeric identifier of this series
+    pub number: Option<UnsignedIntType>,
+    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
+    pub _number: Option<Element>,
+    /// The modality of the instances in the series
     ///
-    /// Binding: extensible (The type of involvement of the performer.)
+    /// Binding: extensible (Type of acquired data in the instance.)
+    ///
+    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_29.html
+    pub modality: Coding,
+    /// A short human readable summary of the series
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Number of Series Related Instances
+    #[serde(rename = "numberOfInstances")]
+    pub number_of_instances: Option<UnsignedIntType>,
+    /// Extension element for the 'numberOfInstances' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfInstances")]
+    pub _number_of_instances: Option<Element>,
+    /// Series access endpoint
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
+    /// Body part examined
+    ///
+    /// Binding: example (Codes describing anatomical locations. May include laterality.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/body-site
+    #[serde(rename = "bodySite")]
+    pub body_site: Option<Coding>,
+    /// Body part laterality
+    ///
+    /// Binding: example (Codes describing body site laterality (left, right, etc.).)
     ///
     /// Available values:
-    /// - `CON`: consultant
-    /// - `VRF`: verifier
-    /// - `PRF`: performer
-    /// - `SPRF`: secondary performer
-    /// - `REF`: referrer
-    pub function: Option<CodeableConcept>,
-    /// Who performed the series
-    pub actor: Reference,
+    /// - `419161000`: Unilateral left
+    /// - `419465000`: Unilateral right
+    /// - `51440002`: Bilateral
+    pub laterality: Option<Coding>,
+    /// Specimen imaged
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specimen: Vec<Reference>,
+    /// When the series started
+    pub started: Option<DateTimeType>,
+    /// Extension element for the 'started' primitive field. Contains metadata and extensions.
+    pub _started: Option<Element>,
 }
 
 impl Default for ImagingStudy {
@@ -237,6 +251,31 @@ impl Default for ImagingStudy {
     }
 }
 
+impl Default for ImagingStudySeriesPerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Default::default(),
+        }
+    }
+}
+
+impl Default for ImagingStudySeriesInstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            uid: Default::default(),
+            _uid: Default::default(),
+            sop_class: Default::default(),
+            number: Default::default(),
+            _number: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+        }
+    }
+}
+
 impl Default for ImagingStudySeries {
     fn default() -> Self {
         Self {
@@ -258,31 +297,6 @@ impl Default for ImagingStudySeries {
             specimen: Default::default(),
             started: Default::default(),
             _started: Default::default(),
-        }
-    }
-}
-
-impl Default for ImagingStudySeriesInstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            uid: Default::default(),
-            _uid: Default::default(),
-            sop_class: Default::default(),
-            number: Default::default(),
-            _number: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
-        }
-    }
-}
-
-impl Default for ImagingStudySeriesPerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Default::default(),
         }
     }
 }
@@ -488,13 +502,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ImagingStudy {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -509,44 +523,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImagingStudy {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -556,28 +558,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for ImagingStudy {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::imaging_study::ImagingStudyAccessors for ImagingStudy {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ImagingstudyStatus {
         self.status.clone()
     }
     fn modality(&self) -> &[Coding] {
-        self.modality.as_deref().unwrap_or(&[])
+        self.modality.as_slice()
     }
     fn subject(&self) -> Reference {
         self.subject.clone()
@@ -589,16 +588,16 @@ impl crate::traits::imaging_study::ImagingStudyAccessors for ImagingStudy {
         self.started.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn referrer(&self) -> Option<Reference> {
         self.referrer.clone()
     }
     fn interpreter(&self) -> &[Reference] {
-        self.interpreter.as_deref().unwrap_or(&[])
+        self.interpreter.as_slice()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
     fn number_of_series(&self) -> Option<UnsignedIntType> {
         self.number_of_series
@@ -610,25 +609,25 @@ impl crate::traits::imaging_study::ImagingStudyAccessors for ImagingStudy {
         self.procedure_reference.clone()
     }
     fn procedure_code(&self) -> &[CodeableConcept] {
-        self.procedure_code.as_deref().unwrap_or(&[])
+        self.procedure_code.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn series(&self) -> &[ImagingStudySeries] {
-        self.series.as_deref().unwrap_or(&[])
+        self.series.as_slice()
     }
 }
 
@@ -638,12 +637,12 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ImagingstudyStatus) -> Self {
@@ -653,12 +652,12 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_modality(self, value: Vec<Coding>) -> Self {
         let mut resource = self.clone();
-        resource.modality = Some(value);
+        resource.modality = value;
         resource
     }
     fn add_modality(self, item: Coding) -> Self {
         let mut resource = self.clone();
-        resource.modality.get_or_insert_with(Vec::new).push(item);
+        resource.modality.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -678,12 +677,12 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_referrer(self, value: Reference) -> Self {
@@ -693,22 +692,22 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_interpreter(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.interpreter = Some(value);
+        resource.interpreter = value;
         resource
     }
     fn add_interpreter(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.interpreter.get_or_insert_with(Vec::new).push(item);
+        resource.interpreter.push(item);
         resource
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
     fn set_number_of_series(self, value: i32) -> Self {
@@ -728,15 +727,12 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_procedure_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.procedure_code = Some(value);
+        resource.procedure_code = value;
         resource
     }
     fn add_procedure_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .procedure_code
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.procedure_code.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -746,35 +742,32 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -784,25 +777,25 @@ impl crate::traits::imaging_study::ImagingStudyMutators for ImagingStudy {
     }
     fn set_series(self, value: Vec<ImagingStudySeries>) -> Self {
         let mut resource = self.clone();
-        resource.series = Some(value);
+        resource.series = value;
         resource
     }
     fn add_series(self, item: ImagingStudySeries) -> Self {
         let mut resource = self.clone();
-        resource.series.get_or_insert_with(Vec::new).push(item);
+        resource.series.push(item);
         resource
     }
 }
 
 impl crate::traits::imaging_study::ImagingStudyExistence for ImagingStudy {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_modality(&self) -> bool {
-        self.modality.as_ref().is_some_and(|v| !v.is_empty())
+        !self.modality.is_empty()
     }
     fn has_subject(&self) -> bool {
         true
@@ -814,16 +807,16 @@ impl crate::traits::imaging_study::ImagingStudyExistence for ImagingStudy {
         self.started.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_referrer(&self) -> bool {
         self.referrer.is_some()
     }
     fn has_interpreter(&self) -> bool {
-        self.interpreter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.interpreter.is_empty()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
     fn has_number_of_series(&self) -> bool {
         self.number_of_series.is_some()
@@ -835,27 +828,25 @@ impl crate::traits::imaging_study::ImagingStudyExistence for ImagingStudy {
         self.procedure_reference.is_some()
     }
     fn has_procedure_code(&self) -> bool {
-        self.procedure_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.procedure_code.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_series(&self) -> bool {
-        self.series.as_ref().is_some_and(|v| !v.is_empty())
+        !self.series.is_empty()
     }
 }
 

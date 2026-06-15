@@ -28,7 +28,8 @@ pub struct HealthcareService {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External identifiers for this item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this HealthcareService record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
@@ -41,14 +42,16 @@ pub struct HealthcareService {
     /// Binding: example (A category of the service(s) that could be provided.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Type of service that may be delivered or performed
     ///
     /// Binding: example (Additional details about where the content was created (e.g. clinical specialty).)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Specialties handled by the HealthcareService
     ///
     /// Binding: preferred (A specialty that a healthcare service may provide.)
@@ -65,9 +68,11 @@ pub struct HealthcareService {
     /// - `394803006`: Clinical hematology
     /// - `408480009`: Clinical immunology
     /// - ... and 107 more values
-    pub specialty: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialty: Vec<CodeableConcept>,
     /// Location(s) where service may be provided
-    pub location: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<Reference>,
     /// Description of service as presented to a consumer while searching
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -85,29 +90,35 @@ pub struct HealthcareService {
     /// Facilitates quick identification of the service
     pub photo: Option<Attachment>,
     /// Contacts related to the healthcare service
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// Location(s) service is intended for/available to
     #[serde(rename = "coverageArea")]
-    pub coverage_area: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage_area: Vec<Reference>,
     /// Conditions under which service is available/offered
     ///
     /// Binding: example (The code(s) that detail the conditions under which the healthcare service is available/offered.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-provision-conditions
     #[serde(rename = "serviceProvisionCode")]
-    pub service_provision_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_provision_code: Vec<CodeableConcept>,
     /// Specific eligibility requirements required to use the service
-    pub eligibility: Option<Vec<HealthcareServiceEligibility>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub eligibility: Vec<HealthcareServiceEligibility>,
     /// Programs that this service is applicable to
     ///
     /// Binding: example (Government or local programs that this service applies to.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/program
-    pub program: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub program: Vec<CodeableConcept>,
     /// Collection of characteristics (attributes)
     ///
     /// Binding: example (A custom attribute that could be provided at a service (e.g. Wheelchair accessibiliy).)
-    pub characteristic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<CodeableConcept>,
     /// The language that this service is offered in
     ///
     /// Binding: preferred (A human language.)
@@ -124,14 +135,16 @@ pub struct HealthcareService {
     /// - `el`: Greek
     /// - `en`: English
     /// - ... and 46 more values
-    pub communication: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication: Vec<CodeableConcept>,
     /// Ways that the service accepts referrals
     ///
     /// Binding: example (The methods of referral can be used when referring to a specific HealthCareService resource.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-referral-method
     #[serde(rename = "referralMethod")]
-    pub referral_method: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub referral_method: Vec<CodeableConcept>,
     /// If an appointment is required for access to this service
     #[serde(rename = "appointmentRequired")]
     pub appointment_required: Option<BooleanType>,
@@ -140,10 +153,12 @@ pub struct HealthcareService {
     pub _appointment_required: Option<Element>,
     /// Times the Service Site is available
     #[serde(rename = "availableTime")]
-    pub available_time: Option<Vec<HealthcareServiceAvailabletime>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available_time: Vec<HealthcareServiceAvailabletime>,
     /// Not available during this time due to provided reason
     #[serde(rename = "notAvailable")]
-    pub not_available: Option<Vec<HealthcareServiceNotavailable>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_available: Vec<HealthcareServiceNotavailable>,
     /// Description of availability exceptions
     #[serde(rename = "availabilityExceptions")]
     pub availability_exceptions: Option<StringType>,
@@ -151,7 +166,41 @@ pub struct HealthcareService {
     #[serde(rename = "_availabilityExceptions")]
     pub _availability_exceptions: Option<Element>,
     /// Technical endpoints providing access to electronic services operated for the healthcare service
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
+}
+/// HealthcareService nested structure for the 'availableTime' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthcareServiceAvailabletime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// mon | tue | wed | thu | fri | sat | sun
+    #[serde(rename = "daysOfWeek")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub days_of_week: Vec<DaysOfWeek>,
+    /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_daysOfWeek")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _days_of_week: Vec<Element>,
+    /// Always available? e.g. 24 hour service
+    #[serde(rename = "allDay")]
+    pub all_day: Option<BooleanType>,
+    /// Extension element for the 'allDay' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_allDay")]
+    pub _all_day: Option<Element>,
+    /// Opening time of day (ignored if allDay = true)
+    #[serde(rename = "availableStartTime")]
+    pub available_start_time: Option<TimeType>,
+    /// Extension element for the 'availableStartTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_availableStartTime")]
+    pub _available_start_time: Option<Element>,
+    /// Closing time of day (ignored if allDay = true)
+    #[serde(rename = "availableEndTime")]
+    pub available_end_time: Option<TimeType>,
+    /// Extension element for the 'availableEndTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_availableEndTime")]
+    pub _available_end_time: Option<Element>,
 }
 /// HealthcareService nested structure for the 'eligibility' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,37 +229,6 @@ pub struct HealthcareServiceNotavailable {
     pub _description: Option<Element>,
     /// Service not available from this date
     pub during: Option<Period>,
-}
-/// HealthcareService nested structure for the 'availableTime' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthcareServiceAvailabletime {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// mon | tue | wed | thu | fri | sat | sun
-    #[serde(rename = "daysOfWeek")]
-    pub days_of_week: Option<Vec<DaysOfWeek>>,
-    /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_daysOfWeek")]
-    pub _days_of_week: Option<Element>,
-    /// Always available? e.g. 24 hour service
-    #[serde(rename = "allDay")]
-    pub all_day: Option<BooleanType>,
-    /// Extension element for the 'allDay' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_allDay")]
-    pub _all_day: Option<Element>,
-    /// Opening time of day (ignored if allDay = true)
-    #[serde(rename = "availableStartTime")]
-    pub available_start_time: Option<TimeType>,
-    /// Extension element for the 'availableStartTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_availableStartTime")]
-    pub _available_start_time: Option<Element>,
-    /// Closing time of day (ignored if allDay = true)
-    #[serde(rename = "availableEndTime")]
-    pub available_end_time: Option<TimeType>,
-    /// Extension element for the 'availableEndTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_availableEndTime")]
-    pub _available_end_time: Option<Element>,
 }
 
 impl Default for HealthcareService {
@@ -251,6 +269,22 @@ impl Default for HealthcareService {
     }
 }
 
+impl Default for HealthcareServiceAvailabletime {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            days_of_week: Default::default(),
+            _days_of_week: Default::default(),
+            all_day: Default::default(),
+            _all_day: Default::default(),
+            available_start_time: Default::default(),
+            _available_start_time: Default::default(),
+            available_end_time: Default::default(),
+            _available_end_time: Default::default(),
+        }
+    }
+}
+
 impl Default for HealthcareServiceEligibility {
     fn default() -> Self {
         Self {
@@ -269,22 +303,6 @@ impl Default for HealthcareServiceNotavailable {
             description: Default::default(),
             _description: Default::default(),
             during: Default::default(),
-        }
-    }
-}
-
-impl Default for HealthcareServiceAvailabletime {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            days_of_week: Default::default(),
-            _days_of_week: Default::default(),
-            all_day: Default::default(),
-            _all_day: Default::default(),
-            available_start_time: Default::default(),
-            _available_start_time: Default::default(),
-            available_end_time: Default::default(),
-            _available_end_time: Default::default(),
         }
     }
 }
@@ -512,13 +530,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for HealthcareServi
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -533,44 +551,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for HealthcareServic
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -580,22 +586,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for HealthcareServi
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::healthcare_service::HealthcareServiceAccessors for HealthcareService {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
@@ -604,16 +607,16 @@ impl crate::traits::healthcare_service::HealthcareServiceAccessors for Healthcar
         self.provided_by.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn specialty(&self) -> &[CodeableConcept] {
-        self.specialty.as_deref().unwrap_or(&[])
+        self.specialty.as_slice()
     }
     fn location(&self) -> &[Reference] {
-        self.location.as_deref().unwrap_or(&[])
+        self.location.as_slice()
     }
     fn name(&self) -> Option<StringType> {
         self.name.clone()
@@ -628,43 +631,43 @@ impl crate::traits::healthcare_service::HealthcareServiceAccessors for Healthcar
         self.photo.clone()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn coverage_area(&self) -> &[Reference] {
-        self.coverage_area.as_deref().unwrap_or(&[])
+        self.coverage_area.as_slice()
     }
     fn service_provision_code(&self) -> &[CodeableConcept] {
-        self.service_provision_code.as_deref().unwrap_or(&[])
+        self.service_provision_code.as_slice()
     }
     fn eligibility(&self) -> &[HealthcareServiceEligibility] {
-        self.eligibility.as_deref().unwrap_or(&[])
+        self.eligibility.as_slice()
     }
     fn program(&self) -> &[CodeableConcept] {
-        self.program.as_deref().unwrap_or(&[])
+        self.program.as_slice()
     }
     fn characteristic(&self) -> &[CodeableConcept] {
-        self.characteristic.as_deref().unwrap_or(&[])
+        self.characteristic.as_slice()
     }
     fn communication(&self) -> &[CodeableConcept] {
-        self.communication.as_deref().unwrap_or(&[])
+        self.communication.as_slice()
     }
     fn referral_method(&self) -> &[CodeableConcept] {
-        self.referral_method.as_deref().unwrap_or(&[])
+        self.referral_method.as_slice()
     }
     fn appointment_required(&self) -> Option<BooleanType> {
         self.appointment_required
     }
     fn available_time(&self) -> &[HealthcareServiceAvailabletime] {
-        self.available_time.as_deref().unwrap_or(&[])
+        self.available_time.as_slice()
     }
     fn not_available(&self) -> &[HealthcareServiceNotavailable] {
-        self.not_available.as_deref().unwrap_or(&[])
+        self.not_available.as_slice()
     }
     fn availability_exceptions(&self) -> Option<StringType> {
         self.availability_exceptions.clone()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
 }
 
@@ -674,12 +677,12 @@ impl crate::traits::healthcare_service::HealthcareServiceMutators for Healthcare
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -694,42 +697,42 @@ impl crate::traits::healthcare_service::HealthcareServiceMutators for Healthcare
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_specialty(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.specialty = Some(value);
+        resource.specialty = value;
         resource
     }
     fn add_specialty(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.specialty.get_or_insert_with(Vec::new).push(item);
+        resource.specialty.push(item);
         resource
     }
     fn set_location(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.location = Some(value);
+        resource.location = value;
         resource
     }
     fn add_location(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.location.get_or_insert_with(Vec::new).push(item);
+        resource.location.push(item);
         resource
     }
     fn set_name(self, value: String) -> Self {
@@ -754,97 +757,82 @@ impl crate::traits::healthcare_service::HealthcareServiceMutators for Healthcare
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_coverage_area(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.coverage_area = Some(value);
+        resource.coverage_area = value;
         resource
     }
     fn add_coverage_area(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .coverage_area
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.coverage_area.push(item);
         resource
     }
     fn set_service_provision_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.service_provision_code = Some(value);
+        resource.service_provision_code = value;
         resource
     }
     fn add_service_provision_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .service_provision_code
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.service_provision_code.push(item);
         resource
     }
     fn set_eligibility(self, value: Vec<HealthcareServiceEligibility>) -> Self {
         let mut resource = self.clone();
-        resource.eligibility = Some(value);
+        resource.eligibility = value;
         resource
     }
     fn add_eligibility(self, item: HealthcareServiceEligibility) -> Self {
         let mut resource = self.clone();
-        resource.eligibility.get_or_insert_with(Vec::new).push(item);
+        resource.eligibility.push(item);
         resource
     }
     fn set_program(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.program = Some(value);
+        resource.program = value;
         resource
     }
     fn add_program(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.program.get_or_insert_with(Vec::new).push(item);
+        resource.program.push(item);
         resource
     }
     fn set_characteristic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.characteristic = Some(value);
+        resource.characteristic = value;
         resource
     }
     fn add_characteristic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.characteristic.push(item);
         resource
     }
     fn set_communication(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.communication = Some(value);
+        resource.communication = value;
         resource
     }
     fn add_communication(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .communication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.communication.push(item);
         resource
     }
     fn set_referral_method(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.referral_method = Some(value);
+        resource.referral_method = value;
         resource
     }
     fn add_referral_method(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .referral_method
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.referral_method.push(item);
         resource
     }
     fn set_appointment_required(self, value: bool) -> Self {
@@ -854,28 +842,22 @@ impl crate::traits::healthcare_service::HealthcareServiceMutators for Healthcare
     }
     fn set_available_time(self, value: Vec<HealthcareServiceAvailabletime>) -> Self {
         let mut resource = self.clone();
-        resource.available_time = Some(value);
+        resource.available_time = value;
         resource
     }
     fn add_available_time(self, item: HealthcareServiceAvailabletime) -> Self {
         let mut resource = self.clone();
-        resource
-            .available_time
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.available_time.push(item);
         resource
     }
     fn set_not_available(self, value: Vec<HealthcareServiceNotavailable>) -> Self {
         let mut resource = self.clone();
-        resource.not_available = Some(value);
+        resource.not_available = value;
         resource
     }
     fn add_not_available(self, item: HealthcareServiceNotavailable) -> Self {
         let mut resource = self.clone();
-        resource
-            .not_available
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.not_available.push(item);
         resource
     }
     fn set_availability_exceptions(self, value: String) -> Self {
@@ -885,19 +867,19 @@ impl crate::traits::healthcare_service::HealthcareServiceMutators for Healthcare
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
 }
 
 impl crate::traits::healthcare_service::HealthcareServiceExistence for HealthcareService {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
@@ -906,16 +888,16 @@ impl crate::traits::healthcare_service::HealthcareServiceExistence for Healthcar
         self.provided_by.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_specialty(&self) -> bool {
-        self.specialty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specialty.is_empty()
     }
     fn has_location(&self) -> bool {
-        self.location.as_ref().is_some_and(|v| !v.is_empty())
+        !self.location.is_empty()
     }
     fn has_name(&self) -> bool {
         self.name.is_some()
@@ -930,45 +912,43 @@ impl crate::traits::healthcare_service::HealthcareServiceExistence for Healthcar
         self.photo.is_some()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_coverage_area(&self) -> bool {
-        self.coverage_area.as_ref().is_some_and(|v| !v.is_empty())
+        !self.coverage_area.is_empty()
     }
     fn has_service_provision_code(&self) -> bool {
-        self.service_provision_code
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.service_provision_code.is_empty()
     }
     fn has_eligibility(&self) -> bool {
-        self.eligibility.as_ref().is_some_and(|v| !v.is_empty())
+        !self.eligibility.is_empty()
     }
     fn has_program(&self) -> bool {
-        self.program.as_ref().is_some_and(|v| !v.is_empty())
+        !self.program.is_empty()
     }
     fn has_characteristic(&self) -> bool {
-        self.characteristic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.characteristic.is_empty()
     }
     fn has_communication(&self) -> bool {
-        self.communication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.communication.is_empty()
     }
     fn has_referral_method(&self) -> bool {
-        self.referral_method.as_ref().is_some_and(|v| !v.is_empty())
+        !self.referral_method.is_empty()
     }
     fn has_appointment_required(&self) -> bool {
         self.appointment_required.is_some()
     }
     fn has_available_time(&self) -> bool {
-        self.available_time.as_ref().is_some_and(|v| !v.is_empty())
+        !self.available_time.is_empty()
     }
     fn has_not_available(&self) -> bool {
-        self.not_available.as_ref().is_some_and(|v| !v.is_empty())
+        !self.not_available.is_empty()
     }
     fn has_availability_exceptions(&self) -> bool {
         self.availability_exceptions.is_some()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
 }
 

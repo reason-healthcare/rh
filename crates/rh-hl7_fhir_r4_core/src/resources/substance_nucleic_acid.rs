@@ -41,7 +41,8 @@ pub struct SubstanceNucleicAcid {
     #[serde(rename = "oligoNucleotideType")]
     pub oligo_nucleotide_type: Option<CodeableConcept>,
     /// Subunits are listed in order of decreasing length; sequences of the same length will be ordered by molecular weight; subunits that have identical sequences will be repeated multiple times
-    pub subunit: Option<Vec<SubstanceNucleicAcidSubunit>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subunit: Vec<SubstanceNucleicAcidSubunit>,
 }
 /// SubstanceNucleicAcidSubunit nested structure for the 'sugar' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,38 +62,6 @@ pub struct SubstanceNucleicAcidSubunitSugar {
     /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
     #[serde(rename = "_residueSite")]
     pub _residue_site: Option<Element>,
-}
-/// SubstanceNucleicAcid nested structure for the 'subunit' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceNucleicAcidSubunit {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The linkages between sugar residues will also be captured
-    pub linkage: Option<Vec<SubstanceNucleicAcidSubunitLinkage>>,
-    /// 5.3.6.8.1 Sugar ID (Mandatory)
-    pub sugar: Option<Vec<SubstanceNucleicAcidSubunitSugar>>,
-    /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
-    pub subunit: Option<IntegerType>,
-    /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
-    pub _subunit: Option<Element>,
-    /// Actual nucleotide sequence notation from 5' to 3' end using standard single letter codes. In addition to the base sequence, sugar and type of phosphate or non-phosphate linkage should also be captured
-    pub sequence: Option<StringType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// The length of the sequence shall be captured
-    pub length: Option<IntegerType>,
-    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
-    pub _length: Option<Element>,
-    /// (TBC)
-    #[serde(rename = "sequenceAttachment")]
-    pub sequence_attachment: Option<Attachment>,
-    /// The nucleotide present at the 5’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the first position in the sequence. A separate representation would be redundant
-    #[serde(rename = "fivePrime")]
-    pub five_prime: Option<CodeableConcept>,
-    /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
-    #[serde(rename = "threePrime")]
-    pub three_prime: Option<CodeableConcept>,
 }
 /// SubstanceNucleicAcidSubunit nested structure for the 'linkage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,6 +85,40 @@ pub struct SubstanceNucleicAcidSubunitLinkage {
     /// Extension element for the 'residueSite' primitive field. Contains metadata and extensions.
     #[serde(rename = "_residueSite")]
     pub _residue_site: Option<Element>,
+}
+/// SubstanceNucleicAcid nested structure for the 'subunit' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceNucleicAcidSubunit {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// 5.3.6.8.1 Sugar ID (Mandatory)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sugar: Vec<SubstanceNucleicAcidSubunitSugar>,
+    /// The linkages between sugar residues will also be captured
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub linkage: Vec<SubstanceNucleicAcidSubunitLinkage>,
+    /// Index of linear sequences of nucleic acids in order of decreasing length. Sequences of the same length will be ordered by molecular weight. Subunits that have identical sequences will be repeated and have sequential subscripts
+    pub subunit: Option<IntegerType>,
+    /// Extension element for the 'subunit' primitive field. Contains metadata and extensions.
+    pub _subunit: Option<Element>,
+    /// Actual nucleotide sequence notation from 5' to 3' end using standard single letter codes. In addition to the base sequence, sugar and type of phosphate or non-phosphate linkage should also be captured
+    pub sequence: Option<StringType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// The length of the sequence shall be captured
+    pub length: Option<IntegerType>,
+    /// Extension element for the 'length' primitive field. Contains metadata and extensions.
+    pub _length: Option<Element>,
+    /// (TBC)
+    #[serde(rename = "sequenceAttachment")]
+    pub sequence_attachment: Option<Attachment>,
+    /// The nucleotide present at the 5’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the first position in the sequence. A separate representation would be redundant
+    #[serde(rename = "fivePrime")]
+    pub five_prime: Option<CodeableConcept>,
+    /// The nucleotide present at the 3’ terminal shall be specified based on a controlled vocabulary. Since the sequence is represented from the 5' to the 3' end, the 5’ prime nucleotide is the letter at the last position in the sequence. A separate representation would be redundant
+    #[serde(rename = "threePrime")]
+    pub three_prime: Option<CodeableConcept>,
 }
 
 impl Default for SubstanceNucleicAcid {
@@ -146,25 +149,6 @@ impl Default for SubstanceNucleicAcidSubunitSugar {
     }
 }
 
-impl Default for SubstanceNucleicAcidSubunit {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            linkage: Default::default(),
-            sugar: Default::default(),
-            subunit: Default::default(),
-            _subunit: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            length: Default::default(),
-            _length: Default::default(),
-            sequence_attachment: Default::default(),
-            five_prime: Default::default(),
-            three_prime: Default::default(),
-        }
-    }
-}
-
 impl Default for SubstanceNucleicAcidSubunitLinkage {
     fn default() -> Self {
         Self {
@@ -176,6 +160,25 @@ impl Default for SubstanceNucleicAcidSubunitLinkage {
             _name: Default::default(),
             residue_site: Default::default(),
             _residue_site: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceNucleicAcidSubunit {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            sugar: Default::default(),
+            linkage: Default::default(),
+            subunit: Default::default(),
+            _subunit: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            length: Default::default(),
+            _length: Default::default(),
+            sequence_attachment: Default::default(),
+            five_prime: Default::default(),
+            three_prime: Default::default(),
         }
     }
 }
@@ -409,13 +412,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SubstanceNuclei
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -430,44 +433,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceNucleic
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -477,16 +468,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SubstanceNuclei
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -504,7 +492,7 @@ impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidAccessors for Su
         self.oligo_nucleotide_type.clone()
     }
     fn subunit(&self) -> &[SubstanceNucleicAcidSubunit] {
-        self.subunit.as_deref().unwrap_or(&[])
+        self.subunit.as_slice()
     }
 }
 
@@ -534,12 +522,12 @@ impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidMutators for Sub
     }
     fn set_subunit(self, value: Vec<SubstanceNucleicAcidSubunit>) -> Self {
         let mut resource = self.clone();
-        resource.subunit = Some(value);
+        resource.subunit = value;
         resource
     }
     fn add_subunit(self, item: SubstanceNucleicAcidSubunit) -> Self {
         let mut resource = self.clone();
-        resource.subunit.get_or_insert_with(Vec::new).push(item);
+        resource.subunit.push(item);
         resource
     }
 }
@@ -558,7 +546,7 @@ impl crate::traits::substance_nucleic_acid::SubstanceNucleicAcidExistence for Su
         self.oligo_nucleotide_type.is_some()
     }
     fn has_subunit(&self) -> bool {
-        self.subunit.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subunit.is_empty()
     }
 }
 

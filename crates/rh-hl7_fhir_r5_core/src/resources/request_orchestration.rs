@@ -44,24 +44,31 @@ pub struct RequestOrchestration {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// Fulfills plan, proposal, or order
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Request(s) replaced by this request
-    pub replaces: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replaces: Vec<Reference>,
     /// Composite request this is part of
     #[serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
@@ -100,13 +107,65 @@ pub struct RequestOrchestration {
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/action-reason-code
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// What goals
-    pub goal: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goal: Vec<Reference>,
     /// Additional notes about the response
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Proposed actions, if any
-    pub action: Option<Vec<RequestOrchestrationAction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub action: Vec<RequestOrchestrationAction>,
+}
+/// RequestOrchestrationAction nested structure for the 'input' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestOrchestrationActionInput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
+}
+/// RequestOrchestrationAction nested structure for the 'relatedAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestOrchestrationActionRelatedaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What action this is related to
+    #[serde(rename = "targetId")]
+    pub target_id: StringType,
+    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetId")]
+    pub _target_id: Option<Element>,
+    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
+    pub relationship: ActionRelationshipType,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
+    #[serde(rename = "endRelationship")]
+    pub end_relationship: Option<ActionRelationshipType>,
+    /// Extension element for the 'endRelationship' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_endRelationship")]
+    pub _end_relationship: Option<Element>,
+    /// Time offset for the relationship (Duration)
+    #[serde(rename = "offsetDuration")]
+    pub offset_duration: Option<Duration>,
+    /// Time offset for the relationship (Range)
+    #[serde(rename = "offsetRange")]
+    pub offset_range: Option<Range>,
 }
 /// RequestOrchestration nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,20 +173,26 @@ pub struct RequestOrchestrationAction {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Who should perform the action
-    pub participant: Option<Vec<RequestOrchestrationActionParticipant>>,
-    /// Dynamic aspects of the definition
-    #[serde(rename = "dynamicValue")]
-    pub dynamic_value: Option<Vec<RequestOrchestrationActionDynamicvalue>>,
+    /// Input data requirements
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input: Vec<RequestOrchestrationActionInput>,
     /// Relationship to another action
     #[serde(rename = "relatedAction")]
-    pub related_action: Option<Vec<RequestOrchestrationActionRelatedaction>>,
-    /// Input data requirements
-    pub input: Option<Vec<RequestOrchestrationActionInput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_action: Vec<RequestOrchestrationActionRelatedaction>,
+    /// Who should perform the action
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<RequestOrchestrationActionParticipant>,
+    /// Dynamic aspects of the definition
+    #[serde(rename = "dynamicValue")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dynamic_value: Vec<RequestOrchestrationActionDynamicvalue>,
     /// Whether or not the action is applicable
-    pub condition: Option<Vec<RequestOrchestrationActionCondition>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condition: Vec<RequestOrchestrationActionCondition>,
     /// Output data definition
-    pub output: Option<Vec<RequestOrchestrationActionOutput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output: Vec<RequestOrchestrationActionOutput>,
     /// Pointer to specific item from the PlanDefinition
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -161,11 +226,14 @@ pub struct RequestOrchestrationAction {
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/action-code
-    pub code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
     /// Supporting documentation for the intended performer of the action
-    pub documentation: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub documentation: Vec<RelatedArtifact>,
     /// What goals
-    pub goal: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goal: Vec<Reference>,
     /// When the action should take place (dateTime)
     #[serde(rename = "timingDateTime")]
     pub timing_date_time: Option<DateTimeType>,
@@ -236,45 +304,34 @@ pub struct RequestOrchestrationAction {
     /// Extension element for the 'transform' primitive field. Contains metadata and extensions.
     pub _transform: Option<Element>,
     /// Sub action
-    pub action: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub action: Vec<StringType>,
 }
-/// RequestOrchestrationAction nested structure for the 'input' field
+/// RequestOrchestrationAction nested structure for the 'condition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionInput {
+pub struct RequestOrchestrationActionCondition {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
+    /// applicability | start | stop
+    pub kind: ActionConditionKind,
+    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
+    pub _kind: Option<Element>,
+    /// Boolean-valued expression
+    pub expression: Option<Expression>,
 }
-/// RequestOrchestrationAction nested structure for the 'output' field
+/// RequestOrchestrationAction nested structure for the 'dynamicValue' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionOutput {
+pub struct RequestOrchestrationActionDynamicvalue {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
+    /// The path to the element to be set dynamically
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// An expression that provides the dynamic value for the customization
+    pub expression: Option<Expression>,
 }
 /// RequestOrchestrationAction nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -315,60 +372,24 @@ pub struct RequestOrchestrationActionParticipant {
     #[serde(rename = "actorReference")]
     pub actor_reference: Option<Reference>,
 }
-/// RequestOrchestrationAction nested structure for the 'dynamicValue' field
+/// RequestOrchestrationAction nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionDynamicvalue {
+pub struct RequestOrchestrationActionOutput {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The path to the element to be set dynamically
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// An expression that provides the dynamic value for the customization
-    pub expression: Option<Expression>,
-}
-/// RequestOrchestrationAction nested structure for the 'condition' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionCondition {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// applicability | start | stop
-    pub kind: ActionConditionKind,
-    /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
-    pub _kind: Option<Element>,
-    /// Boolean-valued expression
-    pub expression: Option<Expression>,
-}
-/// RequestOrchestrationAction nested structure for the 'relatedAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestOrchestrationActionRelatedaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What action this is related to
-    #[serde(rename = "targetId")]
-    pub target_id: StringType,
-    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetId")]
-    pub _target_id: Option<Element>,
-    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
-    pub relationship: ActionRelationshipType,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
-    #[serde(rename = "endRelationship")]
-    pub end_relationship: Option<ActionRelationshipType>,
-    /// Extension element for the 'endRelationship' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_endRelationship")]
-    pub _end_relationship: Option<Element>,
-    /// Time offset for the relationship (Duration)
-    #[serde(rename = "offsetDuration")]
-    pub offset_duration: Option<Duration>,
-    /// Time offset for the relationship (Range)
-    #[serde(rename = "offsetRange")]
-    pub offset_range: Option<Range>,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
 }
 
 impl Default for RequestOrchestration {
@@ -403,14 +424,43 @@ impl Default for RequestOrchestration {
     }
 }
 
+impl Default for RequestOrchestrationActionInput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestOrchestrationActionRelatedaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target_id: Default::default(),
+            _target_id: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            end_relationship: Default::default(),
+            _end_relationship: Default::default(),
+            offset_duration: Default::default(),
+            offset_range: Default::default(),
+        }
+    }
+}
+
 impl Default for RequestOrchestrationAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            input: Default::default(),
+            related_action: Default::default(),
             participant: Default::default(),
             dynamic_value: Default::default(),
-            related_action: Default::default(),
-            input: Default::default(),
             condition: Default::default(),
             output: Default::default(),
             link_id: Default::default(),
@@ -456,28 +506,24 @@ impl Default for RequestOrchestrationAction {
     }
 }
 
-impl Default for RequestOrchestrationActionInput {
+impl Default for RequestOrchestrationActionCondition {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
+            kind: Default::default(),
+            _kind: Default::default(),
+            expression: Default::default(),
         }
     }
 }
 
-impl Default for RequestOrchestrationActionOutput {
+impl Default for RequestOrchestrationActionDynamicvalue {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            expression: Default::default(),
         }
     }
 }
@@ -499,40 +545,15 @@ impl Default for RequestOrchestrationActionParticipant {
     }
 }
 
-impl Default for RequestOrchestrationActionDynamicvalue {
+impl Default for RequestOrchestrationActionOutput {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestOrchestrationActionCondition {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            kind: Default::default(),
-            _kind: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
-impl Default for RequestOrchestrationActionRelatedaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target_id: Default::default(),
-            _target_id: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            end_relationship: Default::default(),
-            _end_relationship: Default::default(),
-            offset_duration: Default::default(),
-            offset_range: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
         }
     }
 }
@@ -1002,13 +1023,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for RequestOrchestr
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -1023,44 +1044,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for RequestOrchestra
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1070,34 +1079,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for RequestOrchestr
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::request_orchestration::RequestOrchestrationAccessors for RequestOrchestration {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn replaces(&self) -> &[Reference] {
-        self.replaces.as_deref().unwrap_or(&[])
+        self.replaces.as_slice()
     }
     fn group_identifier(&self) -> Option<Identifier> {
         self.group_identifier.clone()
@@ -1127,16 +1133,16 @@ impl crate::traits::request_orchestration::RequestOrchestrationAccessors for Req
         self.author.clone()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn goal(&self) -> &[Reference] {
-        self.goal.as_deref().unwrap_or(&[])
+        self.goal.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn action(&self) -> &[RequestOrchestrationAction] {
-        self.action.as_deref().unwrap_or(&[])
+        self.action.as_slice()
     }
 }
 
@@ -1146,58 +1152,52 @@ impl crate::traits::request_orchestration::RequestOrchestrationMutators for Requ
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_replaces(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.replaces = Some(value);
+        resource.replaces = value;
         resource
     }
     fn add_replaces(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource.replaces.push(item);
         resource
     }
     fn set_group_identifier(self, value: Identifier) -> Self {
@@ -1247,65 +1247,61 @@ impl crate::traits::request_orchestration::RequestOrchestrationMutators for Requ
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_goal(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.goal = Some(value);
+        resource.goal = value;
         resource
     }
     fn add_goal(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.goal.get_or_insert_with(Vec::new).push(item);
+        resource.goal.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_action(self, value: Vec<RequestOrchestrationAction>) -> Self {
         let mut resource = self.clone();
-        resource.action = Some(value);
+        resource.action = value;
         resource
     }
     fn add_action(self, item: RequestOrchestrationAction) -> Self {
         let mut resource = self.clone();
-        resource.action.get_or_insert_with(Vec::new).push(item);
+        resource.action.push(item);
         resource
     }
 }
 
 impl crate::traits::request_orchestration::RequestOrchestrationExistence for RequestOrchestration {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_replaces(&self) -> bool {
-        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+        !self.replaces.is_empty()
     }
     fn has_group_identifier(&self) -> bool {
         self.group_identifier.is_some()
@@ -1335,16 +1331,16 @@ impl crate::traits::request_orchestration::RequestOrchestrationExistence for Req
         self.author.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_goal(&self) -> bool {
-        self.goal.as_ref().is_some_and(|v| !v.is_empty())
+        !self.goal.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_action(&self) -> bool {
-        self.action.as_ref().is_some_and(|v| !v.is_empty())
+        !self.action.is_empty()
     }
 }
 

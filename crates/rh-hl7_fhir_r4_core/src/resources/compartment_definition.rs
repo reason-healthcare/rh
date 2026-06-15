@@ -54,14 +54,16 @@ pub struct CompartmentDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the compartment definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Why this compartment definition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -75,7 +77,8 @@ pub struct CompartmentDefinition {
     /// Extension element for the 'search' primitive field. Contains metadata and extensions.
     pub _search: Option<Element>,
     /// How a resource is related to the compartment
-    pub resource: Option<Vec<CompartmentDefinitionResource>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resource: Vec<CompartmentDefinitionResource>,
 }
 /// CompartmentDefinition nested structure for the 'resource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,9 +91,11 @@ pub struct CompartmentDefinitionResource {
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
     /// Search Parameter Name, or chained parameters
-    pub param: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub param: Vec<StringType>,
     /// Extension element for the 'param' primitive field. Contains metadata and extensions.
-    pub _param: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _param: Vec<Element>,
     /// Additional documentation about the resource and compartment
     pub documentation: Option<StringType>,
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
@@ -317,13 +322,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CompartmentDefi
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -338,44 +343,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CompartmentDefin
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -385,16 +378,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for CompartmentDefi
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -423,13 +413,13 @@ impl crate::traits::compartment_definition::CompartmentDefinitionAccessors
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -441,7 +431,7 @@ impl crate::traits::compartment_definition::CompartmentDefinitionAccessors
         self.search
     }
     fn resource(&self) -> &[CompartmentDefinitionResource] {
-        self.resource.as_deref().unwrap_or(&[])
+        self.resource.as_slice()
     }
 }
 
@@ -488,12 +478,12 @@ impl crate::traits::compartment_definition::CompartmentDefinitionMutators
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -503,12 +493,12 @@ impl crate::traits::compartment_definition::CompartmentDefinitionMutators
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -528,12 +518,12 @@ impl crate::traits::compartment_definition::CompartmentDefinitionMutators
     }
     fn set_resource(self, value: Vec<CompartmentDefinitionResource>) -> Self {
         let mut resource = self.clone();
-        resource.resource = Some(value);
+        resource.resource = value;
         resource
     }
     fn add_resource(self, item: CompartmentDefinitionResource) -> Self {
         let mut resource = self.clone();
-        resource.resource.get_or_insert_with(Vec::new).push(item);
+        resource.resource.push(item);
         resource
     }
 }
@@ -563,13 +553,13 @@ impl crate::traits::compartment_definition::CompartmentDefinitionExistence
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -581,7 +571,7 @@ impl crate::traits::compartment_definition::CompartmentDefinitionExistence
         true
     }
     fn has_resource(&self) -> bool {
-        self.resource.as_ref().is_some_and(|v| !v.is_empty())
+        !self.resource.is_empty()
     }
 }
 

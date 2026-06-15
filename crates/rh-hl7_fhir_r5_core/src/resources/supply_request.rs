@@ -30,14 +30,16 @@ pub struct SupplyRequest {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for SupplyRequest
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | active | suspended +
     pub status: Option<SupplyrequestStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// What other request is fulfilled by this supply request
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// The kind of supply (central, non-stock, etc.)
     ///
     /// Binding: example (Category of supply request.)
@@ -60,7 +62,8 @@ pub struct SupplyRequest {
     /// The requested amount of the item indicated
     pub quantity: Quantity,
     /// Ordered item details
-    pub parameter: Option<Vec<SupplyRequestParameter>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<SupplyRequestParameter>,
     /// When the request should be fulfilled (dateTime)
     #[serde(rename = "occurrenceDateTime")]
     pub occurrence_date_time: Option<DateTimeType>,
@@ -79,13 +82,15 @@ pub struct SupplyRequest {
     /// Individual making the request
     pub requester: Option<Reference>,
     /// Who is intended to fulfill the request
-    pub supplier: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supplier: Vec<Reference>,
     /// The reason why the supply item was requested
     ///
     /// Binding: example (The reason why the supply item was requested.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/supplyrequest-reason
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// The origin of the supply
     #[serde(rename = "deliverFrom")]
     pub deliver_from: Option<Reference>,
@@ -310,13 +315,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SupplyRequest {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -331,44 +336,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SupplyRequest {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -378,28 +371,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for SupplyRequest {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::supply_request::SupplyRequestAccessors for SupplyRequest {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Option<SupplyrequestStatus> {
         self.status.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn category(&self) -> Option<CodeableConcept> {
         self.category.clone()
@@ -417,7 +407,7 @@ impl crate::traits::supply_request::SupplyRequestAccessors for SupplyRequest {
         self.quantity.clone()
     }
     fn parameter(&self) -> &[SupplyRequestParameter] {
-        self.parameter.as_deref().unwrap_or(&[])
+        self.parameter.as_slice()
     }
     fn authored_on(&self) -> Option<DateTimeType> {
         self.authored_on.clone()
@@ -426,10 +416,10 @@ impl crate::traits::supply_request::SupplyRequestAccessors for SupplyRequest {
         self.requester.clone()
     }
     fn supplier(&self) -> &[Reference] {
-        self.supplier.as_deref().unwrap_or(&[])
+        self.supplier.as_slice()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn deliver_from(&self) -> Option<Reference> {
         self.deliver_from.clone()
@@ -445,12 +435,12 @@ impl crate::traits::supply_request::SupplyRequestMutators for SupplyRequest {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: SupplyrequestStatus) -> Self {
@@ -460,12 +450,12 @@ impl crate::traits::supply_request::SupplyRequestMutators for SupplyRequest {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_category(self, value: CodeableConcept) -> Self {
@@ -495,12 +485,12 @@ impl crate::traits::supply_request::SupplyRequestMutators for SupplyRequest {
     }
     fn set_parameter(self, value: Vec<SupplyRequestParameter>) -> Self {
         let mut resource = self.clone();
-        resource.parameter = Some(value);
+        resource.parameter = value;
         resource
     }
     fn add_parameter(self, item: SupplyRequestParameter) -> Self {
         let mut resource = self.clone();
-        resource.parameter.get_or_insert_with(Vec::new).push(item);
+        resource.parameter.push(item);
         resource
     }
     fn set_authored_on(self, value: String) -> Self {
@@ -515,22 +505,22 @@ impl crate::traits::supply_request::SupplyRequestMutators for SupplyRequest {
     }
     fn set_supplier(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supplier = Some(value);
+        resource.supplier = value;
         resource
     }
     fn add_supplier(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.supplier.get_or_insert_with(Vec::new).push(item);
+        resource.supplier.push(item);
         resource
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_deliver_from(self, value: Reference) -> Self {
@@ -552,13 +542,13 @@ impl crate::traits::supply_request::SupplyRequestExistence for SupplyRequest {
             || self.occurrence_timing.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_category(&self) -> bool {
         self.category.is_some()
@@ -576,7 +566,7 @@ impl crate::traits::supply_request::SupplyRequestExistence for SupplyRequest {
         true
     }
     fn has_parameter(&self) -> bool {
-        self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parameter.is_empty()
     }
     fn has_authored_on(&self) -> bool {
         self.authored_on.is_some()
@@ -585,10 +575,10 @@ impl crate::traits::supply_request::SupplyRequestExistence for SupplyRequest {
         self.requester.is_some()
     }
     fn has_supplier(&self) -> bool {
-        self.supplier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supplier.is_empty()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_deliver_from(&self) -> bool {
         self.deliver_from.is_some()

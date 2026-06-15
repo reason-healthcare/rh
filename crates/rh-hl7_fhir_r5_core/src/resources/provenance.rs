@@ -39,9 +39,11 @@ pub struct Provenance {
     /// Extension element for the 'recorded' primitive field. Contains metadata and extensions.
     pub _recorded: Option<Element>,
     /// Policy or plan the activity was defined by
-    pub policy: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub policy: Vec<StringType>,
     /// Extension element for the 'policy' primitive field. Contains metadata and extensions.
-    pub _policy: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _policy: Vec<Element>,
     /// Where the activity occurred, if relevant
     pub location: Option<Reference>,
     /// Authorization (purposeOfUse) related to the event
@@ -49,7 +51,8 @@ pub struct Provenance {
     /// Binding: example (The authorized purposeOfUse for the activity.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
-    pub authorization: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub authorization: Vec<CodeableReference>,
     /// Activity that occurred
     ///
     /// Binding: example (The activity that took place.)
@@ -65,7 +68,8 @@ pub struct Provenance {
     pub activity: Option<CodeableConcept>,
     /// Workflow authorization within which this event occurred
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// The patient is the subject of the data created/updated (.target) by the activity
     pub patient: Option<Reference>,
     /// Encounter within which this event occurred or which the event is tightly associated
@@ -73,9 +77,11 @@ pub struct Provenance {
     /// Actor involved
     pub agent: Vec<ProvenanceAgent>,
     /// An entity used in this activity
-    pub entity: Option<Vec<ProvenanceEntity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entity: Vec<ProvenanceEntity>,
     /// Signature on target
-    pub signature: Option<Vec<Signature>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signature: Vec<Signature>,
 }
 /// Provenance nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,7 +101,8 @@ pub struct ProvenanceAgent {
     /// Binding: example (The role that a provenance agent played with respect to the activity.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/security-role-type
-    pub role: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub role: Vec<CodeableConcept>,
     /// The agent that participated in the event
     pub who: Reference,
     /// The agent that delegated
@@ -115,7 +122,8 @@ pub struct ProvenanceEntity {
     /// Identity of entity
     pub what: Reference,
     /// Entity is attributed to this agent
-    pub agent: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub agent: Vec<StringType>,
 }
 
 impl Default for Provenance {
@@ -313,13 +321,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Provenance {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -334,44 +342,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Provenance {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -381,16 +377,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Provenance {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -402,19 +395,19 @@ impl crate::traits::provenance::ProvenanceAccessors for Provenance {
         self.recorded.clone()
     }
     fn policy(&self) -> &[StringType] {
-        self.policy.as_deref().unwrap_or(&[])
+        self.policy.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
     }
     fn authorization(&self) -> &[CodeableReference] {
-        self.authorization.as_deref().unwrap_or(&[])
+        self.authorization.as_slice()
     }
     fn activity(&self) -> Option<CodeableConcept> {
         self.activity.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn patient(&self) -> Option<Reference> {
         self.patient.clone()
@@ -426,10 +419,10 @@ impl crate::traits::provenance::ProvenanceAccessors for Provenance {
         &self.agent
     }
     fn entity(&self) -> &[ProvenanceEntity] {
-        self.entity.as_deref().unwrap_or(&[])
+        self.entity.as_slice()
     }
     fn signature(&self) -> &[Signature] {
-        self.signature.as_deref().unwrap_or(&[])
+        self.signature.as_slice()
     }
 }
 
@@ -454,12 +447,12 @@ impl crate::traits::provenance::ProvenanceMutators for Provenance {
     }
     fn set_policy(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.policy = Some(value);
+        resource.policy = value;
         resource
     }
     fn add_policy(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.policy.get_or_insert_with(Vec::new).push(item);
+        resource.policy.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -469,15 +462,12 @@ impl crate::traits::provenance::ProvenanceMutators for Provenance {
     }
     fn set_authorization(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.authorization = Some(value);
+        resource.authorization = value;
         resource
     }
     fn add_authorization(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource
-            .authorization
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.authorization.push(item);
         resource
     }
     fn set_activity(self, value: CodeableConcept) -> Self {
@@ -487,12 +477,12 @@ impl crate::traits::provenance::ProvenanceMutators for Provenance {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -517,22 +507,22 @@ impl crate::traits::provenance::ProvenanceMutators for Provenance {
     }
     fn set_entity(self, value: Vec<ProvenanceEntity>) -> Self {
         let mut resource = self.clone();
-        resource.entity = Some(value);
+        resource.entity = value;
         resource
     }
     fn add_entity(self, item: ProvenanceEntity) -> Self {
         let mut resource = self.clone();
-        resource.entity.get_or_insert_with(Vec::new).push(item);
+        resource.entity.push(item);
         resource
     }
     fn set_signature(self, value: Vec<Signature>) -> Self {
         let mut resource = self.clone();
-        resource.signature = Some(value);
+        resource.signature = value;
         resource
     }
     fn add_signature(self, item: Signature) -> Self {
         let mut resource = self.clone();
-        resource.signature.get_or_insert_with(Vec::new).push(item);
+        resource.signature.push(item);
         resource
     }
 }
@@ -548,19 +538,19 @@ impl crate::traits::provenance::ProvenanceExistence for Provenance {
         self.recorded.is_some()
     }
     fn has_policy(&self) -> bool {
-        self.policy.as_ref().is_some_and(|v| !v.is_empty())
+        !self.policy.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
     }
     fn has_authorization(&self) -> bool {
-        self.authorization.as_ref().is_some_and(|v| !v.is_empty())
+        !self.authorization.is_empty()
     }
     fn has_activity(&self) -> bool {
         self.activity.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_patient(&self) -> bool {
         self.patient.is_some()
@@ -572,10 +562,10 @@ impl crate::traits::provenance::ProvenanceExistence for Provenance {
         !self.agent.is_empty()
     }
     fn has_entity(&self) -> bool {
-        self.entity.as_ref().is_some_and(|v| !v.is_empty())
+        !self.entity.is_empty()
     }
     fn has_signature(&self) -> bool {
-        self.signature.as_ref().is_some_and(|v| !v.is_empty())
+        !self.signature.is_empty()
     }
 }
 

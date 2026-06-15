@@ -6,6 +6,7 @@ use crate::bindings::v3confidentiality_classification::V3ConfidentialityClassifi
 use crate::datatypes::backbone_element::BackboneElement;
 use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::element::Element;
+use crate::datatypes::extension::Extension;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::narrative::Narrative;
 use crate::datatypes::period::Period;
@@ -58,7 +59,8 @@ pub struct Composition {
     /// - `18761-7`: Provider-unspecified transfer summary
     /// - `18842-5`: Discharge summary
     /// - ... and 35 more values
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Who and/or what the composition is about
     pub subject: Option<Reference>,
     /// Context of the Composition
@@ -78,67 +80,52 @@ pub struct Composition {
     /// Extension element for the 'confidentiality' primitive field. Contains metadata and extensions.
     pub _confidentiality: Option<Element>,
     /// Attests to accuracy of composition
-    pub attester: Option<Vec<CompositionAttester>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attester: Vec<CompositionAttester>,
     /// Organization which maintains the composition
     pub custodian: Option<Reference>,
     /// Relationships to other compositions/documents
     #[serde(rename = "relatesTo")]
-    pub relates_to: Option<Vec<CompositionRelatesto>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relates_to: Vec<CompositionRelatesto>,
     /// The clinical service(s) being documented
-    pub event: Option<Vec<CompositionEvent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event: Vec<CompositionEvent>,
     /// Composition is broken into sections
-    pub section: Option<Vec<CompositionSection>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section: Vec<CompositionSection>,
 }
-/// Composition nested structure for the 'relatesTo' field
+/// otherConfidentiality
+///
+/// Carries additional confidentiality codes beyond the base fixed code specified in the CDA document.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-otherConfidentiality
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionRelatesto {
+pub struct CompositionClinicaldocumentOtherConfidentiality {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// replaces | transforms | signs | appends
-    pub code: DocumentRelationshipType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Target of the relationship (Identifier)
-    #[serde(rename = "targetIdentifier")]
-    pub target_identifier: Identifier,
-    /// Target of the relationship (Reference)
-    #[serde(rename = "targetReference")]
-    pub target_reference: Reference,
+    pub base: Extension,
 }
-/// Composition nested structure for the 'event' field
+/// Overrides Composition.subject
+///
+/// Specifies that the section has a different subject that the Composition, or it's container section.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/composition-section-subject
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionEvent {
+pub struct CompositionSectionSubject {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code(s) that apply to the event being documented
-    ///
-    /// Binding: example (This list of codes represents the main clinical acts being documented.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub code: Option<Vec<CodeableConcept>>,
-    /// The period covered by the documentation
-    pub period: Option<Period>,
-    /// The event(s) being documented
-    pub detail: Option<Vec<Reference>>,
-}
-/// Composition nested structure for the 'attester' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionAttester {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// personal | professional | legal | official
-    pub mode: CompositionAttestationMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// When the composition was attested
-    pub time: Option<DateTimeType>,
-    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
-    pub _time: Option<Element>,
-    /// Who attested the composition
-    pub party: Option<Reference>,
+    pub base: Extension,
 }
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,7 +155,8 @@ pub struct CompositionSection {
     /// - ... and 47 more values
     pub code: Option<CodeableConcept>,
     /// Who and/or what authored the section
-    pub author: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<Reference>,
     /// Who/what the section is about, when it is not about the subject of composition
     pub focus: Option<Reference>,
     /// Text summary of the section, for human interpretation
@@ -185,7 +173,8 @@ pub struct CompositionSection {
     #[serde(rename = "orderedBy")]
     pub ordered_by: Option<CodeableConcept>,
     /// A reference to data that supports this section
-    pub entry: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry: Vec<Reference>,
     /// Why the section is empty
     ///
     /// Binding: preferred (If a section is empty, why it is empty.)
@@ -194,7 +183,77 @@ pub struct CompositionSection {
     #[serde(rename = "emptyReason")]
     pub empty_reason: Option<CodeableConcept>,
     /// Nested Section
-    pub section: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section: Vec<StringType>,
+}
+/// Composition nested structure for the 'event' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code(s) that apply to the event being documented
+    ///
+    /// Binding: example (This list of codes represents the main clinical acts being documented.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
+    /// The period covered by the documentation
+    pub period: Option<Period>,
+    /// The event(s) being documented
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
+}
+/// Composition nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// replaces | transforms | signs | appends
+    pub code: DocumentRelationshipType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Target of the relationship (Identifier)
+    #[serde(rename = "targetIdentifier")]
+    pub target_identifier: Identifier,
+    /// Target of the relationship (Reference)
+    #[serde(rename = "targetReference")]
+    pub target_reference: Reference,
+}
+/// versionNumber
+///
+/// Version specific identifier for the composition, assigned when each version is created/updated.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-versionNumber
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionClinicaldocumentVersionNumber {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Composition nested structure for the 'attester' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompositionAttester {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// personal | professional | legal | official
+    pub mode: CompositionAttestationMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// When the composition was attested
+    pub time: Option<DateTimeType>,
+    /// Extension element for the 'time' primitive field. Contains metadata and extensions.
+    pub _time: Option<Element>,
+    /// Who attested the composition
+    pub party: Option<Reference>,
 }
 
 impl Default for Composition {
@@ -224,38 +283,18 @@ impl Default for Composition {
     }
 }
 
-impl Default for CompositionRelatesto {
+impl Default for CompositionClinicaldocumentOtherConfidentiality {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            target_identifier: Default::default(),
-            target_reference: Default::default(),
+            base: Extension::default(),
         }
     }
 }
 
-impl Default for CompositionEvent {
+impl Default for CompositionSectionSubject {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            period: Default::default(),
-            detail: Default::default(),
-        }
-    }
-}
-
-impl Default for CompositionAttester {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: CompositionAttestationMode::default(),
-            _mode: Default::default(),
-            time: Default::default(),
-            _time: Default::default(),
-            party: Default::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -276,6 +315,50 @@ impl Default for CompositionSection {
             entry: Default::default(),
             empty_reason: Default::default(),
             section: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionEvent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            period: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            target_identifier: Default::default(),
+            target_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for CompositionClinicaldocumentVersionNumber {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for CompositionAttester {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: CompositionAttestationMode::default(),
+            _mode: Default::default(),
+            time: Default::default(),
+            _time: Default::default(),
+            party: Default::default(),
         }
     }
 }
@@ -475,13 +558,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Composition {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -496,44 +579,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Composition {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -543,16 +614,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Composition {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -567,7 +635,7 @@ impl crate::traits::composition::CompositionAccessors for Composition {
         self.type_.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
@@ -588,19 +656,19 @@ impl crate::traits::composition::CompositionAccessors for Composition {
         self.confidentiality.clone()
     }
     fn attester(&self) -> &[CompositionAttester] {
-        self.attester.as_deref().unwrap_or(&[])
+        self.attester.as_slice()
     }
     fn custodian(&self) -> Option<Reference> {
         self.custodian.clone()
     }
     fn relates_to(&self) -> &[CompositionRelatesto] {
-        self.relates_to.as_deref().unwrap_or(&[])
+        self.relates_to.as_slice()
     }
     fn event(&self) -> &[CompositionEvent] {
-        self.event.as_deref().unwrap_or(&[])
+        self.event.as_slice()
     }
     fn section(&self) -> &[CompositionSection] {
-        self.section.as_deref().unwrap_or(&[])
+        self.section.as_slice()
     }
 }
 
@@ -625,12 +693,12 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -670,12 +738,12 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_attester(self, value: Vec<CompositionAttester>) -> Self {
         let mut resource = self.clone();
-        resource.attester = Some(value);
+        resource.attester = value;
         resource
     }
     fn add_attester(self, item: CompositionAttester) -> Self {
         let mut resource = self.clone();
-        resource.attester.get_or_insert_with(Vec::new).push(item);
+        resource.attester.push(item);
         resource
     }
     fn set_custodian(self, value: Reference) -> Self {
@@ -685,32 +753,32 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_relates_to(self, value: Vec<CompositionRelatesto>) -> Self {
         let mut resource = self.clone();
-        resource.relates_to = Some(value);
+        resource.relates_to = value;
         resource
     }
     fn add_relates_to(self, item: CompositionRelatesto) -> Self {
         let mut resource = self.clone();
-        resource.relates_to.get_or_insert_with(Vec::new).push(item);
+        resource.relates_to.push(item);
         resource
     }
     fn set_event(self, value: Vec<CompositionEvent>) -> Self {
         let mut resource = self.clone();
-        resource.event = Some(value);
+        resource.event = value;
         resource
     }
     fn add_event(self, item: CompositionEvent) -> Self {
         let mut resource = self.clone();
-        resource.event.get_or_insert_with(Vec::new).push(item);
+        resource.event.push(item);
         resource
     }
     fn set_section(self, value: Vec<CompositionSection>) -> Self {
         let mut resource = self.clone();
-        resource.section = Some(value);
+        resource.section = value;
         resource
     }
     fn add_section(self, item: CompositionSection) -> Self {
         let mut resource = self.clone();
-        resource.section.get_or_insert_with(Vec::new).push(item);
+        resource.section.push(item);
         resource
     }
 }
@@ -726,7 +794,7 @@ impl crate::traits::composition::CompositionExistence for Composition {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_subject(&self) -> bool {
         self.subject.is_some()
@@ -747,19 +815,19 @@ impl crate::traits::composition::CompositionExistence for Composition {
         self.confidentiality.is_some()
     }
     fn has_attester(&self) -> bool {
-        self.attester.as_ref().is_some_and(|v| !v.is_empty())
+        !self.attester.is_empty()
     }
     fn has_custodian(&self) -> bool {
         self.custodian.is_some()
     }
     fn has_relates_to(&self) -> bool {
-        self.relates_to.as_ref().is_some_and(|v| !v.is_empty())
+        !self.relates_to.is_empty()
     }
     fn has_event(&self) -> bool {
-        self.event.as_ref().is_some_and(|v| !v.is_empty())
+        !self.event.is_empty()
     }
     fn has_section(&self) -> bool {
-        self.section.as_ref().is_some_and(|v| !v.is_empty())
+        !self.section.is_empty()
     }
 }
 

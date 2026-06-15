@@ -31,7 +31,8 @@ pub struct PackagedProductDefinition {
     #[serde(flatten)]
     pub base: DomainResource,
     /// A unique identifier for this package as whole - not for the content of the package
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// A name for this package. Typically as listed in a drug formulary, catalogue, inventory etc
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -45,7 +46,8 @@ pub struct PackagedProductDefinition {
     pub type_: Option<CodeableConcept>,
     /// The product that this is a pack for
     #[serde(rename = "packageFor")]
-    pub package_for: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub package_for: Vec<Reference>,
     /// The status within the lifecycle of this item. High level - not intended to duplicate details elsewhere e.g. legal status, or authorization/marketing status
     ///
     /// Binding: preferred (The lifecycle status of an artifact.)
@@ -60,17 +62,20 @@ pub struct PackagedProductDefinition {
     pub _status_date: Option<Element>,
     /// A total of the complete count of contained items of a particular type/form, independent of sub-packaging or organization. This can be considered as the pack size. See also packaging.containedItem.amount (especially the long definition)
     #[serde(rename = "containedItemQuantity")]
-    pub contained_item_quantity: Option<Vec<Quantity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contained_item_quantity: Vec<Quantity>,
     /// Textual description. Note that this is not the name of the package or product
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The legal status of supply of the packaged item as classified by the regulator
     #[serde(rename = "legalStatusOfSupply")]
-    pub legal_status_of_supply: Option<Vec<PackagedProductDefinitionLegalstatusofsupply>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub legal_status_of_supply: Vec<PackagedProductDefinitionLegalstatusofsupply>,
     /// Allows specifying that an item is on the market for sale, or that it is not available, and the dates and locations associated
     #[serde(rename = "marketingStatus")]
-    pub marketing_status: Option<Vec<MarketingStatus>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marketing_status: Vec<MarketingStatus>,
     /// Identifies if the drug product is supplied with another item such as a diluent or adjuvant
     #[serde(rename = "copackagedIndicator")]
     pub copackaged_indicator: Option<BooleanType>,
@@ -78,65 +83,17 @@ pub struct PackagedProductDefinition {
     #[serde(rename = "_copackagedIndicator")]
     pub _copackaged_indicator: Option<Element>,
     /// Manufacturer of this package type (multiple means these are all possible manufacturers)
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
     /// Additional information or supporting documentation about the packaged product
     #[serde(rename = "attachedDocument")]
-    pub attached_document: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attached_document: Vec<Reference>,
     /// A packaging item, as a container for medically related items, possibly with other packaging items within, or a packaging component, such as bottle cap
     pub packaging: Option<PackagedProductDefinitionPackaging>,
     /// Allows the key features to be recorded, such as "hospital pack", "nurse prescribable"
-    pub characteristic: Option<Vec<StringType>>,
-}
-/// PackagedProductDefinition nested structure for the 'packaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackagedProductDefinitionPackaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The item(s) within the packaging
-    #[serde(rename = "containedItem")]
-    pub contained_item: Option<Vec<PackagedProductDefinitionPackagingContaineditem>>,
-    /// General characteristics of this item
-    pub property: Option<Vec<PackagedProductDefinitionPackagingProperty>>,
-    /// An identifier that is specific to this particular part of the packaging. Including possibly a Data Carrier Identifier
-    pub identifier: Option<Vec<Identifier>>,
-    /// The physical type of the container of the items
-    ///
-    /// Binding: example (A high level categorisation of a package.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/packaging-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Is this a part of the packaging (e.g. a cap or bottle stopper), rather than the packaging itself (e.g. a bottle or vial)
-    #[serde(rename = "componentPart")]
-    pub component_part: Option<BooleanType>,
-    /// Extension element for the 'componentPart' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_componentPart")]
-    pub _component_part: Option<Element>,
-    /// The quantity of this level of packaging in the package that contains it (with the outermost level being 1)
-    pub quantity: Option<IntegerType>,
-    /// Extension element for the 'quantity' primitive field. Contains metadata and extensions.
-    pub _quantity: Option<Element>,
-    /// Material type of the package item
-    ///
-    /// Binding: example (A material used in the construction of packages and their components.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/package-material
-    pub material: Option<Vec<CodeableConcept>>,
-    /// A possible alternate material for this part of the packaging, that is allowed to be used instead of the usual material
-    ///
-    /// Binding: example (A material used in the construction of packages and their components.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/package-material
-    #[serde(rename = "alternateMaterial")]
-    pub alternate_material: Option<Vec<CodeableConcept>>,
-    /// Shelf Life and storage information
-    #[serde(rename = "shelfLifeStorage")]
-    pub shelf_life_storage: Option<Vec<ProductShelfLife>>,
-    /// Manufacturer of this packaging item (multiple means these are all potential manufacturers)
-    pub manufacturer: Option<Vec<Reference>>,
-    /// Allows containers (and parts of containers) within containers, still as a part of single packaged product
-    pub packaging: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<StringType>,
 }
 /// PackagedProductDefinition nested structure for the 'legalStatusOfSupply' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,6 +124,65 @@ pub struct PackagedProductDefinitionPackagingContaineditem {
     pub item: CodeableReference,
     /// The number of this type of item within this packaging or for continuous items such as liquids it is the quantity (for example 25ml). See also PackagedProductDefinition.containedItemQuantity (especially the long definition)
     pub amount: Option<Quantity>,
+}
+/// PackagedProductDefinition nested structure for the 'packaging' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackagedProductDefinitionPackaging {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The item(s) within the packaging
+    #[serde(rename = "containedItem")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contained_item: Vec<PackagedProductDefinitionPackagingContaineditem>,
+    /// General characteristics of this item
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<PackagedProductDefinitionPackagingProperty>,
+    /// An identifier that is specific to this particular part of the packaging. Including possibly a Data Carrier Identifier
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// The physical type of the container of the items
+    ///
+    /// Binding: example (A high level categorisation of a package.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/packaging-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Is this a part of the packaging (e.g. a cap or bottle stopper), rather than the packaging itself (e.g. a bottle or vial)
+    #[serde(rename = "componentPart")]
+    pub component_part: Option<BooleanType>,
+    /// Extension element for the 'componentPart' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_componentPart")]
+    pub _component_part: Option<Element>,
+    /// The quantity of this level of packaging in the package that contains it (with the outermost level being 1)
+    pub quantity: Option<IntegerType>,
+    /// Extension element for the 'quantity' primitive field. Contains metadata and extensions.
+    pub _quantity: Option<Element>,
+    /// Material type of the package item
+    ///
+    /// Binding: example (A material used in the construction of packages and their components.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/package-material
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub material: Vec<CodeableConcept>,
+    /// A possible alternate material for this part of the packaging, that is allowed to be used instead of the usual material
+    ///
+    /// Binding: example (A material used in the construction of packages and their components.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/package-material
+    #[serde(rename = "alternateMaterial")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternate_material: Vec<CodeableConcept>,
+    /// Shelf Life and storage information
+    #[serde(rename = "shelfLifeStorage")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shelf_life_storage: Vec<ProductShelfLife>,
+    /// Manufacturer of this packaging item (multiple means these are all potential manufacturers)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
+    /// Allows containers (and parts of containers) within containers, still as a part of single packaged product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packaging: Vec<StringType>,
 }
 /// PackagedProductDefinitionPackaging nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,6 +241,26 @@ impl Default for PackagedProductDefinition {
     }
 }
 
+impl Default for PackagedProductDefinitionLegalstatusofsupply {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            jurisdiction: Default::default(),
+        }
+    }
+}
+
+impl Default for PackagedProductDefinitionPackagingContaineditem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item: Default::default(),
+            amount: Default::default(),
+        }
+    }
+}
+
 impl Default for PackagedProductDefinitionPackaging {
     fn default() -> Self {
         Self {
@@ -242,26 +278,6 @@ impl Default for PackagedProductDefinitionPackaging {
             shelf_life_storage: Default::default(),
             manufacturer: Default::default(),
             packaging: Default::default(),
-        }
-    }
-}
-
-impl Default for PackagedProductDefinitionLegalstatusofsupply {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            jurisdiction: Default::default(),
-        }
-    }
-}
-
-impl Default for PackagedProductDefinitionPackagingContaineditem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            item: Default::default(),
-            amount: Default::default(),
         }
     }
 }
@@ -602,13 +618,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for PackagedProduct
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -623,44 +639,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for PackagedProductD
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -670,16 +674,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for PackagedProduct
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -687,7 +688,7 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionAccess
     for PackagedProductDefinition
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn name(&self) -> Option<StringType> {
         self.name.clone()
@@ -696,7 +697,7 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionAccess
         self.type_.clone()
     }
     fn package_for(&self) -> &[Reference] {
-        self.package_for.as_deref().unwrap_or(&[])
+        self.package_for.as_slice()
     }
     fn status(&self) -> Option<CodeableConcept> {
         self.status.clone()
@@ -705,25 +706,25 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionAccess
         self.status_date.clone()
     }
     fn contained_item_quantity(&self) -> &[Quantity] {
-        self.contained_item_quantity.as_deref().unwrap_or(&[])
+        self.contained_item_quantity.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn legal_status_of_supply(&self) -> &[PackagedProductDefinitionLegalstatusofsupply] {
-        self.legal_status_of_supply.as_deref().unwrap_or(&[])
+        self.legal_status_of_supply.as_slice()
     }
     fn marketing_status(&self) -> &[MarketingStatus] {
-        self.marketing_status.as_deref().unwrap_or(&[])
+        self.marketing_status.as_slice()
     }
     fn copackaged_indicator(&self) -> Option<BooleanType> {
         self.copackaged_indicator
     }
     fn manufacturer(&self) -> &[Reference] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn attached_document(&self) -> &[Reference] {
-        self.attached_document.as_deref().unwrap_or(&[])
+        self.attached_document.as_slice()
     }
     fn packaging(&self) -> Option<PackagedProductDefinitionPackaging> {
         self.packaging.clone()
@@ -738,12 +739,12 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_name(self, value: String) -> Self {
@@ -758,12 +759,12 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
     }
     fn set_package_for(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.package_for = Some(value);
+        resource.package_for = value;
         resource
     }
     fn add_package_for(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.package_for.get_or_insert_with(Vec::new).push(item);
+        resource.package_for.push(item);
         resource
     }
     fn set_status(self, value: CodeableConcept) -> Self {
@@ -778,15 +779,12 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
     }
     fn set_contained_item_quantity(self, value: Vec<Quantity>) -> Self {
         let mut resource = self.clone();
-        resource.contained_item_quantity = Some(value);
+        resource.contained_item_quantity = value;
         resource
     }
     fn add_contained_item_quantity(self, item: Quantity) -> Self {
         let mut resource = self.clone();
-        resource
-            .contained_item_quantity
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.contained_item_quantity.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -799,7 +797,7 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
         value: Vec<PackagedProductDefinitionLegalstatusofsupply>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.legal_status_of_supply = Some(value);
+        resource.legal_status_of_supply = value;
         resource
     }
     fn add_legal_status_of_supply(
@@ -807,23 +805,17 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
         item: PackagedProductDefinitionLegalstatusofsupply,
     ) -> Self {
         let mut resource = self.clone();
-        resource
-            .legal_status_of_supply
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.legal_status_of_supply.push(item);
         resource
     }
     fn set_marketing_status(self, value: Vec<MarketingStatus>) -> Self {
         let mut resource = self.clone();
-        resource.marketing_status = Some(value);
+        resource.marketing_status = value;
         resource
     }
     fn add_marketing_status(self, item: MarketingStatus) -> Self {
         let mut resource = self.clone();
-        resource
-            .marketing_status
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.marketing_status.push(item);
         resource
     }
     fn set_copackaged_indicator(self, value: bool) -> Self {
@@ -833,28 +825,22 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
     }
     fn set_manufacturer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_attached_document(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.attached_document = Some(value);
+        resource.attached_document = value;
         resource
     }
     fn add_attached_document(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .attached_document
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.attached_document.push(item);
         resource
     }
     fn set_packaging(self, value: PackagedProductDefinitionPackaging) -> Self {
@@ -864,15 +850,12 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionMutato
     }
     fn set_characteristic(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.characteristic = Some(value);
+        resource.characteristic = value;
         resource
     }
     fn add_characteristic(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.characteristic.push(item);
         resource
     }
 }
@@ -881,7 +864,7 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionExiste
     for PackagedProductDefinition
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_name(&self) -> bool {
         self.name.is_some()
@@ -890,7 +873,7 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionExiste
         self.type_.is_some()
     }
     fn has_package_for(&self) -> bool {
-        self.package_for.as_ref().is_some_and(|v| !v.is_empty())
+        !self.package_for.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -899,39 +882,31 @@ impl crate::traits::packaged_product_definition::PackagedProductDefinitionExiste
         self.status_date.is_some()
     }
     fn has_contained_item_quantity(&self) -> bool {
-        self.contained_item_quantity
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.contained_item_quantity.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_legal_status_of_supply(&self) -> bool {
-        self.legal_status_of_supply
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.legal_status_of_supply.is_empty()
     }
     fn has_marketing_status(&self) -> bool {
-        self.marketing_status
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.marketing_status.is_empty()
     }
     fn has_copackaged_indicator(&self) -> bool {
         self.copackaged_indicator.is_some()
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_attached_document(&self) -> bool {
-        self.attached_document
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.attached_document.is_empty()
     }
     fn has_packaging(&self) -> bool {
         self.packaging.is_some()
     }
     fn has_characteristic(&self) -> bool {
-        self.characteristic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.characteristic.is_empty()
     }
 }
 

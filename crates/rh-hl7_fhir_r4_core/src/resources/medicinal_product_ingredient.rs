@@ -34,49 +34,14 @@ pub struct MedicinalProductIngredient {
     #[serde(rename = "_allergenicIndicator")]
     pub _allergenic_indicator: Option<Element>,
     /// Manufacturer of this Ingredient
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
     /// A specified substance that comprises this ingredient
     #[serde(rename = "specifiedSubstance")]
-    pub specified_substance: Option<Vec<MedicinalProductIngredientSpecifiedsubstance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specified_substance: Vec<MedicinalProductIngredientSpecifiedsubstance>,
     /// The ingredient substance
     pub substance: Option<MedicinalProductIngredientSubstance>,
-}
-/// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Relevant reference substance
-    pub substance: Option<CodeableConcept>,
-    /// Strength expressed in terms of a reference substance
-    pub strength: Ratio,
-    /// Strength expressed in terms of a reference substance
-    #[serde(rename = "strengthLowLimit")]
-    pub strength_low_limit: Option<Ratio>,
-    /// For when strength is measured at a particular point or distance
-    #[serde(rename = "measurementPoint")]
-    pub measurement_point: Option<StringType>,
-    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_measurementPoint")]
-    pub _measurement_point: Option<Element>,
-    /// The country or countries for which the strength range applies
-    pub country: Option<Vec<CodeableConcept>>,
-}
-/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductIngredientSpecifiedsubstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>>,
-    /// The specified substance
-    pub code: CodeableConcept,
-    /// The group of specified substance, e.g. group 1 to 4
-    pub group: CodeableConcept,
-    /// Confidentiality level of the specified substance as the ingredient
-    pub confidentiality: Option<CodeableConcept>,
 }
 /// MedicinalProductIngredientSpecifiedsubstance nested structure for the 'strength' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,7 +66,47 @@ pub struct MedicinalProductIngredientSpecifiedsubstanceStrength {
     #[serde(rename = "_measurementPoint")]
     pub _measurement_point: Option<Element>,
     /// The country or countries for which the strength range applies
-    pub country: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<CodeableConcept>,
+}
+/// MedicinalProductIngredient nested structure for the 'specifiedSubstance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub strength: Vec<MedicinalProductIngredientSpecifiedsubstanceStrength>,
+    /// The specified substance
+    pub code: CodeableConcept,
+    /// The group of specified substance, e.g. group 1 to 4
+    pub group: CodeableConcept,
+    /// Confidentiality level of the specified substance as the ingredient
+    pub confidentiality: Option<CodeableConcept>,
+}
+/// MedicinalProductIngredientSpecifiedsubstanceStrength nested structure for the 'referenceStrength' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Relevant reference substance
+    pub substance: Option<CodeableConcept>,
+    /// Strength expressed in terms of a reference substance
+    pub strength: Ratio,
+    /// Strength expressed in terms of a reference substance
+    #[serde(rename = "strengthLowLimit")]
+    pub strength_low_limit: Option<Ratio>,
+    /// For when strength is measured at a particular point or distance
+    #[serde(rename = "measurementPoint")]
+    pub measurement_point: Option<StringType>,
+    /// Extension element for the 'measurementPoint' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_measurementPoint")]
+    pub _measurement_point: Option<Element>,
+    /// The country or countries for which the strength range applies
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<CodeableConcept>,
 }
 /// MedicinalProductIngredient nested structure for the 'substance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,7 +117,8 @@ pub struct MedicinalProductIngredientSubstance {
     /// The ingredient substance
     pub code: CodeableConcept,
     /// Quantity of the substance or specified substance present in the manufactured item or pharmaceutical product
-    pub strength: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub strength: Vec<StringType>,
 }
 
 impl Default for MedicinalProductIngredient {
@@ -130,13 +136,14 @@ impl Default for MedicinalProductIngredient {
     }
 }
 
-impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
+impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            substance: Default::default(),
-            strength: Default::default(),
-            strength_low_limit: Default::default(),
+            presentation: Default::default(),
+            presentation_low_limit: Default::default(),
+            concentration: Default::default(),
+            concentration_low_limit: Default::default(),
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
@@ -156,14 +163,13 @@ impl Default for MedicinalProductIngredientSpecifiedsubstance {
     }
 }
 
-impl Default for MedicinalProductIngredientSpecifiedsubstanceStrength {
+impl Default for MedicinalProductIngredientSpecifiedsubstanceStrengthReferencestrength {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            presentation: Default::default(),
-            presentation_low_limit: Default::default(),
-            concentration: Default::default(),
-            concentration_low_limit: Default::default(),
+            substance: Default::default(),
+            strength: Default::default(),
+            strength_low_limit: Default::default(),
             measurement_point: Default::default(),
             _measurement_point: Default::default(),
             country: Default::default(),
@@ -313,13 +319,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -334,44 +340,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -381,16 +375,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -407,10 +398,10 @@ impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientAcce
         self.allergenic_indicator
     }
     fn manufacturer(&self) -> &[Reference] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn specified_substance(&self) -> &[MedicinalProductIngredientSpecifiedsubstance] {
-        self.specified_substance.as_deref().unwrap_or(&[])
+        self.specified_substance.as_slice()
     }
     fn substance(&self) -> Option<MedicinalProductIngredientSubstance> {
         self.substance.clone()
@@ -440,15 +431,12 @@ impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientMuta
     }
     fn set_manufacturer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_specified_substance(
@@ -456,15 +444,12 @@ impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientMuta
         value: Vec<MedicinalProductIngredientSpecifiedsubstance>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.specified_substance = Some(value);
+        resource.specified_substance = value;
         resource
     }
     fn add_specified_substance(self, item: MedicinalProductIngredientSpecifiedsubstance) -> Self {
         let mut resource = self.clone();
-        resource
-            .specified_substance
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.specified_substance.push(item);
         resource
     }
     fn set_substance(self, value: MedicinalProductIngredientSubstance) -> Self {
@@ -487,12 +472,10 @@ impl crate::traits::medicinal_product_ingredient::MedicinalProductIngredientExis
         self.allergenic_indicator.is_some()
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_specified_substance(&self) -> bool {
-        self.specified_substance
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.specified_substance.is_empty()
     }
     fn has_substance(&self) -> bool {
         self.substance.is_some()

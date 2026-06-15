@@ -29,12 +29,15 @@ pub struct CommunicationRequest {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Fulfills plan or proposal
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Request(s) replaced by this request
-    pub replaces: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replaces: Vec<Reference>,
     /// Composite request this is part of
     #[serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
@@ -52,7 +55,8 @@ pub struct CommunicationRequest {
     /// Binding: example (Codes for general categories of communications such as alerts, instruction, etc.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/communication-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// routine | urgent | asap | stat
     pub priority: Option<RequestPriority>,
     /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
@@ -68,15 +72,18 @@ pub struct CommunicationRequest {
     /// Binding: example (Codes for communication mediums such as phone, fax, email, in person, etc.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ParticipationMode
-    pub medium: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub medium: Vec<CodeableConcept>,
     /// Focus of message
     pub subject: Option<Reference>,
     /// Resources that pertain to this communication request
-    pub about: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub about: Vec<Reference>,
     /// Encounter created as part of
     pub encounter: Option<Reference>,
     /// Message payload
-    pub payload: Option<Vec<CommunicationRequestPayload>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub payload: Vec<CommunicationRequestPayload>,
     /// When scheduled (dateTime)
     #[serde(rename = "occurrenceDateTime")]
     pub occurrence_date_time: Option<DateTimeType>,
@@ -92,7 +99,8 @@ pub struct CommunicationRequest {
     /// Who/what is requesting service
     pub requester: Option<Reference>,
     /// Message recipient
-    pub recipient: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipient: Vec<Reference>,
     /// Message sender
     pub sender: Option<Reference>,
     /// Why is communication needed?
@@ -101,12 +109,15 @@ pub struct CommunicationRequest {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActReason
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Why is communication needed?
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Comments made about communication request
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// CommunicationRequest nested structure for the 'payload' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -345,13 +356,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CommunicationRe
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -366,44 +377,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CommunicationReq
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -413,28 +412,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for CommunicationRe
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::communication_request::CommunicationRequestAccessors for CommunicationRequest {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn replaces(&self) -> &[Reference] {
-        self.replaces.as_deref().unwrap_or(&[])
+        self.replaces.as_slice()
     }
     fn group_identifier(&self) -> Option<Identifier> {
         self.group_identifier.clone()
@@ -446,7 +442,7 @@ impl crate::traits::communication_request::CommunicationRequestAccessors for Com
         self.status_reason.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn priority(&self) -> Option<RequestPriority> {
         self.priority.clone()
@@ -455,19 +451,19 @@ impl crate::traits::communication_request::CommunicationRequestAccessors for Com
         self.do_not_perform
     }
     fn medium(&self) -> &[CodeableConcept] {
-        self.medium.as_deref().unwrap_or(&[])
+        self.medium.as_slice()
     }
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
     }
     fn about(&self) -> &[Reference] {
-        self.about.as_deref().unwrap_or(&[])
+        self.about.as_slice()
     }
     fn encounter(&self) -> Option<Reference> {
         self.encounter.clone()
     }
     fn payload(&self) -> &[CommunicationRequestPayload] {
-        self.payload.as_deref().unwrap_or(&[])
+        self.payload.as_slice()
     }
     fn authored_on(&self) -> Option<DateTimeType> {
         self.authored_on.clone()
@@ -476,19 +472,19 @@ impl crate::traits::communication_request::CommunicationRequestAccessors for Com
         self.requester.clone()
     }
     fn recipient(&self) -> &[Reference] {
-        self.recipient.as_deref().unwrap_or(&[])
+        self.recipient.as_slice()
     }
     fn sender(&self) -> Option<Reference> {
         self.sender.clone()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -498,32 +494,32 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_replaces(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.replaces = Some(value);
+        resource.replaces = value;
         resource
     }
     fn add_replaces(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource.replaces.push(item);
         resource
     }
     fn set_group_identifier(self, value: Identifier) -> Self {
@@ -543,12 +539,12 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_priority(self, value: RequestPriority) -> Self {
@@ -563,12 +559,12 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_medium(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.medium = Some(value);
+        resource.medium = value;
         resource
     }
     fn add_medium(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.medium.get_or_insert_with(Vec::new).push(item);
+        resource.medium.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -578,12 +574,12 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_about(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.about = Some(value);
+        resource.about = value;
         resource
     }
     fn add_about(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.about.get_or_insert_with(Vec::new).push(item);
+        resource.about.push(item);
         resource
     }
     fn set_encounter(self, value: Reference) -> Self {
@@ -593,12 +589,12 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_payload(self, value: Vec<CommunicationRequestPayload>) -> Self {
         let mut resource = self.clone();
-        resource.payload = Some(value);
+        resource.payload = value;
         resource
     }
     fn add_payload(self, item: CommunicationRequestPayload) -> Self {
         let mut resource = self.clone();
-        resource.payload.get_or_insert_with(Vec::new).push(item);
+        resource.payload.push(item);
         resource
     }
     fn set_authored_on(self, value: String) -> Self {
@@ -613,12 +609,12 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_recipient(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.recipient = Some(value);
+        resource.recipient = value;
         resource
     }
     fn add_recipient(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.recipient.get_or_insert_with(Vec::new).push(item);
+        resource.recipient.push(item);
         resource
     }
     fn set_sender(self, value: Reference) -> Self {
@@ -628,35 +624,32 @@ impl crate::traits::communication_request::CommunicationRequestMutators for Comm
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
@@ -666,13 +659,13 @@ impl crate::traits::communication_request::CommunicationRequestExistence for Com
         self.occurrence_date_time.is_some() || self.occurrence_period.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_replaces(&self) -> bool {
-        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+        !self.replaces.is_empty()
     }
     fn has_group_identifier(&self) -> bool {
         self.group_identifier.is_some()
@@ -684,7 +677,7 @@ impl crate::traits::communication_request::CommunicationRequestExistence for Com
         self.status_reason.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_priority(&self) -> bool {
         self.priority.is_some()
@@ -693,19 +686,19 @@ impl crate::traits::communication_request::CommunicationRequestExistence for Com
         self.do_not_perform.is_some()
     }
     fn has_medium(&self) -> bool {
-        self.medium.as_ref().is_some_and(|v| !v.is_empty())
+        !self.medium.is_empty()
     }
     fn has_subject(&self) -> bool {
         self.subject.is_some()
     }
     fn has_about(&self) -> bool {
-        self.about.as_ref().is_some_and(|v| !v.is_empty())
+        !self.about.is_empty()
     }
     fn has_encounter(&self) -> bool {
         self.encounter.is_some()
     }
     fn has_payload(&self) -> bool {
-        self.payload.as_ref().is_some_and(|v| !v.is_empty())
+        !self.payload.is_empty()
     }
     fn has_authored_on(&self) -> bool {
         self.authored_on.is_some()
@@ -714,21 +707,19 @@ impl crate::traits::communication_request::CommunicationRequestExistence for Com
         self.requester.is_some()
     }
     fn has_recipient(&self) -> bool {
-        self.recipient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.recipient.is_empty()
     }
     fn has_sender(&self) -> bool {
         self.sender.is_some()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

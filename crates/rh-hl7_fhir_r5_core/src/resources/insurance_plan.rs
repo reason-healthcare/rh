@@ -28,7 +28,8 @@ pub struct InsurancePlan {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for Product
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | active | retired | unknown
     pub status: Option<PublicationStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -39,15 +40,18 @@ pub struct InsurancePlan {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/insuranceplan-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Official name
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// Alternate names
-    pub alias: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alias: Vec<StringType>,
     /// Extension element for the 'alias' primitive field. Contains metadata and extensions.
-    pub _alias: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _alias: Vec<Element>,
     /// When the product is available
     pub period: Option<Period>,
     /// Product issuer
@@ -58,17 +62,23 @@ pub struct InsurancePlan {
     pub administered_by: Option<Reference>,
     /// Where product applies
     #[serde(rename = "coverageArea")]
-    pub coverage_area: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage_area: Vec<Reference>,
     /// Official contact details relevant to the health insurance plan/product
-    pub contact: Option<Vec<ExtendedContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ExtendedContactDetail>,
     /// Technical endpoint
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
     /// What networks are Included
-    pub network: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub network: Vec<Reference>,
     /// Coverage details
-    pub coverage: Option<Vec<InsurancePlanCoverage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage: Vec<InsurancePlanCoverage>,
     /// Plan details
-    pub plan: Option<Vec<InsurancePlanPlan>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub plan: Vec<InsurancePlanPlan>,
 }
 /// InsurancePlanPlan nested structure for the 'specificCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,22 +88,6 @@ pub struct InsurancePlanPlanSpecificcost {
     pub base: BackboneElement,
     /// General category of benefit
     pub category: CodeableConcept,
-}
-/// InsurancePlanPlanSpecificcostBenefit nested structure for the 'cost' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlanSpecificcostBenefitCost {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of cost
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// in-network | out-of-network | other
-    pub applicability: Option<CodeableConcept>,
-    /// Additional information about the cost
-    pub qualifiers: Option<Vec<CodeableConcept>>,
-    /// The actual cost value
-    pub value: Option<Quantity>,
 }
 /// InsurancePlanCoverage nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,29 +113,6 @@ pub struct InsurancePlanCoverageBenefitLimit {
     pub value: Option<Quantity>,
     /// Benefit limit details
     pub code: Option<CodeableConcept>,
-}
-/// InsurancePlan nested structure for the 'plan' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InsurancePlanPlan {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Overall costs
-    #[serde(rename = "generalCost")]
-    pub general_cost: Option<Vec<InsurancePlanPlanGeneralcost>>,
-    /// Specific costs
-    #[serde(rename = "specificCost")]
-    pub specific_cost: Option<Vec<InsurancePlanPlanSpecificcost>>,
-    /// Business Identifier for Product
-    pub identifier: Option<Vec<Identifier>>,
-    /// Type of plan
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Where product applies
-    #[serde(rename = "coverageArea")]
-    pub coverage_area: Option<Vec<Reference>>,
-    /// What networks provide coverage
-    pub network: Option<Vec<Reference>>,
 }
 /// InsurancePlanPlan nested structure for the 'generalCost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,7 +148,53 @@ pub struct InsurancePlanCoverage {
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
     /// What networks provide coverage
-    pub network: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub network: Vec<Reference>,
+}
+/// InsurancePlanPlanSpecificcostBenefit nested structure for the 'cost' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlanSpecificcostBenefitCost {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of cost
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// in-network | out-of-network | other
+    pub applicability: Option<CodeableConcept>,
+    /// Additional information about the cost
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualifiers: Vec<CodeableConcept>,
+    /// The actual cost value
+    pub value: Option<Quantity>,
+}
+/// InsurancePlan nested structure for the 'plan' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InsurancePlanPlan {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specific costs
+    #[serde(rename = "specificCost")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specific_cost: Vec<InsurancePlanPlanSpecificcost>,
+    /// Overall costs
+    #[serde(rename = "generalCost")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub general_cost: Vec<InsurancePlanPlanGeneralcost>,
+    /// Business Identifier for Product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// Type of plan
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Where product applies
+    #[serde(rename = "coverageArea")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage_area: Vec<Reference>,
+    /// What networks provide coverage
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub network: Vec<Reference>,
 }
 /// InsurancePlanPlanSpecificcost nested structure for the 'benefit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,18 +241,6 @@ impl Default for InsurancePlanPlanSpecificcost {
     }
 }
 
-impl Default for InsurancePlanPlanSpecificcostBenefitCost {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            applicability: Default::default(),
-            qualifiers: Default::default(),
-            value: Default::default(),
-        }
-    }
-}
-
 impl Default for InsurancePlanCoverageBenefit {
     fn default() -> Self {
         Self {
@@ -253,20 +258,6 @@ impl Default for InsurancePlanCoverageBenefitLimit {
             base: BackboneElement::default(),
             value: Default::default(),
             code: Default::default(),
-        }
-    }
-}
-
-impl Default for InsurancePlanPlan {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            general_cost: Default::default(),
-            specific_cost: Default::default(),
-            identifier: Default::default(),
-            type_: Default::default(),
-            coverage_area: Default::default(),
-            network: Default::default(),
         }
     }
 }
@@ -291,6 +282,32 @@ impl Default for InsurancePlanCoverage {
             base: BackboneElement::default(),
             benefit: Vec::new(),
             type_: Default::default(),
+            network: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanPlanSpecificcostBenefitCost {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            applicability: Default::default(),
+            qualifiers: Default::default(),
+            value: Default::default(),
+        }
+    }
+}
+
+impl Default for InsurancePlanPlan {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            specific_cost: Default::default(),
+            general_cost: Default::default(),
+            identifier: Default::default(),
+            type_: Default::default(),
+            coverage_area: Default::default(),
             network: Default::default(),
         }
     }
@@ -628,13 +645,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for InsurancePlan {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -649,44 +666,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for InsurancePlan {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -696,34 +701,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for InsurancePlan {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::insurance_plan::InsurancePlanAccessors for InsurancePlan {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Option<PublicationStatus> {
         self.status.clone()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn name(&self) -> Option<StringType> {
         self.name.clone()
     }
     fn alias(&self) -> &[StringType] {
-        self.alias.as_deref().unwrap_or(&[])
+        self.alias.as_slice()
     }
     fn period(&self) -> Option<Period> {
         self.period.clone()
@@ -735,22 +737,22 @@ impl crate::traits::insurance_plan::InsurancePlanAccessors for InsurancePlan {
         self.administered_by.clone()
     }
     fn coverage_area(&self) -> &[Reference] {
-        self.coverage_area.as_deref().unwrap_or(&[])
+        self.coverage_area.as_slice()
     }
     fn contact(&self) -> &[ExtendedContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
     fn network(&self) -> &[Reference] {
-        self.network.as_deref().unwrap_or(&[])
+        self.network.as_slice()
     }
     fn coverage(&self) -> &[InsurancePlanCoverage] {
-        self.coverage.as_deref().unwrap_or(&[])
+        self.coverage.as_slice()
     }
     fn plan(&self) -> &[InsurancePlanPlan] {
-        self.plan.as_deref().unwrap_or(&[])
+        self.plan.as_slice()
     }
 }
 
@@ -760,12 +762,12 @@ impl crate::traits::insurance_plan::InsurancePlanMutators for InsurancePlan {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -775,12 +777,12 @@ impl crate::traits::insurance_plan::InsurancePlanMutators for InsurancePlan {
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_name(self, value: String) -> Self {
@@ -790,12 +792,12 @@ impl crate::traits::insurance_plan::InsurancePlanMutators for InsurancePlan {
     }
     fn set_alias(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.alias = Some(value);
+        resource.alias = value;
         resource
     }
     fn add_alias(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.alias.get_or_insert_with(Vec::new).push(item);
+        resource.alias.push(item);
         resource
     }
     fn set_period(self, value: Period) -> Self {
@@ -815,84 +817,81 @@ impl crate::traits::insurance_plan::InsurancePlanMutators for InsurancePlan {
     }
     fn set_coverage_area(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.coverage_area = Some(value);
+        resource.coverage_area = value;
         resource
     }
     fn add_coverage_area(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .coverage_area
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.coverage_area.push(item);
         resource
     }
     fn set_contact(self, value: Vec<ExtendedContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ExtendedContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
     fn set_network(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.network = Some(value);
+        resource.network = value;
         resource
     }
     fn add_network(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.network.get_or_insert_with(Vec::new).push(item);
+        resource.network.push(item);
         resource
     }
     fn set_coverage(self, value: Vec<InsurancePlanCoverage>) -> Self {
         let mut resource = self.clone();
-        resource.coverage = Some(value);
+        resource.coverage = value;
         resource
     }
     fn add_coverage(self, item: InsurancePlanCoverage) -> Self {
         let mut resource = self.clone();
-        resource.coverage.get_or_insert_with(Vec::new).push(item);
+        resource.coverage.push(item);
         resource
     }
     fn set_plan(self, value: Vec<InsurancePlanPlan>) -> Self {
         let mut resource = self.clone();
-        resource.plan = Some(value);
+        resource.plan = value;
         resource
     }
     fn add_plan(self, item: InsurancePlanPlan) -> Self {
         let mut resource = self.clone();
-        resource.plan.get_or_insert_with(Vec::new).push(item);
+        resource.plan.push(item);
         resource
     }
 }
 
 impl crate::traits::insurance_plan::InsurancePlanExistence for InsurancePlan {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_name(&self) -> bool {
         self.name.is_some()
     }
     fn has_alias(&self) -> bool {
-        self.alias.as_ref().is_some_and(|v| !v.is_empty())
+        !self.alias.is_empty()
     }
     fn has_period(&self) -> bool {
         self.period.is_some()
@@ -904,22 +903,22 @@ impl crate::traits::insurance_plan::InsurancePlanExistence for InsurancePlan {
         self.administered_by.is_some()
     }
     fn has_coverage_area(&self) -> bool {
-        self.coverage_area.as_ref().is_some_and(|v| !v.is_empty())
+        !self.coverage_area.is_empty()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
     fn has_network(&self) -> bool {
-        self.network.as_ref().is_some_and(|v| !v.is_empty())
+        !self.network.is_empty()
     }
     fn has_coverage(&self) -> bool {
-        self.coverage.as_ref().is_some_and(|v| !v.is_empty())
+        !self.coverage.is_empty()
     }
     fn has_plan(&self) -> bool {
-        self.plan.as_ref().is_some_and(|v| !v.is_empty())
+        !self.plan.is_empty()
     }
 }
 

@@ -28,9 +28,11 @@ pub struct ExtendedContactDetail {
     /// ValueSet: http://terminology.hl7.org/ValueSet/contactentity-type
     pub purpose: Option<CodeableConcept>,
     /// Name of an individual to contact
-    pub name: Option<Vec<HumanName>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name: Vec<HumanName>,
     /// Contact details (e.g.phone/fax/url)
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// Address for the contact
     pub address: Option<Address>,
     /// This contact detail is handled/monitored by a specific organization

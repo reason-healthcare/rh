@@ -32,7 +32,8 @@ pub struct Location {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique code or number identifying the location to its users
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | suspended | inactive
     pub status: Option<LocationStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -49,9 +50,11 @@ pub struct Location {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// A list of alternate names that the location is known as, or was known as, in the past
-    pub alias: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alias: Vec<StringType>,
     /// Extension element for the 'alias' primitive field. Contains metadata and extensions.
-    pub _alias: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _alias: Vec<Element>,
     /// Additional details about the location that could be displayed as further information to identify the location beyond its name
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -66,9 +69,11 @@ pub struct Location {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Contact details of the location
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// Physical location
     pub address: Option<Address>,
     /// Physical form of the location
@@ -88,7 +93,8 @@ pub struct Location {
     pub part_of: Option<Reference>,
     /// What days/times during a week is this location usually open
     #[serde(rename = "hoursOfOperation")]
-    pub hours_of_operation: Option<Vec<LocationHoursofoperation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hours_of_operation: Vec<LocationHoursofoperation>,
     /// Description of availability exceptions
     #[serde(rename = "availabilityExceptions")]
     pub availability_exceptions: Option<StringType>,
@@ -96,7 +102,41 @@ pub struct Location {
     #[serde(rename = "_availabilityExceptions")]
     pub _availability_exceptions: Option<Element>,
     /// Technical endpoints providing access to services operated for the location
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
+}
+/// Location nested structure for the 'hoursOfOperation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationHoursofoperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// mon | tue | wed | thu | fri | sat | sun
+    #[serde(rename = "daysOfWeek")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub days_of_week: Vec<DaysOfWeek>,
+    /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_daysOfWeek")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _days_of_week: Vec<Element>,
+    /// The Location is open all day
+    #[serde(rename = "allDay")]
+    pub all_day: Option<BooleanType>,
+    /// Extension element for the 'allDay' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_allDay")]
+    pub _all_day: Option<Element>,
+    /// Time that the Location opens
+    #[serde(rename = "openingTime")]
+    pub opening_time: Option<TimeType>,
+    /// Extension element for the 'openingTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_openingTime")]
+    pub _opening_time: Option<Element>,
+    /// Time that the Location closes
+    #[serde(rename = "closingTime")]
+    pub closing_time: Option<TimeType>,
+    /// Extension element for the 'closingTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_closingTime")]
+    pub _closing_time: Option<Element>,
 }
 /// Location nested structure for the 'position' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,36 +157,21 @@ pub struct LocationPosition {
     /// Extension element for the 'altitude' primitive field. Contains metadata and extensions.
     pub _altitude: Option<Element>,
 }
-/// Location nested structure for the 'hoursOfOperation' field
+/// Boundary (GeoJSON)
+///
+/// A boundary shape that represents the outside edge of the location (in GeoJSON format) This shape may have holes, and disconnected shapes.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/location-boundary-geojson
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationHoursofoperation {
+pub struct LocationBoundaryGeojson {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// mon | tue | wed | thu | fri | sat | sun
-    #[serde(rename = "daysOfWeek")]
-    pub days_of_week: Option<Vec<DaysOfWeek>>,
-    /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_daysOfWeek")]
-    pub _days_of_week: Option<Element>,
-    /// The Location is open all day
-    #[serde(rename = "allDay")]
-    pub all_day: Option<BooleanType>,
-    /// Extension element for the 'allDay' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_allDay")]
-    pub _all_day: Option<Element>,
-    /// Time that the Location opens
-    #[serde(rename = "openingTime")]
-    pub opening_time: Option<TimeType>,
-    /// Extension element for the 'openingTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_openingTime")]
-    pub _opening_time: Option<Element>,
-    /// Time that the Location closes
-    #[serde(rename = "closingTime")]
-    pub closing_time: Option<TimeType>,
-    /// Extension element for the 'closingTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_closingTime")]
-    pub _closing_time: Option<Element>,
+    pub base: Extension,
 }
 /// Distance
 ///
@@ -196,6 +221,22 @@ impl Default for Location {
     }
 }
 
+impl Default for LocationHoursofoperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            days_of_week: Default::default(),
+            _days_of_week: Default::default(),
+            all_day: Default::default(),
+            _all_day: Default::default(),
+            opening_time: Default::default(),
+            _opening_time: Default::default(),
+            closing_time: Default::default(),
+            _closing_time: Default::default(),
+        }
+    }
+}
+
 impl Default for LocationPosition {
     fn default() -> Self {
         Self {
@@ -210,18 +251,10 @@ impl Default for LocationPosition {
     }
 }
 
-impl Default for LocationHoursofoperation {
+impl Default for LocationBoundaryGeojson {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            days_of_week: Default::default(),
-            _days_of_week: Default::default(),
-            all_day: Default::default(),
-            _all_day: Default::default(),
-            opening_time: Default::default(),
-            _opening_time: Default::default(),
-            closing_time: Default::default(),
-            _closing_time: Default::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -385,13 +418,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Location {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -406,44 +439,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Location {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -453,22 +474,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Location {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::location::LocationAccessors for Location {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Option<LocationStatus> {
         self.status.clone()
@@ -480,7 +498,7 @@ impl crate::traits::location::LocationAccessors for Location {
         self.name.clone()
     }
     fn alias(&self) -> &[StringType] {
-        self.alias.as_deref().unwrap_or(&[])
+        self.alias.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
@@ -489,10 +507,10 @@ impl crate::traits::location::LocationAccessors for Location {
         self.mode.clone()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn address(&self) -> Option<Address> {
         self.address.clone()
@@ -510,13 +528,13 @@ impl crate::traits::location::LocationAccessors for Location {
         self.part_of.clone()
     }
     fn hours_of_operation(&self) -> &[LocationHoursofoperation] {
-        self.hours_of_operation.as_deref().unwrap_or(&[])
+        self.hours_of_operation.as_slice()
     }
     fn availability_exceptions(&self) -> Option<StringType> {
         self.availability_exceptions.clone()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
 }
 
@@ -526,12 +544,12 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: LocationStatus) -> Self {
@@ -551,12 +569,12 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_alias(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.alias = Some(value);
+        resource.alias = value;
         resource
     }
     fn add_alias(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.alias.get_or_insert_with(Vec::new).push(item);
+        resource.alias.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -571,22 +589,22 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_address(self, value: Address) -> Self {
@@ -616,15 +634,12 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_hours_of_operation(self, value: Vec<LocationHoursofoperation>) -> Self {
         let mut resource = self.clone();
-        resource.hours_of_operation = Some(value);
+        resource.hours_of_operation = value;
         resource
     }
     fn add_hours_of_operation(self, item: LocationHoursofoperation) -> Self {
         let mut resource = self.clone();
-        resource
-            .hours_of_operation
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.hours_of_operation.push(item);
         resource
     }
     fn set_availability_exceptions(self, value: String) -> Self {
@@ -634,19 +649,19 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
 }
 
 impl crate::traits::location::LocationExistence for Location {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -658,7 +673,7 @@ impl crate::traits::location::LocationExistence for Location {
         self.name.is_some()
     }
     fn has_alias(&self) -> bool {
-        self.alias.as_ref().is_some_and(|v| !v.is_empty())
+        !self.alias.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
@@ -667,10 +682,10 @@ impl crate::traits::location::LocationExistence for Location {
         self.mode.is_some()
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_address(&self) -> bool {
         self.address.is_some()
@@ -688,15 +703,13 @@ impl crate::traits::location::LocationExistence for Location {
         self.part_of.is_some()
     }
     fn has_hours_of_operation(&self) -> bool {
-        self.hours_of_operation
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.hours_of_operation.is_empty()
     }
     fn has_availability_exceptions(&self) -> bool {
         self.availability_exceptions.is_some()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
 }
 

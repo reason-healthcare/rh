@@ -24,13 +24,16 @@ pub struct MedicinalProductAuthorization {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for the marketing authorization, as assigned by a regulator
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The medicinal product that is being authorized
     pub subject: Option<Reference>,
     /// The country in which the marketing authorization has been granted
-    pub country: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<CodeableConcept>,
     /// Jurisdiction within a country
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// The status of the marketing authorization
     pub status: Option<CodeableConcept>,
     /// The date at which the given status has become applicable
@@ -68,14 +71,35 @@ pub struct MedicinalProductAuthorization {
     pub legal_basis: Option<CodeableConcept>,
     /// Authorization in areas within a country
     #[serde(rename = "jurisdictionalAuthorization")]
-    pub jurisdictional_authorization:
-        Option<Vec<MedicinalProductAuthorizationJurisdictionalauthorization>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdictional_authorization: Vec<MedicinalProductAuthorizationJurisdictionalauthorization>,
     /// Marketing Authorization Holder
     pub holder: Option<Reference>,
     /// Medicines Regulatory Agency
     pub regulator: Option<Reference>,
     /// The regulatory procedure for granting or amending a marketing authorization
     pub procedure: Option<MedicinalProductAuthorizationProcedure>,
+}
+/// MedicinalProductAuthorization nested structure for the 'jurisdictionalAuthorization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductAuthorizationJurisdictionalauthorization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The assigned number for the marketing authorization
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// Country of authorization
+    pub country: Option<CodeableConcept>,
+    /// Jurisdiction within a country
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
+    /// The legal status of supply in a jurisdiction or region
+    #[serde(rename = "legalStatusOfSupply")]
+    pub legal_status_of_supply: Option<CodeableConcept>,
+    /// The start and expected end date of the authorization
+    #[serde(rename = "validityPeriod")]
+    pub validity_period: Option<Period>,
 }
 /// MedicinalProductAuthorization nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,26 +119,8 @@ pub struct MedicinalProductAuthorizationProcedure {
     #[serde(rename = "dateDateTime")]
     pub date_date_time: Option<DateTimeType>,
     /// Applcations submitted to obtain a marketing authorization
-    pub application: Option<Vec<StringType>>,
-}
-/// MedicinalProductAuthorization nested structure for the 'jurisdictionalAuthorization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductAuthorizationJurisdictionalauthorization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The assigned number for the marketing authorization
-    pub identifier: Option<Vec<Identifier>>,
-    /// Country of authorization
-    pub country: Option<CodeableConcept>,
-    /// Jurisdiction within a country
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
-    /// The legal status of supply in a jurisdiction or region
-    #[serde(rename = "legalStatusOfSupply")]
-    pub legal_status_of_supply: Option<CodeableConcept>,
-    /// The start and expected end date of the authorization
-    #[serde(rename = "validityPeriod")]
-    pub validity_period: Option<Period>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub application: Vec<StringType>,
 }
 
 impl Default for MedicinalProductAuthorization {
@@ -145,19 +151,6 @@ impl Default for MedicinalProductAuthorization {
     }
 }
 
-impl Default for MedicinalProductAuthorizationProcedure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: Default::default(),
-            type_: Default::default(),
-            date_period: Default::default(),
-            date_date_time: Default::default(),
-            application: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicinalProductAuthorizationJurisdictionalauthorization {
     fn default() -> Self {
         Self {
@@ -167,6 +160,19 @@ impl Default for MedicinalProductAuthorizationJurisdictionalauthorization {
             jurisdiction: Default::default(),
             legal_status_of_supply: Default::default(),
             validity_period: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductAuthorizationProcedure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: Default::default(),
+            type_: Default::default(),
+            date_period: Default::default(),
+            date_date_time: Default::default(),
+            application: Default::default(),
         }
     }
 }
@@ -450,13 +456,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -471,44 +477,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -518,16 +512,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -535,16 +526,16 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
     for MedicinalProductAuthorization
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
     }
     fn country(&self) -> &[CodeableConcept] {
-        self.country.as_deref().unwrap_or(&[])
+        self.country.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn status(&self) -> Option<CodeableConcept> {
         self.status.clone()
@@ -573,7 +564,7 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
     fn jurisdictional_authorization(
         &self,
     ) -> &[MedicinalProductAuthorizationJurisdictionalauthorization] {
-        self.jurisdictional_authorization.as_deref().unwrap_or(&[])
+        self.jurisdictional_authorization.as_slice()
     }
     fn holder(&self) -> Option<Reference> {
         self.holder.clone()
@@ -594,12 +585,12 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -609,25 +600,22 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
     }
     fn set_country(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.country = Some(value);
+        resource.country = value;
         resource
     }
     fn add_country(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.country.get_or_insert_with(Vec::new).push(item);
+        resource.country.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_status(self, value: CodeableConcept) -> Self {
@@ -675,7 +663,7 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
         value: Vec<MedicinalProductAuthorizationJurisdictionalauthorization>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.jurisdictional_authorization = Some(value);
+        resource.jurisdictional_authorization = value;
         resource
     }
     fn add_jurisdictional_authorization(
@@ -683,10 +671,7 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
         item: MedicinalProductAuthorizationJurisdictionalauthorization,
     ) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdictional_authorization
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdictional_authorization.push(item);
         resource
     }
     fn set_holder(self, value: Reference) -> Self {
@@ -710,16 +695,16 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
     for MedicinalProductAuthorization
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_subject(&self) -> bool {
         self.subject.is_some()
     }
     fn has_country(&self) -> bool {
-        self.country.as_ref().is_some_and(|v| !v.is_empty())
+        !self.country.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -746,9 +731,7 @@ impl crate::traits::medicinal_product_authorization::MedicinalProductAuthorizati
         self.legal_basis.is_some()
     }
     fn has_jurisdictional_authorization(&self) -> bool {
-        self.jurisdictional_authorization
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.jurisdictional_authorization.is_empty()
     }
     fn has_holder(&self) -> bool {
         self.holder.is_some()

@@ -36,7 +36,8 @@ pub struct GraphDefinition {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the GraphDefinition (business identifier)
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the graph definition
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -72,20 +73,23 @@ pub struct GraphDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the graph definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for graph definition (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this graph definition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -105,9 +109,59 @@ pub struct GraphDefinition {
     /// Extension element for the 'start' primitive field. Contains metadata and extensions.
     pub _start: Option<Element>,
     /// Potential target for the link
-    pub node: Option<Vec<GraphDefinitionNode>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub node: Vec<GraphDefinitionNode>,
     /// Links this graph makes rules about
-    pub link: Option<Vec<GraphDefinitionLink>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link: Vec<GraphDefinitionLink>,
+}
+/// GraphDefinition nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinitionLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Compartment Consistency Rules
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub compartment: Vec<GraphDefinitionLinkCompartment>,
+    /// Why this link is specified
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Minimum occurrences for this link
+    pub min: Option<IntegerType>,
+    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
+    pub _min: Option<Element>,
+    /// Maximum occurrences for this link
+    pub max: Option<StringType>,
+    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
+    pub _max: Option<Element>,
+    /// Source Node for this link
+    #[serde(rename = "sourceId")]
+    pub source_id: StringType,
+    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sourceId")]
+    pub _source_id: Option<Element>,
+    /// Path in the resource that contains the link
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// Which slice (if profiled)
+    #[serde(rename = "sliceName")]
+    pub slice_name: Option<StringType>,
+    /// Extension element for the 'sliceName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_sliceName")]
+    pub _slice_name: Option<Element>,
+    /// Target Node for this link
+    #[serde(rename = "targetId")]
+    pub target_id: StringType,
+    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetId")]
+    pub _target_id: Option<Element>,
+    /// Criteria for reverse lookup
+    pub params: Option<StringType>,
+    /// Extension element for the 'params' primitive field. Contains metadata and extensions.
+    pub _params: Option<Element>,
 }
 /// GraphDefinition nested structure for the 'node' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,53 +217,6 @@ pub struct GraphDefinitionLinkCompartment {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
-/// GraphDefinition nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphDefinitionLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Compartment Consistency Rules
-    pub compartment: Option<Vec<GraphDefinitionLinkCompartment>>,
-    /// Why this link is specified
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Minimum occurrences for this link
-    pub min: Option<IntegerType>,
-    /// Extension element for the 'min' primitive field. Contains metadata and extensions.
-    pub _min: Option<Element>,
-    /// Maximum occurrences for this link
-    pub max: Option<StringType>,
-    /// Extension element for the 'max' primitive field. Contains metadata and extensions.
-    pub _max: Option<Element>,
-    /// Source Node for this link
-    #[serde(rename = "sourceId")]
-    pub source_id: StringType,
-    /// Extension element for the 'sourceId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sourceId")]
-    pub _source_id: Option<Element>,
-    /// Path in the resource that contains the link
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// Which slice (if profiled)
-    #[serde(rename = "sliceName")]
-    pub slice_name: Option<StringType>,
-    /// Extension element for the 'sliceName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_sliceName")]
-    pub _slice_name: Option<Element>,
-    /// Target Node for this link
-    #[serde(rename = "targetId")]
-    pub target_id: StringType,
-    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetId")]
-    pub _target_id: Option<Element>,
-    /// Criteria for reverse lookup
-    pub params: Option<StringType>,
-    /// Extension element for the 'params' primitive field. Contains metadata and extensions.
-    pub _params: Option<Element>,
-}
 
 impl Default for GraphDefinition {
     fn default() -> Self {
@@ -253,6 +260,31 @@ impl Default for GraphDefinition {
     }
 }
 
+impl Default for GraphDefinitionLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            compartment: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            min: Default::default(),
+            _min: Default::default(),
+            max: Default::default(),
+            _max: Default::default(),
+            source_id: StringType::default(),
+            _source_id: Default::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            slice_name: Default::default(),
+            _slice_name: Default::default(),
+            target_id: StringType::default(),
+            _target_id: Default::default(),
+            params: Default::default(),
+            _params: Default::default(),
+        }
+    }
+}
+
 impl Default for GraphDefinitionNode {
     fn default() -> Self {
         Self {
@@ -283,31 +315,6 @@ impl Default for GraphDefinitionLinkCompartment {
             _expression: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-        }
-    }
-}
-
-impl Default for GraphDefinitionLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            compartment: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            min: Default::default(),
-            _min: Default::default(),
-            max: Default::default(),
-            _max: Default::default(),
-            source_id: StringType::default(),
-            _source_id: Default::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            slice_name: Default::default(),
-            _slice_name: Default::default(),
-            target_id: StringType::default(),
-            _target_id: Default::default(),
-            params: Default::default(),
-            _params: Default::default(),
         }
     }
 }
@@ -539,13 +546,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for GraphDefinition
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -560,44 +567,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for GraphDefinition 
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -607,16 +602,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for GraphDefinition
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -625,7 +617,7 @@ impl crate::traits::graph_definition::GraphDefinitionAccessors for GraphDefiniti
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -649,16 +641,16 @@ impl crate::traits::graph_definition::GraphDefinitionAccessors for GraphDefiniti
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -673,10 +665,10 @@ impl crate::traits::graph_definition::GraphDefinitionAccessors for GraphDefiniti
         self.start.clone()
     }
     fn node(&self) -> &[GraphDefinitionNode] {
-        self.node.as_deref().unwrap_or(&[])
+        self.node.as_slice()
     }
     fn link(&self) -> &[GraphDefinitionLink] {
-        self.link.as_deref().unwrap_or(&[])
+        self.link.as_slice()
     }
 }
 
@@ -691,12 +683,12 @@ impl crate::traits::graph_definition::GraphDefinitionMutators for GraphDefinitio
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -736,12 +728,12 @@ impl crate::traits::graph_definition::GraphDefinitionMutators for GraphDefinitio
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -751,25 +743,22 @@ impl crate::traits::graph_definition::GraphDefinitionMutators for GraphDefinitio
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -794,22 +783,22 @@ impl crate::traits::graph_definition::GraphDefinitionMutators for GraphDefinitio
     }
     fn set_node(self, value: Vec<GraphDefinitionNode>) -> Self {
         let mut resource = self.clone();
-        resource.node = Some(value);
+        resource.node = value;
         resource
     }
     fn add_node(self, item: GraphDefinitionNode) -> Self {
         let mut resource = self.clone();
-        resource.node.get_or_insert_with(Vec::new).push(item);
+        resource.node.push(item);
         resource
     }
     fn set_link(self, value: Vec<GraphDefinitionLink>) -> Self {
         let mut resource = self.clone();
-        resource.link = Some(value);
+        resource.link = value;
         resource
     }
     fn add_link(self, item: GraphDefinitionLink) -> Self {
         let mut resource = self.clone();
-        resource.link.get_or_insert_with(Vec::new).push(item);
+        resource.link.push(item);
         resource
     }
 }
@@ -822,7 +811,7 @@ impl crate::traits::graph_definition::GraphDefinitionExistence for GraphDefiniti
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -846,16 +835,16 @@ impl crate::traits::graph_definition::GraphDefinitionExistence for GraphDefiniti
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -870,10 +859,10 @@ impl crate::traits::graph_definition::GraphDefinitionExistence for GraphDefiniti
         self.start.is_some()
     }
     fn has_node(&self) -> bool {
-        self.node.as_ref().is_some_and(|v| !v.is_empty())
+        !self.node.is_empty()
     }
     fn has_link(&self) -> bool {
-        self.link.as_ref().is_some_and(|v| !v.is_empty())
+        !self.link.is_empty()
     }
 }
 

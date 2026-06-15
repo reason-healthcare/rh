@@ -18,7 +18,8 @@ pub struct BackboneType {
     pub base: DataType,
     /// Extensions that cannot be ignored even if unrecognized
     #[serde(rename = "modifierExtension")]
-    pub modifier_extension: Option<Vec<Extension>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier_extension: Vec<Extension>,
 }
 
 impl Default for BackboneType {

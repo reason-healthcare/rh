@@ -29,7 +29,8 @@ pub struct Specimen {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Identifier assigned by the lab
     #[serde(rename = "accessionIdentifier")]
     pub accession_identifier: Option<Identifier>,
@@ -53,23 +54,103 @@ pub struct Specimen {
     #[serde(rename = "_receivedTime")]
     pub _received_time: Option<Element>,
     /// Specimen from which this specimen originated
-    pub parent: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parent: Vec<Reference>,
     /// Why the specimen was collected
-    pub request: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub request: Vec<Reference>,
     /// Collection details
     pub collection: Option<SpecimenCollection>,
     /// Processing and processing step details
-    pub processing: Option<Vec<SpecimenProcessing>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub processing: Vec<SpecimenProcessing>,
     /// Direct container of specimen (tube/slide, etc.)
-    pub container: Option<Vec<SpecimenContainer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub container: Vec<SpecimenContainer>,
     /// State of the specimen
     ///
     /// Binding: extensible (Codes describing the state of the specimen.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0493
-    pub condition: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condition: Vec<CodeableConcept>,
     /// Comments
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// Specimen nested structure for the 'processing' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenProcessing {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of procedure
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Indicates the treatment step  applied to the specimen
+    ///
+    /// Binding: example (Type indicating the technique used to process the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
+    pub procedure: Option<CodeableConcept>,
+    /// Material used in the processing step
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additive: Vec<Reference>,
+    /// Date and time of specimen processing (dateTime)
+    #[serde(rename = "timeDateTime")]
+    pub time_date_time: Option<DateTimeType>,
+    /// Date and time of specimen processing (Period)
+    #[serde(rename = "timePeriod")]
+    pub time_period: Option<Period>,
+}
+/// sequenceNumber
+///
+/// An assigned number on the specimen denoting the order of collection.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-sequenceNumber
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenSequenceNumber {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Processing Time
+///
+/// Period or duration of processing.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-processingTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenProcessingTime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Special handling
+///
+/// Special handling during the collection, transport, or storage of the specimen.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-specialHandling
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenSpecialHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 /// Specimen nested structure for the 'collection' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,7 +207,8 @@ pub struct SpecimenContainer {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Id for the container
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Textual description of the container
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -150,43 +232,18 @@ pub struct SpecimenContainer {
     #[serde(rename = "additiveReference")]
     pub additive_reference: Option<Reference>,
 }
-/// Specimen nested structure for the 'processing' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenProcessing {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of procedure
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Indicates the treatment step  applied to the specimen
-    ///
-    /// Binding: example (Type indicating the technique used to process the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/specimen-processing-procedure
-    pub procedure: Option<CodeableConcept>,
-    /// Material used in the processing step
-    pub additive: Option<Vec<Reference>>,
-    /// Date and time of specimen processing (dateTime)
-    #[serde(rename = "timeDateTime")]
-    pub time_date_time: Option<DateTimeType>,
-    /// Date and time of specimen processing (Period)
-    #[serde(rename = "timePeriod")]
-    pub time_period: Option<Period>,
-}
-/// sequenceNumber
+/// Is Dry Weight
 ///
-/// An assigned number on the specimen denoting the order of collection.
+/// If the recorded quantity of the specimen is reported as a weight, if it is a dry weight.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-sequenceNumber
+/// - URL: http://hl7.org/fhir/StructureDefinition/specimen-isDryWeight
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenSequenceNumber {
+pub struct SpecimenIsDryWeight {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -211,6 +268,44 @@ impl Default for Specimen {
             container: Default::default(),
             condition: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenProcessing {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            procedure: Default::default(),
+            additive: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenSequenceNumber {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for SpecimenProcessingTime {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for SpecimenSpecialHandling {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -248,21 +343,7 @@ impl Default for SpecimenContainer {
     }
 }
 
-impl Default for SpecimenProcessing {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            procedure: Default::default(),
-            additive: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenSequenceNumber {
+impl Default for SpecimenIsDryWeight {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -435,13 +516,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Specimen {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -456,44 +537,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Specimen {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -503,22 +572,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Specimen {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::specimen::SpecimenAccessors for Specimen {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn accession_identifier(&self) -> Option<Identifier> {
         self.accession_identifier.clone()
@@ -536,25 +602,25 @@ impl crate::traits::specimen::SpecimenAccessors for Specimen {
         self.received_time.clone()
     }
     fn parent(&self) -> &[Reference] {
-        self.parent.as_deref().unwrap_or(&[])
+        self.parent.as_slice()
     }
     fn request(&self) -> &[Reference] {
-        self.request.as_deref().unwrap_or(&[])
+        self.request.as_slice()
     }
     fn collection(&self) -> Option<SpecimenCollection> {
         self.collection.clone()
     }
     fn processing(&self) -> &[SpecimenProcessing] {
-        self.processing.as_deref().unwrap_or(&[])
+        self.processing.as_slice()
     }
     fn container(&self) -> &[SpecimenContainer] {
-        self.container.as_deref().unwrap_or(&[])
+        self.container.as_slice()
     }
     fn condition(&self) -> &[CodeableConcept] {
-        self.condition.as_deref().unwrap_or(&[])
+        self.condition.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -564,12 +630,12 @@ impl crate::traits::specimen::SpecimenMutators for Specimen {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_accession_identifier(self, value: Identifier) -> Self {
@@ -599,22 +665,22 @@ impl crate::traits::specimen::SpecimenMutators for Specimen {
     }
     fn set_parent(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.parent = Some(value);
+        resource.parent = value;
         resource
     }
     fn add_parent(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.parent.get_or_insert_with(Vec::new).push(item);
+        resource.parent.push(item);
         resource
     }
     fn set_request(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.request = Some(value);
+        resource.request = value;
         resource
     }
     fn add_request(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.request.get_or_insert_with(Vec::new).push(item);
+        resource.request.push(item);
         resource
     }
     fn set_collection(self, value: SpecimenCollection) -> Self {
@@ -624,49 +690,49 @@ impl crate::traits::specimen::SpecimenMutators for Specimen {
     }
     fn set_processing(self, value: Vec<SpecimenProcessing>) -> Self {
         let mut resource = self.clone();
-        resource.processing = Some(value);
+        resource.processing = value;
         resource
     }
     fn add_processing(self, item: SpecimenProcessing) -> Self {
         let mut resource = self.clone();
-        resource.processing.get_or_insert_with(Vec::new).push(item);
+        resource.processing.push(item);
         resource
     }
     fn set_container(self, value: Vec<SpecimenContainer>) -> Self {
         let mut resource = self.clone();
-        resource.container = Some(value);
+        resource.container = value;
         resource
     }
     fn add_container(self, item: SpecimenContainer) -> Self {
         let mut resource = self.clone();
-        resource.container.get_or_insert_with(Vec::new).push(item);
+        resource.container.push(item);
         resource
     }
     fn set_condition(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.condition = Some(value);
+        resource.condition = value;
         resource
     }
     fn add_condition(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.condition.get_or_insert_with(Vec::new).push(item);
+        resource.condition.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::specimen::SpecimenExistence for Specimen {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_accession_identifier(&self) -> bool {
         self.accession_identifier.is_some()
@@ -684,25 +750,25 @@ impl crate::traits::specimen::SpecimenExistence for Specimen {
         self.received_time.is_some()
     }
     fn has_parent(&self) -> bool {
-        self.parent.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parent.is_empty()
     }
     fn has_request(&self) -> bool {
-        self.request.as_ref().is_some_and(|v| !v.is_empty())
+        !self.request.is_empty()
     }
     fn has_collection(&self) -> bool {
         self.collection.is_some()
     }
     fn has_processing(&self) -> bool {
-        self.processing.as_ref().is_some_and(|v| !v.is_empty())
+        !self.processing.is_empty()
     }
     fn has_container(&self) -> bool {
-        self.container.as_ref().is_some_and(|v| !v.is_empty())
+        !self.container.is_empty()
     }
     fn has_condition(&self) -> bool {
-        self.condition.as_ref().is_some_and(|v| !v.is_empty())
+        !self.condition.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

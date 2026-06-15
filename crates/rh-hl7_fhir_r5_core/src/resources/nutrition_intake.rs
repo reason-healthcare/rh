@@ -30,25 +30,32 @@ pub struct NutritionIntake {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// Fulfils plan, proposal or order
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Part of referenced event
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// preparation | in-progress | not-done | on-hold | stopped | completed | entered-in-error | unknown
     pub status: EventStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -70,7 +77,8 @@ pub struct NutritionIntake {
     /// - `704277009`
     /// - ... and 1 more values
     #[serde(rename = "statusReason")]
-    pub status_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub status_reason: Vec<CodeableConcept>,
     /// Code representing an overall type of nutrition intake
     ///
     /// Binding: example (A coded concept identifying an overall type of diet or nutrition that is represented by this intake.  See consumedItem for more details.)
@@ -102,23 +110,61 @@ pub struct NutritionIntake {
     pub consumed_item: Vec<NutritionIntakeConsumeditem>,
     /// Total nutrient for the whole meal, product, serving
     #[serde(rename = "ingredientLabel")]
-    pub ingredient_label: Option<Vec<NutritionIntakeIngredientlabel>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient_label: Vec<NutritionIntakeIngredientlabel>,
     /// Who was performed in the intake
-    pub performer: Option<Vec<NutritionIntakePerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<NutritionIntakePerformer>,
     /// Where the intake occurred
     pub location: Option<Reference>,
     /// Additional supporting information
     #[serde(rename = "derivedFrom")]
-    pub derived_from: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from: Vec<Reference>,
     /// Reason for why the food or fluid is /was consumed
     ///
     /// Binding: example (Reason for why something was ingested.)
     ///
     /// Available values:
     /// - `160245001`: No current problems or disability
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Further information about the consumption
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// NutritionIntake nested structure for the 'ingredientLabel' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionIntakeIngredientlabel {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Total nutrient consumed
+    ///
+    /// Binding: example (Types of nutrients that can be found in a nutrition product.)
+    ///
+    /// Available values:
+    /// - `33463005`: Fluid
+    /// - `39972003`: Sodium
+    /// - `88480006`: Potassium
+    pub nutrient: CodeableReference,
+    /// Total amount of nutrient consumed
+    pub amount: Quantity,
+}
+/// NutritionIntake nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionIntakePerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of performer
+    ///
+    /// Binding: example (Type of performance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/performer-role
+    pub function: Option<CodeableConcept>,
+    /// Who performed the intake
+    pub actor: Reference,
 }
 /// NutritionIntake nested structure for the 'consumedItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -160,39 +206,6 @@ pub struct NutritionIntakeConsumeditem {
     #[serde(rename = "notConsumedReason")]
     pub not_consumed_reason: Option<CodeableConcept>,
 }
-/// NutritionIntake nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionIntakePerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of performer
-    ///
-    /// Binding: example (Type of performance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/performer-role
-    pub function: Option<CodeableConcept>,
-    /// Who performed the intake
-    pub actor: Reference,
-}
-/// NutritionIntake nested structure for the 'ingredientLabel' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionIntakeIngredientlabel {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Total nutrient consumed
-    ///
-    /// Binding: example (Types of nutrients that can be found in a nutrition product.)
-    ///
-    /// Available values:
-    /// - `33463005`: Fluid
-    /// - `39972003`: Sodium
-    /// - `88480006`: Potassium
-    pub nutrient: CodeableReference,
-    /// Total amount of nutrient consumed
-    pub amount: Quantity,
-}
 
 impl Default for NutritionIntake {
     fn default() -> Self {
@@ -228,18 +241,12 @@ impl Default for NutritionIntake {
     }
 }
 
-impl Default for NutritionIntakeConsumeditem {
+impl Default for NutritionIntakeIngredientlabel {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            nutrition_product: Default::default(),
-            schedule: Default::default(),
+            nutrient: Default::default(),
             amount: Default::default(),
-            rate: Default::default(),
-            not_consumed: Default::default(),
-            _not_consumed: Default::default(),
-            not_consumed_reason: Default::default(),
         }
     }
 }
@@ -254,12 +261,18 @@ impl Default for NutritionIntakePerformer {
     }
 }
 
-impl Default for NutritionIntakeIngredientlabel {
+impl Default for NutritionIntakeConsumeditem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            nutrient: Default::default(),
+            type_: Default::default(),
+            nutrition_product: Default::default(),
+            schedule: Default::default(),
             amount: Default::default(),
+            rate: Default::default(),
+            not_consumed: Default::default(),
+            _not_consumed: Default::default(),
+            not_consumed_reason: Default::default(),
         }
     }
 }
@@ -484,13 +497,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for NutritionIntake
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -505,44 +518,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for NutritionIntake 
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -552,40 +553,37 @@ impl crate::traits::domain_resource::DomainResourceExistence for NutritionIntake
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::nutrition_intake::NutritionIntakeAccessors for NutritionIntake {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> EventStatus {
         self.status.clone()
     }
     fn status_reason(&self) -> &[CodeableConcept] {
-        self.status_reason.as_deref().unwrap_or(&[])
+        self.status_reason.as_slice()
     }
     fn code(&self) -> Option<CodeableConcept> {
         self.code.clone()
@@ -603,22 +601,22 @@ impl crate::traits::nutrition_intake::NutritionIntakeAccessors for NutritionInta
         &self.consumed_item
     }
     fn ingredient_label(&self) -> &[NutritionIntakeIngredientlabel] {
-        self.ingredient_label.as_deref().unwrap_or(&[])
+        self.ingredient_label.as_slice()
     }
     fn performer(&self) -> &[NutritionIntakePerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
     }
     fn derived_from(&self) -> &[Reference] {
-        self.derived_from.as_deref().unwrap_or(&[])
+        self.derived_from.as_slice()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -628,58 +626,52 @@ impl crate::traits::nutrition_intake::NutritionIntakeMutators for NutritionIntak
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: EventStatus) -> Self {
@@ -689,15 +681,12 @@ impl crate::traits::nutrition_intake::NutritionIntakeMutators for NutritionIntak
     }
     fn set_status_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.status_reason = Some(value);
+        resource.status_reason = value;
         resource
     }
     fn add_status_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .status_reason
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.status_reason.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -732,25 +721,22 @@ impl crate::traits::nutrition_intake::NutritionIntakeMutators for NutritionIntak
     }
     fn set_ingredient_label(self, value: Vec<NutritionIntakeIngredientlabel>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient_label = Some(value);
+        resource.ingredient_label = value;
         resource
     }
     fn add_ingredient_label(self, item: NutritionIntakeIngredientlabel) -> Self {
         let mut resource = self.clone();
-        resource
-            .ingredient_label
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.ingredient_label.push(item);
         resource
     }
     fn set_performer(self, value: Vec<NutritionIntakePerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: NutritionIntakePerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -760,35 +746,32 @@ impl crate::traits::nutrition_intake::NutritionIntakeMutators for NutritionIntak
     }
     fn set_derived_from(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from = Some(value);
+        resource.derived_from = value;
         resource
     }
     fn add_derived_from(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from.push(item);
         resource
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
@@ -801,29 +784,25 @@ impl crate::traits::nutrition_intake::NutritionIntakeExistence for NutritionInta
         self.reported_boolean.is_some() || self.reported_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_status_reason(&self) -> bool {
-        self.status_reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.status_reason.is_empty()
     }
     fn has_code(&self) -> bool {
         self.code.is_some()
@@ -841,24 +820,22 @@ impl crate::traits::nutrition_intake::NutritionIntakeExistence for NutritionInta
         !self.consumed_item.is_empty()
     }
     fn has_ingredient_label(&self) -> bool {
-        self.ingredient_label
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.ingredient_label.is_empty()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
     }
     fn has_derived_from(&self) -> bool {
-        self.derived_from.as_ref().is_some_and(|v| !v.is_empty())
+        !self.derived_from.is_empty()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

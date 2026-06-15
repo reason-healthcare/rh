@@ -25,9 +25,11 @@ pub struct RegulatedAuthorization {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for the authorization, typically assigned by the authorizing body
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The product type, treatment, facility or activity that is being authorized
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// Overall type of this authorization, for example drug marketing approval, orphan drug designation
     ///
     /// Binding: example (Overall type of this authorization.)
@@ -44,7 +46,8 @@ pub struct RegulatedAuthorization {
     /// Binding: example (Jurisdiction codes)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub region: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub region: Vec<CodeableConcept>,
     /// The status that is authorised e.g. approved. Intermediate states can be tracked with cases and applications
     ///
     /// Binding: preferred (The lifecycle status of an artifact.)
@@ -61,7 +64,8 @@ pub struct RegulatedAuthorization {
     #[serde(rename = "validityPeriod")]
     pub validity_period: Option<Period>,
     /// Condition for which the use of the regulated product applies
-    pub indication: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub indication: Vec<CodeableReference>,
     /// The intended use of the product, e.g. prevention, treatment
     ///
     /// Binding: preferred (The overall intended use of a product.)
@@ -74,14 +78,16 @@ pub struct RegulatedAuthorization {
     /// Binding: example (A legal or regulatory framework against which an authorization is granted, or other reasons for it.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/regulated-authorization-basis
-    pub basis: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub basis: Vec<CodeableConcept>,
     /// The organization that has been granted this authorization, by the regulator
     pub holder: Option<Reference>,
     /// The regulatory authority or authorizing body granting the authorization
     pub regulator: Option<Reference>,
     /// Additional information or supporting documentation about the authorization
     #[serde(rename = "attachedDocument")]
-    pub attached_document: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attached_document: Vec<Reference>,
     /// The case or regulatory procedure for granting or amending a regulated authorization. Note: This area is subject to ongoing review and the workgroup is seeking implementer feedback on its use (see link at bottom of page)
     pub case: Option<RegulatedAuthorizationCase>,
 }
@@ -113,7 +119,8 @@ pub struct RegulatedAuthorizationCase {
     #[serde(rename = "dateDateTime")]
     pub date_date_time: Option<DateTimeType>,
     /// Applications submitted to obtain a regulated authorization. Steps within the longer running case or procedure
-    pub application: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub application: Vec<StringType>,
 }
 
 impl Default for RegulatedAuthorization {
@@ -336,13 +343,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for RegulatedAuthor
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -357,44 +364,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for RegulatedAuthori
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -404,16 +399,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for RegulatedAuthor
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -421,10 +413,10 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationAccessors
     for RegulatedAuthorization
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
@@ -433,7 +425,7 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationAccessors
         self.description.clone()
     }
     fn region(&self) -> &[CodeableConcept] {
-        self.region.as_deref().unwrap_or(&[])
+        self.region.as_slice()
     }
     fn status(&self) -> Option<CodeableConcept> {
         self.status.clone()
@@ -445,13 +437,13 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationAccessors
         self.validity_period.clone()
     }
     fn indication(&self) -> &[CodeableReference] {
-        self.indication.as_deref().unwrap_or(&[])
+        self.indication.as_slice()
     }
     fn intended_use(&self) -> Option<CodeableConcept> {
         self.intended_use.clone()
     }
     fn basis(&self) -> &[CodeableConcept] {
-        self.basis.as_deref().unwrap_or(&[])
+        self.basis.as_slice()
     }
     fn holder(&self) -> Option<Reference> {
         self.holder.clone()
@@ -460,7 +452,7 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationAccessors
         self.regulator.clone()
     }
     fn attached_document(&self) -> &[Reference] {
-        self.attached_document.as_deref().unwrap_or(&[])
+        self.attached_document.as_slice()
     }
     fn case(&self) -> Option<RegulatedAuthorizationCase> {
         self.case.clone()
@@ -475,22 +467,22 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -505,12 +497,12 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationMutators
     }
     fn set_region(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.region = Some(value);
+        resource.region = value;
         resource
     }
     fn add_region(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.region.get_or_insert_with(Vec::new).push(item);
+        resource.region.push(item);
         resource
     }
     fn set_status(self, value: CodeableConcept) -> Self {
@@ -530,12 +522,12 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationMutators
     }
     fn set_indication(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.indication = Some(value);
+        resource.indication = value;
         resource
     }
     fn add_indication(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.indication.get_or_insert_with(Vec::new).push(item);
+        resource.indication.push(item);
         resource
     }
     fn set_intended_use(self, value: CodeableConcept) -> Self {
@@ -545,12 +537,12 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationMutators
     }
     fn set_basis(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.basis = Some(value);
+        resource.basis = value;
         resource
     }
     fn add_basis(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.basis.get_or_insert_with(Vec::new).push(item);
+        resource.basis.push(item);
         resource
     }
     fn set_holder(self, value: Reference) -> Self {
@@ -565,15 +557,12 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationMutators
     }
     fn set_attached_document(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.attached_document = Some(value);
+        resource.attached_document = value;
         resource
     }
     fn add_attached_document(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .attached_document
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.attached_document.push(item);
         resource
     }
     fn set_case(self, value: RegulatedAuthorizationCase) -> Self {
@@ -587,10 +576,10 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationExistence
     for RegulatedAuthorization
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
@@ -599,7 +588,7 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationExistence
         self.description.is_some()
     }
     fn has_region(&self) -> bool {
-        self.region.as_ref().is_some_and(|v| !v.is_empty())
+        !self.region.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -611,13 +600,13 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationExistence
         self.validity_period.is_some()
     }
     fn has_indication(&self) -> bool {
-        self.indication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.indication.is_empty()
     }
     fn has_intended_use(&self) -> bool {
         self.intended_use.is_some()
     }
     fn has_basis(&self) -> bool {
-        self.basis.as_ref().is_some_and(|v| !v.is_empty())
+        !self.basis.is_empty()
     }
     fn has_holder(&self) -> bool {
         self.holder.is_some()
@@ -626,9 +615,7 @@ impl crate::traits::regulated_authorization::RegulatedAuthorizationExistence
         self.regulator.is_some()
     }
     fn has_attached_document(&self) -> bool {
-        self.attached_document
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.attached_document.is_empty()
     }
     fn has_case(&self) -> bool {
         self.case.is_some()

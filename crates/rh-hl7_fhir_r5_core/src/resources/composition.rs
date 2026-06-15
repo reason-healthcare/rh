@@ -34,7 +34,8 @@ pub struct Composition {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Version-independent identifier for the Composition
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// An explicitly assigned identifer of a variation of the content in the Composition
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -55,9 +56,11 @@ pub struct Composition {
     /// Binding: example (High-level kind of a clinical document at a macro level.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/referenced-item-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Who and/or what the composition is about
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// Context of the Composition
     pub encounter: Option<Reference>,
     /// Composition editing time
@@ -66,7 +69,8 @@ pub struct Composition {
     pub _date: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Who and/or what authored the composition
     pub author: Vec<Reference>,
     /// Name for this Composition (computer friendly)
@@ -78,18 +82,23 @@ pub struct Composition {
     /// Extension element for the 'title' primitive field. Contains metadata and extensions.
     pub _title: Option<Element>,
     /// For any additional notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Attests to accuracy of composition
-    pub attester: Option<Vec<CompositionAttester>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attester: Vec<CompositionAttester>,
     /// Organization which maintains the composition
     pub custodian: Option<Reference>,
     /// Relationships to other compositions/documents
     #[serde(rename = "relatesTo")]
-    pub relates_to: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relates_to: Vec<RelatedArtifact>,
     /// The clinical service(s) being documented
-    pub event: Option<Vec<CompositionEvent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event: Vec<CompositionEvent>,
     /// Composition is broken into sections
-    pub section: Option<Vec<CompositionSection>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section: Vec<CompositionSection>,
 }
 /// Composition nested structure for the 'attester' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,7 +132,8 @@ pub struct CompositionEvent {
     /// Binding: example (This list of codes represents the main clinical acts being documented.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub detail: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<CodeableReference>,
 }
 /// Composition nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,7 +163,8 @@ pub struct CompositionSection {
     /// - ... and 47 more values
     pub code: Option<CodeableConcept>,
     /// Who and/or what authored the section
-    pub author: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<Reference>,
     /// Who/what the section is about, when it is not about the subject of composition
     pub focus: Option<Reference>,
     /// Text summary of the section, for human interpretation
@@ -166,7 +177,8 @@ pub struct CompositionSection {
     #[serde(rename = "orderedBy")]
     pub ordered_by: Option<CodeableConcept>,
     /// A reference to data that supports this section
-    pub entry: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry: Vec<Reference>,
     /// Why the section is empty
     ///
     /// Binding: preferred (If a section is empty, why it is empty.)
@@ -175,7 +187,8 @@ pub struct CompositionSection {
     #[serde(rename = "emptyReason")]
     pub empty_reason: Option<CodeableConcept>,
     /// Nested Section
-    pub section: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section: Vec<StringType>,
 }
 
 impl Default for Composition {
@@ -421,13 +434,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Composition {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -442,44 +455,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Composition {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -489,16 +490,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Composition {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -507,7 +505,7 @@ impl crate::traits::composition::CompositionAccessors for Composition {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -519,10 +517,10 @@ impl crate::traits::composition::CompositionAccessors for Composition {
         self.type_.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn encounter(&self) -> Option<Reference> {
         self.encounter.clone()
@@ -531,7 +529,7 @@ impl crate::traits::composition::CompositionAccessors for Composition {
         self.date.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn author(&self) -> &[Reference] {
         &self.author
@@ -543,22 +541,22 @@ impl crate::traits::composition::CompositionAccessors for Composition {
         self.title.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn attester(&self) -> &[CompositionAttester] {
-        self.attester.as_deref().unwrap_or(&[])
+        self.attester.as_slice()
     }
     fn custodian(&self) -> Option<Reference> {
         self.custodian.clone()
     }
     fn relates_to(&self) -> &[RelatedArtifact] {
-        self.relates_to.as_deref().unwrap_or(&[])
+        self.relates_to.as_slice()
     }
     fn event(&self) -> &[CompositionEvent] {
-        self.event.as_deref().unwrap_or(&[])
+        self.event.as_slice()
     }
     fn section(&self) -> &[CompositionSection] {
-        self.section.as_deref().unwrap_or(&[])
+        self.section.as_slice()
     }
 }
 
@@ -573,12 +571,12 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -598,22 +596,22 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_encounter(self, value: Reference) -> Self {
@@ -628,12 +626,12 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_author(self, value: Vec<Reference>) -> Self {
@@ -658,22 +656,22 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_attester(self, value: Vec<CompositionAttester>) -> Self {
         let mut resource = self.clone();
-        resource.attester = Some(value);
+        resource.attester = value;
         resource
     }
     fn add_attester(self, item: CompositionAttester) -> Self {
         let mut resource = self.clone();
-        resource.attester.get_or_insert_with(Vec::new).push(item);
+        resource.attester.push(item);
         resource
     }
     fn set_custodian(self, value: Reference) -> Self {
@@ -683,32 +681,32 @@ impl crate::traits::composition::CompositionMutators for Composition {
     }
     fn set_relates_to(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.relates_to = Some(value);
+        resource.relates_to = value;
         resource
     }
     fn add_relates_to(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource.relates_to.get_or_insert_with(Vec::new).push(item);
+        resource.relates_to.push(item);
         resource
     }
     fn set_event(self, value: Vec<CompositionEvent>) -> Self {
         let mut resource = self.clone();
-        resource.event = Some(value);
+        resource.event = value;
         resource
     }
     fn add_event(self, item: CompositionEvent) -> Self {
         let mut resource = self.clone();
-        resource.event.get_or_insert_with(Vec::new).push(item);
+        resource.event.push(item);
         resource
     }
     fn set_section(self, value: Vec<CompositionSection>) -> Self {
         let mut resource = self.clone();
-        resource.section = Some(value);
+        resource.section = value;
         resource
     }
     fn add_section(self, item: CompositionSection) -> Self {
         let mut resource = self.clone();
-        resource.section.get_or_insert_with(Vec::new).push(item);
+        resource.section.push(item);
         resource
     }
 }
@@ -718,7 +716,7 @@ impl crate::traits::composition::CompositionExistence for Composition {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -730,10 +728,10 @@ impl crate::traits::composition::CompositionExistence for Composition {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_encounter(&self) -> bool {
         self.encounter.is_some()
@@ -742,7 +740,7 @@ impl crate::traits::composition::CompositionExistence for Composition {
         true
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_author(&self) -> bool {
         !self.author.is_empty()
@@ -754,22 +752,22 @@ impl crate::traits::composition::CompositionExistence for Composition {
         true
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_attester(&self) -> bool {
-        self.attester.as_ref().is_some_and(|v| !v.is_empty())
+        !self.attester.is_empty()
     }
     fn has_custodian(&self) -> bool {
         self.custodian.is_some()
     }
     fn has_relates_to(&self) -> bool {
-        self.relates_to.as_ref().is_some_and(|v| !v.is_empty())
+        !self.relates_to.is_empty()
     }
     fn has_event(&self) -> bool {
-        self.event.as_ref().is_some_and(|v| !v.is_empty())
+        !self.event.is_empty()
     }
     fn has_section(&self) -> bool {
-        self.section.as_ref().is_some_and(|v| !v.is_empty())
+        !self.section.is_empty()
     }
 }
 

@@ -30,7 +30,8 @@ pub struct ImagingSelection {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for Imaging Selection
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// available | entered-in-error | unknown
     pub status: ImagingselectionStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -42,16 +43,19 @@ pub struct ImagingSelection {
     /// Extension element for the 'issued' primitive field. Contains metadata and extensions.
     pub _issued: Option<Element>,
     /// Selector of the instances (human or machine)
-    pub performer: Option<Vec<ImagingSelectionPerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<ImagingSelectionPerformer>,
     /// Associated request
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Classifies the imaging selection
     ///
     /// Binding: example (Key Object Selection Document Title.)
     ///
     /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_7010.html
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Imaging Selection purpose text or code
     ///
     /// Binding: example (Key Object Selection Document Title.)
@@ -66,9 +70,11 @@ pub struct ImagingSelection {
     pub _study_uid: Option<Element>,
     /// The imaging study from which the imaging selection is derived
     #[serde(rename = "derivedFrom")]
-    pub derived_from: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from: Vec<Reference>,
     /// The network service providing retrieval for the images referenced in the imaging selection
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
     /// DICOM Series Instance UID
     #[serde(rename = "seriesUid")]
     pub series_uid: Option<StringType>,
@@ -106,9 +112,47 @@ pub struct ImagingSelection {
     #[serde(rename = "bodySite")]
     pub body_site: Option<CodeableReference>,
     /// Related resource that is the focus for the imaging selection
-    pub focus: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<Reference>,
     /// The selected instances
-    pub instance: Option<Vec<ImagingSelectionInstance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instance: Vec<ImagingSelectionInstance>,
+}
+/// ImagingSelection nested structure for the 'instance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagingSelectionInstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A specific 2D region in a DICOM image / frame
+    #[serde(rename = "imageRegion2D")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image_region2_d: Vec<ImagingSelectionInstanceImageregion2d>,
+    /// A specific 3D region in a DICOM frame of reference
+    #[serde(rename = "imageRegion3D")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image_region3_d: Vec<ImagingSelectionInstanceImageregion3d>,
+    /// DICOM SOP Instance UID
+    pub uid: StringType,
+    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
+    pub _uid: Option<Element>,
+    /// DICOM Instance Number
+    pub number: Option<UnsignedIntType>,
+    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
+    pub _number: Option<Element>,
+    /// DICOM SOP Class UID
+    ///
+    /// Binding: extensible (DICOM SOP Classes.)
+    ///
+    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_B.5.html#table_B.5-1
+    #[serde(rename = "sopClass")]
+    pub sop_class: Option<Coding>,
+    /// The selected subset of the SOP Instance
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subset: Vec<StringType>,
+    /// Extension element for the 'subset' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _subset: Vec<Element>,
 }
 /// ImagingSelectionInstance nested structure for the 'imageRegion3D' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,7 +169,26 @@ pub struct ImagingSelectionInstanceImageregion3d {
     /// Specifies the coordinates that define the image region
     pub coordinate: Vec<DecimalType>,
     /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
-    pub _coordinate: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _coordinate: Vec<Element>,
+}
+/// ImagingSelectionInstance nested structure for the 'imageRegion2D' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImagingSelectionInstanceImageregion2d {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// point | polyline | interpolated | circle | ellipse
+    #[serde(rename = "regionType")]
+    pub region_type: Imagingselection2dgraphictype,
+    /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_regionType")]
+    pub _region_type: Option<Element>,
+    /// Specifies the coordinates that define the image region
+    pub coordinate: Vec<DecimalType>,
+    /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _coordinate: Vec<Element>,
 }
 /// ImagingSelection nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,55 +209,6 @@ pub struct ImagingSelectionPerformer {
     pub function: Option<CodeableConcept>,
     /// Author (human or machine)
     pub actor: Option<Reference>,
-}
-/// ImagingSelectionInstance nested structure for the 'imageRegion2D' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingSelectionInstanceImageregion2d {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// point | polyline | interpolated | circle | ellipse
-    #[serde(rename = "regionType")]
-    pub region_type: Imagingselection2dgraphictype,
-    /// Extension element for the 'regionType' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_regionType")]
-    pub _region_type: Option<Element>,
-    /// Specifies the coordinates that define the image region
-    pub coordinate: Vec<DecimalType>,
-    /// Extension element for the 'coordinate' primitive field. Contains metadata and extensions.
-    pub _coordinate: Option<Element>,
-}
-/// ImagingSelection nested structure for the 'instance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImagingSelectionInstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A specific 2D region in a DICOM image / frame
-    #[serde(rename = "imageRegion2D")]
-    pub image_region2_d: Option<Vec<ImagingSelectionInstanceImageregion2d>>,
-    /// A specific 3D region in a DICOM frame of reference
-    #[serde(rename = "imageRegion3D")]
-    pub image_region3_d: Option<Vec<ImagingSelectionInstanceImageregion3d>>,
-    /// DICOM SOP Instance UID
-    pub uid: StringType,
-    /// Extension element for the 'uid' primitive field. Contains metadata and extensions.
-    pub _uid: Option<Element>,
-    /// DICOM Instance Number
-    pub number: Option<UnsignedIntType>,
-    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
-    pub _number: Option<Element>,
-    /// DICOM SOP Class UID
-    ///
-    /// Binding: extensible (DICOM SOP Classes.)
-    ///
-    /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part04/sect_B.5.html#table_B.5-1
-    #[serde(rename = "sopClass")]
-    pub sop_class: Option<Coding>,
-    /// The selected subset of the SOP Instance
-    pub subset: Option<Vec<StringType>>,
-    /// Extension element for the 'subset' primitive field. Contains metadata and extensions.
-    pub _subset: Option<Element>,
 }
 
 impl Default for ImagingSelection {
@@ -228,7 +242,36 @@ impl Default for ImagingSelection {
     }
 }
 
+impl Default for ImagingSelectionInstance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            image_region2_d: Default::default(),
+            image_region3_d: Default::default(),
+            uid: StringType::default(),
+            _uid: Default::default(),
+            number: Default::default(),
+            _number: Default::default(),
+            sop_class: Default::default(),
+            subset: Default::default(),
+            _subset: Default::default(),
+        }
+    }
+}
+
 impl Default for ImagingSelectionInstanceImageregion3d {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            region_type: Default::default(),
+            _region_type: Default::default(),
+            coordinate: Default::default(),
+            _coordinate: Default::default(),
+        }
+    }
+}
+
+impl Default for ImagingSelectionInstanceImageregion2d {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -246,35 +289,6 @@ impl Default for ImagingSelectionPerformer {
             base: BackboneElement::default(),
             function: Default::default(),
             actor: Default::default(),
-        }
-    }
-}
-
-impl Default for ImagingSelectionInstanceImageregion2d {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            region_type: Default::default(),
-            _region_type: Default::default(),
-            coordinate: Default::default(),
-            _coordinate: Default::default(),
-        }
-    }
-}
-
-impl Default for ImagingSelectionInstance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            image_region2_d: Default::default(),
-            image_region3_d: Default::default(),
-            uid: StringType::default(),
-            _uid: Default::default(),
-            number: Default::default(),
-            _number: Default::default(),
-            sop_class: Default::default(),
-            subset: Default::default(),
-            _subset: Default::default(),
         }
     }
 }
@@ -518,13 +532,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ImagingSelectio
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -539,44 +553,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImagingSelection
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -586,22 +588,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for ImagingSelectio
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::imaging_selection::ImagingSelectionAccessors for ImagingSelection {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ImagingselectionStatus {
         self.status.clone()
@@ -613,13 +612,13 @@ impl crate::traits::imaging_selection::ImagingSelectionAccessors for ImagingSele
         self.issued.clone()
     }
     fn performer(&self) -> &[ImagingSelectionPerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
@@ -628,10 +627,10 @@ impl crate::traits::imaging_selection::ImagingSelectionAccessors for ImagingSele
         self.study_uid.clone()
     }
     fn derived_from(&self) -> &[Reference] {
-        self.derived_from.as_deref().unwrap_or(&[])
+        self.derived_from.as_slice()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
     fn series_uid(&self) -> Option<StringType> {
         self.series_uid.clone()
@@ -646,10 +645,10 @@ impl crate::traits::imaging_selection::ImagingSelectionAccessors for ImagingSele
         self.body_site.clone()
     }
     fn focus(&self) -> &[Reference] {
-        self.focus.as_deref().unwrap_or(&[])
+        self.focus.as_slice()
     }
     fn instance(&self) -> &[ImagingSelectionInstance] {
-        self.instance.as_deref().unwrap_or(&[])
+        self.instance.as_slice()
     }
 }
 
@@ -659,12 +658,12 @@ impl crate::traits::imaging_selection::ImagingSelectionMutators for ImagingSelec
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ImagingselectionStatus) -> Self {
@@ -684,32 +683,32 @@ impl crate::traits::imaging_selection::ImagingSelectionMutators for ImagingSelec
     }
     fn set_performer(self, value: Vec<ImagingSelectionPerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: ImagingSelectionPerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -724,25 +723,22 @@ impl crate::traits::imaging_selection::ImagingSelectionMutators for ImagingSelec
     }
     fn set_derived_from(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from = Some(value);
+        resource.derived_from = value;
         resource
     }
     fn add_derived_from(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from.push(item);
         resource
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
     fn set_series_uid(self, value: String) -> Self {
@@ -767,29 +763,29 @@ impl crate::traits::imaging_selection::ImagingSelectionMutators for ImagingSelec
     }
     fn set_focus(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.focus = Some(value);
+        resource.focus = value;
         resource
     }
     fn add_focus(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.focus.get_or_insert_with(Vec::new).push(item);
+        resource.focus.push(item);
         resource
     }
     fn set_instance(self, value: Vec<ImagingSelectionInstance>) -> Self {
         let mut resource = self.clone();
-        resource.instance = Some(value);
+        resource.instance = value;
         resource
     }
     fn add_instance(self, item: ImagingSelectionInstance) -> Self {
         let mut resource = self.clone();
-        resource.instance.get_or_insert_with(Vec::new).push(item);
+        resource.instance.push(item);
         resource
     }
 }
 
 impl crate::traits::imaging_selection::ImagingSelectionExistence for ImagingSelection {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -801,13 +797,13 @@ impl crate::traits::imaging_selection::ImagingSelectionExistence for ImagingSele
         self.issued.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         true
@@ -816,10 +812,10 @@ impl crate::traits::imaging_selection::ImagingSelectionExistence for ImagingSele
         self.study_uid.is_some()
     }
     fn has_derived_from(&self) -> bool {
-        self.derived_from.as_ref().is_some_and(|v| !v.is_empty())
+        !self.derived_from.is_empty()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
     fn has_series_uid(&self) -> bool {
         self.series_uid.is_some()
@@ -834,10 +830,10 @@ impl crate::traits::imaging_selection::ImagingSelectionExistence for ImagingSele
         self.body_site.is_some()
     }
     fn has_focus(&self) -> bool {
-        self.focus.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focus.is_empty()
     }
     fn has_instance(&self) -> bool {
-        self.instance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.instance.is_empty()
     }
 }
 

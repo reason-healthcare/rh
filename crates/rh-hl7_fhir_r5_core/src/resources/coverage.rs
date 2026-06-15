@@ -29,7 +29,8 @@ pub struct Coverage {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier(s) for this coverage
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | cancelled | draft | entered-in-error
     pub status: FmStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -40,7 +41,8 @@ pub struct Coverage {
     pub _kind: Option<Element>,
     /// Self-pay parties and responsibility
     #[serde(rename = "paymentBy")]
-    pub payment_by: Option<Vec<CoveragePaymentby>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub payment_by: Vec<CoveragePaymentby>,
     /// Coverage category such as medical or accident
     ///
     /// Binding: preferred (The type of insurance: public health, worker compensation; private accident, auto, private health, etc.) or a direct payment by an individual or organization.)
@@ -55,7 +57,8 @@ pub struct Coverage {
     pub subscriber: Option<Reference>,
     /// ID assigned to the subscriber
     #[serde(rename = "subscriberId")]
-    pub subscriber_id: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subscriber_id: Vec<Identifier>,
     /// Plan beneficiary
     pub beneficiary: Reference,
     /// Dependent number
@@ -73,7 +76,8 @@ pub struct Coverage {
     /// Issuer of the policy
     pub insurer: Option<Reference>,
     /// Additional coverage classifications
-    pub class: Option<Vec<CoverageClass>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub class: Vec<CoverageClass>,
     /// Relative order of the coverage
     pub order: Option<PositiveIntType>,
     /// Extension element for the 'order' primitive field. Contains metadata and extensions.
@@ -84,16 +88,67 @@ pub struct Coverage {
     pub _network: Option<Element>,
     /// Patient payments for services/products
     #[serde(rename = "costToBeneficiary")]
-    pub cost_to_beneficiary: Option<Vec<CoverageCosttobeneficiary>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cost_to_beneficiary: Vec<CoverageCosttobeneficiary>,
     /// Reimbursement to insurer
     pub subrogation: Option<BooleanType>,
     /// Extension element for the 'subrogation' primitive field. Contains metadata and extensions.
     pub _subrogation: Option<Element>,
     /// Contract details
-    pub contract: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contract: Vec<Reference>,
     /// Insurance plan details
     #[serde(rename = "insurancePlan")]
     pub insurance_plan: Option<Reference>,
+}
+/// Coverage nested structure for the 'paymentBy' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoveragePaymentby {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Parties performing self-payment
+    pub party: Reference,
+    /// Party's responsibility
+    pub responsibility: Option<StringType>,
+    /// Extension element for the 'responsibility' primitive field. Contains metadata and extensions.
+    pub _responsibility: Option<Element>,
+}
+/// CoverageCosttobeneficiary nested structure for the 'exception' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageCosttobeneficiaryException {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Exception category
+    ///
+    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The effective period of the exception
+    pub period: Option<Period>,
+}
+/// Coverage nested structure for the 'class' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageClass {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of class such as 'group' or 'plan'
+    ///
+    /// Binding: extensible (The policy classifications, e.g. Group, Plan, Class, etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-class
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Value associated with the type
+    pub value: Identifier,
+    /// Human readable description of the type and value
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
 }
 /// Coverage nested structure for the 'costToBeneficiary' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,7 +157,8 @@ pub struct CoverageCosttobeneficiary {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Exceptions for patient payments
-    pub exception: Option<Vec<CoverageCosttobeneficiaryException>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exception: Vec<CoverageCosttobeneficiaryException>,
     /// Cost category
     ///
     /// Binding: extensible (The types of services to which patient copayments are specified.)
@@ -141,55 +197,6 @@ pub struct CoverageCosttobeneficiary {
     #[serde(rename = "valueMoney")]
     pub value_money: Option<Money>,
 }
-/// Coverage nested structure for the 'paymentBy' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoveragePaymentby {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Parties performing self-payment
-    pub party: Reference,
-    /// Party's responsibility
-    pub responsibility: Option<StringType>,
-    /// Extension element for the 'responsibility' primitive field. Contains metadata and extensions.
-    pub _responsibility: Option<Element>,
-}
-/// Coverage nested structure for the 'class' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageClass {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of class such as 'group' or 'plan'
-    ///
-    /// Binding: extensible (The policy classifications, e.g. Group, Plan, Class, etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-class
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Value associated with the type
-    pub value: Identifier,
-    /// Human readable description of the type and value
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-}
-/// CoverageCosttobeneficiary nested structure for the 'exception' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageCosttobeneficiaryException {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Exception category
-    ///
-    /// Binding: example (The types of exceptions from the part or full value of financial obligations such as copays.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/coverage-financial-exception
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The effective period of the exception
-    pub period: Option<Period>,
-}
 
 impl Default for Coverage {
     fn default() -> Self {
@@ -225,22 +232,6 @@ impl Default for Coverage {
     }
 }
 
-impl Default for CoverageCosttobeneficiary {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            exception: Default::default(),
-            type_: Default::default(),
-            category: Default::default(),
-            network: Default::default(),
-            unit: Default::default(),
-            term: Default::default(),
-            value_quantity: Default::default(),
-            value_money: Default::default(),
-        }
-    }
-}
-
 impl Default for CoveragePaymentby {
     fn default() -> Self {
         Self {
@@ -248,6 +239,16 @@ impl Default for CoveragePaymentby {
             party: Default::default(),
             responsibility: Default::default(),
             _responsibility: Default::default(),
+        }
+    }
+}
+
+impl Default for CoverageCosttobeneficiaryException {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -264,12 +265,18 @@ impl Default for CoverageClass {
     }
 }
 
-impl Default for CoverageCosttobeneficiaryException {
+impl Default for CoverageCosttobeneficiary {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            exception: Default::default(),
             type_: Default::default(),
-            period: Default::default(),
+            category: Default::default(),
+            network: Default::default(),
+            unit: Default::default(),
+            term: Default::default(),
+            value_quantity: Default::default(),
+            value_money: Default::default(),
         }
     }
 }
@@ -479,13 +486,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Coverage {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -500,44 +507,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Coverage {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -547,22 +542,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Coverage {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::coverage::CoverageAccessors for Coverage {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> FmStatus {
         self.status.clone()
@@ -571,7 +563,7 @@ impl crate::traits::coverage::CoverageAccessors for Coverage {
         self.kind.clone()
     }
     fn payment_by(&self) -> &[CoveragePaymentby] {
-        self.payment_by.as_deref().unwrap_or(&[])
+        self.payment_by.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
@@ -583,7 +575,7 @@ impl crate::traits::coverage::CoverageAccessors for Coverage {
         self.subscriber.clone()
     }
     fn subscriber_id(&self) -> &[Identifier] {
-        self.subscriber_id.as_deref().unwrap_or(&[])
+        self.subscriber_id.as_slice()
     }
     fn beneficiary(&self) -> Reference {
         self.beneficiary.clone()
@@ -601,7 +593,7 @@ impl crate::traits::coverage::CoverageAccessors for Coverage {
         self.insurer.clone()
     }
     fn class(&self) -> &[CoverageClass] {
-        self.class.as_deref().unwrap_or(&[])
+        self.class.as_slice()
     }
     fn order(&self) -> Option<PositiveIntType> {
         self.order
@@ -610,13 +602,13 @@ impl crate::traits::coverage::CoverageAccessors for Coverage {
         self.network.clone()
     }
     fn cost_to_beneficiary(&self) -> &[CoverageCosttobeneficiary] {
-        self.cost_to_beneficiary.as_deref().unwrap_or(&[])
+        self.cost_to_beneficiary.as_slice()
     }
     fn subrogation(&self) -> Option<BooleanType> {
         self.subrogation
     }
     fn contract(&self) -> &[Reference] {
-        self.contract.as_deref().unwrap_or(&[])
+        self.contract.as_slice()
     }
     fn insurance_plan(&self) -> Option<Reference> {
         self.insurance_plan.clone()
@@ -629,12 +621,12 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: FmStatus) -> Self {
@@ -649,12 +641,12 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
     }
     fn set_payment_by(self, value: Vec<CoveragePaymentby>) -> Self {
         let mut resource = self.clone();
-        resource.payment_by = Some(value);
+        resource.payment_by = value;
         resource
     }
     fn add_payment_by(self, item: CoveragePaymentby) -> Self {
         let mut resource = self.clone();
-        resource.payment_by.get_or_insert_with(Vec::new).push(item);
+        resource.payment_by.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -674,15 +666,12 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
     }
     fn set_subscriber_id(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.subscriber_id = Some(value);
+        resource.subscriber_id = value;
         resource
     }
     fn add_subscriber_id(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource
-            .subscriber_id
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.subscriber_id.push(item);
         resource
     }
     fn set_beneficiary(self, value: Reference) -> Self {
@@ -712,12 +701,12 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
     }
     fn set_class(self, value: Vec<CoverageClass>) -> Self {
         let mut resource = self.clone();
-        resource.class = Some(value);
+        resource.class = value;
         resource
     }
     fn add_class(self, item: CoverageClass) -> Self {
         let mut resource = self.clone();
-        resource.class.get_or_insert_with(Vec::new).push(item);
+        resource.class.push(item);
         resource
     }
     fn set_order(self, value: i32) -> Self {
@@ -732,15 +721,12 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
     }
     fn set_cost_to_beneficiary(self, value: Vec<CoverageCosttobeneficiary>) -> Self {
         let mut resource = self.clone();
-        resource.cost_to_beneficiary = Some(value);
+        resource.cost_to_beneficiary = value;
         resource
     }
     fn add_cost_to_beneficiary(self, item: CoverageCosttobeneficiary) -> Self {
         let mut resource = self.clone();
-        resource
-            .cost_to_beneficiary
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.cost_to_beneficiary.push(item);
         resource
     }
     fn set_subrogation(self, value: bool) -> Self {
@@ -750,12 +736,12 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
     }
     fn set_contract(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.contract = Some(value);
+        resource.contract = value;
         resource
     }
     fn add_contract(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.contract.get_or_insert_with(Vec::new).push(item);
+        resource.contract.push(item);
         resource
     }
     fn set_insurance_plan(self, value: Reference) -> Self {
@@ -767,7 +753,7 @@ impl crate::traits::coverage::CoverageMutators for Coverage {
 
 impl crate::traits::coverage::CoverageExistence for Coverage {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -776,7 +762,7 @@ impl crate::traits::coverage::CoverageExistence for Coverage {
         true
     }
     fn has_payment_by(&self) -> bool {
-        self.payment_by.as_ref().is_some_and(|v| !v.is_empty())
+        !self.payment_by.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
@@ -788,7 +774,7 @@ impl crate::traits::coverage::CoverageExistence for Coverage {
         self.subscriber.is_some()
     }
     fn has_subscriber_id(&self) -> bool {
-        self.subscriber_id.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subscriber_id.is_empty()
     }
     fn has_beneficiary(&self) -> bool {
         true
@@ -806,7 +792,7 @@ impl crate::traits::coverage::CoverageExistence for Coverage {
         self.insurer.is_some()
     }
     fn has_class(&self) -> bool {
-        self.class.as_ref().is_some_and(|v| !v.is_empty())
+        !self.class.is_empty()
     }
     fn has_order(&self) -> bool {
         self.order.is_some()
@@ -815,15 +801,13 @@ impl crate::traits::coverage::CoverageExistence for Coverage {
         self.network.is_some()
     }
     fn has_cost_to_beneficiary(&self) -> bool {
-        self.cost_to_beneficiary
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.cost_to_beneficiary.is_empty()
     }
     fn has_subrogation(&self) -> bool {
         self.subrogation.is_some()
     }
     fn has_contract(&self) -> bool {
-        self.contract.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contract.is_empty()
     }
     fn has_insurance_plan(&self) -> bool {
         self.insurance_plan.is_some()

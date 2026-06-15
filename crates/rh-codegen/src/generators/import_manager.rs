@@ -138,14 +138,16 @@ impl ImportManager {
                     && type_name != current_struct_name
                     && !structs_in_file.contains(type_name)
                 {
-                    // Check if the type actually exists in the TypeRegistry before generating an import
-                    if TypeRegistry::get_classification(type_name).is_some() {
-                        // Get the correct import path for this type
+                    // Trait files are generated separately from the resource module, so they
+                    // need imports for nested resource structs referenced in method signatures.
+                    // During parallel generation the TypeRegistry may not contain every sibling
+                    // nested struct yet, so allow NamingManager's nested-structure fallback here.
+                    if TypeRegistry::get_classification(type_name).is_some()
+                        || NamingManager::detect_nested_structure_parent(type_name).is_some()
+                    {
                         let import_path = Self::get_import_path_for_type(type_name);
                         imports.insert(import_path);
                     }
-                    // If the type doesn't exist in the registry, don't generate an import
-                    // This prevents importing non-existent nested structures
                 }
             }
             RustType::Option(inner) => {
@@ -190,14 +192,11 @@ impl ImportManager {
                 else if !Self::is_primitive_type(name)
                     && name != current_struct_name
                     && !structs_in_file.contains(name)
+                    && (TypeRegistry::get_classification(name).is_some()
+                        || NamingManager::detect_nested_structure_parent(name).is_some())
                 {
-                    // Check if the type actually exists in the TypeRegistry before generating an import
-                    if TypeRegistry::get_classification(name).is_some() {
-                        let import_path = Self::get_import_path_for_type(name);
-                        imports.insert(import_path);
-                    }
-                    // If the type doesn't exist in the registry, don't generate an import
-                    // This prevents importing non-existent nested structures
+                    let import_path = Self::get_import_path_for_type(name);
+                    imports.insert(import_path);
                 }
             }
             // Primitive types don't need imports

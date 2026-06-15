@@ -26,9 +26,11 @@ pub struct MedicinalProductPackaged {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The product with this is a pack for
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// Textual description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -38,15 +40,18 @@ pub struct MedicinalProductPackaged {
     pub legal_status_of_supply: Option<CodeableConcept>,
     /// Marketing information
     #[serde(rename = "marketingStatus")]
-    pub marketing_status: Option<Vec<MarketingStatus>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marketing_status: Vec<MarketingStatus>,
     /// Manufacturer of this Package Item
     #[serde(rename = "marketingAuthorization")]
     pub marketing_authorization: Option<Reference>,
     /// Manufacturer of this Package Item
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
     /// Batch numbering
     #[serde(rename = "batchIdentifier")]
-    pub batch_identifier: Option<Vec<MedicinalProductPackagedBatchidentifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub batch_identifier: Vec<MedicinalProductPackagedBatchidentifier>,
     /// A packaging item, as a contained for medicine, possibly with other packaging items within
     #[serde(rename = "packageItem")]
     pub package_item: Vec<MedicinalProductPackagedPackageitem>,
@@ -71,36 +76,45 @@ pub struct MedicinalProductPackagedPackageitem {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Including possibly Data Carrier Identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The physical type of the container of the medicine
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
     /// The quantity of this package in the medicinal product, at the current level of packaging. The outermost is always 1
     pub quantity: Quantity,
     /// Material type of the package item
-    pub material: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub material: Vec<CodeableConcept>,
     /// A possible alternate material for the packaging
     #[serde(rename = "alternateMaterial")]
-    pub alternate_material: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternate_material: Vec<CodeableConcept>,
     /// A device accompanying a medicinal product
-    pub device: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<Reference>,
     /// The manufactured item as contained in the packaged medicinal product
     #[serde(rename = "manufacturedItem")]
-    pub manufactured_item: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufactured_item: Vec<Reference>,
     /// Allows containers within containers
     #[serde(rename = "packageItem")]
-    pub package_item: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub package_item: Vec<StringType>,
     /// Dimensions, color etc.
     #[serde(rename = "physicalCharacteristics")]
     pub physical_characteristics: Option<ProdCharacteristic>,
     /// Other codeable characteristics
     #[serde(rename = "otherCharacteristics")]
-    pub other_characteristics: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub other_characteristics: Vec<CodeableConcept>,
     /// Shelf Life and storage information
     #[serde(rename = "shelfLifeStorage")]
-    pub shelf_life_storage: Option<Vec<ProductShelfLife>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shelf_life_storage: Vec<ProductShelfLife>,
     /// Manufacturer of this Package Item
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
 }
 
 impl Default for MedicinalProductPackaged {
@@ -388,13 +402,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -409,44 +423,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -456,16 +458,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -473,10 +472,10 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedAccessor
     for MedicinalProductPackaged
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
@@ -485,16 +484,16 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedAccessor
         self.legal_status_of_supply.clone()
     }
     fn marketing_status(&self) -> &[MarketingStatus] {
-        self.marketing_status.as_deref().unwrap_or(&[])
+        self.marketing_status.as_slice()
     }
     fn marketing_authorization(&self) -> Option<Reference> {
         self.marketing_authorization.clone()
     }
     fn manufacturer(&self) -> &[Reference] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn batch_identifier(&self) -> &[MedicinalProductPackagedBatchidentifier] {
-        self.batch_identifier.as_deref().unwrap_or(&[])
+        self.batch_identifier.as_slice()
     }
     fn package_item(&self) -> &[MedicinalProductPackagedPackageitem] {
         &self.package_item
@@ -509,22 +508,22 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -539,15 +538,12 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedMutators
     }
     fn set_marketing_status(self, value: Vec<MarketingStatus>) -> Self {
         let mut resource = self.clone();
-        resource.marketing_status = Some(value);
+        resource.marketing_status = value;
         resource
     }
     fn add_marketing_status(self, item: MarketingStatus) -> Self {
         let mut resource = self.clone();
-        resource
-            .marketing_status
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.marketing_status.push(item);
         resource
     }
     fn set_marketing_authorization(self, value: Reference) -> Self {
@@ -557,28 +553,22 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedMutators
     }
     fn set_manufacturer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_batch_identifier(self, value: Vec<MedicinalProductPackagedBatchidentifier>) -> Self {
         let mut resource = self.clone();
-        resource.batch_identifier = Some(value);
+        resource.batch_identifier = value;
         resource
     }
     fn add_batch_identifier(self, item: MedicinalProductPackagedBatchidentifier) -> Self {
         let mut resource = self.clone();
-        resource
-            .batch_identifier
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.batch_identifier.push(item);
         resource
     }
     fn set_package_item(self, value: Vec<MedicinalProductPackagedPackageitem>) -> Self {
@@ -597,10 +587,10 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedExistenc
     for MedicinalProductPackaged
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
@@ -609,20 +599,16 @@ impl crate::traits::medicinal_product_packaged::MedicinalProductPackagedExistenc
         self.legal_status_of_supply.is_some()
     }
     fn has_marketing_status(&self) -> bool {
-        self.marketing_status
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.marketing_status.is_empty()
     }
     fn has_marketing_authorization(&self) -> bool {
         self.marketing_authorization.is_some()
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_batch_identifier(&self) -> bool {
-        self.batch_identifier
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.batch_identifier.is_empty()
     }
     fn has_package_item(&self) -> bool {
         !self.package_item.is_empty()

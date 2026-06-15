@@ -21,16 +21,19 @@ pub struct DeviceAssociation {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Instance identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Reference to the devices associated with the patient or group
     pub device: Reference,
     /// Describes the relationship between the device and subject
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// implanted | explanted | attached | entered-in-error | unknown
     pub status: CodeableConcept,
     /// The reasons given for the current association status
     #[serde(rename = "statusReason")]
-    pub status_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub status_reason: Vec<CodeableConcept>,
     /// The individual, group of individuals or device that the device is on or associated with
     pub subject: Option<Reference>,
     /// Current anatomical location of the device in/on subject
@@ -39,7 +42,8 @@ pub struct DeviceAssociation {
     /// Begin and end dates and times for the device association
     pub period: Option<Period>,
     /// The details about the device when it is in use to describe its operation
-    pub operation: Option<Vec<DeviceAssociationOperation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub operation: Vec<DeviceAssociationOperation>,
 }
 /// DeviceAssociation nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,7 +58,8 @@ pub struct DeviceAssociationOperation {
     /// ValueSet: http://hl7.org/fhir/ValueSet/deviceassociation-operationstatus
     pub status: CodeableConcept,
     /// The individual performing the action enabled by the device
-    pub operator: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub operator: Vec<Reference>,
     /// Begin and end dates and times for the device's operation
     pub period: Option<Period>,
 }
@@ -242,13 +247,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DeviceAssociati
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -263,44 +268,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DeviceAssociatio
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -310,34 +303,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for DeviceAssociati
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::device_association::DeviceAssociationAccessors for DeviceAssociation {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn device(&self) -> Reference {
         self.device.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn status(&self) -> CodeableConcept {
         self.status.clone()
     }
     fn status_reason(&self) -> &[CodeableConcept] {
-        self.status_reason.as_deref().unwrap_or(&[])
+        self.status_reason.as_slice()
     }
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
@@ -349,7 +339,7 @@ impl crate::traits::device_association::DeviceAssociationAccessors for DeviceAss
         self.period.clone()
     }
     fn operation(&self) -> &[DeviceAssociationOperation] {
-        self.operation.as_deref().unwrap_or(&[])
+        self.operation.as_slice()
     }
 }
 
@@ -359,12 +349,12 @@ impl crate::traits::device_association::DeviceAssociationMutators for DeviceAsso
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_device(self, value: Reference) -> Self {
@@ -374,12 +364,12 @@ impl crate::traits::device_association::DeviceAssociationMutators for DeviceAsso
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_status(self, value: CodeableConcept) -> Self {
@@ -389,15 +379,12 @@ impl crate::traits::device_association::DeviceAssociationMutators for DeviceAsso
     }
     fn set_status_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.status_reason = Some(value);
+        resource.status_reason = value;
         resource
     }
     fn add_status_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .status_reason
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.status_reason.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -417,31 +404,31 @@ impl crate::traits::device_association::DeviceAssociationMutators for DeviceAsso
     }
     fn set_operation(self, value: Vec<DeviceAssociationOperation>) -> Self {
         let mut resource = self.clone();
-        resource.operation = Some(value);
+        resource.operation = value;
         resource
     }
     fn add_operation(self, item: DeviceAssociationOperation) -> Self {
         let mut resource = self.clone();
-        resource.operation.get_or_insert_with(Vec::new).push(item);
+        resource.operation.push(item);
         resource
     }
 }
 
 impl crate::traits::device_association::DeviceAssociationExistence for DeviceAssociation {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_device(&self) -> bool {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_status_reason(&self) -> bool {
-        self.status_reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.status_reason.is_empty()
     }
     fn has_subject(&self) -> bool {
         self.subject.is_some()
@@ -453,7 +440,7 @@ impl crate::traits::device_association::DeviceAssociationExistence for DeviceAss
         self.period.is_some()
     }
     fn has_operation(&self) -> bool {
-        self.operation.as_ref().is_some_and(|v| !v.is_empty())
+        !self.operation.is_empty()
     }
 }
 

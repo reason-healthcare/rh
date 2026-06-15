@@ -28,7 +28,8 @@ pub struct AdverseEvent {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for the event
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// in-progress | completed | entered-in-error | unknown
     pub status: AdverseEventStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -42,7 +43,8 @@ pub struct AdverseEvent {
     /// Binding: example (Overall categorization of the event, e.g. product-related or situational.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Event or incident that occurred or was averted
     ///
     /// Binding: example (Detailed type of event.)
@@ -75,7 +77,8 @@ pub struct AdverseEvent {
     pub _recorded_date: Option<Element>,
     /// Effect on the subject due to this event
     #[serde(rename = "resultingEffect")]
-    pub resulting_effect: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resulting_effect: Vec<Reference>,
     /// Location where adverse event occurred
     pub location: Option<Reference>,
     /// Seriousness or gravity of the event
@@ -89,13 +92,16 @@ pub struct AdverseEvent {
     /// Binding: example (Codes describing the type of outcome from the adverse event.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-outcome
-    pub outcome: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcome: Vec<CodeableConcept>,
     /// Who recorded the adverse event
     pub recorder: Option<Reference>,
     /// Who was involved in the adverse event or the potential adverse event and what they did
-    pub participant: Option<Vec<AdverseEventParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<AdverseEventParticipant>,
     /// Research study that the subject is enrolled in
-    pub study: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub study: Vec<Reference>,
     /// Considered likely or probable or anticipated in the research study
     #[serde(rename = "expectedInResearchStudy")]
     pub expected_in_research_study: Option<BooleanType>,
@@ -104,21 +110,65 @@ pub struct AdverseEvent {
     pub _expected_in_research_study: Option<Element>,
     /// The suspected agent causing the adverse event
     #[serde(rename = "suspectEntity")]
-    pub suspect_entity: Option<Vec<AdverseEventSuspectentity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suspect_entity: Vec<AdverseEventSuspectentity>,
     /// Contributing factors suspected to have increased the probability or severity of the adverse event
     #[serde(rename = "contributingFactor")]
-    pub contributing_factor: Option<Vec<AdverseEventContributingfactor>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contributing_factor: Vec<AdverseEventContributingfactor>,
     /// Preventive actions that contributed to avoiding the adverse event
     #[serde(rename = "preventiveAction")]
-    pub preventive_action: Option<Vec<AdverseEventPreventiveaction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preventive_action: Vec<AdverseEventPreventiveaction>,
     /// Ameliorating actions taken after the adverse event occured in order to reduce the extent of harm
     #[serde(rename = "mitigatingAction")]
-    pub mitigating_action: Option<Vec<AdverseEventMitigatingaction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mitigating_action: Vec<AdverseEventMitigatingaction>,
     /// Supporting information relevant to the event
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<AdverseEventSupportinginfo>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<AdverseEventSupportinginfo>,
     /// Comment on adverse event
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// AdverseEventSuspectentity nested structure for the 'causality' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdverseEventSuspectentityCausality {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Method of evaluating the relatedness of the suspected entity to the event
+    ///
+    /// Binding: example (TODO.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-method
+    #[serde(rename = "assessmentMethod")]
+    pub assessment_method: Option<CodeableConcept>,
+    /// Result of the assessment regarding the relatedness of the suspected entity to the event
+    ///
+    /// Binding: example (Codes for the assessment of whether the entity caused the event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-assess
+    #[serde(rename = "entityRelatedness")]
+    pub entity_relatedness: Option<CodeableConcept>,
+    /// Author of the information on the possible cause of the event
+    pub author: Option<Reference>,
+}
+/// AdverseEvent nested structure for the 'suspectEntity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdverseEventSuspectentity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information on the possible cause of the event
+    pub causality: Option<AdverseEventSuspectentityCausality>,
+    /// Refers to the specific entity that caused the adverse event (CodeableConcept)
+    #[serde(rename = "instanceCodeableConcept")]
+    pub instance_codeable_concept: CodeableConcept,
+    /// Refers to the specific entity that caused the adverse event (Reference)
+    #[serde(rename = "instanceReference")]
+    pub instance_reference: Reference,
 }
 /// AdverseEvent nested structure for the 'preventiveAction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,6 +180,19 @@ pub struct AdverseEventPreventiveaction {
     #[serde(rename = "itemReference")]
     pub item_reference: Reference,
     /// Action that contributed to avoiding the adverse event (CodeableConcept)
+    #[serde(rename = "itemCodeableConcept")]
+    pub item_codeable_concept: CodeableConcept,
+}
+/// AdverseEvent nested structure for the 'mitigatingAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdverseEventMitigatingaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Ameliorating action taken after the adverse event occured in order to reduce the extent of harm (Reference)
+    #[serde(rename = "itemReference")]
+    pub item_reference: Reference,
+    /// Ameliorating action taken after the adverse event occured in order to reduce the extent of harm (CodeableConcept)
     #[serde(rename = "itemCodeableConcept")]
     pub item_codeable_concept: CodeableConcept,
 }
@@ -151,34 +214,6 @@ pub struct AdverseEventParticipant {
     pub function: Option<CodeableConcept>,
     /// Who was involved in the adverse event or the potential adverse event
     pub actor: Reference,
-}
-/// AdverseEvent nested structure for the 'suspectEntity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventSuspectentity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information on the possible cause of the event
-    pub causality: Option<AdverseEventSuspectentityCausality>,
-    /// Refers to the specific entity that caused the adverse event (CodeableConcept)
-    #[serde(rename = "instanceCodeableConcept")]
-    pub instance_codeable_concept: CodeableConcept,
-    /// Refers to the specific entity that caused the adverse event (Reference)
-    #[serde(rename = "instanceReference")]
-    pub instance_reference: Reference,
-}
-/// AdverseEvent nested structure for the 'mitigatingAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventMitigatingaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Ameliorating action taken after the adverse event occured in order to reduce the extent of harm (Reference)
-    #[serde(rename = "itemReference")]
-    pub item_reference: Reference,
-    /// Ameliorating action taken after the adverse event occured in order to reduce the extent of harm (CodeableConcept)
-    #[serde(rename = "itemCodeableConcept")]
-    pub item_codeable_concept: CodeableConcept,
 }
 /// AdverseEvent nested structure for the 'supportingInfo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,29 +240,6 @@ pub struct AdverseEventContributingfactor {
     /// Item suspected to have increased the probability or severity of the adverse event (CodeableConcept)
     #[serde(rename = "itemCodeableConcept")]
     pub item_codeable_concept: CodeableConcept,
-}
-/// AdverseEventSuspectentity nested structure for the 'causality' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdverseEventSuspectentityCausality {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Method of evaluating the relatedness of the suspected entity to the event
-    ///
-    /// Binding: example (TODO.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-method
-    #[serde(rename = "assessmentMethod")]
-    pub assessment_method: Option<CodeableConcept>,
-    /// Result of the assessment regarding the relatedness of the suspected entity to the event
-    ///
-    /// Binding: example (Codes for the assessment of whether the entity caused the event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-causality-assess
-    #[serde(rename = "entityRelatedness")]
-    pub entity_relatedness: Option<CodeableConcept>,
-    /// Author of the information on the possible cause of the event
-    pub author: Option<Reference>,
 }
 
 impl Default for AdverseEvent {
@@ -269,22 +281,13 @@ impl Default for AdverseEvent {
     }
 }
 
-impl Default for AdverseEventPreventiveaction {
+impl Default for AdverseEventSuspectentityCausality {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            item_reference: Default::default(),
-            item_codeable_concept: Default::default(),
-        }
-    }
-}
-
-impl Default for AdverseEventParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
+            assessment_method: Default::default(),
+            entity_relatedness: Default::default(),
+            author: Default::default(),
         }
     }
 }
@@ -300,12 +303,32 @@ impl Default for AdverseEventSuspectentity {
     }
 }
 
+impl Default for AdverseEventPreventiveaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            item_reference: Default::default(),
+            item_codeable_concept: Default::default(),
+        }
+    }
+}
+
 impl Default for AdverseEventMitigatingaction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             item_reference: Default::default(),
             item_codeable_concept: Default::default(),
+        }
+    }
+}
+
+impl Default for AdverseEventParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -326,17 +349,6 @@ impl Default for AdverseEventContributingfactor {
             base: BackboneElement::default(),
             item_reference: Default::default(),
             item_codeable_concept: Default::default(),
-        }
-    }
-}
-
-impl Default for AdverseEventSuspectentityCausality {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            assessment_method: Default::default(),
-            entity_relatedness: Default::default(),
-            author: Default::default(),
         }
     }
 }
@@ -617,13 +629,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for AdverseEvent {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -638,44 +650,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for AdverseEvent {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -685,22 +685,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for AdverseEvent {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> AdverseEventStatus {
         self.status.clone()
@@ -709,7 +706,7 @@ impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
         self.actuality.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> Option<CodeableConcept> {
         self.code.clone()
@@ -727,7 +724,7 @@ impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
         self.recorded_date.clone()
     }
     fn resulting_effect(&self) -> &[Reference] {
-        self.resulting_effect.as_deref().unwrap_or(&[])
+        self.resulting_effect.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
@@ -736,37 +733,37 @@ impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
         self.seriousness.clone()
     }
     fn outcome(&self) -> &[CodeableConcept] {
-        self.outcome.as_deref().unwrap_or(&[])
+        self.outcome.as_slice()
     }
     fn recorder(&self) -> Option<Reference> {
         self.recorder.clone()
     }
     fn participant(&self) -> &[AdverseEventParticipant] {
-        self.participant.as_deref().unwrap_or(&[])
+        self.participant.as_slice()
     }
     fn study(&self) -> &[Reference] {
-        self.study.as_deref().unwrap_or(&[])
+        self.study.as_slice()
     }
     fn expected_in_research_study(&self) -> Option<BooleanType> {
         self.expected_in_research_study
     }
     fn suspect_entity(&self) -> &[AdverseEventSuspectentity] {
-        self.suspect_entity.as_deref().unwrap_or(&[])
+        self.suspect_entity.as_slice()
     }
     fn contributing_factor(&self) -> &[AdverseEventContributingfactor] {
-        self.contributing_factor.as_deref().unwrap_or(&[])
+        self.contributing_factor.as_slice()
     }
     fn preventive_action(&self) -> &[AdverseEventPreventiveaction] {
-        self.preventive_action.as_deref().unwrap_or(&[])
+        self.preventive_action.as_slice()
     }
     fn mitigating_action(&self) -> &[AdverseEventMitigatingaction] {
-        self.mitigating_action.as_deref().unwrap_or(&[])
+        self.mitigating_action.as_slice()
     }
     fn supporting_info(&self) -> &[AdverseEventSupportinginfo] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -776,12 +773,12 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: AdverseEventStatus) -> Self {
@@ -796,12 +793,12 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -831,15 +828,12 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_resulting_effect(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.resulting_effect = Some(value);
+        resource.resulting_effect = value;
         resource
     }
     fn add_resulting_effect(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .resulting_effect
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.resulting_effect.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -854,12 +848,12 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_outcome(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.outcome = Some(value);
+        resource.outcome = value;
         resource
     }
     fn add_outcome(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.outcome.get_or_insert_with(Vec::new).push(item);
+        resource.outcome.push(item);
         resource
     }
     fn set_recorder(self, value: Reference) -> Self {
@@ -869,22 +863,22 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_participant(self, value: Vec<AdverseEventParticipant>) -> Self {
         let mut resource = self.clone();
-        resource.participant = Some(value);
+        resource.participant = value;
         resource
     }
     fn add_participant(self, item: AdverseEventParticipant) -> Self {
         let mut resource = self.clone();
-        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource.participant.push(item);
         resource
     }
     fn set_study(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.study = Some(value);
+        resource.study = value;
         resource
     }
     fn add_study(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.study.get_or_insert_with(Vec::new).push(item);
+        resource.study.push(item);
         resource
     }
     fn set_expected_in_research_study(self, value: bool) -> Self {
@@ -894,77 +888,62 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_suspect_entity(self, value: Vec<AdverseEventSuspectentity>) -> Self {
         let mut resource = self.clone();
-        resource.suspect_entity = Some(value);
+        resource.suspect_entity = value;
         resource
     }
     fn add_suspect_entity(self, item: AdverseEventSuspectentity) -> Self {
         let mut resource = self.clone();
-        resource
-            .suspect_entity
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.suspect_entity.push(item);
         resource
     }
     fn set_contributing_factor(self, value: Vec<AdverseEventContributingfactor>) -> Self {
         let mut resource = self.clone();
-        resource.contributing_factor = Some(value);
+        resource.contributing_factor = value;
         resource
     }
     fn add_contributing_factor(self, item: AdverseEventContributingfactor) -> Self {
         let mut resource = self.clone();
-        resource
-            .contributing_factor
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.contributing_factor.push(item);
         resource
     }
     fn set_preventive_action(self, value: Vec<AdverseEventPreventiveaction>) -> Self {
         let mut resource = self.clone();
-        resource.preventive_action = Some(value);
+        resource.preventive_action = value;
         resource
     }
     fn add_preventive_action(self, item: AdverseEventPreventiveaction) -> Self {
         let mut resource = self.clone();
-        resource
-            .preventive_action
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.preventive_action.push(item);
         resource
     }
     fn set_mitigating_action(self, value: Vec<AdverseEventMitigatingaction>) -> Self {
         let mut resource = self.clone();
-        resource.mitigating_action = Some(value);
+        resource.mitigating_action = value;
         resource
     }
     fn add_mitigating_action(self, item: AdverseEventMitigatingaction) -> Self {
         let mut resource = self.clone();
-        resource
-            .mitigating_action
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.mitigating_action.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<AdverseEventSupportinginfo>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: AdverseEventSupportinginfo) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
@@ -976,7 +955,7 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
             || self.occurrence_timing.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -985,7 +964,7 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         self.code.is_some()
@@ -1003,9 +982,7 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
         self.recorded_date.is_some()
     }
     fn has_resulting_effect(&self) -> bool {
-        self.resulting_effect
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.resulting_effect.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
@@ -1014,43 +991,37 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
         self.seriousness.is_some()
     }
     fn has_outcome(&self) -> bool {
-        self.outcome.as_ref().is_some_and(|v| !v.is_empty())
+        !self.outcome.is_empty()
     }
     fn has_recorder(&self) -> bool {
         self.recorder.is_some()
     }
     fn has_participant(&self) -> bool {
-        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.participant.is_empty()
     }
     fn has_study(&self) -> bool {
-        self.study.as_ref().is_some_and(|v| !v.is_empty())
+        !self.study.is_empty()
     }
     fn has_expected_in_research_study(&self) -> bool {
         self.expected_in_research_study.is_some()
     }
     fn has_suspect_entity(&self) -> bool {
-        self.suspect_entity.as_ref().is_some_and(|v| !v.is_empty())
+        !self.suspect_entity.is_empty()
     }
     fn has_contributing_factor(&self) -> bool {
-        self.contributing_factor
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.contributing_factor.is_empty()
     }
     fn has_preventive_action(&self) -> bool {
-        self.preventive_action
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.preventive_action.is_empty()
     }
     fn has_mitigating_action(&self) -> bool {
-        self.mitigating_action
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.mitigating_action.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

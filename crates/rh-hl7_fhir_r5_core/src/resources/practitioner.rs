@@ -31,15 +31,18 @@ pub struct Practitioner {
     #[serde(flatten)]
     pub base: DomainResource,
     /// An identifier for the person as this agent
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this practitioner's record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
     pub _active: Option<Element>,
     /// The name(s) associated with the practitioner
-    pub name: Option<Vec<HumanName>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name: Vec<HumanName>,
     /// A contact detail for the practitioner (that apply to all roles)
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// male | female | other | unknown
     pub gender: Option<AdministrativeGender>,
     /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
@@ -57,32 +60,17 @@ pub struct Practitioner {
     #[serde(rename = "deceasedDateTime")]
     pub deceased_date_time: Option<DateTimeType>,
     /// Address(es) of the practitioner that are not role specific (typically home address)
-    pub address: Option<Vec<Address>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub address: Vec<Address>,
     /// Image of the person
-    pub photo: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub photo: Vec<Attachment>,
     /// Qualifications, certifications, accreditations, licenses, training, etc. pertaining to the provision of care
-    pub qualification: Option<Vec<PractitionerQualification>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualification: Vec<PractitionerQualification>,
     /// A language which may be used to communicate with the practitioner
-    pub communication: Option<Vec<PractitionerCommunication>>,
-}
-/// Practitioner nested structure for the 'qualification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PractitionerQualification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// An identifier for this qualification for the practitioner
-    pub identifier: Option<Vec<Identifier>>,
-    /// Coded representation of the qualification
-    ///
-    /// Binding: example (Specific qualification the practitioner has to provide a service.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0360
-    pub code: CodeableConcept,
-    /// Period during which the qualification is valid
-    pub period: Option<Period>,
-    /// Organization that regulates and issues the qualification
-    pub issuer: Option<Reference>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication: Vec<PractitionerCommunication>,
 }
 /// Practitioner nested structure for the 'communication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,6 +84,26 @@ pub struct PractitionerCommunication {
     pub preferred: Option<BooleanType>,
     /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
     pub _preferred: Option<Element>,
+}
+/// Practitioner nested structure for the 'qualification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PractitionerQualification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// An identifier for this qualification for the practitioner
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// Coded representation of the qualification
+    ///
+    /// Binding: example (Specific qualification the practitioner has to provide a service.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v2-0360
+    pub code: CodeableConcept,
+    /// Period during which the qualification is valid
+    pub period: Option<Period>,
+    /// Organization that regulates and issues the qualification
+    pub issuer: Option<Reference>,
 }
 
 impl Default for Practitioner {
@@ -121,6 +129,17 @@ impl Default for Practitioner {
     }
 }
 
+impl Default for PractitionerCommunication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: StringType::default(),
+            preferred: Default::default(),
+            _preferred: Default::default(),
+        }
+    }
+}
+
 impl Default for PractitionerQualification {
     fn default() -> Self {
         Self {
@@ -129,17 +148,6 @@ impl Default for PractitionerQualification {
             code: CodeableConcept::default(),
             period: Default::default(),
             issuer: Default::default(),
-        }
-    }
-}
-
-impl Default for PractitionerCommunication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: StringType::default(),
-            preferred: Default::default(),
-            _preferred: Default::default(),
         }
     }
 }
@@ -311,13 +319,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Practitioner {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -332,44 +340,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Practitioner {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -379,31 +375,28 @@ impl crate::traits::domain_resource::DomainResourceExistence for Practitioner {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::practitioner::PractitionerAccessors for Practitioner {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
     }
     fn name(&self) -> &[HumanName] {
-        self.name.as_deref().unwrap_or(&[])
+        self.name.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn gender(&self) -> Option<AdministrativeGender> {
         self.gender.clone()
@@ -412,16 +405,16 @@ impl crate::traits::practitioner::PractitionerAccessors for Practitioner {
         self.birth_date.clone()
     }
     fn address(&self) -> &[Address] {
-        self.address.as_deref().unwrap_or(&[])
+        self.address.as_slice()
     }
     fn photo(&self) -> &[Attachment] {
-        self.photo.as_deref().unwrap_or(&[])
+        self.photo.as_slice()
     }
     fn qualification(&self) -> &[PractitionerQualification] {
-        self.qualification.as_deref().unwrap_or(&[])
+        self.qualification.as_slice()
     }
     fn communication(&self) -> &[PractitionerCommunication] {
-        self.communication.as_deref().unwrap_or(&[])
+        self.communication.as_slice()
     }
 }
 
@@ -431,12 +424,12 @@ impl crate::traits::practitioner::PractitionerMutators for Practitioner {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -446,22 +439,22 @@ impl crate::traits::practitioner::PractitionerMutators for Practitioner {
     }
     fn set_name(self, value: Vec<HumanName>) -> Self {
         let mut resource = self.clone();
-        resource.name = Some(value);
+        resource.name = value;
         resource
     }
     fn add_name(self, item: HumanName) -> Self {
         let mut resource = self.clone();
-        resource.name.get_or_insert_with(Vec::new).push(item);
+        resource.name.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_gender(self, value: AdministrativeGender) -> Self {
@@ -476,48 +469,42 @@ impl crate::traits::practitioner::PractitionerMutators for Practitioner {
     }
     fn set_address(self, value: Vec<Address>) -> Self {
         let mut resource = self.clone();
-        resource.address = Some(value);
+        resource.address = value;
         resource
     }
     fn add_address(self, item: Address) -> Self {
         let mut resource = self.clone();
-        resource.address.get_or_insert_with(Vec::new).push(item);
+        resource.address.push(item);
         resource
     }
     fn set_photo(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.photo = Some(value);
+        resource.photo = value;
         resource
     }
     fn add_photo(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.photo.get_or_insert_with(Vec::new).push(item);
+        resource.photo.push(item);
         resource
     }
     fn set_qualification(self, value: Vec<PractitionerQualification>) -> Self {
         let mut resource = self.clone();
-        resource.qualification = Some(value);
+        resource.qualification = value;
         resource
     }
     fn add_qualification(self, item: PractitionerQualification) -> Self {
         let mut resource = self.clone();
-        resource
-            .qualification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.qualification.push(item);
         resource
     }
     fn set_communication(self, value: Vec<PractitionerCommunication>) -> Self {
         let mut resource = self.clone();
-        resource.communication = Some(value);
+        resource.communication = value;
         resource
     }
     fn add_communication(self, item: PractitionerCommunication) -> Self {
         let mut resource = self.clone();
-        resource
-            .communication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.communication.push(item);
         resource
     }
 }
@@ -527,16 +514,16 @@ impl crate::traits::practitioner::PractitionerExistence for Practitioner {
         self.deceased_boolean.is_some() || self.deceased_date_time.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
     }
     fn has_name(&self) -> bool {
-        self.name.as_ref().is_some_and(|v| !v.is_empty())
+        !self.name.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_gender(&self) -> bool {
         self.gender.is_some()
@@ -545,16 +532,16 @@ impl crate::traits::practitioner::PractitionerExistence for Practitioner {
         self.birth_date.is_some()
     }
     fn has_address(&self) -> bool {
-        self.address.as_ref().is_some_and(|v| !v.is_empty())
+        !self.address.is_empty()
     }
     fn has_photo(&self) -> bool {
-        self.photo.as_ref().is_some_and(|v| !v.is_empty())
+        !self.photo.is_empty()
     }
     fn has_qualification(&self) -> bool {
-        self.qualification.as_ref().is_some_and(|v| !v.is_empty())
+        !self.qualification.is_empty()
     }
     fn has_communication(&self) -> bool {
-        self.communication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.communication.is_empty()
     }
 }
 

@@ -67,7 +67,8 @@ pub struct Transport {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Formal definition of transport
     #[serde(rename = "instantiatesCanonical")]
     pub instantiates_canonical: Option<StringType>,
@@ -82,13 +83,15 @@ pub struct Transport {
     pub _instantiates_uri: Option<Element>,
     /// Request fulfilled by this transport
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Requisition or grouper id
     #[serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
     /// Part of referenced event
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// in-progress | completed | abandoned | cancelled | planned | entered-in-error
     pub status: Option<TransportStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -151,24 +154,30 @@ pub struct Transport {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/performer-role
     #[serde(rename = "performerType")]
-    pub performer_type: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer_type: Vec<CodeableConcept>,
     /// Responsible individual
     pub owner: Option<Reference>,
     /// Where transport occurs
     pub location: Option<Reference>,
     /// Associated insurance coverage
-    pub insurance: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<Reference>,
     /// Comments made about the transport
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Key events in history of the Transport
     #[serde(rename = "relevantHistory")]
-    pub relevant_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relevant_history: Vec<Reference>,
     /// Constraints on fulfillment transports
     pub restriction: Option<TransportRestriction>,
     /// Information used to perform transport
-    pub input: Option<Vec<TransportInput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input: Vec<TransportInput>,
     /// Information produced as part of transport
-    pub output: Option<Vec<TransportOutput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output: Vec<TransportOutput>,
     /// The desired location
     #[serde(rename = "requestedLocation")]
     pub requested_location: Reference,
@@ -356,21 +365,6 @@ pub struct TransportInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
-/// Transport nested structure for the 'restriction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransportRestriction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How many times to repeat
-    pub repetitions: Option<PositiveIntType>,
-    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
-    pub _repetitions: Option<Element>,
-    /// When fulfillment sought
-    pub period: Option<Period>,
-    /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
-}
 /// Transport nested structure for the 'output' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransportOutput {
@@ -545,6 +539,22 @@ pub struct TransportOutput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
+/// Transport nested structure for the 'restriction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransportRestriction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How many times to repeat
+    pub repetitions: Option<PositiveIntType>,
+    /// Extension element for the 'repetitions' primitive field. Contains metadata and extensions.
+    pub _repetitions: Option<Element>,
+    /// When fulfillment sought
+    pub period: Option<Period>,
+    /// For whom is fulfillment sought?
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipient: Vec<Reference>,
+}
 
 impl Default for Transport {
     fn default() -> Self {
@@ -658,18 +668,6 @@ impl Default for TransportInput {
     }
 }
 
-impl Default for TransportRestriction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            repetitions: Default::default(),
-            _repetitions: Default::default(),
-            period: Default::default(),
-            recipient: Default::default(),
-        }
-    }
-}
-
 impl Default for TransportOutput {
     fn default() -> Self {
         Self {
@@ -729,6 +727,18 @@ impl Default for TransportOutput {
             value_extended_contact_detail: Default::default(),
             value_dosage: Default::default(),
             value_meta: Default::default(),
+        }
+    }
+}
+
+impl Default for TransportRestriction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            repetitions: Default::default(),
+            _repetitions: Default::default(),
+            period: Default::default(),
+            recipient: Default::default(),
         }
     }
 }
@@ -919,13 +929,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Transport {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -940,44 +950,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Transport {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -987,22 +985,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Transport {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::transport::TransportAccessors for Transport {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> Option<StringType> {
         self.instantiates_canonical.clone()
@@ -1011,13 +1006,13 @@ impl crate::traits::transport::TransportAccessors for Transport {
         self.instantiates_uri.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn group_identifier(&self) -> Option<Identifier> {
         self.group_identifier.clone()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> Option<TransportStatus> {
         self.status.clone()
@@ -1059,7 +1054,7 @@ impl crate::traits::transport::TransportAccessors for Transport {
         self.requester.clone()
     }
     fn performer_type(&self) -> &[CodeableConcept] {
-        self.performer_type.as_deref().unwrap_or(&[])
+        self.performer_type.as_slice()
     }
     fn owner(&self) -> Option<Reference> {
         self.owner.clone()
@@ -1068,22 +1063,22 @@ impl crate::traits::transport::TransportAccessors for Transport {
         self.location.clone()
     }
     fn insurance(&self) -> &[Reference] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn relevant_history(&self) -> &[Reference] {
-        self.relevant_history.as_deref().unwrap_or(&[])
+        self.relevant_history.as_slice()
     }
     fn restriction(&self) -> Option<TransportRestriction> {
         self.restriction.clone()
     }
     fn input(&self) -> &[TransportInput] {
-        self.input.as_deref().unwrap_or(&[])
+        self.input.as_slice()
     }
     fn output(&self) -> &[TransportOutput] {
-        self.output.as_deref().unwrap_or(&[])
+        self.output.as_slice()
     }
     fn requested_location(&self) -> Reference {
         self.requested_location.clone()
@@ -1105,12 +1100,12 @@ impl crate::traits::transport::TransportMutators for Transport {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: String) -> Self {
@@ -1125,12 +1120,12 @@ impl crate::traits::transport::TransportMutators for Transport {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_group_identifier(self, value: Identifier) -> Self {
@@ -1140,12 +1135,12 @@ impl crate::traits::transport::TransportMutators for Transport {
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: TransportStatus) -> Self {
@@ -1215,15 +1210,12 @@ impl crate::traits::transport::TransportMutators for Transport {
     }
     fn set_performer_type(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.performer_type = Some(value);
+        resource.performer_type = value;
         resource
     }
     fn add_performer_type(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .performer_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.performer_type.push(item);
         resource
     }
     fn set_owner(self, value: Reference) -> Self {
@@ -1238,35 +1230,32 @@ impl crate::traits::transport::TransportMutators for Transport {
     }
     fn set_insurance(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_relevant_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.relevant_history = Some(value);
+        resource.relevant_history = value;
         resource
     }
     fn add_relevant_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .relevant_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.relevant_history.push(item);
         resource
     }
     fn set_restriction(self, value: TransportRestriction) -> Self {
@@ -1276,22 +1265,22 @@ impl crate::traits::transport::TransportMutators for Transport {
     }
     fn set_input(self, value: Vec<TransportInput>) -> Self {
         let mut resource = self.clone();
-        resource.input = Some(value);
+        resource.input = value;
         resource
     }
     fn add_input(self, item: TransportInput) -> Self {
         let mut resource = self.clone();
-        resource.input.get_or_insert_with(Vec::new).push(item);
+        resource.input.push(item);
         resource
     }
     fn set_output(self, value: Vec<TransportOutput>) -> Self {
         let mut resource = self.clone();
-        resource.output = Some(value);
+        resource.output = value;
         resource
     }
     fn add_output(self, item: TransportOutput) -> Self {
         let mut resource = self.clone();
-        resource.output.get_or_insert_with(Vec::new).push(item);
+        resource.output.push(item);
         resource
     }
     fn set_requested_location(self, value: Reference) -> Self {
@@ -1318,7 +1307,7 @@ impl crate::traits::transport::TransportMutators for Transport {
 
 impl crate::traits::transport::TransportExistence for Transport {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
         self.instantiates_canonical.is_some()
@@ -1327,13 +1316,13 @@ impl crate::traits::transport::TransportExistence for Transport {
         self.instantiates_uri.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_group_identifier(&self) -> bool {
         self.group_identifier.is_some()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -1375,7 +1364,7 @@ impl crate::traits::transport::TransportExistence for Transport {
         self.requester.is_some()
     }
     fn has_performer_type(&self) -> bool {
-        self.performer_type.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer_type.is_empty()
     }
     fn has_owner(&self) -> bool {
         self.owner.is_some()
@@ -1384,24 +1373,22 @@ impl crate::traits::transport::TransportExistence for Transport {
         self.location.is_some()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_relevant_history(&self) -> bool {
-        self.relevant_history
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.relevant_history.is_empty()
     }
     fn has_restriction(&self) -> bool {
         self.restriction.is_some()
     }
     fn has_input(&self) -> bool {
-        self.input.as_ref().is_some_and(|v| !v.is_empty())
+        !self.input.is_empty()
     }
     fn has_output(&self) -> bool {
-        self.output.as_ref().is_some_and(|v| !v.is_empty())
+        !self.output.is_empty()
     }
     fn has_requested_location(&self) -> bool {
         true

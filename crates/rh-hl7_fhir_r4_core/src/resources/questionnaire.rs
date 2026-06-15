@@ -44,7 +44,8 @@ pub struct Questionnaire {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the questionnaire
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the questionnaire
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -59,10 +60,12 @@ pub struct Questionnaire {
     pub _title: Option<Element>,
     /// Instantiates protocol or definition
     #[serde(rename = "derivedFrom")]
-    pub derived_from: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from: Vec<StringType>,
     /// Extension element for the 'derivedFrom' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFrom")]
-    pub _derived_from: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from: Vec<Element>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -73,10 +76,12 @@ pub struct Questionnaire {
     pub _experimental: Option<Element>,
     /// Resource that can be subject of QuestionnaireResponse
     #[serde(rename = "subjectType")]
-    pub subject_type: Option<Vec<ResourceTypes>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject_type: Vec<ResourceTypes>,
     /// Extension element for the 'subjectType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_subjectType")]
-    pub _subject_type: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _subject_type: Vec<Element>,
     /// Date last changed
     pub date: Option<DateTimeType>,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
@@ -86,20 +91,23 @@ pub struct Questionnaire {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the questionnaire
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for questionnaire (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this questionnaire is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -128,22 +136,24 @@ pub struct Questionnaire {
     /// Binding: example (Codes for questionnaires, groups and individual questions.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/questionnaire-questions
-    pub code: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<Coding>,
     /// Questions and sections within the Questionnaire
-    pub item: Option<Vec<QuestionnaireItem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<QuestionnaireItem>,
 }
-/// choiceOrientation
+/// unit
 ///
-/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
+/// Provides a computable unit of measure associated with numeric questions to support subsequent computation on responses. This is for use on items of type integer and decimal, and it's purpose is to support converting the integer or decimal answer into a Quantity when extracting the data into a resource.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unit
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireChoiceOrientation {
+pub struct QuestionnaireUnit {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -160,6 +170,54 @@ pub struct QuestionnaireChoiceOrientation {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuestionnaireHidden {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// minOccurs
+///
+/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireMinOccurs {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// optionExclusive
+///
+/// If true, indicates that if this answerOption is selected, no other possible answers may be selected, even if the item is a repeating question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-optionExclusive
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireOptionExclusive {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// maxOccurs
+///
+/// The maximum number of times the group must appear, or the maximum number of answers for a question - when greater than 1 and not unlimited.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-maxOccurs
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireMaxOccurs {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -195,126 +253,6 @@ pub struct QuestionnaireItemAnsweroption {
     #[serde(rename = "_initialSelected")]
     pub _initial_selected: Option<Element>,
 }
-/// QuestionnaireItem nested structure for the 'initial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemInitial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Actual value for initializing the question (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Actual value for initializing the question (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Actual value for initializing the question (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Actual value for initializing the question (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Actual value for initializing the question (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Actual value for initializing the question (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Actual value for initializing the question (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Actual value for initializing the question (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Actual value for initializing the question (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Actual value for initializing the question (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Actual value for initializing the question (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Actual value for initializing the question (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-}
-/// QuestionnaireItem nested structure for the 'enableWhen' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemEnablewhen {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Question that determines whether item is enabled
-    pub question: StringType,
-    /// Extension element for the 'question' primitive field. Contains metadata and extensions.
-    pub _question: Option<Element>,
-    /// exists | = | != | > | < | >= | <=
-    pub operator: QuestionnaireEnableOperator,
-    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
-    /// Value for question comparison based on operator (boolean)
-    #[serde(rename = "answerBoolean")]
-    pub answer_boolean: BooleanType,
-    /// Value for question comparison based on operator (decimal)
-    #[serde(rename = "answerDecimal")]
-    pub answer_decimal: DecimalType,
-    /// Value for question comparison based on operator (integer)
-    #[serde(rename = "answerInteger")]
-    pub answer_integer: IntegerType,
-    /// Value for question comparison based on operator (date)
-    #[serde(rename = "answerDate")]
-    pub answer_date: DateType,
-    /// Value for question comparison based on operator (dateTime)
-    #[serde(rename = "answerDateTime")]
-    pub answer_date_time: DateTimeType,
-    /// Value for question comparison based on operator (time)
-    #[serde(rename = "answerTime")]
-    pub answer_time: TimeType,
-    /// Value for question comparison based on operator (string)
-    #[serde(rename = "answerString")]
-    pub answer_string: StringType,
-    /// Value for question comparison based on operator (Coding)
-    #[serde(rename = "answerCoding")]
-    pub answer_coding: Coding,
-    /// Value for question comparison based on operator (Quantity)
-    #[serde(rename = "answerQuantity")]
-    pub answer_quantity: Quantity,
-    /// Value for question comparison based on operator (Reference)
-    #[serde(rename = "answerReference")]
-    pub answer_reference: Reference,
-}
-/// minOccurs
-///
-/// The minimum number of times the group must appear, or the minimum number of answers for a question - when greater than 1.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-minOccurs
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireMinOccurs {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// supportLink
-///
-/// A URL that resolves to additional supporting information or guidance related to the question.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-supportLink
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireSupportLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// signatureRequired
 ///
 /// Indicates that a signature (of the specified type) is needed when completing the QuestionnaireResponse.
@@ -337,14 +275,17 @@ pub struct QuestionnaireItem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Only allow data when
-    #[serde(rename = "enableWhen")]
-    pub enable_when: Option<Vec<QuestionnaireItemEnablewhen>>,
+    /// Initial value(s) when item is first rendered
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub initial: Vec<QuestionnaireItemInitial>,
     /// Permitted answer
     #[serde(rename = "answerOption")]
-    pub answer_option: Option<Vec<QuestionnaireItemAnsweroption>>,
-    /// Initial value(s) when item is first rendered
-    pub initial: Option<Vec<QuestionnaireItemInitial>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub answer_option: Vec<QuestionnaireItemAnsweroption>,
+    /// Only allow data when
+    #[serde(rename = "enableWhen")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub enable_when: Vec<QuestionnaireItemEnablewhen>,
     /// Unique id for item in questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -360,7 +301,8 @@ pub struct QuestionnaireItem {
     /// Binding: example (Codes for questionnaires, groups and individual questions.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/questionnaire-questions
-    pub code: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<Coding>,
     /// E.g. "1(a)", "2.5.3"
     pub prefix: Option<StringType>,
     /// Extension element for the 'prefix' primitive field. Contains metadata and extensions.
@@ -407,7 +349,288 @@ pub struct QuestionnaireItem {
     #[serde(rename = "_answerValueSet")]
     pub _answer_value_set: Option<Element>,
     /// Nested questionnaire items
-    pub item: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<StringType>,
+}
+/// optionPrefix
+///
+/// The label to list in front of a code when presenting a list of possible values in a questionnaire-like fashion.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-optionPrefix
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireOptionPrefix {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// supportLink
+///
+/// A URL that resolves to additional supporting information or guidance related to the question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-supportLink
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSupportLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// referenceProfile
+///
+/// Where the type for a question is "Reference", indicates a profile that the resource instances pointed to in answers to this question must be valid against.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceProfile
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireReferenceProfile {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// unitValueSet
+///
+/// A set of units that the user may choose when providing a quantity value.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireUnitValueSet {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// choiceOrientation
+///
+/// Identifies the desired orientation when rendering a list of choices (typically radio-box or check-box lists).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-choiceOrientation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireChoiceOrientation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// referenceResource
+///
+/// Where the type for a question is "Reference", indicates a type of resource that is permitted.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireReferenceResource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// sliderStepValue
+///
+/// For slider-based controls, indicates the step size to use when toggling the control up or down.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-sliderStepValue
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireSliderStepValue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// fhirType
+///
+/// For questionnaires generated from FHIR profiles, indicates the FHIR data type or resource type that corresponds to this node.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-fhirType
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireFHIRType {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// unitOption
+///
+/// A unit that the user may choose when providing a quantity value.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-unitOption
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireUnitOption {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// QuestionnaireItem nested structure for the 'initial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemInitial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Actual value for initializing the question (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Actual value for initializing the question (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Actual value for initializing the question (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Actual value for initializing the question (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Actual value for initializing the question (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Actual value for initializing the question (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Actual value for initializing the question (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Actual value for initializing the question (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Actual value for initializing the question (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Actual value for initializing the question (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Actual value for initializing the question (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Actual value for initializing the question (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+}
+/// referenceFilter
+///
+/// Identifies a filter to apply when looking up candidate answers for the question.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-referenceFilter
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireReferenceFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// QuestionnaireItem nested structure for the 'enableWhen' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemEnablewhen {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Question that determines whether item is enabled
+    pub question: StringType,
+    /// Extension element for the 'question' primitive field. Contains metadata and extensions.
+    pub _question: Option<Element>,
+    /// exists | = | != | > | < | >= | <=
+    pub operator: QuestionnaireEnableOperator,
+    /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
+    pub _operator: Option<Element>,
+    /// Value for question comparison based on operator (boolean)
+    #[serde(rename = "answerBoolean")]
+    pub answer_boolean: BooleanType,
+    /// Value for question comparison based on operator (decimal)
+    #[serde(rename = "answerDecimal")]
+    pub answer_decimal: DecimalType,
+    /// Value for question comparison based on operator (integer)
+    #[serde(rename = "answerInteger")]
+    pub answer_integer: IntegerType,
+    /// Value for question comparison based on operator (date)
+    #[serde(rename = "answerDate")]
+    pub answer_date: DateType,
+    /// Value for question comparison based on operator (dateTime)
+    #[serde(rename = "answerDateTime")]
+    pub answer_date_time: DateTimeType,
+    /// Value for question comparison based on operator (time)
+    #[serde(rename = "answerTime")]
+    pub answer_time: TimeType,
+    /// Value for question comparison based on operator (string)
+    #[serde(rename = "answerString")]
+    pub answer_string: StringType,
+    /// Value for question comparison based on operator (Coding)
+    #[serde(rename = "answerCoding")]
+    pub answer_coding: Coding,
+    /// Value for question comparison based on operator (Quantity)
+    #[serde(rename = "answerQuantity")]
+    pub answer_quantity: Quantity,
+    /// Value for question comparison based on operator (Reference)
+    #[serde(rename = "answerReference")]
+    pub answer_reference: Reference,
+}
+/// constraint
+///
+/// An invariant that must be satisfied before responses to the questionnaire can be considered "complete".
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-constraint
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireConstraint {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// baseType
+///
+/// This identifies the underlying type in a profile, when a questionnaire is generated from a profile.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/questionnaire-baseType
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireBaseType {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for Questionnaire {
@@ -455,7 +678,7 @@ impl Default for Questionnaire {
     }
 }
 
-impl Default for QuestionnaireChoiceOrientation {
+impl Default for QuestionnaireUnit {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -464,6 +687,30 @@ impl Default for QuestionnaireChoiceOrientation {
 }
 
 impl Default for QuestionnaireHidden {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireMinOccurs {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireOptionExclusive {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireMaxOccurs {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -487,6 +734,121 @@ impl Default for QuestionnaireItemAnsweroption {
     }
 }
 
+impl Default for QuestionnaireSignatureRequired {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            initial: Default::default(),
+            answer_option: Default::default(),
+            enable_when: Default::default(),
+            link_id: StringType::default(),
+            _link_id: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            code: Default::default(),
+            prefix: Default::default(),
+            _prefix: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            enable_behavior: Default::default(),
+            _enable_behavior: Default::default(),
+            required: Default::default(),
+            _required: Default::default(),
+            repeats: Default::default(),
+            _repeats: Default::default(),
+            read_only: Default::default(),
+            _read_only: Default::default(),
+            max_length: Default::default(),
+            _max_length: Default::default(),
+            answer_value_set: Default::default(),
+            _answer_value_set: Default::default(),
+            item: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireOptionPrefix {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSupportLink {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireReferenceProfile {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireUnitValueSet {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireChoiceOrientation {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireReferenceResource {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireSliderStepValue {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireFHIRType {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireUnitOption {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for QuestionnaireItemInitial {
     fn default() -> Self {
         Self {
@@ -503,6 +865,14 @@ impl Default for QuestionnaireItemInitial {
             value_coding: Default::default(),
             value_quantity: Default::default(),
             value_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireReferenceFilter {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -529,7 +899,7 @@ impl Default for QuestionnaireItemEnablewhen {
     }
 }
 
-impl Default for QuestionnaireMinOccurs {
+impl Default for QuestionnaireConstraint {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -537,53 +907,10 @@ impl Default for QuestionnaireMinOccurs {
     }
 }
 
-impl Default for QuestionnaireSupportLink {
+impl Default for QuestionnaireBaseType {
     fn default() -> Self {
         Self {
             base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireSignatureRequired {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for QuestionnaireItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            enable_when: Default::default(),
-            answer_option: Default::default(),
-            initial: Default::default(),
-            link_id: StringType::default(),
-            _link_id: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            code: Default::default(),
-            prefix: Default::default(),
-            _prefix: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            enable_behavior: Default::default(),
-            _enable_behavior: Default::default(),
-            required: Default::default(),
-            _required: Default::default(),
-            repeats: Default::default(),
-            _repeats: Default::default(),
-            read_only: Default::default(),
-            _read_only: Default::default(),
-            max_length: Default::default(),
-            _max_length: Default::default(),
-            answer_value_set: Default::default(),
-            _answer_value_set: Default::default(),
-            item: Default::default(),
         }
     }
 }
@@ -817,13 +1144,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Questionnaire {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -838,44 +1165,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Questionnaire {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -885,16 +1200,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Questionnaire {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -903,7 +1215,7 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -915,7 +1227,7 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.title.clone()
     }
     fn derived_from(&self) -> &[StringType] {
-        self.derived_from.as_deref().unwrap_or(&[])
+        self.derived_from.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
@@ -924,7 +1236,7 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.experimental
     }
     fn subject_type(&self) -> &[ResourceTypes] {
-        self.subject_type.as_deref().unwrap_or(&[])
+        self.subject_type.as_slice()
     }
     fn date(&self) -> Option<DateTimeType> {
         self.date.clone()
@@ -933,16 +1245,16 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -960,10 +1272,10 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.effective_period.clone()
     }
     fn code(&self) -> &[Coding] {
-        self.code.as_deref().unwrap_or(&[])
+        self.code.as_slice()
     }
     fn item(&self) -> &[QuestionnaireItem] {
-        self.item.as_deref().unwrap_or(&[])
+        self.item.as_slice()
     }
 }
 
@@ -978,12 +1290,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1003,15 +1315,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_derived_from(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from = Some(value);
+        resource.derived_from = value;
         resource
     }
     fn add_derived_from(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -1026,15 +1335,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_subject_type(self, value: Vec<ResourceTypes>) -> Self {
         let mut resource = self.clone();
-        resource.subject_type = Some(value);
+        resource.subject_type = value;
         resource
     }
     fn add_subject_type(self, item: ResourceTypes) -> Self {
         let mut resource = self.clone();
-        resource
-            .subject_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.subject_type.push(item);
         resource
     }
     fn set_date(self, value: String) -> Self {
@@ -1049,12 +1355,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1064,25 +1370,22 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1112,22 +1415,22 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_code(self, value: Vec<Coding>) -> Self {
         let mut resource = self.clone();
-        resource.code = Some(value);
+        resource.code = value;
         resource
     }
     fn add_code(self, item: Coding) -> Self {
         let mut resource = self.clone();
-        resource.code.get_or_insert_with(Vec::new).push(item);
+        resource.code.push(item);
         resource
     }
     fn set_item(self, value: Vec<QuestionnaireItem>) -> Self {
         let mut resource = self.clone();
-        resource.item = Some(value);
+        resource.item = value;
         resource
     }
     fn add_item(self, item: QuestionnaireItem) -> Self {
         let mut resource = self.clone();
-        resource.item.get_or_insert_with(Vec::new).push(item);
+        resource.item.push(item);
         resource
     }
 }
@@ -1137,7 +1440,7 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1149,7 +1452,7 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.title.is_some()
     }
     fn has_derived_from(&self) -> bool {
-        self.derived_from.as_ref().is_some_and(|v| !v.is_empty())
+        !self.derived_from.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1158,7 +1461,7 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.experimental.is_some()
     }
     fn has_subject_type(&self) -> bool {
-        self.subject_type.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject_type.is_empty()
     }
     fn has_date(&self) -> bool {
         self.date.is_some()
@@ -1167,16 +1470,16 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1194,10 +1497,10 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.effective_period.is_some()
     }
     fn has_code(&self) -> bool {
-        self.code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.code.is_empty()
     }
     fn has_item(&self) -> bool {
-        self.item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.item.is_empty()
     }
 }
 

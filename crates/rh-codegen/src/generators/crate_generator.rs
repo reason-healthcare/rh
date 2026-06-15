@@ -316,13 +316,12 @@ pub fn generate_module_files(
         generate_mod_rs_for_directory(primitives_dir, "FHIR primitive types")?;
     fs::write(primitives_dir.join("mod.rs"), primitives_mod_content)?;
 
-    // Generate traits/mod.rs (placeholder for now, but don't overwrite existing content)
-    let traits_mod_path = traits_dir.join("mod.rs");
-    if !traits_mod_path.exists() || fs::read_to_string(&traits_mod_path)?.len() < 500 {
-        // If file is small, it's likely just placeholder
-        let traits_mod_content = generate_traits_mod_rs()?;
-        fs::write(traits_mod_path, traits_mod_content)?;
-    }
+    // Generate traits/mod.rs
+    let traits_mod_content = generate_mod_rs_for_directory(
+        traits_dir,
+        "FHIR trait definitions for resources and profiles",
+    )?;
+    fs::write(traits_dir.join("mod.rs"), traits_mod_content)?;
 
     // Generate bindings/mod.rs for ValueSet enums
     let bindings_mod_content =
@@ -370,42 +369,6 @@ fn generate_mod_rs_for_directory(dir: &Path, description: &str) -> Result<String
     // Individual types can be imported explicitly when needed
 
     Ok(content)
-}
-
-/// Generate traits/mod.rs with placeholder content
-fn generate_traits_mod_rs() -> Result<String> {
-    let content = r#"//! FHIR traits for common functionality
-//!
-//! This module contains traits that define common interfaces for FHIR types.
-
-// Placeholder traits - these would be generated based on FHIR structure definitions
-
-/// Trait for types that have extensions
-pub trait HasExtensions {
-    /// Get the extensions for this type
-    fn extensions(&self) -> &[crate::datatypes::extension::Extension];
-}
-
-/// Trait for FHIR resources
-pub trait Resource {
-    /// Get the resource type name
-    fn resource_type(&self) -> &'static str;
-    
-    /// Get the logical id of this resource
-    fn id(&self) -> Option<&str>;
-    
-    /// Get the metadata about this resource
-    fn meta(&self) -> Option<&crate::datatypes::meta::Meta>;
-}
-
-/// Trait for domain resources (resources that can have narrative)
-pub trait DomainResource: Resource + HasExtensions {
-    /// Get the narrative text for this domain resource
-    fn narrative(&self) -> Option<&crate::datatypes::narrative::Narrative>;
-}
-"#;
-
-    Ok(content.to_string())
 }
 
 /// Generate statistics from organized directories

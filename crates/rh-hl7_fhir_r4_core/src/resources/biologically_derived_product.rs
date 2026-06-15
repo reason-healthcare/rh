@@ -29,7 +29,8 @@ pub struct BiologicallyDerivedProduct {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External ids for this item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// organ | tissue | fluid | cells | biologicalAgent
     #[serde(rename = "productCategory")]
     pub product_category: Option<ProductCategory>,
@@ -46,21 +47,25 @@ pub struct BiologicallyDerivedProduct {
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// Procedure request
-    pub request: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub request: Vec<Reference>,
     /// The amount of this biologically derived product
     pub quantity: Option<IntegerType>,
     /// Extension element for the 'quantity' primitive field. Contains metadata and extensions.
     pub _quantity: Option<Element>,
     /// BiologicallyDerivedProduct parent
-    pub parent: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parent: Vec<Reference>,
     /// How this product was collected
     pub collection: Option<BiologicallyDerivedProductCollection>,
     /// Any processing of the product during collection
-    pub processing: Option<Vec<BiologicallyDerivedProductProcessing>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub processing: Vec<BiologicallyDerivedProductProcessing>,
     /// Any manipulation of product post-collection
     pub manipulation: Option<BiologicallyDerivedProductManipulation>,
     /// Product storage
-    pub storage: Option<Vec<BiologicallyDerivedProductStorage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub storage: Vec<BiologicallyDerivedProductStorage>,
 }
 /// BiologicallyDerivedProduct nested structure for the 'processing' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,23 +113,6 @@ pub struct BiologicallyDerivedProductStorage {
     /// Storage timeperiod
     pub duration: Option<Period>,
 }
-/// BiologicallyDerivedProduct nested structure for the 'manipulation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BiologicallyDerivedProductManipulation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of manipulation
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Time of manipulation (dateTime)
-    #[serde(rename = "timeDateTime")]
-    pub time_date_time: Option<DateTimeType>,
-    /// Time of manipulation (Period)
-    #[serde(rename = "timePeriod")]
-    pub time_period: Option<Period>,
-}
 /// BiologicallyDerivedProduct nested structure for the 'collection' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BiologicallyDerivedProductCollection {
@@ -141,6 +129,23 @@ pub struct BiologicallyDerivedProductCollection {
     /// Time of product collection (Period)
     #[serde(rename = "collectedPeriod")]
     pub collected_period: Option<Period>,
+}
+/// BiologicallyDerivedProduct nested structure for the 'manipulation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiologicallyDerivedProductManipulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of manipulation
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Time of manipulation (dateTime)
+    #[serde(rename = "timeDateTime")]
+    pub time_date_time: Option<DateTimeType>,
+    /// Time of manipulation (Period)
+    #[serde(rename = "timePeriod")]
+    pub time_period: Option<Period>,
 }
 
 impl Default for BiologicallyDerivedProduct {
@@ -194,18 +199,6 @@ impl Default for BiologicallyDerivedProductStorage {
     }
 }
 
-impl Default for BiologicallyDerivedProductManipulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            time_date_time: Default::default(),
-            time_period: Default::default(),
-        }
-    }
-}
-
 impl Default for BiologicallyDerivedProductCollection {
     fn default() -> Self {
         Self {
@@ -214,6 +207,18 @@ impl Default for BiologicallyDerivedProductCollection {
             source: Default::default(),
             collected_date_time: Default::default(),
             collected_period: Default::default(),
+        }
+    }
+}
+
+impl Default for BiologicallyDerivedProductManipulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            time_date_time: Default::default(),
+            time_period: Default::default(),
         }
     }
 }
@@ -518,13 +523,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for BiologicallyDer
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -539,44 +544,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for BiologicallyDeri
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -586,16 +579,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for BiologicallyDer
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -603,7 +593,7 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductAcce
     for BiologicallyDerivedProduct
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn product_category(&self) -> Option<ProductCategory> {
         self.product_category.clone()
@@ -615,25 +605,25 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductAcce
         self.status.clone()
     }
     fn request(&self) -> &[Reference] {
-        self.request.as_deref().unwrap_or(&[])
+        self.request.as_slice()
     }
     fn quantity(&self) -> Option<IntegerType> {
         self.quantity
     }
     fn parent(&self) -> &[Reference] {
-        self.parent.as_deref().unwrap_or(&[])
+        self.parent.as_slice()
     }
     fn collection(&self) -> Option<BiologicallyDerivedProductCollection> {
         self.collection.clone()
     }
     fn processing(&self) -> &[BiologicallyDerivedProductProcessing] {
-        self.processing.as_deref().unwrap_or(&[])
+        self.processing.as_slice()
     }
     fn manipulation(&self) -> Option<BiologicallyDerivedProductManipulation> {
         self.manipulation.clone()
     }
     fn storage(&self) -> &[BiologicallyDerivedProductStorage] {
-        self.storage.as_deref().unwrap_or(&[])
+        self.storage.as_slice()
     }
 }
 
@@ -645,12 +635,12 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductMuta
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_product_category(self, value: ProductCategory) -> Self {
@@ -670,12 +660,12 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductMuta
     }
     fn set_request(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.request = Some(value);
+        resource.request = value;
         resource
     }
     fn add_request(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.request.get_or_insert_with(Vec::new).push(item);
+        resource.request.push(item);
         resource
     }
     fn set_quantity(self, value: i32) -> Self {
@@ -685,12 +675,12 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductMuta
     }
     fn set_parent(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.parent = Some(value);
+        resource.parent = value;
         resource
     }
     fn add_parent(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.parent.get_or_insert_with(Vec::new).push(item);
+        resource.parent.push(item);
         resource
     }
     fn set_collection(self, value: BiologicallyDerivedProductCollection) -> Self {
@@ -700,12 +690,12 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductMuta
     }
     fn set_processing(self, value: Vec<BiologicallyDerivedProductProcessing>) -> Self {
         let mut resource = self.clone();
-        resource.processing = Some(value);
+        resource.processing = value;
         resource
     }
     fn add_processing(self, item: BiologicallyDerivedProductProcessing) -> Self {
         let mut resource = self.clone();
-        resource.processing.get_or_insert_with(Vec::new).push(item);
+        resource.processing.push(item);
         resource
     }
     fn set_manipulation(self, value: BiologicallyDerivedProductManipulation) -> Self {
@@ -715,12 +705,12 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductMuta
     }
     fn set_storage(self, value: Vec<BiologicallyDerivedProductStorage>) -> Self {
         let mut resource = self.clone();
-        resource.storage = Some(value);
+        resource.storage = value;
         resource
     }
     fn add_storage(self, item: BiologicallyDerivedProductStorage) -> Self {
         let mut resource = self.clone();
-        resource.storage.get_or_insert_with(Vec::new).push(item);
+        resource.storage.push(item);
         resource
     }
 }
@@ -729,7 +719,7 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductExis
     for BiologicallyDerivedProduct
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_product_category(&self) -> bool {
         self.product_category.is_some()
@@ -741,25 +731,25 @@ impl crate::traits::biologically_derived_product::BiologicallyDerivedProductExis
         self.status.is_some()
     }
     fn has_request(&self) -> bool {
-        self.request.as_ref().is_some_and(|v| !v.is_empty())
+        !self.request.is_empty()
     }
     fn has_quantity(&self) -> bool {
         self.quantity.is_some()
     }
     fn has_parent(&self) -> bool {
-        self.parent.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parent.is_empty()
     }
     fn has_collection(&self) -> bool {
         self.collection.is_some()
     }
     fn has_processing(&self) -> bool {
-        self.processing.as_ref().is_some_and(|v| !v.is_empty())
+        !self.processing.is_empty()
     }
     fn has_manipulation(&self) -> bool {
         self.manipulation.is_some()
     }
     fn has_storage(&self) -> bool {
-        self.storage.as_ref().is_some_and(|v| !v.is_empty())
+        !self.storage.is_empty()
     }
 }
 

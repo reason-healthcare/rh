@@ -42,10 +42,12 @@ pub struct VirtualServiceDetail {
     pub address_extended_contact_detail: Option<ExtendedContactDetail>,
     /// Address to see alternative connection details
     #[serde(rename = "additionalInfo")]
-    pub additional_info: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_info: Vec<StringType>,
     /// Extension element for the 'additionalInfo' primitive field. Contains metadata and extensions.
     #[serde(rename = "_additionalInfo")]
-    pub _additional_info: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _additional_info: Vec<Element>,
     /// Maximum number of participants supported by the virtual service
     #[serde(rename = "maxParticipants")]
     pub max_participants: Option<PositiveIntType>,

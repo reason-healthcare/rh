@@ -28,7 +28,8 @@ pub struct MolecularSequence {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique ID for this particular sequence
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// aa | dna | rna
     #[serde(rename = "type")]
     pub type_: Option<SequenceType>,
@@ -37,7 +38,8 @@ pub struct MolecularSequence {
     /// Subject this sequence is associated too
     pub subject: Option<Reference>,
     /// What the molecular sequence is about, when it is not about the subject of record
-    pub focus: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<Reference>,
     /// Specimen used for sequencing
     pub specimen: Option<Reference>,
     /// The method for sequencing
@@ -49,9 +51,11 @@ pub struct MolecularSequence {
     /// Extension element for the 'literal' primitive field. Contains metadata and extensions.
     pub _literal: Option<Element>,
     /// Embedded file or a link (URL) which contains content to represent the sequence
-    pub formatted: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub formatted: Vec<Attachment>,
     /// A sequence defined relative to another sequence
-    pub relative: Option<Vec<MolecularSequenceRelative>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relative: Vec<MolecularSequenceRelative>,
 }
 /// MolecularSequenceRelative nested structure for the 'edit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,7 +94,8 @@ pub struct MolecularSequenceRelative {
     #[serde(rename = "startingSequence")]
     pub starting_sequence: Option<MolecularSequenceRelativeStartingsequence>,
     /// Changes in sequence from the starting sequence
-    pub edit: Option<Vec<MolecularSequenceRelativeEdit>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub edit: Vec<MolecularSequenceRelativeEdit>,
     /// Ways of identifying nucleotides or amino acids within a sequence
     ///
     /// Binding: extensible (Genomic coordinate system.)
@@ -486,13 +491,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MolecularSequen
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -507,44 +512,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MolecularSequenc
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -554,22 +547,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for MolecularSequen
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::molecular_sequence::MolecularSequenceAccessors for MolecularSequence {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn type_(&self) -> Option<SequenceType> {
         self.type_.clone()
@@ -578,7 +568,7 @@ impl crate::traits::molecular_sequence::MolecularSequenceAccessors for Molecular
         self.subject.clone()
     }
     fn focus(&self) -> &[Reference] {
-        self.focus.as_deref().unwrap_or(&[])
+        self.focus.as_slice()
     }
     fn specimen(&self) -> Option<Reference> {
         self.specimen.clone()
@@ -593,10 +583,10 @@ impl crate::traits::molecular_sequence::MolecularSequenceAccessors for Molecular
         self.literal.clone()
     }
     fn formatted(&self) -> &[Attachment] {
-        self.formatted.as_deref().unwrap_or(&[])
+        self.formatted.as_slice()
     }
     fn relative(&self) -> &[MolecularSequenceRelative] {
-        self.relative.as_deref().unwrap_or(&[])
+        self.relative.as_slice()
     }
 }
 
@@ -606,12 +596,12 @@ impl crate::traits::molecular_sequence::MolecularSequenceMutators for MolecularS
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_type_(self, value: SequenceType) -> Self {
@@ -626,12 +616,12 @@ impl crate::traits::molecular_sequence::MolecularSequenceMutators for MolecularS
     }
     fn set_focus(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.focus = Some(value);
+        resource.focus = value;
         resource
     }
     fn add_focus(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.focus.get_or_insert_with(Vec::new).push(item);
+        resource.focus.push(item);
         resource
     }
     fn set_specimen(self, value: Reference) -> Self {
@@ -656,29 +646,29 @@ impl crate::traits::molecular_sequence::MolecularSequenceMutators for MolecularS
     }
     fn set_formatted(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.formatted = Some(value);
+        resource.formatted = value;
         resource
     }
     fn add_formatted(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.formatted.get_or_insert_with(Vec::new).push(item);
+        resource.formatted.push(item);
         resource
     }
     fn set_relative(self, value: Vec<MolecularSequenceRelative>) -> Self {
         let mut resource = self.clone();
-        resource.relative = Some(value);
+        resource.relative = value;
         resource
     }
     fn add_relative(self, item: MolecularSequenceRelative) -> Self {
         let mut resource = self.clone();
-        resource.relative.get_or_insert_with(Vec::new).push(item);
+        resource.relative.push(item);
         resource
     }
 }
 
 impl crate::traits::molecular_sequence::MolecularSequenceExistence for MolecularSequence {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
@@ -687,7 +677,7 @@ impl crate::traits::molecular_sequence::MolecularSequenceExistence for Molecular
         self.subject.is_some()
     }
     fn has_focus(&self) -> bool {
-        self.focus.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focus.is_empty()
     }
     fn has_specimen(&self) -> bool {
         self.specimen.is_some()
@@ -702,10 +692,10 @@ impl crate::traits::molecular_sequence::MolecularSequenceExistence for Molecular
         self.literal.is_some()
     }
     fn has_formatted(&self) -> bool {
-        self.formatted.as_ref().is_some_and(|v| !v.is_empty())
+        !self.formatted.is_empty()
     }
     fn has_relative(&self) -> bool {
-        self.relative.as_ref().is_some_and(|v| !v.is_empty())
+        !self.relative.is_empty()
     }
 }
 

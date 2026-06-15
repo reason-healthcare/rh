@@ -26,7 +26,8 @@ pub struct AppointmentResponse {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Appointment this response relates to
     pub appointment: Reference,
     /// Indicator for a counter proposal
@@ -49,7 +50,8 @@ pub struct AppointmentResponse {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-participant-type
     #[serde(rename = "participantType")]
-    pub participant_type: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant_type: Vec<CodeableConcept>,
     /// Person(s), Location, HealthcareService, or Device
     pub actor: Option<Reference>,
     /// accepted | declined | tentative | needs-action | entered-in-error
@@ -255,13 +257,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for AppointmentResp
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -276,44 +278,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for AppointmentRespo
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -323,22 +313,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for AppointmentResp
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::appointment_response::AppointmentResponseAccessors for AppointmentResponse {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn appointment(&self) -> Reference {
         self.appointment.clone()
@@ -353,7 +340,7 @@ impl crate::traits::appointment_response::AppointmentResponseAccessors for Appoi
         self.end.clone()
     }
     fn participant_type(&self) -> &[CodeableConcept] {
-        self.participant_type.as_deref().unwrap_or(&[])
+        self.participant_type.as_slice()
     }
     fn actor(&self) -> Option<Reference> {
         self.actor.clone()
@@ -381,12 +368,12 @@ impl crate::traits::appointment_response::AppointmentResponseMutators for Appoin
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_appointment(self, value: Reference) -> Self {
@@ -411,15 +398,12 @@ impl crate::traits::appointment_response::AppointmentResponseMutators for Appoin
     }
     fn set_participant_type(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.participant_type = Some(value);
+        resource.participant_type = value;
         resource
     }
     fn add_participant_type(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .participant_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.participant_type.push(item);
         resource
     }
     fn set_actor(self, value: Reference) -> Self {
@@ -456,7 +440,7 @@ impl crate::traits::appointment_response::AppointmentResponseMutators for Appoin
 
 impl crate::traits::appointment_response::AppointmentResponseExistence for AppointmentResponse {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_appointment(&self) -> bool {
         true
@@ -471,9 +455,7 @@ impl crate::traits::appointment_response::AppointmentResponseExistence for Appoi
         self.end.is_some()
     }
     fn has_participant_type(&self) -> bool {
-        self.participant_type
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.participant_type.is_empty()
     }
     fn has_actor(&self) -> bool {
         self.actor.is_some()

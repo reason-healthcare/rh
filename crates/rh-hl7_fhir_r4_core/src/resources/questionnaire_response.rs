@@ -34,10 +34,12 @@ pub struct QuestionnaireResponse {
     pub identifier: Option<Identifier>,
     /// Request fulfilled by this QuestionnaireResponse
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Part of this action
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// Form being answered
     pub questionnaire: Option<StringType>,
     /// Extension element for the 'questionnaire' primitive field. Contains metadata and extensions.
@@ -59,7 +61,8 @@ pub struct QuestionnaireResponse {
     /// The person who answered the questions
     pub source: Option<Reference>,
     /// Groups and questions
-    pub item: Option<Vec<QuestionnaireResponseItem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<QuestionnaireResponseItem>,
 }
 /// QuestionnaireResponseItem nested structure for the 'answer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,7 +107,8 @@ pub struct QuestionnaireResponseItemAnswer {
     #[serde(rename = "valueReference")]
     pub value_reference: Option<Reference>,
     /// Nested groups and questions
-    pub item: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<StringType>,
 }
 /// QuestionnaireResponse nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,7 +117,8 @@ pub struct QuestionnaireResponseItem {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// The response(s) to the question
-    pub answer: Option<Vec<QuestionnaireResponseItemAnswer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub answer: Vec<QuestionnaireResponseItemAnswer>,
     /// Pointer to specific item from Questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -129,7 +134,8 @@ pub struct QuestionnaireResponseItem {
     /// Extension element for the 'text' primitive field. Contains metadata and extensions.
     pub _text: Option<Element>,
     /// Nested questionnaire response items
-    pub item: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<StringType>,
 }
 
 impl Default for QuestionnaireResponse {
@@ -366,13 +372,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for QuestionnaireRe
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -387,44 +393,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for QuestionnaireRes
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -434,16 +428,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for QuestionnaireRe
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -454,10 +445,10 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseAccessors
         self.identifier.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn questionnaire(&self) -> Option<StringType> {
         self.questionnaire.clone()
@@ -481,7 +472,7 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseAccessors
         self.source.clone()
     }
     fn item(&self) -> &[QuestionnaireResponseItem] {
-        self.item.as_deref().unwrap_or(&[])
+        self.item.as_slice()
     }
 }
 
@@ -498,22 +489,22 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseMutators
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_questionnaire(self, value: String) -> Self {
@@ -553,12 +544,12 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseMutators
     }
     fn set_item(self, value: Vec<QuestionnaireResponseItem>) -> Self {
         let mut resource = self.clone();
-        resource.item = Some(value);
+        resource.item = value;
         resource
     }
     fn add_item(self, item: QuestionnaireResponseItem) -> Self {
         let mut resource = self.clone();
-        resource.item.get_or_insert_with(Vec::new).push(item);
+        resource.item.push(item);
         resource
     }
 }
@@ -570,10 +561,10 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseExistence
         self.identifier.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_questionnaire(&self) -> bool {
         self.questionnaire.is_some()
@@ -597,7 +588,7 @@ impl crate::traits::questionnaire_response::QuestionnaireResponseExistence
         self.source.is_some()
     }
     fn has_item(&self) -> bool {
-        self.item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.item.is_empty()
     }
 }
 

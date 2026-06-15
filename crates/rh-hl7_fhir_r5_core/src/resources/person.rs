@@ -31,15 +31,18 @@ pub struct Person {
     #[serde(flatten)]
     pub base: DomainResource,
     /// A human identifier for this person
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// This person's record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
     pub _active: Option<Element>,
     /// A name associated with the person
-    pub name: Option<Vec<HumanName>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name: Vec<HumanName>,
     /// A contact detail for the person
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// male | female | other | unknown
     pub gender: Option<AdministrativeGender>,
     /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
@@ -57,7 +60,8 @@ pub struct Person {
     #[serde(rename = "deceasedDateTime")]
     pub deceased_date_time: Option<DateTimeType>,
     /// One or more addresses for the person
-    pub address: Option<Vec<Address>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub address: Vec<Address>,
     /// Marital (civil) status of a person
     ///
     /// Binding: extensible (The domestic partnership status of a person.)
@@ -67,14 +71,17 @@ pub struct Person {
     #[serde(rename = "maritalStatus")]
     pub marital_status: Option<CodeableConcept>,
     /// Image of the person
-    pub photo: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub photo: Vec<Attachment>,
     /// A language which may be used to communicate with the person about his or her health
-    pub communication: Option<Vec<PersonCommunication>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication: Vec<PersonCommunication>,
     /// The organization that is the custodian of the person record
     #[serde(rename = "managingOrganization")]
     pub managing_organization: Option<Reference>,
     /// Link to a resource that concerns the same actual person
-    pub link: Option<Vec<PersonLink>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link: Vec<PersonLink>,
 }
 /// Person nested structure for the 'communication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -287,13 +294,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Person {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -308,44 +315,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Person {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -355,31 +350,28 @@ impl crate::traits::domain_resource::DomainResourceExistence for Person {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::person::PersonAccessors for Person {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
     }
     fn name(&self) -> &[HumanName] {
-        self.name.as_deref().unwrap_or(&[])
+        self.name.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn gender(&self) -> Option<AdministrativeGender> {
         self.gender.clone()
@@ -388,22 +380,22 @@ impl crate::traits::person::PersonAccessors for Person {
         self.birth_date.clone()
     }
     fn address(&self) -> &[Address] {
-        self.address.as_deref().unwrap_or(&[])
+        self.address.as_slice()
     }
     fn marital_status(&self) -> Option<CodeableConcept> {
         self.marital_status.clone()
     }
     fn photo(&self) -> &[Attachment] {
-        self.photo.as_deref().unwrap_or(&[])
+        self.photo.as_slice()
     }
     fn communication(&self) -> &[PersonCommunication] {
-        self.communication.as_deref().unwrap_or(&[])
+        self.communication.as_slice()
     }
     fn managing_organization(&self) -> Option<Reference> {
         self.managing_organization.clone()
     }
     fn link(&self) -> &[PersonLink] {
-        self.link.as_deref().unwrap_or(&[])
+        self.link.as_slice()
     }
 }
 
@@ -413,12 +405,12 @@ impl crate::traits::person::PersonMutators for Person {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -428,22 +420,22 @@ impl crate::traits::person::PersonMutators for Person {
     }
     fn set_name(self, value: Vec<HumanName>) -> Self {
         let mut resource = self.clone();
-        resource.name = Some(value);
+        resource.name = value;
         resource
     }
     fn add_name(self, item: HumanName) -> Self {
         let mut resource = self.clone();
-        resource.name.get_or_insert_with(Vec::new).push(item);
+        resource.name.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_gender(self, value: AdministrativeGender) -> Self {
@@ -458,12 +450,12 @@ impl crate::traits::person::PersonMutators for Person {
     }
     fn set_address(self, value: Vec<Address>) -> Self {
         let mut resource = self.clone();
-        resource.address = Some(value);
+        resource.address = value;
         resource
     }
     fn add_address(self, item: Address) -> Self {
         let mut resource = self.clone();
-        resource.address.get_or_insert_with(Vec::new).push(item);
+        resource.address.push(item);
         resource
     }
     fn set_marital_status(self, value: CodeableConcept) -> Self {
@@ -473,25 +465,22 @@ impl crate::traits::person::PersonMutators for Person {
     }
     fn set_photo(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.photo = Some(value);
+        resource.photo = value;
         resource
     }
     fn add_photo(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.photo.get_or_insert_with(Vec::new).push(item);
+        resource.photo.push(item);
         resource
     }
     fn set_communication(self, value: Vec<PersonCommunication>) -> Self {
         let mut resource = self.clone();
-        resource.communication = Some(value);
+        resource.communication = value;
         resource
     }
     fn add_communication(self, item: PersonCommunication) -> Self {
         let mut resource = self.clone();
-        resource
-            .communication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.communication.push(item);
         resource
     }
     fn set_managing_organization(self, value: Reference) -> Self {
@@ -501,12 +490,12 @@ impl crate::traits::person::PersonMutators for Person {
     }
     fn set_link(self, value: Vec<PersonLink>) -> Self {
         let mut resource = self.clone();
-        resource.link = Some(value);
+        resource.link = value;
         resource
     }
     fn add_link(self, item: PersonLink) -> Self {
         let mut resource = self.clone();
-        resource.link.get_or_insert_with(Vec::new).push(item);
+        resource.link.push(item);
         resource
     }
 }
@@ -516,16 +505,16 @@ impl crate::traits::person::PersonExistence for Person {
         self.deceased_boolean.is_some() || self.deceased_date_time.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
     }
     fn has_name(&self) -> bool {
-        self.name.as_ref().is_some_and(|v| !v.is_empty())
+        !self.name.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_gender(&self) -> bool {
         self.gender.is_some()
@@ -534,22 +523,22 @@ impl crate::traits::person::PersonExistence for Person {
         self.birth_date.is_some()
     }
     fn has_address(&self) -> bool {
-        self.address.as_ref().is_some_and(|v| !v.is_empty())
+        !self.address.is_empty()
     }
     fn has_marital_status(&self) -> bool {
         self.marital_status.is_some()
     }
     fn has_photo(&self) -> bool {
-        self.photo.as_ref().is_some_and(|v| !v.is_empty())
+        !self.photo.is_empty()
     }
     fn has_communication(&self) -> bool {
-        self.communication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.communication.is_empty()
     }
     fn has_managing_organization(&self) -> bool {
         self.managing_organization.is_some()
     }
     fn has_link(&self) -> bool {
-        self.link.as_ref().is_some_and(|v| !v.is_empty())
+        !self.link.is_empty()
     }
 }
 

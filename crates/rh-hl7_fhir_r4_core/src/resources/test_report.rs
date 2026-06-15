@@ -56,13 +56,43 @@ pub struct TestReport {
     /// Extension element for the 'issued' primitive field. Contains metadata and extensions.
     pub _issued: Option<Element>,
     /// A participant in the test execution, either the execution engine, a client, or a server
-    pub participant: Option<Vec<TestReportParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<TestReportParticipant>,
     /// The results of the series of required setup operations before the tests were executed
     pub setup: Option<TestReportSetup>,
     /// A test executed from the test script
-    pub test: Option<Vec<TestReportTest>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub test: Vec<TestReportTest>,
     /// The results of running the series of required clean up steps
     pub teardown: Option<TestReportTeardown>,
+}
+/// TestReportSetupAction nested structure for the 'assert' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportSetupActionAssert {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// pass | skip | fail | warning | error
+    pub result: ReportActionResultCodes,
+    /// Extension element for the 'result' primitive field. Contains metadata and extensions.
+    pub _result: Option<Element>,
+    /// A message associated with the result
+    pub message: Option<StringType>,
+    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
+    pub _message: Option<Element>,
+    /// A link to further details on the result
+    pub detail: Option<StringType>,
+    /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
+    pub _detail: Option<Element>,
+}
+/// TestReportTeardown nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTeardownAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The teardown operation performed
+    pub operation: StringType,
 }
 /// TestReport nested structure for the 'setup' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,39 +102,6 @@ pub struct TestReportSetup {
     pub base: BackboneElement,
     /// A setup operation or assert that was executed
     pub action: Vec<TestReportSetupAction>,
-}
-/// TestReport nested structure for the 'test' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A test operation or assert that was performed
-    pub action: Vec<TestReportTestAction>,
-    /// Tracking/logging name of this test
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Tracking/reporting short description of the test
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// TestReport nested structure for the 'teardown' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTeardown {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// One or more teardown operations performed
-    pub action: Vec<TestReportTeardownAction>,
-}
-/// TestReportSetup nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetupAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
 }
 /// TestReport nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,44 +123,14 @@ pub struct TestReportParticipant {
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
 }
-/// TestReportSetupAction nested structure for the 'assert' field
+/// TestReport nested structure for the 'teardown' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportSetupActionAssert {
+pub struct TestReportTeardown {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// pass | skip | fail | warning | error
-    pub result: ReportActionResultCodes,
-    /// Extension element for the 'result' primitive field. Contains metadata and extensions.
-    pub _result: Option<Element>,
-    /// A message associated with the result
-    pub message: Option<StringType>,
-    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
-    pub _message: Option<Element>,
-    /// A link to further details on the result
-    pub detail: Option<StringType>,
-    /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
-    pub _detail: Option<Element>,
-}
-/// TestReportTest nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTestAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The operation performed
-    pub operation: Option<StringType>,
-    /// The assertion performed
-    pub assert: Option<StringType>,
-}
-/// TestReportTeardown nested structure for the 'action' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestReportTeardownAction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The teardown operation performed
-    pub operation: StringType,
+    /// One or more teardown operations performed
+    pub action: Vec<TestReportTeardownAction>,
 }
 /// TestReportSetupAction nested structure for the 'operation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -183,6 +150,41 @@ pub struct TestReportSetupActionOperation {
     pub detail: Option<StringType>,
     /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
     pub _detail: Option<Element>,
+}
+/// TestReport nested structure for the 'test' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A test operation or assert that was performed
+    pub action: Vec<TestReportTestAction>,
+    /// Tracking/logging name of this test
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Tracking/reporting short description of the test
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// TestReportSetup nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportSetupAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+}
+/// TestReportTest nested structure for the 'action' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReportTestAction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The operation performed
+    pub operation: Option<StringType>,
+    /// The assertion performed
+    pub assert: Option<StringType>,
 }
 
 impl Default for TestReport {
@@ -211,41 +213,34 @@ impl Default for TestReport {
     }
 }
 
+impl Default for TestReportSetupActionAssert {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            result: Default::default(),
+            _result: Default::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            detail: Default::default(),
+            _detail: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportTeardownAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+        }
+    }
+}
+
 impl Default for TestReportSetup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             action: Vec::new(),
-        }
-    }
-}
-
-impl Default for TestReportTest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-            name: Default::default(),
-            _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTeardown {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            action: Vec::new(),
-        }
-    }
-}
-
-impl Default for TestReportSetupAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
         }
     }
 }
@@ -264,35 +259,11 @@ impl Default for TestReportParticipant {
     }
 }
 
-impl Default for TestReportSetupActionAssert {
+impl Default for TestReportTeardown {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            result: Default::default(),
-            _result: Default::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            detail: Default::default(),
-            _detail: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTestAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation: Default::default(),
-            assert: Default::default(),
-        }
-    }
-}
-
-impl Default for TestReportTeardownAction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation: Default::default(),
+            action: Vec::new(),
         }
     }
 }
@@ -307,6 +278,37 @@ impl Default for TestReportSetupActionOperation {
             _message: Default::default(),
             detail: Default::default(),
             _detail: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportTest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            action: Vec::new(),
+            name: Default::default(),
+            _name: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for TestReportSetupAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+        }
+    }
+}
+
+impl Default for TestReportTestAction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation: Default::default(),
+            assert: Default::default(),
         }
     }
 }
@@ -575,13 +577,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for TestReport {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -596,44 +598,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for TestReport {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -643,16 +633,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for TestReport {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -682,13 +669,13 @@ impl crate::traits::test_report::TestReportAccessors for TestReport {
         self.issued.clone()
     }
     fn participant(&self) -> &[TestReportParticipant] {
-        self.participant.as_deref().unwrap_or(&[])
+        self.participant.as_slice()
     }
     fn setup(&self) -> Option<TestReportSetup> {
         self.setup.clone()
     }
     fn test(&self) -> &[TestReportTest] {
-        self.test.as_deref().unwrap_or(&[])
+        self.test.as_slice()
     }
     fn teardown(&self) -> Option<TestReportTeardown> {
         self.teardown.clone()
@@ -741,12 +728,12 @@ impl crate::traits::test_report::TestReportMutators for TestReport {
     }
     fn set_participant(self, value: Vec<TestReportParticipant>) -> Self {
         let mut resource = self.clone();
-        resource.participant = Some(value);
+        resource.participant = value;
         resource
     }
     fn add_participant(self, item: TestReportParticipant) -> Self {
         let mut resource = self.clone();
-        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource.participant.push(item);
         resource
     }
     fn set_setup(self, value: TestReportSetup) -> Self {
@@ -756,12 +743,12 @@ impl crate::traits::test_report::TestReportMutators for TestReport {
     }
     fn set_test(self, value: Vec<TestReportTest>) -> Self {
         let mut resource = self.clone();
-        resource.test = Some(value);
+        resource.test = value;
         resource
     }
     fn add_test(self, item: TestReportTest) -> Self {
         let mut resource = self.clone();
-        resource.test.get_or_insert_with(Vec::new).push(item);
+        resource.test.push(item);
         resource
     }
     fn set_teardown(self, value: TestReportTeardown) -> Self {
@@ -797,13 +784,13 @@ impl crate::traits::test_report::TestReportExistence for TestReport {
         self.issued.is_some()
     }
     fn has_participant(&self) -> bool {
-        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.participant.is_empty()
     }
     fn has_setup(&self) -> bool {
         self.setup.is_some()
     }
     fn has_test(&self) -> bool {
-        self.test.as_ref().is_some_and(|v| !v.is_empty())
+        !self.test.is_empty()
     }
     fn has_teardown(&self) -> bool {
         self.teardown.is_some()

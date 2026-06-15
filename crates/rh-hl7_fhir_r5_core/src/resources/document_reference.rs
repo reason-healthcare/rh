@@ -30,14 +30,16 @@ pub struct DocumentReference {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifiers for the document
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// An explicitly assigned identifer of a variation of the content in the DocumentReference
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
     pub _version: Option<Element>,
     /// Procedure that caused this media to be created
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// current | superseded | entered-in-error
     pub status: DocumentReferenceStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -53,7 +55,8 @@ pub struct DocumentReference {
     /// Binding: extensible (Type of acquired data in the instance.)
     ///
     /// ValueSet: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_33.html
-    pub modality: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modality: Vec<CodeableConcept>,
     /// Kind of document (LOINC if possible)
     ///
     /// Binding: preferred (Precise type of clinical document.)
@@ -66,17 +69,20 @@ pub struct DocumentReference {
     /// Binding: example (High-level kind of document at a macro level.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/referenced-item-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Who/what is the subject of the document
     pub subject: Option<Reference>,
     /// Context of the document content
-    pub context: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub context: Vec<Reference>,
     /// Main clinical acts documented
     ///
     /// Binding: example (This list of codes represents the main clinical acts being documented.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActCode
-    pub event: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event: Vec<CodeableReference>,
     /// Body part included
     ///
     /// Binding: example (SNOMED CT Body site concepts)
@@ -94,7 +100,8 @@ pub struct DocumentReference {
     /// - `371203008`: Distal interphalangeal joint of fifth toe
     /// - ... and 30 more values
     #[serde(rename = "bodySite")]
-    pub body_site: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_site: Vec<CodeableReference>,
     /// Kind of facility where patient was seen
     ///
     /// Binding: example (XDS Facility Type.)
@@ -138,14 +145,17 @@ pub struct DocumentReference {
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
     /// Who and/or what authored the document
-    pub author: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<Reference>,
     /// Attests to accuracy of the document
-    pub attester: Option<Vec<DocumentReferenceAttester>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attester: Vec<DocumentReferenceAttester>,
     /// Organization which maintains the document
     pub custodian: Option<Reference>,
     /// Relationships to other documents
     #[serde(rename = "relatesTo")]
-    pub relates_to: Option<Vec<DocumentReferenceRelatesto>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relates_to: Vec<DocumentReferenceRelatesto>,
     /// Human-readable description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -156,9 +166,38 @@ pub struct DocumentReference {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/security-label-examples
     #[serde(rename = "securityLabel")]
-    pub security_label: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security_label: Vec<CodeableConcept>,
     /// Document referenced
     pub content: Vec<DocumentReferenceContent>,
+}
+/// DocumentReferenceContent nested structure for the 'profile' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContentProfile {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code|uri|canonical (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Code|uri|canonical (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Code|uri|canonical (canonical)
+    #[serde(rename = "valueCanonical")]
+    pub value_canonical: StringType,
+}
+/// DocumentReference nested structure for the 'content' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentReferenceContent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Content profile rules for the document
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub profile: Vec<DocumentReferenceContentProfile>,
+    /// Where to access the document
+    pub attachment: Attachment,
 }
 /// DocumentReference nested structure for the 'attester' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,33 +232,6 @@ pub struct DocumentReferenceRelatesto {
     pub code: CodeableConcept,
     /// Target of the relationship
     pub target: Reference,
-}
-/// DocumentReference nested structure for the 'content' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Content profile rules for the document
-    pub profile: Option<Vec<DocumentReferenceContentProfile>>,
-    /// Where to access the document
-    pub attachment: Attachment,
-}
-/// DocumentReferenceContent nested structure for the 'profile' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DocumentReferenceContentProfile {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code|uri|canonical (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Code|uri|canonical (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Code|uri|canonical (canonical)
-    #[serde(rename = "valueCanonical")]
-    pub value_canonical: StringType,
 }
 
 impl Default for DocumentReference {
@@ -258,6 +270,27 @@ impl Default for DocumentReference {
     }
 }
 
+impl Default for DocumentReferenceContentProfile {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_coding: Default::default(),
+            value_uri: Default::default(),
+            value_canonical: Default::default(),
+        }
+    }
+}
+
+impl Default for DocumentReferenceContent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            profile: Default::default(),
+            attachment: Attachment::default(),
+        }
+    }
+}
+
 impl Default for DocumentReferenceAttester {
     fn default() -> Self {
         Self {
@@ -276,27 +309,6 @@ impl Default for DocumentReferenceRelatesto {
             base: BackboneElement::default(),
             code: Default::default(),
             target: Default::default(),
-        }
-    }
-}
-
-impl Default for DocumentReferenceContent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            profile: Default::default(),
-            attachment: Attachment::default(),
-        }
-    }
-}
-
-impl Default for DocumentReferenceContentProfile {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_coding: Default::default(),
-            value_uri: Default::default(),
-            value_canonical: Default::default(),
         }
     }
 }
@@ -510,13 +522,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DocumentReferen
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -531,44 +543,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DocumentReferenc
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -578,28 +578,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for DocumentReferen
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::document_reference::DocumentReferenceAccessors for DocumentReference {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn status(&self) -> DocumentReferenceStatus {
         self.status.clone()
@@ -608,25 +605,25 @@ impl crate::traits::document_reference::DocumentReferenceAccessors for DocumentR
         self.doc_status.clone()
     }
     fn modality(&self) -> &[CodeableConcept] {
-        self.modality.as_deref().unwrap_or(&[])
+        self.modality.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
     }
     fn context(&self) -> &[Reference] {
-        self.context.as_deref().unwrap_or(&[])
+        self.context.as_slice()
     }
     fn event(&self) -> &[CodeableReference] {
-        self.event.as_deref().unwrap_or(&[])
+        self.event.as_slice()
     }
     fn body_site(&self) -> &[CodeableReference] {
-        self.body_site.as_deref().unwrap_or(&[])
+        self.body_site.as_slice()
     }
     fn facility_type(&self) -> Option<CodeableConcept> {
         self.facility_type.clone()
@@ -641,22 +638,22 @@ impl crate::traits::document_reference::DocumentReferenceAccessors for DocumentR
         self.date.clone()
     }
     fn author(&self) -> &[Reference] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn attester(&self) -> &[DocumentReferenceAttester] {
-        self.attester.as_deref().unwrap_or(&[])
+        self.attester.as_slice()
     }
     fn custodian(&self) -> Option<Reference> {
         self.custodian.clone()
     }
     fn relates_to(&self) -> &[DocumentReferenceRelatesto] {
-        self.relates_to.as_deref().unwrap_or(&[])
+        self.relates_to.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn security_label(&self) -> &[CodeableConcept] {
-        self.security_label.as_deref().unwrap_or(&[])
+        self.security_label.as_slice()
     }
     fn content(&self) -> &[DocumentReferenceContent] {
         &self.content
@@ -669,12 +666,12 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -684,12 +681,12 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_status(self, value: DocumentReferenceStatus) -> Self {
@@ -704,12 +701,12 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_modality(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.modality = Some(value);
+        resource.modality = value;
         resource
     }
     fn add_modality(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.modality.get_or_insert_with(Vec::new).push(item);
+        resource.modality.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -719,12 +716,12 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -734,32 +731,32 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_context(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.context = Some(value);
+        resource.context = value;
         resource
     }
     fn add_context(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.context.get_or_insert_with(Vec::new).push(item);
+        resource.context.push(item);
         resource
     }
     fn set_event(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.event = Some(value);
+        resource.event = value;
         resource
     }
     fn add_event(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.event.get_or_insert_with(Vec::new).push(item);
+        resource.event.push(item);
         resource
     }
     fn set_body_site(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.body_site = Some(value);
+        resource.body_site = value;
         resource
     }
     fn add_body_site(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.body_site.get_or_insert_with(Vec::new).push(item);
+        resource.body_site.push(item);
         resource
     }
     fn set_facility_type(self, value: CodeableConcept) -> Self {
@@ -784,22 +781,22 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_author(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_attester(self, value: Vec<DocumentReferenceAttester>) -> Self {
         let mut resource = self.clone();
-        resource.attester = Some(value);
+        resource.attester = value;
         resource
     }
     fn add_attester(self, item: DocumentReferenceAttester) -> Self {
         let mut resource = self.clone();
-        resource.attester.get_or_insert_with(Vec::new).push(item);
+        resource.attester.push(item);
         resource
     }
     fn set_custodian(self, value: Reference) -> Self {
@@ -809,12 +806,12 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_relates_to(self, value: Vec<DocumentReferenceRelatesto>) -> Self {
         let mut resource = self.clone();
-        resource.relates_to = Some(value);
+        resource.relates_to = value;
         resource
     }
     fn add_relates_to(self, item: DocumentReferenceRelatesto) -> Self {
         let mut resource = self.clone();
-        resource.relates_to.get_or_insert_with(Vec::new).push(item);
+        resource.relates_to.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -824,15 +821,12 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
     }
     fn set_security_label(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.security_label = Some(value);
+        resource.security_label = value;
         resource
     }
     fn add_security_label(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .security_label
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.security_label.push(item);
         resource
     }
     fn set_content(self, value: Vec<DocumentReferenceContent>) -> Self {
@@ -849,13 +843,13 @@ impl crate::traits::document_reference::DocumentReferenceMutators for DocumentRe
 
 impl crate::traits::document_reference::DocumentReferenceExistence for DocumentReference {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -864,25 +858,25 @@ impl crate::traits::document_reference::DocumentReferenceExistence for DocumentR
         self.doc_status.is_some()
     }
     fn has_modality(&self) -> bool {
-        self.modality.as_ref().is_some_and(|v| !v.is_empty())
+        !self.modality.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_subject(&self) -> bool {
         self.subject.is_some()
     }
     fn has_context(&self) -> bool {
-        self.context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.context.is_empty()
     }
     fn has_event(&self) -> bool {
-        self.event.as_ref().is_some_and(|v| !v.is_empty())
+        !self.event.is_empty()
     }
     fn has_body_site(&self) -> bool {
-        self.body_site.as_ref().is_some_and(|v| !v.is_empty())
+        !self.body_site.is_empty()
     }
     fn has_facility_type(&self) -> bool {
         self.facility_type.is_some()
@@ -897,22 +891,22 @@ impl crate::traits::document_reference::DocumentReferenceExistence for DocumentR
         self.date.is_some()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_attester(&self) -> bool {
-        self.attester.as_ref().is_some_and(|v| !v.is_empty())
+        !self.attester.is_empty()
     }
     fn has_custodian(&self) -> bool {
         self.custodian.is_some()
     }
     fn has_relates_to(&self) -> bool {
-        self.relates_to.as_ref().is_some_and(|v| !v.is_empty())
+        !self.relates_to.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_security_label(&self) -> bool {
-        self.security_label.as_ref().is_some_and(|v| !v.is_empty())
+        !self.security_label.is_empty()
     }
     fn has_content(&self) -> bool {
         !self.content.is_empty()

@@ -387,15 +387,12 @@ fn generate_registry_map(
     );
 
     for type_name in types.keys() {
-        // Sanitize type name to create valid Rust identifier
-        // Replace any non-alphanumeric characters with underscores
         let sanitized_name: String = type_name
             .chars()
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
             .collect();
         let const_name = format!("{}_FIELDS", sanitized_name.to_uppercase());
 
-        // Only include if the const was actually generated
         if generated_consts.contains(&const_name) {
             code.push_str(&format!("    \"{type_name}\" => &{const_name},\n"));
         }
@@ -414,10 +411,12 @@ pub fn generate_metadata_code_split(
 ) -> HashMap<String, String> {
     let mut files = HashMap::new();
 
-    // Build name -> category mapping from structure definitions
+    // Build name -> category mapping from structure definitions (first definition wins for duplicates)
     let mut name_to_category: HashMap<&str, MetadataCategory> = HashMap::new();
     for sd in structure_defs {
-        name_to_category.insert(&sd.name, classify_metadata(sd));
+        name_to_category
+            .entry(&sd.name)
+            .or_insert_with(|| classify_metadata(sd));
     }
 
     // Partition types by category
@@ -465,6 +464,11 @@ pub fn generate_metadata_code_split(
                 .map(|c| if c.is_alphanumeric() { c } else { '_' })
                 .collect();
             let const_name = format!("{}_FIELDS", sanitized_name.to_uppercase());
+
+            // Skip if already generated in a previous category (avoids ambiguous re-exports)
+            if all_generated_consts.contains(&const_name) {
+                continue;
+            }
 
             if category_consts.contains(&const_name) {
                 continue;

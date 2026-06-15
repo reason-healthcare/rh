@@ -34,7 +34,8 @@ pub struct ResearchStudy {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Business Identifier for study
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The business version for the study record
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -48,15 +49,19 @@ pub struct ResearchStudy {
     /// Extension element for the 'title' primitive field. Contains metadata and extensions.
     pub _title: Option<Element>,
     /// Additional names for the study
-    pub label: Option<Vec<ResearchStudyLabel>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub label: Vec<ResearchStudyLabel>,
     /// Steps followed in executing study
-    pub protocol: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub protocol: Vec<Reference>,
     /// Part of larger study
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// References, URLs, and attachments
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Date the resource last changed
     pub date: Option<DateTimeType>,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
@@ -84,30 +89,35 @@ pub struct ResearchStudy {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/study-design
     #[serde(rename = "studyDesign")]
-    pub study_design: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub study_design: Vec<CodeableConcept>,
     /// Drugs, devices, etc. under study
     ///
     /// Binding: example (Common codes of research study focus)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-focus-type
-    pub focus: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<CodeableReference>,
     /// Condition being studied
     ///
     /// Binding: example (Identification of the condition or diagnosis.)
     ///
     /// Available values:
     /// - `160245001`: No current problems or disability
-    pub condition: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condition: Vec<CodeableConcept>,
     /// Used to search for the study
     ///
     /// Binding: example (Words associated with the study that may be useful in discovery.)
-    pub keyword: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keyword: Vec<CodeableConcept>,
     /// Geographic area for the study
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub region: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub region: Vec<CodeableConcept>,
     /// Brief text explaining the study
     #[serde(rename = "descriptionSummary")]
     pub description_summary: Option<StringType>,
@@ -121,21 +131,26 @@ pub struct ResearchStudy {
     /// When the study began and ended
     pub period: Option<Period>,
     /// Facility where study activities are conducted
-    pub site: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub site: Vec<Reference>,
     /// Comments made about the study
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Classification for the study
     ///
     /// Binding: example (desc.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-classifiers
-    pub classifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classifier: Vec<CodeableConcept>,
     /// Sponsors, collaborators, and other parties
     #[serde(rename = "associatedParty")]
-    pub associated_party: Option<Vec<ResearchStudyAssociatedparty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub associated_party: Vec<ResearchStudyAssociatedparty>,
     /// Status of study with time for that status
     #[serde(rename = "progressStatus")]
-    pub progress_status: Option<Vec<ResearchStudyProgressstatus>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub progress_status: Vec<ResearchStudyProgressstatus>,
     /// accrual-goal-met | closed-due-to-toxicity | closed-due-to-lack-of-study-progress | temporarily-closed-per-study-design
     ///
     /// Binding: example (Codes for why the study ended prematurely.)
@@ -147,32 +162,90 @@ pub struct ResearchStudy {
     pub recruitment: Option<ResearchStudyRecruitment>,
     /// Defined path through the study for a subject
     #[serde(rename = "comparisonGroup")]
-    pub comparison_group: Option<Vec<ResearchStudyComparisongroup>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comparison_group: Vec<ResearchStudyComparisongroup>,
     /// A goal for the study
-    pub objective: Option<Vec<ResearchStudyObjective>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub objective: Vec<ResearchStudyObjective>,
     /// A variable measured during the study
     #[serde(rename = "outcomeMeasure")]
-    pub outcome_measure: Option<Vec<ResearchStudyOutcomemeasure>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcome_measure: Vec<ResearchStudyOutcomemeasure>,
     /// Link to results generated during the study
-    pub result: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub result: Vec<Reference>,
 }
-/// ResearchStudy nested structure for the 'label' field
+/// ResearchStudy nested structure for the 'recruitment' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyLabel {
+pub struct ResearchStudyRecruitment {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// primary | official | scientific | plain-language | subtitle | short-title | acronym | earlier-title | language | auto-translated | human-use | machine-use | duplicate-uid
+    /// Estimated total number of participants to be enrolled
+    #[serde(rename = "targetNumber")]
+    pub target_number: Option<UnsignedIntType>,
+    /// Extension element for the 'targetNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetNumber")]
+    pub _target_number: Option<Element>,
+    /// Actual total number of participants enrolled in study
+    #[serde(rename = "actualNumber")]
+    pub actual_number: Option<UnsignedIntType>,
+    /// Extension element for the 'actualNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_actualNumber")]
+    pub _actual_number: Option<Element>,
+    /// Inclusion and exclusion criteria
+    pub eligibility: Option<Reference>,
+    /// Group of participants who were enrolled in study
+    #[serde(rename = "actualGroup")]
+    pub actual_group: Option<Reference>,
+}
+/// ResearchStudy nested structure for the 'associatedParty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyAssociatedparty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of associated party
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// sponsor | lead-sponsor | sponsor-investigator | primary-investigator | collaborator | funding-source | general-contact | recruitment-contact | sub-investigator | study-director | study-chair
     ///
     /// Binding: extensible (desc.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/title-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The name
-    pub value: Option<StringType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-party-role
+    pub role: CodeableConcept,
+    /// When active in the role
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub period: Vec<Period>,
+    /// nih | fda | government | nonprofit | academic | industry
+    ///
+    /// Binding: example (A characterization or type of the entity.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-party-organization-type
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classifier: Vec<CodeableConcept>,
+    /// Individual or organization associated with study (use practitionerRole to specify their organisation)
+    pub party: Option<Reference>,
+}
+/// ResearchStudy nested structure for the 'progressStatus' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResearchStudyProgressstatus {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for status or state (e.g. recruitment status)
+    ///
+    /// Binding: extensible (defn.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-status
+    pub state: CodeableConcept,
+    /// Actual if true else anticipated
+    pub actual: Option<BooleanType>,
+    /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
+    pub _actual: Option<Element>,
+    /// Date range
+    pub period: Option<Period>,
 }
 /// ResearchStudy nested structure for the 'outcomeMeasure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,7 +263,8 @@ pub struct ResearchStudyOutcomemeasure {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-objective-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Description of the outcome
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -227,34 +301,11 @@ pub struct ResearchStudyComparisongroup {
     pub _description: Option<Element>,
     /// Interventions or exposures in this comparisonGroup or cohort
     #[serde(rename = "intendedExposure")]
-    pub intended_exposure: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub intended_exposure: Vec<Reference>,
     /// Group of participants who were enrolled in study comparisonGroup
     #[serde(rename = "observedGroup")]
     pub observed_group: Option<Reference>,
-}
-/// ResearchStudy nested structure for the 'recruitment' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyRecruitment {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Estimated total number of participants to be enrolled
-    #[serde(rename = "targetNumber")]
-    pub target_number: Option<UnsignedIntType>,
-    /// Extension element for the 'targetNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetNumber")]
-    pub _target_number: Option<Element>,
-    /// Actual total number of participants enrolled in study
-    #[serde(rename = "actualNumber")]
-    pub actual_number: Option<UnsignedIntType>,
-    /// Extension element for the 'actualNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_actualNumber")]
-    pub _actual_number: Option<Element>,
-    /// Inclusion and exclusion criteria
-    pub eligibility: Option<Reference>,
-    /// Group of participants who were enrolled in study
-    #[serde(rename = "actualGroup")]
-    pub actual_group: Option<Reference>,
 }
 /// ResearchStudy nested structure for the 'objective' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,51 +329,23 @@ pub struct ResearchStudyObjective {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
 }
-/// ResearchStudy nested structure for the 'associatedParty' field
+/// ResearchStudy nested structure for the 'label' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyAssociatedparty {
+pub struct ResearchStudyLabel {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Name of associated party
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// sponsor | lead-sponsor | sponsor-investigator | primary-investigator | collaborator | funding-source | general-contact | recruitment-contact | sub-investigator | study-director | study-chair
+    /// primary | official | scientific | plain-language | subtitle | short-title | acronym | earlier-title | language | auto-translated | human-use | machine-use | duplicate-uid
     ///
     /// Binding: extensible (desc.)
     ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-party-role
-    pub role: CodeableConcept,
-    /// When active in the role
-    pub period: Option<Vec<Period>>,
-    /// nih | fda | government | nonprofit | academic | industry
-    ///
-    /// Binding: example (A characterization or type of the entity.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-party-organization-type
-    pub classifier: Option<Vec<CodeableConcept>>,
-    /// Individual or organization associated with study (use practitionerRole to specify their organisation)
-    pub party: Option<Reference>,
-}
-/// ResearchStudy nested structure for the 'progressStatus' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchStudyProgressstatus {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for status or state (e.g. recruitment status)
-    ///
-    /// Binding: extensible (defn.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/research-study-status
-    pub state: CodeableConcept,
-    /// Actual if true else anticipated
-    pub actual: Option<BooleanType>,
-    /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
-    pub _actual: Option<Element>,
-    /// Date range
-    pub period: Option<Period>,
+    /// ValueSet: http://hl7.org/fhir/ValueSet/title-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The name
+    pub value: Option<StringType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
 }
 
 impl Default for ResearchStudy {
@@ -373,13 +396,42 @@ impl Default for ResearchStudy {
     }
 }
 
-impl Default for ResearchStudyLabel {
+impl Default for ResearchStudyRecruitment {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
+            target_number: Default::default(),
+            _target_number: Default::default(),
+            actual_number: Default::default(),
+            _actual_number: Default::default(),
+            eligibility: Default::default(),
+            actual_group: Default::default(),
+        }
+    }
+}
+
+impl Default for ResearchStudyAssociatedparty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            role: Default::default(),
+            period: Default::default(),
+            classifier: Default::default(),
+            party: Default::default(),
+        }
+    }
+}
+
+impl Default for ResearchStudyProgressstatus {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            state: Default::default(),
+            actual: Default::default(),
+            _actual: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -415,20 +467,6 @@ impl Default for ResearchStudyComparisongroup {
     }
 }
 
-impl Default for ResearchStudyRecruitment {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target_number: Default::default(),
-            _target_number: Default::default(),
-            actual_number: Default::default(),
-            _actual_number: Default::default(),
-            eligibility: Default::default(),
-            actual_group: Default::default(),
-        }
-    }
-}
-
 impl Default for ResearchStudyObjective {
     fn default() -> Self {
         Self {
@@ -442,28 +480,13 @@ impl Default for ResearchStudyObjective {
     }
 }
 
-impl Default for ResearchStudyAssociatedparty {
+impl Default for ResearchStudyLabel {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            role: Default::default(),
-            period: Default::default(),
-            classifier: Default::default(),
-            party: Default::default(),
-        }
-    }
-}
-
-impl Default for ResearchStudyProgressstatus {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            state: Default::default(),
-            actual: Default::default(),
-            _actual: Default::default(),
-            period: Default::default(),
+            type_: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
         }
     }
 }
@@ -792,13 +815,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ResearchStudy {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -813,44 +836,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ResearchStudy {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -860,16 +871,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ResearchStudy {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -878,7 +886,7 @@ impl crate::traits::research_study::ResearchStudyAccessors for ResearchStudy {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -890,16 +898,16 @@ impl crate::traits::research_study::ResearchStudyAccessors for ResearchStudy {
         self.title.clone()
     }
     fn label(&self) -> &[ResearchStudyLabel] {
-        self.label.as_deref().unwrap_or(&[])
+        self.label.as_slice()
     }
     fn protocol(&self) -> &[Reference] {
-        self.protocol.as_deref().unwrap_or(&[])
+        self.protocol.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn date(&self) -> Option<DateTimeType> {
         self.date.clone()
@@ -914,19 +922,19 @@ impl crate::traits::research_study::ResearchStudyAccessors for ResearchStudy {
         self.phase.clone()
     }
     fn study_design(&self) -> &[CodeableConcept] {
-        self.study_design.as_deref().unwrap_or(&[])
+        self.study_design.as_slice()
     }
     fn focus(&self) -> &[CodeableReference] {
-        self.focus.as_deref().unwrap_or(&[])
+        self.focus.as_slice()
     }
     fn condition(&self) -> &[CodeableConcept] {
-        self.condition.as_deref().unwrap_or(&[])
+        self.condition.as_slice()
     }
     fn keyword(&self) -> &[CodeableConcept] {
-        self.keyword.as_deref().unwrap_or(&[])
+        self.keyword.as_slice()
     }
     fn region(&self) -> &[CodeableConcept] {
-        self.region.as_deref().unwrap_or(&[])
+        self.region.as_slice()
     }
     fn description_summary(&self) -> Option<StringType> {
         self.description_summary.clone()
@@ -938,19 +946,19 @@ impl crate::traits::research_study::ResearchStudyAccessors for ResearchStudy {
         self.period.clone()
     }
     fn site(&self) -> &[Reference] {
-        self.site.as_deref().unwrap_or(&[])
+        self.site.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn classifier(&self) -> &[CodeableConcept] {
-        self.classifier.as_deref().unwrap_or(&[])
+        self.classifier.as_slice()
     }
     fn associated_party(&self) -> &[ResearchStudyAssociatedparty] {
-        self.associated_party.as_deref().unwrap_or(&[])
+        self.associated_party.as_slice()
     }
     fn progress_status(&self) -> &[ResearchStudyProgressstatus] {
-        self.progress_status.as_deref().unwrap_or(&[])
+        self.progress_status.as_slice()
     }
     fn why_stopped(&self) -> Option<CodeableConcept> {
         self.why_stopped.clone()
@@ -959,16 +967,16 @@ impl crate::traits::research_study::ResearchStudyAccessors for ResearchStudy {
         self.recruitment.clone()
     }
     fn comparison_group(&self) -> &[ResearchStudyComparisongroup] {
-        self.comparison_group.as_deref().unwrap_or(&[])
+        self.comparison_group.as_slice()
     }
     fn objective(&self) -> &[ResearchStudyObjective] {
-        self.objective.as_deref().unwrap_or(&[])
+        self.objective.as_slice()
     }
     fn outcome_measure(&self) -> &[ResearchStudyOutcomemeasure] {
-        self.outcome_measure.as_deref().unwrap_or(&[])
+        self.outcome_measure.as_slice()
     }
     fn result(&self) -> &[Reference] {
-        self.result.as_deref().unwrap_or(&[])
+        self.result.as_slice()
     }
 }
 
@@ -983,12 +991,12 @@ impl crate::traits::research_study::ResearchStudyMutators for ResearchStudy {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1008,45 +1016,42 @@ impl crate::traits::research_study::ResearchStudyMutators for ResearchStudy {
     }
     fn set_label(self, value: Vec<ResearchStudyLabel>) -> Self {
         let mut resource = self.clone();
-        resource.label = Some(value);
+        resource.label = value;
         resource
     }
     fn add_label(self, item: ResearchStudyLabel) -> Self {
         let mut resource = self.clone();
-        resource.label.get_or_insert_with(Vec::new).push(item);
+        resource.label.push(item);
         resource
     }
     fn set_protocol(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.protocol = Some(value);
+        resource.protocol = value;
         resource
     }
     fn add_protocol(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.protocol.get_or_insert_with(Vec::new).push(item);
+        resource.protocol.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_date(self, value: String) -> Self {
@@ -1071,55 +1076,52 @@ impl crate::traits::research_study::ResearchStudyMutators for ResearchStudy {
     }
     fn set_study_design(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.study_design = Some(value);
+        resource.study_design = value;
         resource
     }
     fn add_study_design(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .study_design
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.study_design.push(item);
         resource
     }
     fn set_focus(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.focus = Some(value);
+        resource.focus = value;
         resource
     }
     fn add_focus(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.focus.get_or_insert_with(Vec::new).push(item);
+        resource.focus.push(item);
         resource
     }
     fn set_condition(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.condition = Some(value);
+        resource.condition = value;
         resource
     }
     fn add_condition(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.condition.get_or_insert_with(Vec::new).push(item);
+        resource.condition.push(item);
         resource
     }
     fn set_keyword(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.keyword = Some(value);
+        resource.keyword = value;
         resource
     }
     fn add_keyword(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.keyword.get_or_insert_with(Vec::new).push(item);
+        resource.keyword.push(item);
         resource
     }
     fn set_region(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.region = Some(value);
+        resource.region = value;
         resource
     }
     fn add_region(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.region.get_or_insert_with(Vec::new).push(item);
+        resource.region.push(item);
         resource
     }
     fn set_description_summary(self, value: String) -> Self {
@@ -1139,58 +1141,52 @@ impl crate::traits::research_study::ResearchStudyMutators for ResearchStudy {
     }
     fn set_site(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.site = Some(value);
+        resource.site = value;
         resource
     }
     fn add_site(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.site.get_or_insert_with(Vec::new).push(item);
+        resource.site.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_classifier(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.classifier = Some(value);
+        resource.classifier = value;
         resource
     }
     fn add_classifier(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.classifier.get_or_insert_with(Vec::new).push(item);
+        resource.classifier.push(item);
         resource
     }
     fn set_associated_party(self, value: Vec<ResearchStudyAssociatedparty>) -> Self {
         let mut resource = self.clone();
-        resource.associated_party = Some(value);
+        resource.associated_party = value;
         resource
     }
     fn add_associated_party(self, item: ResearchStudyAssociatedparty) -> Self {
         let mut resource = self.clone();
-        resource
-            .associated_party
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.associated_party.push(item);
         resource
     }
     fn set_progress_status(self, value: Vec<ResearchStudyProgressstatus>) -> Self {
         let mut resource = self.clone();
-        resource.progress_status = Some(value);
+        resource.progress_status = value;
         resource
     }
     fn add_progress_status(self, item: ResearchStudyProgressstatus) -> Self {
         let mut resource = self.clone();
-        resource
-            .progress_status
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.progress_status.push(item);
         resource
     }
     fn set_why_stopped(self, value: CodeableConcept) -> Self {
@@ -1205,48 +1201,42 @@ impl crate::traits::research_study::ResearchStudyMutators for ResearchStudy {
     }
     fn set_comparison_group(self, value: Vec<ResearchStudyComparisongroup>) -> Self {
         let mut resource = self.clone();
-        resource.comparison_group = Some(value);
+        resource.comparison_group = value;
         resource
     }
     fn add_comparison_group(self, item: ResearchStudyComparisongroup) -> Self {
         let mut resource = self.clone();
-        resource
-            .comparison_group
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.comparison_group.push(item);
         resource
     }
     fn set_objective(self, value: Vec<ResearchStudyObjective>) -> Self {
         let mut resource = self.clone();
-        resource.objective = Some(value);
+        resource.objective = value;
         resource
     }
     fn add_objective(self, item: ResearchStudyObjective) -> Self {
         let mut resource = self.clone();
-        resource.objective.get_or_insert_with(Vec::new).push(item);
+        resource.objective.push(item);
         resource
     }
     fn set_outcome_measure(self, value: Vec<ResearchStudyOutcomemeasure>) -> Self {
         let mut resource = self.clone();
-        resource.outcome_measure = Some(value);
+        resource.outcome_measure = value;
         resource
     }
     fn add_outcome_measure(self, item: ResearchStudyOutcomemeasure) -> Self {
         let mut resource = self.clone();
-        resource
-            .outcome_measure
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.outcome_measure.push(item);
         resource
     }
     fn set_result(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.result = Some(value);
+        resource.result = value;
         resource
     }
     fn add_result(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.result.get_or_insert_with(Vec::new).push(item);
+        resource.result.push(item);
         resource
     }
 }
@@ -1256,7 +1246,7 @@ impl crate::traits::research_study::ResearchStudyExistence for ResearchStudy {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1268,18 +1258,16 @@ impl crate::traits::research_study::ResearchStudyExistence for ResearchStudy {
         self.title.is_some()
     }
     fn has_label(&self) -> bool {
-        self.label.as_ref().is_some_and(|v| !v.is_empty())
+        !self.label.is_empty()
     }
     fn has_protocol(&self) -> bool {
-        self.protocol.as_ref().is_some_and(|v| !v.is_empty())
+        !self.protocol.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_date(&self) -> bool {
         self.date.is_some()
@@ -1294,19 +1282,19 @@ impl crate::traits::research_study::ResearchStudyExistence for ResearchStudy {
         self.phase.is_some()
     }
     fn has_study_design(&self) -> bool {
-        self.study_design.as_ref().is_some_and(|v| !v.is_empty())
+        !self.study_design.is_empty()
     }
     fn has_focus(&self) -> bool {
-        self.focus.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focus.is_empty()
     }
     fn has_condition(&self) -> bool {
-        self.condition.as_ref().is_some_and(|v| !v.is_empty())
+        !self.condition.is_empty()
     }
     fn has_keyword(&self) -> bool {
-        self.keyword.as_ref().is_some_and(|v| !v.is_empty())
+        !self.keyword.is_empty()
     }
     fn has_region(&self) -> bool {
-        self.region.as_ref().is_some_and(|v| !v.is_empty())
+        !self.region.is_empty()
     }
     fn has_description_summary(&self) -> bool {
         self.description_summary.is_some()
@@ -1318,21 +1306,19 @@ impl crate::traits::research_study::ResearchStudyExistence for ResearchStudy {
         self.period.is_some()
     }
     fn has_site(&self) -> bool {
-        self.site.as_ref().is_some_and(|v| !v.is_empty())
+        !self.site.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_classifier(&self) -> bool {
-        self.classifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.classifier.is_empty()
     }
     fn has_associated_party(&self) -> bool {
-        self.associated_party
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.associated_party.is_empty()
     }
     fn has_progress_status(&self) -> bool {
-        self.progress_status.as_ref().is_some_and(|v| !v.is_empty())
+        !self.progress_status.is_empty()
     }
     fn has_why_stopped(&self) -> bool {
         self.why_stopped.is_some()
@@ -1341,18 +1327,16 @@ impl crate::traits::research_study::ResearchStudyExistence for ResearchStudy {
         self.recruitment.is_some()
     }
     fn has_comparison_group(&self) -> bool {
-        self.comparison_group
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.comparison_group.is_empty()
     }
     fn has_objective(&self) -> bool {
-        self.objective.as_ref().is_some_and(|v| !v.is_empty())
+        !self.objective.is_empty()
     }
     fn has_outcome_measure(&self) -> bool {
-        self.outcome_measure.as_ref().is_some_and(|v| !v.is_empty())
+        !self.outcome_measure.is_empty()
     }
     fn has_result(&self) -> bool {
-        self.result.as_ref().is_some_and(|v| !v.is_empty())
+        !self.result.is_empty()
     }
 }
 

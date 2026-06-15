@@ -28,14 +28,18 @@ pub struct SubstanceReferenceInformation {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
     /// Todo
-    pub gene: Option<Vec<SubstanceReferenceInformationGene>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gene: Vec<SubstanceReferenceInformationGene>,
     /// Todo
     #[serde(rename = "geneElement")]
-    pub gene_element: Option<Vec<SubstanceReferenceInformationGeneelement>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gene_element: Vec<SubstanceReferenceInformationGeneelement>,
     /// Todo
-    pub classification: Option<Vec<SubstanceReferenceInformationClassification>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classification: Vec<SubstanceReferenceInformationClassification>,
     /// Todo
-    pub target: Option<Vec<SubstanceReferenceInformationTarget>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target: Vec<SubstanceReferenceInformationTarget>,
 }
 /// SubstanceReferenceInformation nested structure for the 'gene' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,36 +53,8 @@ pub struct SubstanceReferenceInformationGene {
     /// Todo
     pub gene: Option<CodeableConcept>,
     /// Todo
-    pub source: Option<Vec<Reference>>,
-}
-/// SubstanceReferenceInformation nested structure for the 'classification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationClassification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    pub domain: Option<CodeableConcept>,
-    /// Todo
-    pub classification: Option<CodeableConcept>,
-    /// Todo
-    pub subtype: Option<Vec<CodeableConcept>>,
-    /// Todo
-    pub source: Option<Vec<Reference>>,
-}
-/// SubstanceReferenceInformation nested structure for the 'geneElement' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceReferenceInformationGeneelement {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Todo
-    pub element: Option<Identifier>,
-    /// Todo
-    pub source: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
 }
 /// SubstanceReferenceInformation nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,7 +87,40 @@ pub struct SubstanceReferenceInformationTarget {
     #[serde(rename = "amountType")]
     pub amount_type: Option<CodeableConcept>,
     /// Todo
-    pub source: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
+/// SubstanceReferenceInformation nested structure for the 'geneElement' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationGeneelement {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Todo
+    pub element: Option<Identifier>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
+}
+/// SubstanceReferenceInformation nested structure for the 'classification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceReferenceInformationClassification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    pub domain: Option<CodeableConcept>,
+    /// Todo
+    pub classification: Option<CodeableConcept>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subtype: Vec<CodeableConcept>,
+    /// Todo
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source: Vec<Reference>,
 }
 
 impl Default for SubstanceReferenceInformation {
@@ -139,13 +148,19 @@ impl Default for SubstanceReferenceInformationGene {
     }
 }
 
-impl Default for SubstanceReferenceInformationClassification {
+impl Default for SubstanceReferenceInformationTarget {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            domain: Default::default(),
-            classification: Default::default(),
-            subtype: Default::default(),
+            target: Default::default(),
+            type_: Default::default(),
+            interaction: Default::default(),
+            organism: Default::default(),
+            organism_type: Default::default(),
+            amount_quantity: Default::default(),
+            amount_range: Default::default(),
+            amount_string: Default::default(),
+            amount_type: Default::default(),
             source: Default::default(),
         }
     }
@@ -162,19 +177,13 @@ impl Default for SubstanceReferenceInformationGeneelement {
     }
 }
 
-impl Default for SubstanceReferenceInformationTarget {
+impl Default for SubstanceReferenceInformationClassification {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            target: Default::default(),
-            type_: Default::default(),
-            interaction: Default::default(),
-            organism: Default::default(),
-            organism_type: Default::default(),
-            amount_quantity: Default::default(),
-            amount_range: Default::default(),
-            amount_string: Default::default(),
-            amount_type: Default::default(),
+            domain: Default::default(),
+            classification: Default::default(),
+            subtype: Default::default(),
             source: Default::default(),
         }
     }
@@ -471,13 +480,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SubstanceRefere
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -492,44 +501,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceReferen
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -539,16 +536,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SubstanceRefere
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -559,16 +553,16 @@ impl crate::traits::substance_reference_information::SubstanceReferenceInformati
         self.comment.clone()
     }
     fn gene(&self) -> &[SubstanceReferenceInformationGene] {
-        self.gene.as_deref().unwrap_or(&[])
+        self.gene.as_slice()
     }
     fn gene_element(&self) -> &[SubstanceReferenceInformationGeneelement] {
-        self.gene_element.as_deref().unwrap_or(&[])
+        self.gene_element.as_slice()
     }
     fn classification(&self) -> &[SubstanceReferenceInformationClassification] {
-        self.classification.as_deref().unwrap_or(&[])
+        self.classification.as_slice()
     }
     fn target(&self) -> &[SubstanceReferenceInformationTarget] {
-        self.target.as_deref().unwrap_or(&[])
+        self.target.as_slice()
     }
 }
 
@@ -585,48 +579,42 @@ impl crate::traits::substance_reference_information::SubstanceReferenceInformati
     }
     fn set_gene(self, value: Vec<SubstanceReferenceInformationGene>) -> Self {
         let mut resource = self.clone();
-        resource.gene = Some(value);
+        resource.gene = value;
         resource
     }
     fn add_gene(self, item: SubstanceReferenceInformationGene) -> Self {
         let mut resource = self.clone();
-        resource.gene.get_or_insert_with(Vec::new).push(item);
+        resource.gene.push(item);
         resource
     }
     fn set_gene_element(self, value: Vec<SubstanceReferenceInformationGeneelement>) -> Self {
         let mut resource = self.clone();
-        resource.gene_element = Some(value);
+        resource.gene_element = value;
         resource
     }
     fn add_gene_element(self, item: SubstanceReferenceInformationGeneelement) -> Self {
         let mut resource = self.clone();
-        resource
-            .gene_element
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.gene_element.push(item);
         resource
     }
     fn set_classification(self, value: Vec<SubstanceReferenceInformationClassification>) -> Self {
         let mut resource = self.clone();
-        resource.classification = Some(value);
+        resource.classification = value;
         resource
     }
     fn add_classification(self, item: SubstanceReferenceInformationClassification) -> Self {
         let mut resource = self.clone();
-        resource
-            .classification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.classification.push(item);
         resource
     }
     fn set_target(self, value: Vec<SubstanceReferenceInformationTarget>) -> Self {
         let mut resource = self.clone();
-        resource.target = Some(value);
+        resource.target = value;
         resource
     }
     fn add_target(self, item: SubstanceReferenceInformationTarget) -> Self {
         let mut resource = self.clone();
-        resource.target.get_or_insert_with(Vec::new).push(item);
+        resource.target.push(item);
         resource
     }
 }
@@ -638,16 +626,16 @@ impl crate::traits::substance_reference_information::SubstanceReferenceInformati
         self.comment.is_some()
     }
     fn has_gene(&self) -> bool {
-        self.gene.as_ref().is_some_and(|v| !v.is_empty())
+        !self.gene.is_empty()
     }
     fn has_gene_element(&self) -> bool {
-        self.gene_element.as_ref().is_some_and(|v| !v.is_empty())
+        !self.gene_element.is_empty()
     }
     fn has_classification(&self) -> bool {
-        self.classification.as_ref().is_some_and(|v| !v.is_empty())
+        !self.classification.is_empty()
     }
     fn has_target(&self) -> bool {
-        self.target.as_ref().is_some_and(|v| !v.is_empty())
+        !self.target.is_empty()
     }
 }
 

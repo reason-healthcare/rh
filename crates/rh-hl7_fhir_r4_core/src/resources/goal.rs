@@ -32,7 +32,8 @@ pub struct Goal {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this goal
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// proposed | planned | accepted | active | on-hold | completed | cancelled | entered-in-error | rejected
     #[serde(rename = "lifecycleStatus")]
     pub lifecycle_status: GoalStatus,
@@ -51,7 +52,8 @@ pub struct Goal {
     /// Binding: example (Codes for grouping and sorting goals.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/goal-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// high-priority | medium-priority | low-priority
     ///
     /// Binding: preferred (The level of importance associated with a goal.)
@@ -73,7 +75,8 @@ pub struct Goal {
     #[serde(rename = "startCodeableConcept")]
     pub start_codeable_concept: Option<CodeableConcept>,
     /// Target outcome for the goal
-    pub target: Option<Vec<GoalTarget>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target: Vec<GoalTarget>,
     /// When goal status took effect
     #[serde(rename = "statusDate")]
     pub status_date: Option<DateType>,
@@ -90,19 +93,55 @@ pub struct Goal {
     #[serde(rename = "expressedBy")]
     pub expressed_by: Option<Reference>,
     /// Issues addressed by this goal
-    pub addresses: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addresses: Vec<Reference>,
     /// Comments about the goal
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// What result was achieved regarding the goal?
     ///
     /// Binding: example (The result of the goal; e.g. "25% increase in shoulder mobility", "Anxiety reduced to moderate levels".  "15 kg weight loss sustained over 6 months".)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
     #[serde(rename = "outcomeCode")]
-    pub outcome_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcome_code: Vec<CodeableConcept>,
     /// Observation that resulted from goal
     #[serde(rename = "outcomeReference")]
-    pub outcome_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcome_reference: Vec<Reference>,
+}
+/// related goal
+///
+/// Establishes a relationship between this goal and other goals.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalRelationship {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Goal acceptance
+///
+/// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/goal-acceptance
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalAcceptance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 /// reason rejected
 ///
@@ -160,38 +199,6 @@ pub struct GoalTarget {
     #[serde(rename = "dueDuration")]
     pub due_duration: Option<Duration>,
 }
-/// Goal acceptance
-///
-/// Information about the acceptance and relative priority assigned to the goal by the patient, practitioners and other stake-holders.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-acceptance
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalAcceptance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// related goal
-///
-/// Establishes a relationship between this goal and other goals.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/goal-relationship
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoalRelationship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 
 impl Default for Goal {
     fn default() -> Self {
@@ -221,6 +228,22 @@ impl Default for Goal {
     }
 }
 
+impl Default for GoalRelationship {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for GoalAcceptance {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for GoalReasonRejected {
     fn default() -> Self {
         Self {
@@ -243,22 +266,6 @@ impl Default for GoalTarget {
             detail_ratio: Default::default(),
             due_date: Default::default(),
             due_duration: Default::default(),
-        }
-    }
-}
-
-impl Default for GoalAcceptance {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for GoalRelationship {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
         }
     }
 }
@@ -393,13 +400,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Goal {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -414,44 +421,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Goal {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -461,22 +456,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Goal {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::goal::GoalAccessors for Goal {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn lifecycle_status(&self) -> GoalStatus {
         self.lifecycle_status.clone()
@@ -485,7 +477,7 @@ impl crate::traits::goal::GoalAccessors for Goal {
         self.achievement_status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn priority(&self) -> Option<CodeableConcept> {
         self.priority.clone()
@@ -497,7 +489,7 @@ impl crate::traits::goal::GoalAccessors for Goal {
         self.subject.clone()
     }
     fn target(&self) -> &[GoalTarget] {
-        self.target.as_deref().unwrap_or(&[])
+        self.target.as_slice()
     }
     fn status_date(&self) -> Option<DateType> {
         self.status_date.clone()
@@ -509,16 +501,16 @@ impl crate::traits::goal::GoalAccessors for Goal {
         self.expressed_by.clone()
     }
     fn addresses(&self) -> &[Reference] {
-        self.addresses.as_deref().unwrap_or(&[])
+        self.addresses.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn outcome_code(&self) -> &[CodeableConcept] {
-        self.outcome_code.as_deref().unwrap_or(&[])
+        self.outcome_code.as_slice()
     }
     fn outcome_reference(&self) -> &[Reference] {
-        self.outcome_reference.as_deref().unwrap_or(&[])
+        self.outcome_reference.as_slice()
     }
 }
 
@@ -528,12 +520,12 @@ impl crate::traits::goal::GoalMutators for Goal {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_lifecycle_status(self, value: GoalStatus) -> Self {
@@ -548,12 +540,12 @@ impl crate::traits::goal::GoalMutators for Goal {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_priority(self, value: CodeableConcept) -> Self {
@@ -573,12 +565,12 @@ impl crate::traits::goal::GoalMutators for Goal {
     }
     fn set_target(self, value: Vec<GoalTarget>) -> Self {
         let mut resource = self.clone();
-        resource.target = Some(value);
+        resource.target = value;
         resource
     }
     fn add_target(self, item: GoalTarget) -> Self {
         let mut resource = self.clone();
-        resource.target.get_or_insert_with(Vec::new).push(item);
+        resource.target.push(item);
         resource
     }
     fn set_status_date(self, value: String) -> Self {
@@ -598,48 +590,42 @@ impl crate::traits::goal::GoalMutators for Goal {
     }
     fn set_addresses(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.addresses = Some(value);
+        resource.addresses = value;
         resource
     }
     fn add_addresses(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.addresses.get_or_insert_with(Vec::new).push(item);
+        resource.addresses.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_outcome_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.outcome_code = Some(value);
+        resource.outcome_code = value;
         resource
     }
     fn add_outcome_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .outcome_code
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.outcome_code.push(item);
         resource
     }
     fn set_outcome_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.outcome_reference = Some(value);
+        resource.outcome_reference = value;
         resource
     }
     fn add_outcome_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .outcome_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.outcome_reference.push(item);
         resource
     }
 }
@@ -649,7 +635,7 @@ impl crate::traits::goal::GoalExistence for Goal {
         self.start_date.is_some() || self.start_codeable_concept.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_lifecycle_status(&self) -> bool {
         true
@@ -658,7 +644,7 @@ impl crate::traits::goal::GoalExistence for Goal {
         self.achievement_status.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_priority(&self) -> bool {
         self.priority.is_some()
@@ -670,7 +656,7 @@ impl crate::traits::goal::GoalExistence for Goal {
         true
     }
     fn has_target(&self) -> bool {
-        self.target.as_ref().is_some_and(|v| !v.is_empty())
+        !self.target.is_empty()
     }
     fn has_status_date(&self) -> bool {
         self.status_date.is_some()
@@ -682,18 +668,16 @@ impl crate::traits::goal::GoalExistence for Goal {
         self.expressed_by.is_some()
     }
     fn has_addresses(&self) -> bool {
-        self.addresses.as_ref().is_some_and(|v| !v.is_empty())
+        !self.addresses.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_outcome_code(&self) -> bool {
-        self.outcome_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.outcome_code.is_empty()
     }
     fn has_outcome_reference(&self) -> bool {
-        self.outcome_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.outcome_reference.is_empty()
     }
 }
 

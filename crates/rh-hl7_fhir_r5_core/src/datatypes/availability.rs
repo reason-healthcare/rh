@@ -24,23 +24,12 @@ pub struct Availability {
     pub base: DataType,
     /// Times the {item} is available
     #[serde(rename = "availableTime")]
-    pub available_time: Option<Vec<Element>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available_time: Vec<Element>,
     /// Not available during this time due to provided reason
     #[serde(rename = "notAvailableTime")]
-    pub not_available_time: Option<Vec<Element>>,
-}
-/// Availability nested structure for the 'notAvailableTime' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AvailabilityNotavailabletime {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reason presented to the user explaining why time not available
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Service not available during this period
-    pub during: Option<Period>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_available_time: Vec<Element>,
 }
 /// Availability nested structure for the 'availableTime' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,10 +39,12 @@ pub struct AvailabilityAvailabletime {
     pub base: BackboneElement,
     /// mon | tue | wed | thu | fri | sat | sun
     #[serde(rename = "daysOfWeek")]
-    pub days_of_week: Option<Vec<DaysOfWeek>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub days_of_week: Vec<DaysOfWeek>,
     /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
     #[serde(rename = "_daysOfWeek")]
-    pub _days_of_week: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _days_of_week: Vec<Element>,
     /// Always available? i.e. 24 hour service
     #[serde(rename = "allDay")]
     pub all_day: Option<BooleanType>,
@@ -73,6 +64,19 @@ pub struct AvailabilityAvailabletime {
     #[serde(rename = "_availableEndTime")]
     pub _available_end_time: Option<Element>,
 }
+/// Availability nested structure for the 'notAvailableTime' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AvailabilityNotavailabletime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reason presented to the user explaining why time not available
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Service not available during this period
+    pub during: Option<Period>,
+}
 
 impl Default for Availability {
     fn default() -> Self {
@@ -80,17 +84,6 @@ impl Default for Availability {
             base: DataType::default(),
             available_time: Default::default(),
             not_available_time: Default::default(),
-        }
-    }
-}
-
-impl Default for AvailabilityNotavailabletime {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            during: Default::default(),
         }
     }
 }
@@ -107,6 +100,17 @@ impl Default for AvailabilityAvailabletime {
             _available_start_time: Default::default(),
             available_end_time: Default::default(),
             _available_end_time: Default::default(),
+        }
+    }
+}
+
+impl Default for AvailabilityNotavailabletime {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            during: Default::default(),
         }
     }
 }

@@ -112,6 +112,15 @@ impl CodeGenerator {
         &mut self,
         structure_def: &StructureDefinition,
     ) -> CodegenResult<Vec<RustTrait>> {
+        if TypeUtilities::is_example_structure_definition(structure_def) {
+            return Err(crate::CodegenError::Generation {
+                message: format!(
+                    "Skipping example StructureDefinition '{}'",
+                    structure_def.name
+                ),
+            });
+        }
+
         let crate_lib_name = self
             .config
             .crate_name
@@ -590,7 +599,10 @@ impl CodeGenerator {
         let mut results = Vec::with_capacity(structure_defs.len());
 
         for structure_def in structure_defs {
-            if structure_def.kind == "logical" || structure_def.status == "retired" {
+            if structure_def.kind == "logical"
+                || structure_def.status == "retired"
+                || TypeUtilities::is_example_structure_definition(structure_def)
+            {
                 continue;
             }
 
@@ -626,7 +638,10 @@ impl CodeGenerator {
         let mut results = Vec::with_capacity(structure_defs.len());
 
         for structure_def in structure_defs {
-            if structure_def.kind == "logical" || structure_def.status == "retired" {
+            if structure_def.kind == "logical"
+                || structure_def.status == "retired"
+                || TypeUtilities::is_example_structure_definition(structure_def)
+            {
                 continue;
             }
 

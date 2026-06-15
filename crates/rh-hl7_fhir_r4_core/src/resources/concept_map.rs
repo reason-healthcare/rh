@@ -62,20 +62,23 @@ pub struct ConceptMap {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the concept map
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for concept map (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this concept map is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -97,7 +100,8 @@ pub struct ConceptMap {
     #[serde(rename = "targetCanonical")]
     pub target_canonical: Option<StringType>,
     /// Same source and target systems
-    pub group: Option<Vec<ConceptMapGroup>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group: Vec<ConceptMapGroup>,
 }
 /// ConceptMap nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,10 +109,10 @@ pub struct ConceptMapGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Mappings for a concept from the source set
-    pub element: Vec<ConceptMapGroupElement>,
     /// What to do when there is no mapping for the source concept
     pub unmapped: Option<ConceptMapGroupUnmapped>,
+    /// Mappings for a concept from the source set
+    pub element: Vec<ConceptMapGroupElement>,
     /// Source system where concepts to be mapped are defined
     pub source: Option<StringType>,
     /// Extension element for the 'source' primitive field. Contains metadata and extensions.
@@ -153,7 +157,8 @@ pub struct ConceptMapGroupElementTarget {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
     /// Other concepts that this mapping also produces
-    pub product: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub product: Vec<StringType>,
 }
 /// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -260,8 +265,8 @@ impl Default for ConceptMapGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            element: Vec::new(),
             unmapped: Default::default(),
+            element: Vec::new(),
             source: Default::default(),
             _source: Default::default(),
             source_version: Default::default(),
@@ -591,13 +596,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ConceptMap {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -612,44 +617,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ConceptMap {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -659,16 +652,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ConceptMap {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -701,16 +691,16 @@ impl crate::traits::concept_map::ConceptMapAccessors for ConceptMap {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -719,7 +709,7 @@ impl crate::traits::concept_map::ConceptMapAccessors for ConceptMap {
         self.copyright.clone()
     }
     fn group(&self) -> &[ConceptMapGroup] {
-        self.group.as_deref().unwrap_or(&[])
+        self.group.as_slice()
     }
 }
 
@@ -774,12 +764,12 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -789,25 +779,22 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -822,22 +809,22 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_group(self, value: Vec<ConceptMapGroup>) -> Self {
         let mut resource = self.clone();
-        resource.group = Some(value);
+        resource.group = value;
         resource
     }
     fn add_group(self, item: ConceptMapGroup) -> Self {
         let mut resource = self.clone();
-        resource.group.get_or_insert_with(Vec::new).push(item);
+        resource.group.push(item);
         resource
     }
 }
 
 impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
-    fn has_target(&self) -> bool {
-        self.target_uri.is_some() || self.target_canonical.is_some()
-    }
     fn has_source(&self) -> bool {
         self.source_uri.is_some() || self.source_canonical.is_some()
+    }
+    fn has_target(&self) -> bool {
+        self.target_uri.is_some() || self.target_canonical.is_some()
     }
     fn has_url(&self) -> bool {
         self.url.is_some()
@@ -867,16 +854,16 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -885,7 +872,7 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
         self.copyright.is_some()
     }
     fn has_group(&self) -> bool {
-        self.group.as_ref().is_some_and(|v| !v.is_empty())
+        !self.group.is_empty()
     }
 }
 

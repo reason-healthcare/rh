@@ -33,9 +33,11 @@ pub struct Permission {
     /// The person or entity that asserts the permission
     pub asserter: Option<Reference>,
     /// The date that permission was asserted
-    pub date: Option<Vec<DateTimeType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub date: Vec<DateTimeType>,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _date: Vec<Element>,
     /// The period in which the permission is active
     pub validity: Option<Period>,
     /// The asserted justification for using the data
@@ -45,7 +47,49 @@ pub struct Permission {
     /// Extension element for the 'combining' primitive field. Contains metadata and extensions.
     pub _combining: Option<Element>,
     /// Constraints to the Permission
-    pub rule: Option<Vec<PermissionRule>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rule: Vec<PermissionRule>,
+}
+/// Permission nested structure for the 'justification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionJustification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The regulatory grounds upon which this Permission builds
+    ///
+    /// Binding: example (Regulatory policy examples)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-policy
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub basis: Vec<CodeableConcept>,
+    /// Justifing rational
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<Reference>,
+}
+/// PermissionRule nested structure for the 'activity' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionRuleActivity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Authorized actor(s)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actor: Vec<Reference>,
+    /// Actions controlled by this rule
+    ///
+    /// Binding: example (Detailed codes for the action.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-action
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub action: Vec<CodeableConcept>,
+    /// The purpose for which the permission is given
+    ///
+    /// Binding: preferred (What purposes of use are controlled by this exception. If more than one label is specified, operations must have all the specified labels.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub purpose: Vec<CodeableConcept>,
 }
 /// Permission nested structure for the 'rule' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,9 +98,11 @@ pub struct PermissionRule {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// The selection criteria to identify data that is within scope of this provision
-    pub data: Option<Vec<PermissionRuleData>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<PermissionRuleData>,
     /// A description or definition of which activities are allowed to be done on the data
-    pub activity: Option<Vec<PermissionRuleActivity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub activity: Vec<PermissionRuleActivity>,
     /// deny | permit
     #[serde(rename = "type")]
     pub type_: Option<ConsentProvisionType>,
@@ -73,22 +119,8 @@ pub struct PermissionRule {
     /// - `NOAUTH`
     /// - `DELAU`
     /// - `NORDSCLCD`
-    pub limit: Option<Vec<CodeableConcept>>,
-}
-/// Permission nested structure for the 'justification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PermissionJustification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The regulatory grounds upon which this Permission builds
-    ///
-    /// Binding: example (Regulatory policy examples)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-policy
-    pub basis: Option<Vec<CodeableConcept>>,
-    /// Justifing rational
-    pub evidence: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub limit: Vec<CodeableConcept>,
 }
 /// PermissionRule nested structure for the 'data' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,32 +129,13 @@ pub struct PermissionRuleData {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Security tag code on .meta.security
-    pub security: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security: Vec<Coding>,
     /// Timeframe encompasing data create/update
-    pub period: Option<Vec<Period>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub period: Vec<Period>,
     /// Expression identifying the data
     pub expression: Option<Expression>,
-}
-/// PermissionRule nested structure for the 'activity' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PermissionRuleActivity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Authorized actor(s)
-    pub actor: Option<Vec<Reference>>,
-    /// Actions controlled by this rule
-    ///
-    /// Binding: example (Detailed codes for the action.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-action
-    pub action: Option<Vec<CodeableConcept>>,
-    /// The purpose for which the permission is given
-    ///
-    /// Binding: preferred (What purposes of use are controlled by this exception. If more than one label is specified, operations must have all the specified labels.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
-    pub purpose: Option<Vec<CodeableConcept>>,
 }
 
 impl Default for Permission {
@@ -143,6 +156,27 @@ impl Default for Permission {
     }
 }
 
+impl Default for PermissionJustification {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            basis: Default::default(),
+            evidence: Default::default(),
+        }
+    }
+}
+
+impl Default for PermissionRuleActivity {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            actor: Default::default(),
+            action: Default::default(),
+            purpose: Default::default(),
+        }
+    }
+}
+
 impl Default for PermissionRule {
     fn default() -> Self {
         Self {
@@ -156,16 +190,6 @@ impl Default for PermissionRule {
     }
 }
 
-impl Default for PermissionJustification {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            basis: Default::default(),
-            evidence: Default::default(),
-        }
-    }
-}
-
 impl Default for PermissionRuleData {
     fn default() -> Self {
         Self {
@@ -173,17 +197,6 @@ impl Default for PermissionRuleData {
             security: Default::default(),
             period: Default::default(),
             expression: Default::default(),
-        }
-    }
-}
-
-impl Default for PermissionRuleActivity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            actor: Default::default(),
-            action: Default::default(),
-            purpose: Default::default(),
         }
     }
 }
@@ -391,13 +404,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Permission {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -412,44 +425,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Permission {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -459,16 +460,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Permission {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -480,7 +478,7 @@ impl crate::traits::permission::PermissionAccessors for Permission {
         self.asserter.clone()
     }
     fn date(&self) -> &[DateTimeType] {
-        self.date.as_deref().unwrap_or(&[])
+        self.date.as_slice()
     }
     fn validity(&self) -> Option<Period> {
         self.validity.clone()
@@ -492,7 +490,7 @@ impl crate::traits::permission::PermissionAccessors for Permission {
         self.combining.clone()
     }
     fn rule(&self) -> &[PermissionRule] {
-        self.rule.as_deref().unwrap_or(&[])
+        self.rule.as_slice()
     }
 }
 
@@ -512,12 +510,12 @@ impl crate::traits::permission::PermissionMutators for Permission {
     }
     fn set_date(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.date = Some(value);
+        resource.date = value;
         resource
     }
     fn add_date(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.date.get_or_insert_with(Vec::new).push(item);
+        resource.date.push(item);
         resource
     }
     fn set_validity(self, value: Period) -> Self {
@@ -537,12 +535,12 @@ impl crate::traits::permission::PermissionMutators for Permission {
     }
     fn set_rule(self, value: Vec<PermissionRule>) -> Self {
         let mut resource = self.clone();
-        resource.rule = Some(value);
+        resource.rule = value;
         resource
     }
     fn add_rule(self, item: PermissionRule) -> Self {
         let mut resource = self.clone();
-        resource.rule.get_or_insert_with(Vec::new).push(item);
+        resource.rule.push(item);
         resource
     }
 }
@@ -555,7 +553,7 @@ impl crate::traits::permission::PermissionExistence for Permission {
         self.asserter.is_some()
     }
     fn has_date(&self) -> bool {
-        self.date.as_ref().is_some_and(|v| !v.is_empty())
+        !self.date.is_empty()
     }
     fn has_validity(&self) -> bool {
         self.validity.is_some()
@@ -567,7 +565,7 @@ impl crate::traits::permission::PermissionExistence for Permission {
         true
     }
     fn has_rule(&self) -> bool {
-        self.rule.as_ref().is_some_and(|v| !v.is_empty())
+        !self.rule.is_empty()
     }
 }
 

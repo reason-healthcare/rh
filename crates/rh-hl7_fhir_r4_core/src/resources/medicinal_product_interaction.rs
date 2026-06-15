@@ -21,13 +21,15 @@ pub struct MedicinalProductInteraction {
     #[serde(flatten)]
     pub base: DomainResource,
     /// The medication for which this is a described interaction
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// The interaction described
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The specific medication, food or laboratory test that interacts
-    pub interactant: Option<Vec<MedicinalProductInteractionInteractant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interactant: Vec<MedicinalProductInteractionInteractant>,
     /// The type of the interaction e.g. drug-drug interaction, drug-food interaction, drug-lab test interaction
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
@@ -241,13 +243,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -262,44 +264,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -309,16 +299,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -326,13 +313,13 @@ impl crate::traits::medicinal_product_interaction::MedicinalProductInteractionAc
     for MedicinalProductInteraction
 {
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn interactant(&self) -> &[MedicinalProductInteractionInteractant] {
-        self.interactant.as_deref().unwrap_or(&[])
+        self.interactant.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
@@ -356,12 +343,12 @@ impl crate::traits::medicinal_product_interaction::MedicinalProductInteractionMu
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -371,12 +358,12 @@ impl crate::traits::medicinal_product_interaction::MedicinalProductInteractionMu
     }
     fn set_interactant(self, value: Vec<MedicinalProductInteractionInteractant>) -> Self {
         let mut resource = self.clone();
-        resource.interactant = Some(value);
+        resource.interactant = value;
         resource
     }
     fn add_interactant(self, item: MedicinalProductInteractionInteractant) -> Self {
         let mut resource = self.clone();
-        resource.interactant.get_or_insert_with(Vec::new).push(item);
+        resource.interactant.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -405,13 +392,13 @@ impl crate::traits::medicinal_product_interaction::MedicinalProductInteractionEx
     for MedicinalProductInteraction
 {
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_interactant(&self) -> bool {
-        self.interactant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.interactant.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()

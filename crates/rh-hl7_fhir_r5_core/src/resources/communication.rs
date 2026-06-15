@@ -28,28 +28,36 @@ pub struct Communication {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// Request fulfilled by this communication
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Part of referenced event (e.g. Communication, Procedure)
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// Reply to
     #[serde(rename = "inResponseTo")]
-    pub in_response_to: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub in_response_to: Vec<Reference>,
     /// preparation | in-progress | not-done | on-hold | stopped | completed | entered-in-error | unknown
     pub status: EventStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -66,7 +74,8 @@ pub struct Communication {
     /// Binding: example (Codes for general categories of communications such as alerts, instructions, etc.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/communication-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// routine | urgent | asap | stat
     pub priority: Option<RequestPriority>,
     /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
@@ -76,7 +85,8 @@ pub struct Communication {
     /// Binding: example (Codes for communication mediums such as phone, fax, email, in person, etc.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ParticipationMode
-    pub medium: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub medium: Vec<CodeableConcept>,
     /// Focus of message
     pub subject: Option<Reference>,
     /// Description of the purpose/content
@@ -86,7 +96,8 @@ pub struct Communication {
     /// ValueSet: http://hl7.org/fhir/ValueSet/communication-topic
     pub topic: Option<CodeableConcept>,
     /// Resources that pertain to this communication
-    pub about: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub about: Vec<Reference>,
     /// The Encounter during which this Communication was created
     pub encounter: Option<Reference>,
     /// When sent
@@ -98,7 +109,8 @@ pub struct Communication {
     /// Extension element for the 'received' primitive field. Contains metadata and extensions.
     pub _received: Option<Element>,
     /// Who the information is shared with
-    pub recipient: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipient: Vec<Reference>,
     /// Who shares the information
     pub sender: Option<Reference>,
     /// Indication for message
@@ -106,11 +118,14 @@ pub struct Communication {
     /// Binding: example (Codes for describing reasons for the occurrence of a communication.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Message payload
-    pub payload: Option<Vec<CommunicationPayload>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub payload: Vec<CommunicationPayload>,
     /// Comments made about the communication
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// Communication nested structure for the 'payload' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -330,13 +345,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Communication {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -351,44 +366,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Communication {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -398,37 +401,34 @@ impl crate::traits::domain_resource::DomainResourceExistence for Communication {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::communication::CommunicationAccessors for Communication {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn in_response_to(&self) -> &[Reference] {
-        self.in_response_to.as_deref().unwrap_or(&[])
+        self.in_response_to.as_slice()
     }
     fn status(&self) -> EventStatus {
         self.status.clone()
@@ -437,13 +437,13 @@ impl crate::traits::communication::CommunicationAccessors for Communication {
         self.status_reason.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn priority(&self) -> Option<RequestPriority> {
         self.priority.clone()
     }
     fn medium(&self) -> &[CodeableConcept] {
-        self.medium.as_deref().unwrap_or(&[])
+        self.medium.as_slice()
     }
     fn subject(&self) -> Option<Reference> {
         self.subject.clone()
@@ -452,7 +452,7 @@ impl crate::traits::communication::CommunicationAccessors for Communication {
         self.topic.clone()
     }
     fn about(&self) -> &[Reference] {
-        self.about.as_deref().unwrap_or(&[])
+        self.about.as_slice()
     }
     fn encounter(&self) -> Option<Reference> {
         self.encounter.clone()
@@ -464,19 +464,19 @@ impl crate::traits::communication::CommunicationAccessors for Communication {
         self.received.clone()
     }
     fn recipient(&self) -> &[Reference] {
-        self.recipient.as_deref().unwrap_or(&[])
+        self.recipient.as_slice()
     }
     fn sender(&self) -> Option<Reference> {
         self.sender.clone()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn payload(&self) -> &[CommunicationPayload] {
-        self.payload.as_deref().unwrap_or(&[])
+        self.payload.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -486,71 +486,62 @@ impl crate::traits::communication::CommunicationMutators for Communication {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_in_response_to(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.in_response_to = Some(value);
+        resource.in_response_to = value;
         resource
     }
     fn add_in_response_to(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .in_response_to
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.in_response_to.push(item);
         resource
     }
     fn set_status(self, value: EventStatus) -> Self {
@@ -565,12 +556,12 @@ impl crate::traits::communication::CommunicationMutators for Communication {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_priority(self, value: RequestPriority) -> Self {
@@ -580,12 +571,12 @@ impl crate::traits::communication::CommunicationMutators for Communication {
     }
     fn set_medium(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.medium = Some(value);
+        resource.medium = value;
         resource
     }
     fn add_medium(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.medium.get_or_insert_with(Vec::new).push(item);
+        resource.medium.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -600,12 +591,12 @@ impl crate::traits::communication::CommunicationMutators for Communication {
     }
     fn set_about(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.about = Some(value);
+        resource.about = value;
         resource
     }
     fn add_about(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.about.get_or_insert_with(Vec::new).push(item);
+        resource.about.push(item);
         resource
     }
     fn set_encounter(self, value: Reference) -> Self {
@@ -625,12 +616,12 @@ impl crate::traits::communication::CommunicationMutators for Communication {
     }
     fn set_recipient(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.recipient = Some(value);
+        resource.recipient = value;
         resource
     }
     fn add_recipient(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.recipient.get_or_insert_with(Vec::new).push(item);
+        resource.recipient.push(item);
         resource
     }
     fn set_sender(self, value: Reference) -> Self {
@@ -640,58 +631,54 @@ impl crate::traits::communication::CommunicationMutators for Communication {
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_payload(self, value: Vec<CommunicationPayload>) -> Self {
         let mut resource = self.clone();
-        resource.payload = Some(value);
+        resource.payload = value;
         resource
     }
     fn add_payload(self, item: CommunicationPayload) -> Self {
         let mut resource = self.clone();
-        resource.payload.get_or_insert_with(Vec::new).push(item);
+        resource.payload.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::communication::CommunicationExistence for Communication {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_in_response_to(&self) -> bool {
-        self.in_response_to.as_ref().is_some_and(|v| !v.is_empty())
+        !self.in_response_to.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -700,13 +687,13 @@ impl crate::traits::communication::CommunicationExistence for Communication {
         self.status_reason.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_priority(&self) -> bool {
         self.priority.is_some()
     }
     fn has_medium(&self) -> bool {
-        self.medium.as_ref().is_some_and(|v| !v.is_empty())
+        !self.medium.is_empty()
     }
     fn has_subject(&self) -> bool {
         self.subject.is_some()
@@ -715,7 +702,7 @@ impl crate::traits::communication::CommunicationExistence for Communication {
         self.topic.is_some()
     }
     fn has_about(&self) -> bool {
-        self.about.as_ref().is_some_and(|v| !v.is_empty())
+        !self.about.is_empty()
     }
     fn has_encounter(&self) -> bool {
         self.encounter.is_some()
@@ -727,19 +714,19 @@ impl crate::traits::communication::CommunicationExistence for Communication {
         self.received.is_some()
     }
     fn has_recipient(&self) -> bool {
-        self.recipient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.recipient.is_empty()
     }
     fn has_sender(&self) -> bool {
         self.sender.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_payload(&self) -> bool {
-        self.payload.as_ref().is_some_and(|v| !v.is_empty())
+        !self.payload.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

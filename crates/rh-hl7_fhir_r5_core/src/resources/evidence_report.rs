@@ -43,12 +43,15 @@ pub struct EvidenceReport {
     pub _status: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Unique identifier for the evidence report
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Identifiers for articles that may relate to more than one evidence report
     #[serde(rename = "relatedIdentifier")]
-    pub related_identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_identifier: Vec<Identifier>,
     /// Citation for this report (Reference)
     #[serde(rename = "citeAsReference")]
     pub cite_as_reference: Option<Reference>,
@@ -63,10 +66,12 @@ pub struct EvidenceReport {
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
     /// Used for footnotes and annotations
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Link, description or reference to artifact associated with the report
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Focus of the report
     pub subject: EvidenceReportSubject,
     /// Name of the publisher/steward (organization or individual)
@@ -74,31 +79,27 @@ pub struct EvidenceReport {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Who authored the content
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the content
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the content
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the content
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// Relationships to other compositions/documents
     #[serde(rename = "relatesTo")]
-    pub relates_to: Option<Vec<EvidenceReportRelatesto>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relates_to: Vec<EvidenceReportRelatesto>,
     /// Composition is broken into sections
-    pub section: Option<Vec<EvidenceReportSection>>,
-}
-/// EvidenceReport nested structure for the 'subject' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportSubject {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Characteristic
-    pub characteristic: Option<Vec<EvidenceReportSubjectCharacteristic>>,
-    /// Footnotes and/or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section: Vec<EvidenceReportSection>,
 }
 /// EvidenceReport nested structure for the 'section' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,7 +121,8 @@ pub struct EvidenceReportSection {
     #[serde(rename = "focusReference")]
     pub focus_reference: Option<Reference>,
     /// Who and/or what authored the section
-    pub author: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<Reference>,
     /// Text summary of the section, for human interpretation
     pub text: Option<Narrative>,
     /// working | snapshot | changes
@@ -140,13 +142,16 @@ pub struct EvidenceReportSection {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-classifier-code
     #[serde(rename = "entryClassifier")]
-    pub entry_classifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry_classifier: Vec<CodeableConcept>,
     /// Reference to resources as content
     #[serde(rename = "entryReference")]
-    pub entry_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry_reference: Vec<Reference>,
     /// Quantity as content
     #[serde(rename = "entryQuantity")]
-    pub entry_quantity: Option<Vec<Quantity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry_quantity: Vec<Quantity>,
     /// Why the section is empty
     ///
     /// Binding: preferred (If a section is empty, why it is empty.)
@@ -155,7 +160,8 @@ pub struct EvidenceReportSection {
     #[serde(rename = "emptyReason")]
     pub empty_reason: Option<CodeableConcept>,
     /// Nested Section
-    pub section: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub section: Vec<StringType>,
 }
 /// EvidenceReportSubject nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,19 +197,6 @@ pub struct EvidenceReportSubjectCharacteristic {
     /// Timeframe for the characteristic
     pub period: Option<Period>,
 }
-/// EvidenceReport nested structure for the 'relatesTo' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceReportRelatesto {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Target of the relationship
-    pub target: EvidenceReportRelatestoTarget,
-    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
-    pub code: ReportRelationType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-}
 /// EvidenceReportRelatesto nested structure for the 'target' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceReportRelatestoTarget {
@@ -222,6 +215,32 @@ pub struct EvidenceReportRelatestoTarget {
     pub _display: Option<Element>,
     /// Target of the relationship Resource reference
     pub resource: Option<Reference>,
+}
+/// EvidenceReport nested structure for the 'subject' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportSubject {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Characteristic
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<EvidenceReportSubjectCharacteristic>,
+    /// Footnotes and/or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// EvidenceReport nested structure for the 'relatesTo' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceReportRelatesto {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Target of the relationship
+    pub target: EvidenceReportRelatestoTarget,
+    /// replaces | amends | appends | transforms | replacedWith | amendedWith | appendedWith | transformedWith
+    pub code: ReportRelationType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
 }
 
 impl Default for EvidenceReport {
@@ -250,16 +269,6 @@ impl Default for EvidenceReport {
             endorser: Default::default(),
             relates_to: Default::default(),
             section: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceReportSubject {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            characteristic: Default::default(),
-            note: Default::default(),
         }
     }
 }
@@ -303,17 +312,6 @@ impl Default for EvidenceReportSubjectCharacteristic {
     }
 }
 
-impl Default for EvidenceReportRelatesto {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target: Default::default(),
-            code: Default::default(),
-            _code: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceReportRelatestoTarget {
     fn default() -> Self {
         Self {
@@ -324,6 +322,27 @@ impl Default for EvidenceReportRelatestoTarget {
             display: Default::default(),
             _display: Default::default(),
             resource: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceReportSubject {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            characteristic: Default::default(),
+            note: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceReportRelatesto {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
         }
     }
 }
@@ -599,13 +618,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for EvidenceReport 
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -620,44 +639,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for EvidenceReport {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -667,16 +674,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for EvidenceReport 
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -688,22 +692,22 @@ impl crate::traits::evidence_report::EvidenceReportAccessors for EvidenceReport 
         self.status.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn related_identifier(&self) -> &[Identifier] {
-        self.related_identifier.as_deref().unwrap_or(&[])
+        self.related_identifier.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn subject(&self) -> EvidenceReportSubject {
         self.subject.clone()
@@ -712,25 +716,25 @@ impl crate::traits::evidence_report::EvidenceReportAccessors for EvidenceReport 
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn relates_to(&self) -> &[EvidenceReportRelatesto] {
-        self.relates_to.as_deref().unwrap_or(&[])
+        self.relates_to.as_slice()
     }
     fn section(&self) -> &[EvidenceReportSection] {
-        self.section.as_deref().unwrap_or(&[])
+        self.section.as_slice()
     }
 }
 
@@ -750,35 +754,32 @@ impl crate::traits::evidence_report::EvidenceReportMutators for EvidenceReport {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_related_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.related_identifier = Some(value);
+        resource.related_identifier = value;
         resource
     }
     fn add_related_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_identifier
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_identifier.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -788,25 +789,22 @@ impl crate::traits::evidence_report::EvidenceReportMutators for EvidenceReport {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_subject(self, value: EvidenceReportSubject) -> Self {
@@ -821,72 +819,72 @@ impl crate::traits::evidence_report::EvidenceReportMutators for EvidenceReport {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_relates_to(self, value: Vec<EvidenceReportRelatesto>) -> Self {
         let mut resource = self.clone();
-        resource.relates_to = Some(value);
+        resource.relates_to = value;
         resource
     }
     fn add_relates_to(self, item: EvidenceReportRelatesto) -> Self {
         let mut resource = self.clone();
-        resource.relates_to.get_or_insert_with(Vec::new).push(item);
+        resource.relates_to.push(item);
         resource
     }
     fn set_section(self, value: Vec<EvidenceReportSection>) -> Self {
         let mut resource = self.clone();
-        resource.section = Some(value);
+        resource.section = value;
         resource
     }
     fn add_section(self, item: EvidenceReportSection) -> Self {
         let mut resource = self.clone();
-        resource.section.get_or_insert_with(Vec::new).push(item);
+        resource.section.push(item);
         resource
     }
 }
@@ -902,26 +900,22 @@ impl crate::traits::evidence_report::EvidenceReportExistence for EvidenceReport 
         true
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_related_identifier(&self) -> bool {
-        self.related_identifier
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_subject(&self) -> bool {
         true
@@ -930,25 +924,25 @@ impl crate::traits::evidence_report::EvidenceReportExistence for EvidenceReport 
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_relates_to(&self) -> bool {
-        self.relates_to.as_ref().is_some_and(|v| !v.is_empty())
+        !self.relates_to.is_empty()
     }
     fn has_section(&self) -> bool {
-        self.section.as_ref().is_some_and(|v| !v.is_empty())
+        !self.section.is_empty()
     }
 }
 

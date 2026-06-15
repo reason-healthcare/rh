@@ -29,16 +29,21 @@ pub struct SubstancePolymer {
     pub geometry: Option<CodeableConcept>,
     /// Todo
     #[serde(rename = "copolymerConnectivity")]
-    pub copolymer_connectivity: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub copolymer_connectivity: Vec<CodeableConcept>,
     /// Todo
-    pub modification: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modification: Vec<StringType>,
     /// Extension element for the 'modification' primitive field. Contains metadata and extensions.
-    pub _modification: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _modification: Vec<Element>,
     /// Todo
     #[serde(rename = "monomerSet")]
-    pub monomer_set: Option<Vec<SubstancePolymerMonomerset>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub monomer_set: Vec<SubstancePolymerMonomerset>,
     /// Todo
-    pub repeat: Option<Vec<SubstancePolymerRepeat>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repeat: Vec<SubstancePolymerRepeat>,
 }
 /// SubstancePolymerRepeatRepeatunit nested structure for the 'degreeOfPolymerisation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +55,20 @@ pub struct SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
     pub degree: Option<CodeableConcept>,
     /// Todo
     pub amount: Option<SubstanceAmount>,
+}
+/// SubstancePolymer nested structure for the 'monomerSet' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstancePolymerMonomerset {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Todo
+    #[serde(rename = "startingMaterial")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub starting_material: Vec<SubstancePolymerMonomersetStartingmaterial>,
+    /// Todo
+    #[serde(rename = "ratioType")]
+    pub ratio_type: Option<CodeableConcept>,
 }
 /// SubstancePolymerMonomerset nested structure for the 'startingMaterial' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,19 +124,6 @@ pub struct SubstancePolymerRepeatRepeatunit {
     /// Todo
     pub amount: Option<SubstanceAmount>,
 }
-/// SubstancePolymer nested structure for the 'monomerSet' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstancePolymerMonomerset {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Todo
-    #[serde(rename = "startingMaterial")]
-    pub starting_material: Option<Vec<SubstancePolymerMonomersetStartingmaterial>>,
-    /// Todo
-    #[serde(rename = "ratioType")]
-    pub ratio_type: Option<CodeableConcept>,
-}
 /// SubstancePolymer nested structure for the 'repeat' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstancePolymerRepeat {
@@ -126,7 +132,8 @@ pub struct SubstancePolymerRepeat {
     pub base: BackboneElement,
     /// Todo
     #[serde(rename = "repeatUnit")]
-    pub repeat_unit: Option<Vec<SubstancePolymerRepeatRepeatunit>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub repeat_unit: Vec<SubstancePolymerRepeatRepeatunit>,
     /// Todo
     #[serde(rename = "numberOfUnits")]
     pub number_of_units: Option<IntegerType>,
@@ -169,6 +176,16 @@ impl Default for SubstancePolymerRepeatRepeatunitDegreeofpolymerisation {
     }
 }
 
+impl Default for SubstancePolymerMonomerset {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            starting_material: Default::default(),
+            ratio_type: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstancePolymerMonomersetStartingmaterial {
     fn default() -> Self {
         Self {
@@ -202,16 +219,6 @@ impl Default for SubstancePolymerRepeatRepeatunit {
             repeat_unit: Default::default(),
             _repeat_unit: Default::default(),
             amount: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstancePolymerMonomerset {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            starting_material: Default::default(),
-            ratio_type: Default::default(),
         }
     }
 }
@@ -510,13 +517,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SubstancePolyme
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -531,44 +538,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstancePolymer
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -578,16 +573,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SubstancePolyme
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -599,16 +591,16 @@ impl crate::traits::substance_polymer::SubstancePolymerAccessors for SubstancePo
         self.geometry.clone()
     }
     fn copolymer_connectivity(&self) -> &[CodeableConcept] {
-        self.copolymer_connectivity.as_deref().unwrap_or(&[])
+        self.copolymer_connectivity.as_slice()
     }
     fn modification(&self) -> &[StringType] {
-        self.modification.as_deref().unwrap_or(&[])
+        self.modification.as_slice()
     }
     fn monomer_set(&self) -> &[SubstancePolymerMonomerset] {
-        self.monomer_set.as_deref().unwrap_or(&[])
+        self.monomer_set.as_slice()
     }
     fn repeat(&self) -> &[SubstancePolymerRepeat] {
-        self.repeat.as_deref().unwrap_or(&[])
+        self.repeat.as_slice()
     }
 }
 
@@ -628,48 +620,42 @@ impl crate::traits::substance_polymer::SubstancePolymerMutators for SubstancePol
     }
     fn set_copolymer_connectivity(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.copolymer_connectivity = Some(value);
+        resource.copolymer_connectivity = value;
         resource
     }
     fn add_copolymer_connectivity(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .copolymer_connectivity
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.copolymer_connectivity.push(item);
         resource
     }
     fn set_modification(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.modification = Some(value);
+        resource.modification = value;
         resource
     }
     fn add_modification(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .modification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.modification.push(item);
         resource
     }
     fn set_monomer_set(self, value: Vec<SubstancePolymerMonomerset>) -> Self {
         let mut resource = self.clone();
-        resource.monomer_set = Some(value);
+        resource.monomer_set = value;
         resource
     }
     fn add_monomer_set(self, item: SubstancePolymerMonomerset) -> Self {
         let mut resource = self.clone();
-        resource.monomer_set.get_or_insert_with(Vec::new).push(item);
+        resource.monomer_set.push(item);
         resource
     }
     fn set_repeat(self, value: Vec<SubstancePolymerRepeat>) -> Self {
         let mut resource = self.clone();
-        resource.repeat = Some(value);
+        resource.repeat = value;
         resource
     }
     fn add_repeat(self, item: SubstancePolymerRepeat) -> Self {
         let mut resource = self.clone();
-        resource.repeat.get_or_insert_with(Vec::new).push(item);
+        resource.repeat.push(item);
         resource
     }
 }
@@ -682,18 +668,16 @@ impl crate::traits::substance_polymer::SubstancePolymerExistence for SubstancePo
         self.geometry.is_some()
     }
     fn has_copolymer_connectivity(&self) -> bool {
-        self.copolymer_connectivity
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.copolymer_connectivity.is_empty()
     }
     fn has_modification(&self) -> bool {
-        self.modification.as_ref().is_some_and(|v| !v.is_empty())
+        !self.modification.is_empty()
     }
     fn has_monomer_set(&self) -> bool {
-        self.monomer_set.as_ref().is_some_and(|v| !v.is_empty())
+        !self.monomer_set.is_empty()
     }
     fn has_repeat(&self) -> bool {
-        self.repeat.as_ref().is_some_and(|v| !v.is_empty())
+        !self.repeat.is_empty()
     }
 }
 

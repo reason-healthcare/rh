@@ -31,25 +31,32 @@ pub struct Procedure {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Identifiers for this procedure
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// A request for this procedure
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Part of referenced event
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// preparation | in-progress | not-done | on-hold | stopped | completed | entered-in-error | unknown
     pub status: EventStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -74,7 +81,8 @@ pub struct Procedure {
     /// - `103693007`
     /// - `46947000`
     /// - `410606002`
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Identification of the procedure
     ///
     /// Binding: example (A code to identify a specific procedure .)
@@ -118,7 +126,8 @@ pub struct Procedure {
     #[serde(rename = "reportedReference")]
     pub reported_reference: Option<Reference>,
     /// Who performed the procedure and what they did
-    pub performer: Option<Vec<ProcedurePerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<ProcedurePerformer>,
     /// Where the procedure happened
     pub location: Option<Reference>,
     /// The justification that the procedure was performed
@@ -126,7 +135,8 @@ pub struct Procedure {
     /// Binding: example (A code that identifies the reason a procedure is  required.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/procedure-reason
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Target body sites
     ///
     /// Binding: example (SNOMED CT Body site concepts)
@@ -144,7 +154,8 @@ pub struct Procedure {
     /// - `371203008`: Distal interphalangeal joint of fifth toe
     /// - ... and 30 more values
     #[serde(rename = "bodySite")]
-    pub body_site: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_site: Vec<CodeableConcept>,
     /// The result of procedure
     ///
     /// Binding: example (An outcome of a procedure - whether it was resolved or otherwise.)
@@ -155,14 +166,16 @@ pub struct Procedure {
     /// - `385670004`
     pub outcome: Option<CodeableConcept>,
     /// Any report resulting from the procedure
-    pub report: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub report: Vec<Reference>,
     /// Complication following the procedure
     ///
     /// Binding: example (Codes describing complications that resulted from a procedure.)
     ///
     /// Available values:
     /// - `160245001`: No current problems or disability
-    pub complication: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub complication: Vec<CodeableReference>,
     /// Instructions for follow up
     ///
     /// Binding: example (Specific follow up required for a procedure e.g. removal of sutures.)
@@ -179,12 +192,15 @@ pub struct Procedure {
     /// - `394725008`
     /// - `359825008`
     #[serde(rename = "followUp")]
-    pub follow_up: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub follow_up: Vec<CodeableConcept>,
     /// Additional information about the procedure
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Manipulated, implanted, or removed device
     #[serde(rename = "focalDevice")]
-    pub focal_device: Option<Vec<ProcedureFocaldevice>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focal_device: Vec<ProcedureFocaldevice>,
     /// Items used during procedure
     ///
     /// Binding: example (Codes describing items used during a procedure.)
@@ -201,10 +217,12 @@ pub struct Procedure {
     /// - `528455`: Independent Activity/Living Hub
     /// - `528403`: Insulin Pump
     /// - ... and 18 more values
-    pub used: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub used: Vec<CodeableReference>,
     /// Extra information relevant to the procedure
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<Reference>,
 }
 /// Procedure nested structure for the 'focalDevice' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -477,13 +495,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Procedure {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -498,44 +516,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Procedure {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -545,34 +551,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for Procedure {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::procedure::ProcedureAccessors for Procedure {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> EventStatus {
         self.status.clone()
@@ -581,7 +584,7 @@ impl crate::traits::procedure::ProcedureAccessors for Procedure {
         self.status_reason.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> Option<CodeableConcept> {
         self.code.clone()
@@ -602,40 +605,40 @@ impl crate::traits::procedure::ProcedureAccessors for Procedure {
         self.recorder.clone()
     }
     fn performer(&self) -> &[ProcedurePerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn body_site(&self) -> &[CodeableConcept] {
-        self.body_site.as_deref().unwrap_or(&[])
+        self.body_site.as_slice()
     }
     fn outcome(&self) -> Option<CodeableConcept> {
         self.outcome.clone()
     }
     fn report(&self) -> &[Reference] {
-        self.report.as_deref().unwrap_or(&[])
+        self.report.as_slice()
     }
     fn complication(&self) -> &[CodeableReference] {
-        self.complication.as_deref().unwrap_or(&[])
+        self.complication.as_slice()
     }
     fn follow_up(&self) -> &[CodeableConcept] {
-        self.follow_up.as_deref().unwrap_or(&[])
+        self.follow_up.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn focal_device(&self) -> &[ProcedureFocaldevice] {
-        self.focal_device.as_deref().unwrap_or(&[])
+        self.focal_device.as_slice()
     }
     fn used(&self) -> &[CodeableReference] {
-        self.used.as_deref().unwrap_or(&[])
+        self.used.as_slice()
     }
     fn supporting_info(&self) -> &[Reference] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
 }
 
@@ -645,58 +648,52 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: EventStatus) -> Self {
@@ -711,12 +708,12 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -751,12 +748,12 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
     }
     fn set_performer(self, value: Vec<ProcedurePerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: ProcedurePerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -766,22 +763,22 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_body_site(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.body_site = Some(value);
+        resource.body_site = value;
         resource
     }
     fn add_body_site(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.body_site.get_or_insert_with(Vec::new).push(item);
+        resource.body_site.push(item);
         resource
     }
     fn set_outcome(self, value: CodeableConcept) -> Self {
@@ -791,81 +788,72 @@ impl crate::traits::procedure::ProcedureMutators for Procedure {
     }
     fn set_report(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.report = Some(value);
+        resource.report = value;
         resource
     }
     fn add_report(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.report.get_or_insert_with(Vec::new).push(item);
+        resource.report.push(item);
         resource
     }
     fn set_complication(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.complication = Some(value);
+        resource.complication = value;
         resource
     }
     fn add_complication(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource
-            .complication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.complication.push(item);
         resource
     }
     fn set_follow_up(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.follow_up = Some(value);
+        resource.follow_up = value;
         resource
     }
     fn add_follow_up(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.follow_up.get_or_insert_with(Vec::new).push(item);
+        resource.follow_up.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_focal_device(self, value: Vec<ProcedureFocaldevice>) -> Self {
         let mut resource = self.clone();
-        resource.focal_device = Some(value);
+        resource.focal_device = value;
         resource
     }
     fn add_focal_device(self, item: ProcedureFocaldevice) -> Self {
         let mut resource = self.clone();
-        resource
-            .focal_device
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.focal_device.push(item);
         resource
     }
     fn set_used(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.used = Some(value);
+        resource.used = value;
         resource
     }
     fn add_used(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.used.get_or_insert_with(Vec::new).push(item);
+        resource.used.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
 }
@@ -883,23 +871,19 @@ impl crate::traits::procedure::ProcedureExistence for Procedure {
             || self.occurrence_timing.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -908,7 +892,7 @@ impl crate::traits::procedure::ProcedureExistence for Procedure {
         self.status_reason.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         self.code.is_some()
@@ -929,40 +913,40 @@ impl crate::traits::procedure::ProcedureExistence for Procedure {
         self.recorder.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_body_site(&self) -> bool {
-        self.body_site.as_ref().is_some_and(|v| !v.is_empty())
+        !self.body_site.is_empty()
     }
     fn has_outcome(&self) -> bool {
         self.outcome.is_some()
     }
     fn has_report(&self) -> bool {
-        self.report.as_ref().is_some_and(|v| !v.is_empty())
+        !self.report.is_empty()
     }
     fn has_complication(&self) -> bool {
-        self.complication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.complication.is_empty()
     }
     fn has_follow_up(&self) -> bool {
-        self.follow_up.as_ref().is_some_and(|v| !v.is_empty())
+        !self.follow_up.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_focal_device(&self) -> bool {
-        self.focal_device.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focal_device.is_empty()
     }
     fn has_used(&self) -> bool {
-        self.used.as_ref().is_some_and(|v| !v.is_empty())
+        !self.used.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
 }
 

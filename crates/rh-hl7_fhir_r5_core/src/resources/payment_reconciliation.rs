@@ -30,7 +30,8 @@ pub struct PaymentReconciliation {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for a payment reconciliation
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Category of payment
     ///
     /// Binding: extensible (No description)
@@ -134,7 +135,8 @@ pub struct PaymentReconciliation {
     #[serde(rename = "paymentIdentifier")]
     pub payment_identifier: Option<Identifier>,
     /// Settlement particulars
-    pub allocation: Option<Vec<PaymentReconciliationAllocation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allocation: Vec<PaymentReconciliationAllocation>,
     /// Printed form identifier
     ///
     /// Binding: example (The forms codes.)
@@ -144,7 +146,8 @@ pub struct PaymentReconciliation {
     pub form_code: Option<CodeableConcept>,
     /// Note concerning processing
     #[serde(rename = "processNote")]
-    pub process_note: Option<Vec<PaymentReconciliationProcessnote>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub process_note: Vec<PaymentReconciliationProcessnote>,
 }
 /// PaymentReconciliation nested structure for the 'processNote' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -598,13 +601,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for PaymentReconcil
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -619,44 +622,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for PaymentReconcili
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -666,16 +657,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for PaymentReconcil
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -683,7 +671,7 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationAccessors
     for PaymentReconciliation
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn type_(&self) -> CodeableConcept {
         self.type_.clone()
@@ -761,13 +749,13 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationAccessors
         self.payment_identifier.clone()
     }
     fn allocation(&self) -> &[PaymentReconciliationAllocation] {
-        self.allocation.as_deref().unwrap_or(&[])
+        self.allocation.as_slice()
     }
     fn form_code(&self) -> Option<CodeableConcept> {
         self.form_code.clone()
     }
     fn process_note(&self) -> &[PaymentReconciliationProcessnote] {
-        self.process_note.as_deref().unwrap_or(&[])
+        self.process_note.as_slice()
     }
 }
 
@@ -779,12 +767,12 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -914,12 +902,12 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationMutators
     }
     fn set_allocation(self, value: Vec<PaymentReconciliationAllocation>) -> Self {
         let mut resource = self.clone();
-        resource.allocation = Some(value);
+        resource.allocation = value;
         resource
     }
     fn add_allocation(self, item: PaymentReconciliationAllocation) -> Self {
         let mut resource = self.clone();
-        resource.allocation.get_or_insert_with(Vec::new).push(item);
+        resource.allocation.push(item);
         resource
     }
     fn set_form_code(self, value: CodeableConcept) -> Self {
@@ -929,15 +917,12 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationMutators
     }
     fn set_process_note(self, value: Vec<PaymentReconciliationProcessnote>) -> Self {
         let mut resource = self.clone();
-        resource.process_note = Some(value);
+        resource.process_note = value;
         resource
     }
     fn add_process_note(self, item: PaymentReconciliationProcessnote) -> Self {
         let mut resource = self.clone();
-        resource
-            .process_note
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.process_note.push(item);
         resource
     }
 }
@@ -946,7 +931,7 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationExistence
     for PaymentReconciliation
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         true
@@ -1024,13 +1009,13 @@ impl crate::traits::payment_reconciliation::PaymentReconciliationExistence
         self.payment_identifier.is_some()
     }
     fn has_allocation(&self) -> bool {
-        self.allocation.as_ref().is_some_and(|v| !v.is_empty())
+        !self.allocation.is_empty()
     }
     fn has_form_code(&self) -> bool {
         self.form_code.is_some()
     }
     fn has_process_note(&self) -> bool {
-        self.process_note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.process_note.is_empty()
     }
 }
 

@@ -55,7 +55,8 @@ pub struct PlanDefinition {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the plan definition
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the plan definition
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -111,20 +112,23 @@ pub struct PlanDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the plan definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for plan definition (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this plan definition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -163,51 +167,45 @@ pub struct PlanDefinition {
     /// Binding: example (High-level categorization of the definition, used for searching, sorting, and filtering.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/definition-topic
-    pub topic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub topic: Vec<CodeableConcept>,
     /// Who authored the content
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the content
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the content
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the content
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// Additional documentation, citations
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Logic used by the plan definition
-    pub library: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub library: Vec<StringType>,
     /// Extension element for the 'library' primitive field. Contains metadata and extensions.
-    pub _library: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _library: Vec<Element>,
     /// What the plan is trying to accomplish
-    pub goal: Option<Vec<PlanDefinitionGoal>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goal: Vec<PlanDefinitionGoal>,
     /// Actors within the plan
-    pub actor: Option<Vec<PlanDefinitionActor>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actor: Vec<PlanDefinitionActor>,
     /// Action defined by the plan
-    pub action: Option<Vec<PlanDefinitionAction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub action: Vec<PlanDefinitionAction>,
     /// Preconditions for service (boolean)
     #[serde(rename = "asNeededBoolean")]
     pub as_needed_boolean: Option<BooleanType>,
     /// Preconditions for service (CodeableConcept)
     #[serde(rename = "asNeededCodeableConcept")]
     pub as_needed_codeable_concept: Option<CodeableConcept>,
-}
-/// PlanDefinition nested structure for the 'actor' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActor {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who or what can be this actor
-    pub option: Vec<PlanDefinitionActorOption>,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// Describes the actor
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
 }
 /// PlanDefinition nested structure for the 'goal' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -216,7 +214,8 @@ pub struct PlanDefinitionGoal {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Target outcome for the goal
-    pub target: Option<Vec<PlanDefinitionGoalTarget>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target: Vec<PlanDefinitionGoalTarget>,
     /// E.g. Treatment, dietary, behavioral
     ///
     /// Binding: example (Example codes for grouping goals for filtering or presentation.)
@@ -251,191 +250,11 @@ pub struct PlanDefinitionGoal {
     ///
     /// Available values:
     /// - `160245001`: No current problems or disability
-    pub addresses: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addresses: Vec<CodeableConcept>,
     /// Supporting documentation for the goal
-    pub documentation: Option<Vec<RelatedArtifact>>,
-}
-/// PlanDefinitionAction nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What actor
-    #[serde(rename = "actorId")]
-    pub actor_id: Option<StringType>,
-    /// Extension element for the 'actorId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_actorId")]
-    pub _actor_id: Option<Element>,
-    /// careteam | device | group | healthcareservice | location | organization | patient | practitioner | practitionerrole | relatedperson
-    #[serde(rename = "type")]
-    pub type_: Option<ActionParticipantType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Who or what can participate
-    #[serde(rename = "typeCanonical")]
-    pub type_canonical: Option<StringType>,
-    /// Extension element for the 'typeCanonical' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_typeCanonical")]
-    pub _type_canonical: Option<Element>,
-    /// Who or what can participate
-    #[serde(rename = "typeReference")]
-    pub type_reference: Option<Reference>,
-    /// E.g. Nurse, Surgeon, Parent
-    ///
-    /// Binding: example (Defines roles played by participants for the action.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/action-participant-role
-    pub role: Option<CodeableConcept>,
-    /// E.g. Author, Reviewer, Witness, etc
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/action-participant-function
-    pub function: Option<CodeableConcept>,
-}
-/// PlanDefinitionAction nested structure for the 'input' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionInput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
-}
-/// PlanDefinitionAction nested structure for the 'relatedAction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionRelatedaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// What action is this related to
-    #[serde(rename = "targetId")]
-    pub target_id: StringType,
-    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_targetId")]
-    pub _target_id: Option<Element>,
-    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
-    pub relationship: ActionRelationshipType,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
-    #[serde(rename = "endRelationship")]
-    pub end_relationship: Option<ActionRelationshipType>,
-    /// Extension element for the 'endRelationship' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_endRelationship")]
-    pub _end_relationship: Option<Element>,
-    /// Time offset for the relationship (Duration)
-    #[serde(rename = "offsetDuration")]
-    pub offset_duration: Option<Duration>,
-    /// Time offset for the relationship (Range)
-    #[serde(rename = "offsetRange")]
-    pub offset_range: Option<Range>,
-}
-/// PlanDefinitionAction nested structure for the 'output' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionOutput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// User-visible title
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What data is provided
-    pub requirement: Option<DataRequirement>,
-    /// What data is provided
-    #[serde(rename = "relatedData")]
-    pub related_data: Option<StringType>,
-    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relatedData")]
-    pub _related_data: Option<Element>,
-}
-/// PlanDefinitionAction nested structure for the 'dynamicValue' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActionDynamicvalue {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The path to the element to be set dynamically
-    pub path: Option<StringType>,
-    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
-    /// An expression that provides the dynamic value for the customization
-    pub expression: Option<Expression>,
-}
-/// PlanDefinitionGoal nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionGoalTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The parameter whose value is to be tracked
-    ///
-    /// Binding: example (Identifies types of parameters that can be tracked to determine goal achievement.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
-    pub measure: Option<CodeableConcept>,
-    /// The target value to be achieved (Quantity)
-    #[serde(rename = "detailQuantity")]
-    pub detail_quantity: Option<Quantity>,
-    /// The target value to be achieved (Range)
-    #[serde(rename = "detailRange")]
-    pub detail_range: Option<Range>,
-    /// The target value to be achieved (CodeableConcept)
-    #[serde(rename = "detailCodeableConcept")]
-    pub detail_codeable_concept: Option<CodeableConcept>,
-    /// The target value to be achieved (string)
-    #[serde(rename = "detailString")]
-    pub detail_string: Option<StringType>,
-    /// The target value to be achieved (boolean)
-    #[serde(rename = "detailBoolean")]
-    pub detail_boolean: Option<BooleanType>,
-    /// The target value to be achieved (integer)
-    #[serde(rename = "detailInteger")]
-    pub detail_integer: Option<IntegerType>,
-    /// The target value to be achieved (Ratio)
-    #[serde(rename = "detailRatio")]
-    pub detail_ratio: Option<Ratio>,
-    /// Reach goal within
-    pub due: Option<Duration>,
-}
-/// PlanDefinitionActor nested structure for the 'option' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanDefinitionActorOption {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// careteam | device | group | healthcareservice | location | organization | patient | practitioner | practitionerrole | relatedperson
-    #[serde(rename = "type")]
-    pub type_: Option<ActionParticipantType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Who or what can participate
-    #[serde(rename = "typeCanonical")]
-    pub type_canonical: Option<StringType>,
-    /// Extension element for the 'typeCanonical' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_typeCanonical")]
-    pub _type_canonical: Option<Element>,
-    /// Who or what can participate
-    #[serde(rename = "typeReference")]
-    pub type_reference: Option<Reference>,
-    /// E.g. Nurse, Surgeon, Parent
-    ///
-    /// Binding: example (No description)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/action-participant-role
-    pub role: Option<CodeableConcept>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub documentation: Vec<RelatedArtifact>,
 }
 /// PlanDefinition nested structure for the 'action' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -445,18 +264,24 @@ pub struct PlanDefinitionAction {
     pub base: BackboneElement,
     /// Relationship to another action
     #[serde(rename = "relatedAction")]
-    pub related_action: Option<Vec<PlanDefinitionActionRelatedaction>>,
-    /// Who should participate in the action
-    pub participant: Option<Vec<PlanDefinitionActionParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_action: Vec<PlanDefinitionActionRelatedaction>,
     /// Dynamic aspects of the definition
     #[serde(rename = "dynamicValue")]
-    pub dynamic_value: Option<Vec<PlanDefinitionActionDynamicvalue>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dynamic_value: Vec<PlanDefinitionActionDynamicvalue>,
     /// Output data definition
-    pub output: Option<Vec<PlanDefinitionActionOutput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output: Vec<PlanDefinitionActionOutput>,
     /// Input data requirements
-    pub input: Option<Vec<PlanDefinitionActionInput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input: Vec<PlanDefinitionActionInput>,
     /// Whether or not the action is applicable
-    pub condition: Option<Vec<PlanDefinitionActionCondition>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condition: Vec<PlanDefinitionActionCondition>,
+    /// Who should participate in the action
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<PlanDefinitionActionParticipant>,
     /// Unique id for the action in the PlanDefinition
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -496,15 +321,19 @@ pub struct PlanDefinitionAction {
     /// Binding: example (Provides examples of reasons for actions to be performed.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/action-reason-code
-    pub reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableConcept>,
     /// Supporting documentation for the intended performer of the action
-    pub documentation: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub documentation: Vec<RelatedArtifact>,
     /// What goals this action supports
     #[serde(rename = "goalId")]
-    pub goal_id: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goal_id: Vec<StringType>,
     /// Extension element for the 'goalId' primitive field. Contains metadata and extensions.
     #[serde(rename = "_goalId")]
-    pub _goal_id: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _goal_id: Vec<Element>,
     /// Type of individual the action is focused on (CodeableConcept)
     #[serde(rename = "subjectCodeableConcept")]
     pub subject_codeable_concept: Option<CodeableConcept>,
@@ -515,7 +344,8 @@ pub struct PlanDefinitionAction {
     #[serde(rename = "subjectCanonical")]
     pub subject_canonical: Option<StringType>,
     /// When the action should be triggered
-    pub trigger: Option<Vec<TriggerDefinition>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trigger: Vec<TriggerDefinition>,
     /// When the action should take place (Age)
     #[serde(rename = "timingAge")]
     pub timing_age: Option<Age>,
@@ -578,7 +408,178 @@ pub struct PlanDefinitionAction {
     /// Extension element for the 'transform' primitive field. Contains metadata and extensions.
     pub _transform: Option<Element>,
     /// A sub-action
-    pub action: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub action: Vec<StringType>,
+}
+/// PlanDefinitionGoal nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionGoalTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The parameter whose value is to be tracked
+    ///
+    /// Binding: example (Identifies types of parameters that can be tracked to determine goal achievement.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
+    pub measure: Option<CodeableConcept>,
+    /// The target value to be achieved (Quantity)
+    #[serde(rename = "detailQuantity")]
+    pub detail_quantity: Option<Quantity>,
+    /// The target value to be achieved (Range)
+    #[serde(rename = "detailRange")]
+    pub detail_range: Option<Range>,
+    /// The target value to be achieved (CodeableConcept)
+    #[serde(rename = "detailCodeableConcept")]
+    pub detail_codeable_concept: Option<CodeableConcept>,
+    /// The target value to be achieved (string)
+    #[serde(rename = "detailString")]
+    pub detail_string: Option<StringType>,
+    /// The target value to be achieved (boolean)
+    #[serde(rename = "detailBoolean")]
+    pub detail_boolean: Option<BooleanType>,
+    /// The target value to be achieved (integer)
+    #[serde(rename = "detailInteger")]
+    pub detail_integer: Option<IntegerType>,
+    /// The target value to be achieved (Ratio)
+    #[serde(rename = "detailRatio")]
+    pub detail_ratio: Option<Ratio>,
+    /// Reach goal within
+    pub due: Option<Duration>,
+}
+/// PlanDefinitionAction nested structure for the 'dynamicValue' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionDynamicvalue {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The path to the element to be set dynamically
+    pub path: Option<StringType>,
+    /// Extension element for the 'path' primitive field. Contains metadata and extensions.
+    pub _path: Option<Element>,
+    /// An expression that provides the dynamic value for the customization
+    pub expression: Option<Expression>,
+}
+/// PlanDefinition nested structure for the 'actor' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who or what can be this actor
+    pub option: Vec<PlanDefinitionActorOption>,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// Describes the actor
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// PlanDefinitionAction nested structure for the 'output' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionOutput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
+}
+/// PlanDefinitionAction nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What actor
+    #[serde(rename = "actorId")]
+    pub actor_id: Option<StringType>,
+    /// Extension element for the 'actorId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_actorId")]
+    pub _actor_id: Option<Element>,
+    /// careteam | device | group | healthcareservice | location | organization | patient | practitioner | practitionerrole | relatedperson
+    #[serde(rename = "type")]
+    pub type_: Option<ActionParticipantType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Who or what can participate
+    #[serde(rename = "typeCanonical")]
+    pub type_canonical: Option<StringType>,
+    /// Extension element for the 'typeCanonical' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_typeCanonical")]
+    pub _type_canonical: Option<Element>,
+    /// Who or what can participate
+    #[serde(rename = "typeReference")]
+    pub type_reference: Option<Reference>,
+    /// E.g. Nurse, Surgeon, Parent
+    ///
+    /// Binding: example (Defines roles played by participants for the action.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/action-participant-role
+    pub role: Option<CodeableConcept>,
+    /// E.g. Author, Reviewer, Witness, etc
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/action-participant-function
+    pub function: Option<CodeableConcept>,
+}
+/// PlanDefinitionAction nested structure for the 'input' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionInput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// User-visible title
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What data is provided
+    pub requirement: Option<DataRequirement>,
+    /// What data is provided
+    #[serde(rename = "relatedData")]
+    pub related_data: Option<StringType>,
+    /// Extension element for the 'relatedData' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relatedData")]
+    pub _related_data: Option<Element>,
+}
+/// PlanDefinitionActor nested structure for the 'option' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActorOption {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// careteam | device | group | healthcareservice | location | organization | patient | practitioner | practitionerrole | relatedperson
+    #[serde(rename = "type")]
+    pub type_: Option<ActionParticipantType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Who or what can participate
+    #[serde(rename = "typeCanonical")]
+    pub type_canonical: Option<StringType>,
+    /// Extension element for the 'typeCanonical' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_typeCanonical")]
+    pub _type_canonical: Option<Element>,
+    /// Who or what can participate
+    #[serde(rename = "typeReference")]
+    pub type_reference: Option<Reference>,
+    /// E.g. Nurse, Surgeon, Parent
+    ///
+    /// Binding: example (No description)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/action-participant-role
+    pub role: Option<CodeableConcept>,
 }
 /// PlanDefinitionAction nested structure for the 'condition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -592,6 +593,35 @@ pub struct PlanDefinitionActionCondition {
     pub _kind: Option<Element>,
     /// Boolean-valued expression
     pub expression: Option<Expression>,
+}
+/// PlanDefinitionAction nested structure for the 'relatedAction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanDefinitionActionRelatedaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// What action is this related to
+    #[serde(rename = "targetId")]
+    pub target_id: StringType,
+    /// Extension element for the 'targetId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_targetId")]
+    pub _target_id: Option<Element>,
+    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
+    pub relationship: ActionRelationshipType,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// before | before-start | before-end | concurrent | concurrent-with-start | concurrent-with-end | after | after-start | after-end
+    #[serde(rename = "endRelationship")]
+    pub end_relationship: Option<ActionRelationshipType>,
+    /// Extension element for the 'endRelationship' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_endRelationship")]
+    pub _end_relationship: Option<Element>,
+    /// Time offset for the relationship (Duration)
+    #[serde(rename = "offsetDuration")]
+    pub offset_duration: Option<Duration>,
+    /// Time offset for the relationship (Range)
+    #[serde(rename = "offsetRange")]
+    pub offset_range: Option<Range>,
 }
 
 impl Default for PlanDefinition {
@@ -658,19 +688,6 @@ impl Default for PlanDefinition {
     }
 }
 
-impl Default for PlanDefinitionActor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            option: Vec::new(),
-            title: Default::default(),
-            _title: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
 impl Default for PlanDefinitionGoal {
     fn default() -> Self {
         Self {
@@ -686,117 +703,16 @@ impl Default for PlanDefinitionGoal {
     }
 }
 
-impl Default for PlanDefinitionActionParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            actor_id: Default::default(),
-            _actor_id: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            type_canonical: Default::default(),
-            _type_canonical: Default::default(),
-            type_reference: Default::default(),
-            role: Default::default(),
-            function: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionInput {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionRelatedaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            target_id: Default::default(),
-            _target_id: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            end_relationship: Default::default(),
-            _end_relationship: Default::default(),
-            offset_duration: Default::default(),
-            offset_range: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionOutput {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            requirement: Default::default(),
-            related_data: Default::default(),
-            _related_data: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActionDynamicvalue {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            path: Default::default(),
-            _path: Default::default(),
-            expression: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionGoalTarget {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            measure: Default::default(),
-            detail_quantity: Default::default(),
-            detail_range: Default::default(),
-            detail_codeable_concept: Default::default(),
-            detail_string: Default::default(),
-            detail_boolean: Default::default(),
-            detail_integer: Default::default(),
-            detail_ratio: Default::default(),
-            due: Default::default(),
-        }
-    }
-}
-
-impl Default for PlanDefinitionActorOption {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            type_canonical: Default::default(),
-            _type_canonical: Default::default(),
-            type_reference: Default::default(),
-            role: Default::default(),
-        }
-    }
-}
-
 impl Default for PlanDefinitionAction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             related_action: Default::default(),
-            participant: Default::default(),
             dynamic_value: Default::default(),
             output: Default::default(),
             input: Default::default(),
             condition: Default::default(),
+            participant: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             prefix: Default::default(),
@@ -843,6 +759,104 @@ impl Default for PlanDefinitionAction {
     }
 }
 
+impl Default for PlanDefinitionGoalTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            measure: Default::default(),
+            detail_quantity: Default::default(),
+            detail_range: Default::default(),
+            detail_codeable_concept: Default::default(),
+            detail_string: Default::default(),
+            detail_boolean: Default::default(),
+            detail_integer: Default::default(),
+            detail_ratio: Default::default(),
+            due: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionDynamicvalue {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            path: Default::default(),
+            _path: Default::default(),
+            expression: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            option: Vec::new(),
+            title: Default::default(),
+            _title: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionOutput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            actor_id: Default::default(),
+            _actor_id: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            type_canonical: Default::default(),
+            _type_canonical: Default::default(),
+            type_reference: Default::default(),
+            role: Default::default(),
+            function: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionInput {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            requirement: Default::default(),
+            related_data: Default::default(),
+            _related_data: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActorOption {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            type_canonical: Default::default(),
+            _type_canonical: Default::default(),
+            type_reference: Default::default(),
+            role: Default::default(),
+        }
+    }
+}
+
 impl Default for PlanDefinitionActionCondition {
     fn default() -> Self {
         Self {
@@ -850,6 +864,22 @@ impl Default for PlanDefinitionActionCondition {
             kind: Default::default(),
             _kind: Default::default(),
             expression: Default::default(),
+        }
+    }
+}
+
+impl Default for PlanDefinitionActionRelatedaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            target_id: Default::default(),
+            _target_id: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            end_relationship: Default::default(),
+            _end_relationship: Default::default(),
+            offset_duration: Default::default(),
+            offset_range: Default::default(),
         }
     }
 }
@@ -1320,13 +1350,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for PlanDefinition 
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -1341,44 +1371,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for PlanDefinition {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1388,16 +1406,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for PlanDefinition 
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -1406,7 +1421,7 @@ impl crate::traits::plan_definition::PlanDefinitionAccessors for PlanDefinition 
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -1436,16 +1451,16 @@ impl crate::traits::plan_definition::PlanDefinitionAccessors for PlanDefinition 
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -1469,34 +1484,34 @@ impl crate::traits::plan_definition::PlanDefinitionAccessors for PlanDefinition 
         self.effective_period.clone()
     }
     fn topic(&self) -> &[CodeableConcept] {
-        self.topic.as_deref().unwrap_or(&[])
+        self.topic.as_slice()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn library(&self) -> &[StringType] {
-        self.library.as_deref().unwrap_or(&[])
+        self.library.as_slice()
     }
     fn goal(&self) -> &[PlanDefinitionGoal] {
-        self.goal.as_deref().unwrap_or(&[])
+        self.goal.as_slice()
     }
     fn actor(&self) -> &[PlanDefinitionActor] {
-        self.actor.as_deref().unwrap_or(&[])
+        self.actor.as_slice()
     }
     fn action(&self) -> &[PlanDefinitionAction] {
-        self.action.as_deref().unwrap_or(&[])
+        self.action.as_slice()
     }
 }
 
@@ -1511,12 +1526,12 @@ impl crate::traits::plan_definition::PlanDefinitionMutators for PlanDefinition {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1566,12 +1581,12 @@ impl crate::traits::plan_definition::PlanDefinitionMutators for PlanDefinition {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1581,25 +1596,22 @@ impl crate::traits::plan_definition::PlanDefinitionMutators for PlanDefinition {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1639,110 +1651,110 @@ impl crate::traits::plan_definition::PlanDefinitionMutators for PlanDefinition {
     }
     fn set_topic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.topic = Some(value);
+        resource.topic = value;
         resource
     }
     fn add_topic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.topic.get_or_insert_with(Vec::new).push(item);
+        resource.topic.push(item);
         resource
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_library(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.library = Some(value);
+        resource.library = value;
         resource
     }
     fn add_library(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.library.get_or_insert_with(Vec::new).push(item);
+        resource.library.push(item);
         resource
     }
     fn set_goal(self, value: Vec<PlanDefinitionGoal>) -> Self {
         let mut resource = self.clone();
-        resource.goal = Some(value);
+        resource.goal = value;
         resource
     }
     fn add_goal(self, item: PlanDefinitionGoal) -> Self {
         let mut resource = self.clone();
-        resource.goal.get_or_insert_with(Vec::new).push(item);
+        resource.goal.push(item);
         resource
     }
     fn set_actor(self, value: Vec<PlanDefinitionActor>) -> Self {
         let mut resource = self.clone();
-        resource.actor = Some(value);
+        resource.actor = value;
         resource
     }
     fn add_actor(self, item: PlanDefinitionActor) -> Self {
         let mut resource = self.clone();
-        resource.actor.get_or_insert_with(Vec::new).push(item);
+        resource.actor.push(item);
         resource
     }
     fn set_action(self, value: Vec<PlanDefinitionAction>) -> Self {
         let mut resource = self.clone();
-        resource.action = Some(value);
+        resource.action = value;
         resource
     }
     fn add_action(self, item: PlanDefinitionAction) -> Self {
         let mut resource = self.clone();
-        resource.action.get_or_insert_with(Vec::new).push(item);
+        resource.action.push(item);
         resource
     }
 }
 
 impl crate::traits::plan_definition::PlanDefinitionExistence for PlanDefinition {
+    fn has_version_algorithm(&self) -> bool {
+        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
+    }
     fn has_as_needed(&self) -> bool {
         self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
     }
@@ -1751,14 +1763,11 @@ impl crate::traits::plan_definition::PlanDefinitionExistence for PlanDefinition 
             || self.subject_reference.is_some()
             || self.subject_canonical.is_some()
     }
-    fn has_version_algorithm(&self) -> bool {
-        self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
-    }
     fn has_url(&self) -> bool {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1788,16 +1797,16 @@ impl crate::traits::plan_definition::PlanDefinitionExistence for PlanDefinition 
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1821,36 +1830,34 @@ impl crate::traits::plan_definition::PlanDefinitionExistence for PlanDefinition 
         self.effective_period.is_some()
     }
     fn has_topic(&self) -> bool {
-        self.topic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.topic.is_empty()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_library(&self) -> bool {
-        self.library.as_ref().is_some_and(|v| !v.is_empty())
+        !self.library.is_empty()
     }
     fn has_goal(&self) -> bool {
-        self.goal.as_ref().is_some_and(|v| !v.is_empty())
+        !self.goal.is_empty()
     }
     fn has_actor(&self) -> bool {
-        self.actor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.actor.is_empty()
     }
     fn has_action(&self) -> bool {
-        self.action.as_ref().is_some_and(|v| !v.is_empty())
+        !self.action.is_empty()
     }
 }
 

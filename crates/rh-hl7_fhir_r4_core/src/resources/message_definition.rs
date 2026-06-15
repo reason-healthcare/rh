@@ -35,7 +35,8 @@ pub struct MessageDefinition {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Primary key for the message definition on a given server
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the message definition
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -49,9 +50,11 @@ pub struct MessageDefinition {
     /// Extension element for the 'title' primitive field. Contains metadata and extensions.
     pub _title: Option<Element>,
     /// Takes the place of
-    pub replaces: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replaces: Vec<StringType>,
     /// Extension element for the 'replaces' primitive field. Contains metadata and extensions.
-    pub _replaces: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _replaces: Vec<Element>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -69,20 +72,23 @@ pub struct MessageDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the message definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for message definition (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this message definition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -97,9 +103,11 @@ pub struct MessageDefinition {
     /// Extension element for the 'base' primitive field. Contains metadata and extensions.
     pub _base: Option<Element>,
     /// Protocol/workflow this is part of
-    pub parent: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parent: Vec<StringType>,
     /// Extension element for the 'parent' primitive field. Contains metadata and extensions.
-    pub _parent: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _parent: Vec<Element>,
     /// Event code  or link to the EventDefinition (Coding)
     #[serde(rename = "eventCoding")]
     pub event_coding: Coding,
@@ -111,7 +119,8 @@ pub struct MessageDefinition {
     /// Extension element for the 'category' primitive field. Contains metadata and extensions.
     pub _category: Option<Element>,
     /// Resource(s) that are the subject of the event
-    pub focus: Option<Vec<MessageDefinitionFocus>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<MessageDefinitionFocus>,
     /// always | on-error | never | on-success
     #[serde(rename = "responseRequired")]
     pub response_required: Option<MessageheaderResponseRequest>,
@@ -120,26 +129,14 @@ pub struct MessageDefinition {
     pub _response_required: Option<Element>,
     /// Responses to this message
     #[serde(rename = "allowedResponse")]
-    pub allowed_response: Option<Vec<MessageDefinitionAllowedresponse>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allowed_response: Vec<MessageDefinitionAllowedresponse>,
     /// Canonical reference to a GraphDefinition
-    pub graph: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub graph: Vec<StringType>,
     /// Extension element for the 'graph' primitive field. Contains metadata and extensions.
-    pub _graph: Option<Element>,
-}
-/// MessageDefinition nested structure for the 'allowedResponse' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageDefinitionAllowedresponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to allowed message definition response
-    pub message: StringType,
-    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
-    pub _message: Option<Element>,
-    /// When should this response be used
-    pub situation: Option<StringType>,
-    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
-    pub _situation: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _graph: Vec<Element>,
 }
 /// MessageDefinition nested structure for the 'focus' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +160,21 @@ pub struct MessageDefinitionFocus {
     pub max: Option<StringType>,
     /// Extension element for the 'max' primitive field. Contains metadata and extensions.
     pub _max: Option<Element>,
+}
+/// MessageDefinition nested structure for the 'allowedResponse' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageDefinitionAllowedresponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to allowed message definition response
+    pub message: StringType,
+    /// Extension element for the 'message' primitive field. Contains metadata and extensions.
+    pub _message: Option<Element>,
+    /// When should this response be used
+    pub situation: Option<StringType>,
+    /// Extension element for the 'situation' primitive field. Contains metadata and extensions.
+    pub _situation: Option<Element>,
 }
 
 impl Default for MessageDefinition {
@@ -215,18 +227,6 @@ impl Default for MessageDefinition {
     }
 }
 
-impl Default for MessageDefinitionAllowedresponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            message: Default::default(),
-            _message: Default::default(),
-            situation: Default::default(),
-            _situation: Default::default(),
-        }
-    }
-}
-
 impl Default for MessageDefinitionFocus {
     fn default() -> Self {
         Self {
@@ -239,6 +239,18 @@ impl Default for MessageDefinitionFocus {
             _min: Default::default(),
             max: Default::default(),
             _max: Default::default(),
+        }
+    }
+}
+
+impl Default for MessageDefinitionAllowedresponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            message: Default::default(),
+            _message: Default::default(),
+            situation: Default::default(),
+            _situation: Default::default(),
         }
     }
 }
@@ -419,13 +431,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MessageDefiniti
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -440,44 +452,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MessageDefinitio
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -487,16 +487,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MessageDefiniti
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -505,7 +502,7 @@ impl crate::traits::message_definition::MessageDefinitionAccessors for MessageDe
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -517,7 +514,7 @@ impl crate::traits::message_definition::MessageDefinitionAccessors for MessageDe
         self.title.clone()
     }
     fn replaces(&self) -> &[StringType] {
-        self.replaces.as_deref().unwrap_or(&[])
+        self.replaces.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
@@ -532,16 +529,16 @@ impl crate::traits::message_definition::MessageDefinitionAccessors for MessageDe
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -553,22 +550,22 @@ impl crate::traits::message_definition::MessageDefinitionAccessors for MessageDe
         self.base_definition.clone()
     }
     fn parent(&self) -> &[StringType] {
-        self.parent.as_deref().unwrap_or(&[])
+        self.parent.as_slice()
     }
     fn category(&self) -> Option<MessageSignificanceCategory> {
         self.category.clone()
     }
     fn focus(&self) -> &[MessageDefinitionFocus] {
-        self.focus.as_deref().unwrap_or(&[])
+        self.focus.as_slice()
     }
     fn response_required(&self) -> Option<MessageheaderResponseRequest> {
         self.response_required.clone()
     }
     fn allowed_response(&self) -> &[MessageDefinitionAllowedresponse] {
-        self.allowed_response.as_deref().unwrap_or(&[])
+        self.allowed_response.as_slice()
     }
     fn graph(&self) -> &[StringType] {
-        self.graph.as_deref().unwrap_or(&[])
+        self.graph.as_slice()
     }
 }
 
@@ -583,12 +580,12 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -608,12 +605,12 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_replaces(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.replaces = Some(value);
+        resource.replaces = value;
         resource
     }
     fn add_replaces(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource.replaces.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -638,12 +635,12 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -653,25 +650,22 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -691,12 +685,12 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_parent(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.parent = Some(value);
+        resource.parent = value;
         resource
     }
     fn add_parent(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.parent.get_or_insert_with(Vec::new).push(item);
+        resource.parent.push(item);
         resource
     }
     fn set_category(self, value: MessageSignificanceCategory) -> Self {
@@ -706,12 +700,12 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_focus(self, value: Vec<MessageDefinitionFocus>) -> Self {
         let mut resource = self.clone();
-        resource.focus = Some(value);
+        resource.focus = value;
         resource
     }
     fn add_focus(self, item: MessageDefinitionFocus) -> Self {
         let mut resource = self.clone();
-        resource.focus.get_or_insert_with(Vec::new).push(item);
+        resource.focus.push(item);
         resource
     }
     fn set_response_required(self, value: MessageheaderResponseRequest) -> Self {
@@ -721,25 +715,22 @@ impl crate::traits::message_definition::MessageDefinitionMutators for MessageDef
     }
     fn set_allowed_response(self, value: Vec<MessageDefinitionAllowedresponse>) -> Self {
         let mut resource = self.clone();
-        resource.allowed_response = Some(value);
+        resource.allowed_response = value;
         resource
     }
     fn add_allowed_response(self, item: MessageDefinitionAllowedresponse) -> Self {
         let mut resource = self.clone();
-        resource
-            .allowed_response
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.allowed_response.push(item);
         resource
     }
     fn set_graph(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.graph = Some(value);
+        resource.graph = value;
         resource
     }
     fn add_graph(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.graph.get_or_insert_with(Vec::new).push(item);
+        resource.graph.push(item);
         resource
     }
 }
@@ -752,7 +743,7 @@ impl crate::traits::message_definition::MessageDefinitionExistence for MessageDe
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -764,7 +755,7 @@ impl crate::traits::message_definition::MessageDefinitionExistence for MessageDe
         self.title.is_some()
     }
     fn has_replaces(&self) -> bool {
-        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+        !self.replaces.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -779,16 +770,16 @@ impl crate::traits::message_definition::MessageDefinitionExistence for MessageDe
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -800,24 +791,22 @@ impl crate::traits::message_definition::MessageDefinitionExistence for MessageDe
         self.base_definition.is_some()
     }
     fn has_parent(&self) -> bool {
-        self.parent.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parent.is_empty()
     }
     fn has_category(&self) -> bool {
         self.category.is_some()
     }
     fn has_focus(&self) -> bool {
-        self.focus.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focus.is_empty()
     }
     fn has_response_required(&self) -> bool {
         self.response_required.is_some()
     }
     fn has_allowed_response(&self) -> bool {
-        self.allowed_response
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.allowed_response.is_empty()
     }
     fn has_graph(&self) -> bool {
-        self.graph.as_ref().is_some_and(|v| !v.is_empty())
+        !self.graph.is_empty()
     }
 }
 

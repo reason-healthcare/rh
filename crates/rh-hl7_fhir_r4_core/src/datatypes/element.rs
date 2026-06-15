@@ -15,7 +15,8 @@ pub struct Element {
     /// Unique id for inter-element referencing
     pub id: Option<StringType>,
     /// Additional content defined by implementations
-    pub extension: Option<Vec<Extension>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension: Vec<Extension>,
 }
 
 impl Default for Element {

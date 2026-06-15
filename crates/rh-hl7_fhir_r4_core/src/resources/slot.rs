@@ -24,21 +24,24 @@ pub struct Slot {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// A broad categorization of the service that is to be performed during this appointment
     ///
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-category
     #[serde(rename = "serviceCategory")]
-    pub service_category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_category: Vec<CodeableConcept>,
     /// The type of appointments that can be booked into this slot (ideally this would be an identifiable service - which is at a location, rather than the location itself). If provided then this overrides the value provided on the availability resource
     ///
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-type
     #[serde(rename = "serviceType")]
-    pub service_type: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_type: Vec<CodeableConcept>,
     /// The specialty of a practitioner that would be required to perform the service requested in this appointment
     ///
     /// Binding: preferred (Additional details about where the content was created (e.g. clinical specialty).)
@@ -55,7 +58,8 @@ pub struct Slot {
     /// - `394803006`: Clinical hematology
     /// - `408480009`: Clinical immunology
     /// - ... and 107 more values
-    pub specialty: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialty: Vec<CodeableConcept>,
     /// The style of appointment or patient that may be booked in the slot (not service type)
     ///
     /// Binding: preferred (No description)
@@ -232,13 +236,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Slot {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -253,44 +257,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Slot {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -300,31 +292,28 @@ impl crate::traits::domain_resource::DomainResourceExistence for Slot {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::slot::SlotAccessors for Slot {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn service_category(&self) -> &[CodeableConcept] {
-        self.service_category.as_deref().unwrap_or(&[])
+        self.service_category.as_slice()
     }
     fn service_type(&self) -> &[CodeableConcept] {
-        self.service_type.as_deref().unwrap_or(&[])
+        self.service_type.as_slice()
     }
     fn specialty(&self) -> &[CodeableConcept] {
-        self.specialty.as_deref().unwrap_or(&[])
+        self.specialty.as_slice()
     }
     fn appointment_type(&self) -> Option<CodeableConcept> {
         self.appointment_type.clone()
@@ -355,48 +344,42 @@ impl crate::traits::slot::SlotMutators for Slot {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_service_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.service_category = Some(value);
+        resource.service_category = value;
         resource
     }
     fn add_service_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .service_category
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.service_category.push(item);
         resource
     }
     fn set_service_type(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.service_type = Some(value);
+        resource.service_type = value;
         resource
     }
     fn add_service_type(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .service_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.service_type.push(item);
         resource
     }
     fn set_specialty(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.specialty = Some(value);
+        resource.specialty = value;
         resource
     }
     fn add_specialty(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.specialty.get_or_insert_with(Vec::new).push(item);
+        resource.specialty.push(item);
         resource
     }
     fn set_appointment_type(self, value: CodeableConcept) -> Self {
@@ -438,18 +421,16 @@ impl crate::traits::slot::SlotMutators for Slot {
 
 impl crate::traits::slot::SlotExistence for Slot {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_service_category(&self) -> bool {
-        self.service_category
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.service_category.is_empty()
     }
     fn has_service_type(&self) -> bool {
-        self.service_type.as_ref().is_some_and(|v| !v.is_empty())
+        !self.service_type.is_empty()
     }
     fn has_specialty(&self) -> bool {
-        self.specialty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specialty.is_empty()
     }
     fn has_appointment_type(&self) -> bool {
         self.appointment_type.is_some()

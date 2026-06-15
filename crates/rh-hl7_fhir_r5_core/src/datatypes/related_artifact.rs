@@ -33,7 +33,8 @@ pub struct RelatedArtifact {
     /// Binding: example (Additional classifiers for the related artifact.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/citation-artifact-classifier
-    pub classifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classifier: Vec<CodeableConcept>,
     /// Short label
     pub label: Option<StringType>,
     /// Extension element for the 'label' primitive field. Contains metadata and extensions.

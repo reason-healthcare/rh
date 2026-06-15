@@ -38,7 +38,8 @@ pub struct Dosage {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/additional-instruction-codes
     #[serde(rename = "additionalInstruction")]
-    pub additional_instruction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_instruction: Vec<CodeableConcept>,
     /// Patient or consumer oriented instructions
     #[serde(rename = "patientInstruction")]
     pub patient_instruction: Option<StringType>,
@@ -73,7 +74,8 @@ pub struct Dosage {
     pub method: Option<CodeableConcept>,
     /// Amount of medication administered
     #[serde(rename = "doseAndRate")]
-    pub dose_and_rate: Option<Vec<Element>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dose_and_rate: Vec<Element>,
     /// Upper limit on medication per unit of time
     #[serde(rename = "maxDosePerPeriod")]
     pub max_dose_per_period: Option<Ratio>,

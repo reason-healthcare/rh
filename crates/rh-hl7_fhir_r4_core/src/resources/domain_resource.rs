@@ -20,12 +20,15 @@ pub struct DomainResource {
     /// Text summary of the resource, for human interpretation
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    pub contained: Option<Vec<Resource>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contained: Vec<Resource>,
     /// Additional content defined by implementations
-    pub extension: Option<Vec<Extension>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension: Vec<Extension>,
     /// Extensions that cannot be ignored
     #[serde(rename = "modifierExtension")]
-    pub modifier_extension: Option<Vec<Extension>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier_extension: Vec<Extension>,
 }
 
 impl Default for DomainResource {
@@ -136,13 +139,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DomainResource 
         self.text.clone()
     }
     fn contained(&self) -> &[Resource] {
-        self.contained.as_deref().unwrap_or(&[])
+        self.contained.as_slice()
     }
     fn extension(&self) -> &[Extension] {
-        self.extension.as_deref().unwrap_or(&[])
+        self.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[Extension] {
-        self.modifier_extension.as_deref().unwrap_or(&[])
+        self.modifier_extension.as_slice()
     }
 }
 
@@ -157,35 +160,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DomainResource {
     }
     fn set_contained(self, value: Vec<Resource>) -> Self {
         let mut resource = self.clone();
-        resource.contained = Some(value);
+        resource.contained = value;
         resource
     }
     fn add_contained(self, item: Resource) -> Self {
         let mut resource = self.clone();
-        resource.contained.get_or_insert_with(Vec::new).push(item);
+        resource.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<Extension>) -> Self {
         let mut resource = self.clone();
-        resource.extension = Some(value);
+        resource.extension = value;
         resource
     }
     fn add_extension(self, item: Extension) -> Self {
         let mut resource = self.clone();
-        resource.extension.get_or_insert_with(Vec::new).push(item);
+        resource.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<Extension>) -> Self {
         let mut resource = self.clone();
-        resource.modifier_extension = Some(value);
+        resource.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.modifier_extension.push(item);
         resource
     }
 }
@@ -195,15 +195,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for DomainResource 
         self.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.contained.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.extension.as_ref().is_some_and(|v| !v.is_empty())
+        !self.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.modifier_extension
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.modifier_extension.is_empty()
     }
 }
 

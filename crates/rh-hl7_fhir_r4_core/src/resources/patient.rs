@@ -34,15 +34,18 @@ pub struct Patient {
     #[serde(flatten)]
     pub base: DomainResource,
     /// An identifier for this patient
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this patient's record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
     pub _active: Option<Element>,
     /// A name associated with the patient
-    pub name: Option<Vec<HumanName>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name: Vec<HumanName>,
     /// A contact detail for the individual
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// male | female | other | unknown
     pub gender: Option<AdministrativeGender>,
     /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
@@ -60,7 +63,8 @@ pub struct Patient {
     #[serde(rename = "deceasedDateTime")]
     pub deceased_date_time: Option<DateTimeType>,
     /// An address for the individual
-    pub address: Option<Vec<Address>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub address: Vec<Address>,
     /// Marital (civil) status of a patient
     ///
     /// Binding: extensible (The domestic partnership status of a person.)
@@ -76,19 +80,72 @@ pub struct Patient {
     #[serde(rename = "multipleBirthInteger")]
     pub multiple_birth_integer: Option<IntegerType>,
     /// Image of the patient
-    pub photo: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub photo: Vec<Attachment>,
     /// A contact party (e.g. guardian, partner, friend) for the patient
-    pub contact: Option<Vec<PatientContact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<PatientContact>,
     /// A language which may be used to communicate with the patient about his or her health
-    pub communication: Option<Vec<PatientCommunication>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication: Vec<PatientCommunication>,
     /// Patient's nominated primary care provider
     #[serde(rename = "generalPractitioner")]
-    pub general_practitioner: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub general_practitioner: Vec<Reference>,
     /// Organization that is the custodian of the patient record
     #[serde(rename = "managingOrganization")]
     pub managing_organization: Option<Reference>,
     /// Link to another patient resource that concerns the same actual person
-    pub link: Option<Vec<PatientLink>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link: Vec<PatientLink>,
+}
+/// Birth Place
+///
+/// The registered place of birth of the patient. A sytem may use the address.text if they don't store the birthPlace address in discrete elements.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-birthPlace
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientBirthPlace {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// congregation
+///
+/// A group or place of religious practice that may provide services to the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-congregation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCongregation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Birth Time
+///
+/// The time of day that the Patient was born. This includes the date to ensure that the timezone information can be communicated effectively.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-birthTime
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientBirthTime {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 /// disability
 ///
@@ -102,81 +159,6 @@ pub struct Patient {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatientDisability {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// citizenship
-///
-/// The patient's legal status as citizen of a country.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-citizenship
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCitizenship {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Patient nested structure for the 'contact' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientContact {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The kind of relationship
-    ///
-    /// Binding: extensible (The nature of the relationship between a patient and a contact person for that patient.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/patient-contactrelationship
-    pub relationship: Option<Vec<CodeableConcept>>,
-    /// A name associated with the contact person
-    pub name: Option<HumanName>,
-    /// A contact detail for the person
-    pub telecom: Option<Vec<ContactPoint>>,
-    /// Address for the contact person
-    pub address: Option<Address>,
-    /// male | female | other | unknown
-    pub gender: Option<AdministrativeGender>,
-    /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
-    pub _gender: Option<Element>,
-    /// Organization that is associated with the contact
-    pub organization: Option<Reference>,
-    /// The period during which this contact person or organization is valid to be contacted relating to this patient
-    pub period: Option<Period>,
-}
-/// importance
-///
-/// The importance of the patient (e.g. VIP).
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-importance
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientImportance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// adoptionInfo
-///
-/// Code indication the adoption status of the patient.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-adoptionInfo
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientAdoptionInfo {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -197,95 +179,37 @@ pub struct PatientProficiency {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// relatedPerson
+/// nationality
 ///
-/// In some cases a Patient.contact will also be populated as a RelatedPerson resource. This linkage permits the linkage between the 2 resources to be able to accurately indicate a representation of the same individual, and updating details between could be appropriate.
+/// The nationality of the patient.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-relatedPerson
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-nationality
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientRelatedPerson {
+pub struct PatientNationality {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
 }
-/// cadavericDonor
+/// importance
 ///
-/// Flag indicating whether the patient authorized the donation of body parts after death.
+/// The importance of the patient (e.g. VIP).
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-cadavericDonor
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-importance
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCadavericDonor {
+pub struct PatientImportance {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
-}
-/// Patient nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The other patient or related person resource that the link refers to
-    pub other: Reference,
-    /// replaced-by | replaces | refer | seealso
-    #[serde(rename = "type")]
-    pub type_: LinkType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// genderIdentity
-///
-/// The gender the patient identifies with. The Patient's gender identity is used as guidance (e.g. for staff) about how to interact with the patient.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-genderIdentity
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientGenderIdentity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Patient nested structure for the 'communication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCommunication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The language which can be used to communicate with the patient about his or her health
-    ///
-    /// Binding: preferred (A human language.)
-    ///
-    /// Available values:
-    /// - `ar`: Arabic
-    /// - `bn`: Bengali
-    /// - `cs`: Czech
-    /// - `da`: Danish
-    /// - `de`: German
-    /// - `de-AT`: German (Austria)
-    /// - `de-CH`: German (Switzerland)
-    /// - `de-DE`: German (Germany)
-    /// - `el`: Greek
-    /// - `en`: English
-    /// - ... and 46 more values
-    pub language: StringType,
-    /// Language preference indicator
-    pub preferred: Option<BooleanType>,
-    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
-    pub _preferred: Option<Element>,
 }
 /// animal
 ///
@@ -319,21 +243,204 @@ pub struct PatientPreferenceType {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// congregation
+/// Mother's Maiden Name
 ///
-/// A group or place of religious practice that may provide services to the patient.
+/// Mother's maiden (unmarried) name, commonly collected to help verify patient identity.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/patient-congregation
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PatientCongregation {
+pub struct PatientMothersMaidenName {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// religion
+///
+/// The patient's professed religious affiliations.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-religion
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientReligion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Patient nested structure for the 'communication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCommunication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The language which can be used to communicate with the patient about his or her health
+    ///
+    /// Binding: preferred (A human language.)
+    ///
+    /// Available values:
+    /// - `ar`: Arabic
+    /// - `bn`: Bengali
+    /// - `cs`: Czech
+    /// - `da`: Danish
+    /// - `de`: German
+    /// - `de-AT`: German (Austria)
+    /// - `de-CH`: German (Switzerland)
+    /// - `de-DE`: German (Germany)
+    /// - `el`: Greek
+    /// - `en`: English
+    /// - ... and 46 more values
+    pub language: StringType,
+    /// Language preference indicator
+    pub preferred: Option<BooleanType>,
+    /// Extension element for the 'preferred' primitive field. Contains metadata and extensions.
+    pub _preferred: Option<Element>,
+}
+/// genderIdentity
+///
+/// The gender the patient identifies with. The Patient's gender identity is used as guidance (e.g. for staff) about how to interact with the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-genderIdentity
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientGenderIdentity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// adoptionInfo
+///
+/// Code indication the adoption status of the patient.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-adoptionInfo
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientAdoptionInfo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// citizenship
+///
+/// The patient's legal status as citizen of a country.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-citizenship
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCitizenship {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Patient nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The other patient or related person resource that the link refers to
+    pub other: Reference,
+    /// replaced-by | replaces | refer | seealso
+    #[serde(rename = "type")]
+    pub type_: LinkType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+}
+/// cadavericDonor
+///
+/// Flag indicating whether the patient authorized the donation of body parts after death.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-cadavericDonor
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientCadavericDonor {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// relatedPerson
+///
+/// In some cases a Patient.contact will also be populated as a RelatedPerson resource. This linkage permits the linkage between the 2 resources to be able to accurately indicate a representation of the same individual, and updating details between could be appropriate.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-relatedPerson
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientRelatedPerson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// interpreterRequired
+///
+/// This Patient requires an interpreter to communicate healthcare information to the practitioner.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/patient-interpreterRequired
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientInterpreterRequired {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Patient nested structure for the 'contact' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatientContact {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kind of relationship
+    ///
+    /// Binding: extensible (The nature of the relationship between a patient and a contact person for that patient.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/patient-contactrelationship
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relationship: Vec<CodeableConcept>,
+    /// A name associated with the contact person
+    pub name: Option<HumanName>,
+    /// A contact detail for the person
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
+    /// Address for the contact person
+    pub address: Option<Address>,
+    /// male | female | other | unknown
+    pub gender: Option<AdministrativeGender>,
+    /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
+    pub _gender: Option<Element>,
+    /// Organization that is associated with the contact
+    pub organization: Option<Reference>,
+    /// The period during which this contact person or organization is valid to be contacted relating to this patient
+    pub period: Option<Period>,
 }
 
 impl Default for Patient {
@@ -365,47 +472,31 @@ impl Default for Patient {
     }
 }
 
+impl Default for PatientBirthPlace {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientCongregation {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientBirthTime {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
 impl Default for PatientDisability {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientCitizenship {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientContact {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            relationship: Default::default(),
-            name: Default::default(),
-            telecom: Default::default(),
-            address: Default::default(),
-            gender: Default::default(),
-            _gender: Default::default(),
-            organization: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for PatientImportance {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientAdoptionInfo {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -421,7 +512,7 @@ impl Default for PatientProficiency {
     }
 }
 
-impl Default for PatientRelatedPerson {
+impl Default for PatientNationality {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -429,40 +520,10 @@ impl Default for PatientRelatedPerson {
     }
 }
 
-impl Default for PatientCadavericDonor {
+impl Default for PatientImportance {
     fn default() -> Self {
         Self {
             base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientLink {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            other: Reference::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
-impl Default for PatientGenderIdentity {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for PatientCommunication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: StringType::default(),
-            preferred: Default::default(),
-            _preferred: Default::default(),
         }
     }
 }
@@ -483,10 +544,104 @@ impl Default for PatientPreferenceType {
     }
 }
 
-impl Default for PatientCongregation {
+impl Default for PatientMothersMaidenName {
     fn default() -> Self {
         Self {
             base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientReligion {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientCommunication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: StringType::default(),
+            preferred: Default::default(),
+            _preferred: Default::default(),
+        }
+    }
+}
+
+impl Default for PatientGenderIdentity {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientAdoptionInfo {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientCitizenship {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientLink {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            other: Reference::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
+impl Default for PatientCadavericDonor {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientRelatedPerson {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientInterpreterRequired {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for PatientContact {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            relationship: Default::default(),
+            name: Default::default(),
+            telecom: Default::default(),
+            address: Default::default(),
+            gender: Default::default(),
+            _gender: Default::default(),
+            organization: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -658,13 +813,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Patient {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -679,44 +834,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Patient {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -726,31 +869,28 @@ impl crate::traits::domain_resource::DomainResourceExistence for Patient {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::patient::PatientAccessors for Patient {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
     }
     fn name(&self) -> &[HumanName] {
-        self.name.as_deref().unwrap_or(&[])
+        self.name.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn gender(&self) -> Option<AdministrativeGender> {
         self.gender.clone()
@@ -759,28 +899,28 @@ impl crate::traits::patient::PatientAccessors for Patient {
         self.birth_date.clone()
     }
     fn address(&self) -> &[Address] {
-        self.address.as_deref().unwrap_or(&[])
+        self.address.as_slice()
     }
     fn marital_status(&self) -> Option<CodeableConcept> {
         self.marital_status.clone()
     }
     fn photo(&self) -> &[Attachment] {
-        self.photo.as_deref().unwrap_or(&[])
+        self.photo.as_slice()
     }
     fn contact(&self) -> &[PatientContact] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn communication(&self) -> &[PatientCommunication] {
-        self.communication.as_deref().unwrap_or(&[])
+        self.communication.as_slice()
     }
     fn general_practitioner(&self) -> &[Reference] {
-        self.general_practitioner.as_deref().unwrap_or(&[])
+        self.general_practitioner.as_slice()
     }
     fn managing_organization(&self) -> Option<Reference> {
         self.managing_organization.clone()
     }
     fn link(&self) -> &[PatientLink] {
-        self.link.as_deref().unwrap_or(&[])
+        self.link.as_slice()
     }
 }
 
@@ -790,12 +930,12 @@ impl crate::traits::patient::PatientMutators for Patient {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -805,22 +945,22 @@ impl crate::traits::patient::PatientMutators for Patient {
     }
     fn set_name(self, value: Vec<HumanName>) -> Self {
         let mut resource = self.clone();
-        resource.name = Some(value);
+        resource.name = value;
         resource
     }
     fn add_name(self, item: HumanName) -> Self {
         let mut resource = self.clone();
-        resource.name.get_or_insert_with(Vec::new).push(item);
+        resource.name.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_gender(self, value: AdministrativeGender) -> Self {
@@ -835,12 +975,12 @@ impl crate::traits::patient::PatientMutators for Patient {
     }
     fn set_address(self, value: Vec<Address>) -> Self {
         let mut resource = self.clone();
-        resource.address = Some(value);
+        resource.address = value;
         resource
     }
     fn add_address(self, item: Address) -> Self {
         let mut resource = self.clone();
-        resource.address.get_or_insert_with(Vec::new).push(item);
+        resource.address.push(item);
         resource
     }
     fn set_marital_status(self, value: CodeableConcept) -> Self {
@@ -850,48 +990,42 @@ impl crate::traits::patient::PatientMutators for Patient {
     }
     fn set_photo(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.photo = Some(value);
+        resource.photo = value;
         resource
     }
     fn add_photo(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.photo.get_or_insert_with(Vec::new).push(item);
+        resource.photo.push(item);
         resource
     }
     fn set_contact(self, value: Vec<PatientContact>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: PatientContact) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_communication(self, value: Vec<PatientCommunication>) -> Self {
         let mut resource = self.clone();
-        resource.communication = Some(value);
+        resource.communication = value;
         resource
     }
     fn add_communication(self, item: PatientCommunication) -> Self {
         let mut resource = self.clone();
-        resource
-            .communication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.communication.push(item);
         resource
     }
     fn set_general_practitioner(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.general_practitioner = Some(value);
+        resource.general_practitioner = value;
         resource
     }
     fn add_general_practitioner(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .general_practitioner
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.general_practitioner.push(item);
         resource
     }
     fn set_managing_organization(self, value: Reference) -> Self {
@@ -901,12 +1035,12 @@ impl crate::traits::patient::PatientMutators for Patient {
     }
     fn set_link(self, value: Vec<PatientLink>) -> Self {
         let mut resource = self.clone();
-        resource.link = Some(value);
+        resource.link = value;
         resource
     }
     fn add_link(self, item: PatientLink) -> Self {
         let mut resource = self.clone();
-        resource.link.get_or_insert_with(Vec::new).push(item);
+        resource.link.push(item);
         resource
     }
 }
@@ -919,16 +1053,16 @@ impl crate::traits::patient::PatientExistence for Patient {
         self.multiple_birth_boolean.is_some() || self.multiple_birth_integer.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
     }
     fn has_name(&self) -> bool {
-        self.name.as_ref().is_some_and(|v| !v.is_empty())
+        !self.name.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_gender(&self) -> bool {
         self.gender.is_some()
@@ -937,30 +1071,28 @@ impl crate::traits::patient::PatientExistence for Patient {
         self.birth_date.is_some()
     }
     fn has_address(&self) -> bool {
-        self.address.as_ref().is_some_and(|v| !v.is_empty())
+        !self.address.is_empty()
     }
     fn has_marital_status(&self) -> bool {
         self.marital_status.is_some()
     }
     fn has_photo(&self) -> bool {
-        self.photo.as_ref().is_some_and(|v| !v.is_empty())
+        !self.photo.is_empty()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_communication(&self) -> bool {
-        self.communication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.communication.is_empty()
     }
     fn has_general_practitioner(&self) -> bool {
-        self.general_practitioner
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.general_practitioner.is_empty()
     }
     fn has_managing_organization(&self) -> bool {
         self.managing_organization.is_some()
     }
     fn has_link(&self) -> bool {
-        self.link.as_ref().is_some_and(|v| !v.is_empty())
+        !self.link.is_empty()
     }
 }
 

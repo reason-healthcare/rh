@@ -30,7 +30,8 @@ pub struct VisionPrescription {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for vision prescription
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | cancelled | draft | entered-in-error
     pub status: FmStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -62,7 +63,8 @@ pub struct VisionPrescriptionLensspecification {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Eye alignment compensation
-    pub prism: Option<Vec<VisionPrescriptionLensspecificationPrism>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prism: Vec<VisionPrescriptionLensspecificationPrism>,
     /// Product to be supplied
     ///
     /// Binding: example (A coded concept describing the vision products.)
@@ -114,7 +116,8 @@ pub struct VisionPrescriptionLensspecification {
     /// Extension element for the 'brand' primitive field. Contains metadata and extensions.
     pub _brand: Option<Element>,
     /// Notes for coatings
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// VisionPrescriptionLensspecification nested structure for the 'prism' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -438,13 +441,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for VisionPrescript
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -459,44 +462,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for VisionPrescripti
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -506,22 +497,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for VisionPrescript
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::vision_prescription::VisionPrescriptionAccessors for VisionPrescription {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> FmStatus {
         self.status.clone()
@@ -552,12 +540,12 @@ impl crate::traits::vision_prescription::VisionPrescriptionMutators for VisionPr
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: FmStatus) -> Self {
@@ -604,7 +592,7 @@ impl crate::traits::vision_prescription::VisionPrescriptionMutators for VisionPr
 
 impl crate::traits::vision_prescription::VisionPrescriptionExistence for VisionPrescription {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true

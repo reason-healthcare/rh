@@ -26,13 +26,16 @@ pub struct BiologicallyDerivedProductDispense {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for this dispense
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The order or request that this dispense is fulfilling
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Short description
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// preparation | in-progress | allocated | issued | unfulfilled | returned | entered-in-error | unknown
     pub status: BiologicallyderivedproductdispenseStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -56,7 +59,8 @@ pub struct BiologicallyDerivedProductDispense {
     #[serde(rename = "matchStatus")]
     pub match_status: Option<CodeableConcept>,
     /// Indicates who or what performed an action
-    pub performer: Option<Vec<BiologicallyDerivedProductDispensePerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<BiologicallyDerivedProductDispensePerformer>,
     /// Where the dispense occurred
     pub location: Option<Reference>,
     /// Amount dispensed
@@ -76,7 +80,8 @@ pub struct BiologicallyDerivedProductDispense {
     /// Where the product was dispatched to
     pub destination: Option<Reference>,
     /// Additional notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Specific instructions for use
     #[serde(rename = "usageInstruction")]
     pub usage_instruction: Option<StringType>,
@@ -395,13 +400,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -416,44 +421,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for BiologicallyDeri
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -465,29 +458,26 @@ impl crate::traits::domain_resource::DomainResourceExistence
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::biologically_derived_product_dispense::BiologicallyDerivedProductDispenseAccessors
 for BiologicallyDerivedProductDispense {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> BiologicallyderivedproductdispenseStatus {
         self.status.clone()
@@ -505,7 +495,7 @@ for BiologicallyDerivedProductDispense {
         self.match_status.clone()
     }
     fn performer(&self) -> &[BiologicallyDerivedProductDispensePerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
@@ -523,7 +513,7 @@ for BiologicallyDerivedProductDispense {
         self.destination.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn usage_instruction(&self) -> Option<StringType> {
         self.usage_instruction.clone()
@@ -539,32 +529,32 @@ impl
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: BiologicallyderivedproductdispenseStatus) -> Self {
@@ -594,12 +584,12 @@ impl
     }
     fn set_performer(self, value: Vec<BiologicallyDerivedProductDispensePerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: BiologicallyDerivedProductDispensePerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -629,12 +619,12 @@ impl
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_usage_instruction(self, value: String) -> Self {
@@ -647,13 +637,13 @@ impl
 impl crate::traits::biologically_derived_product_dispense::BiologicallyDerivedProductDispenseExistence
 for BiologicallyDerivedProductDispense {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -671,7 +661,7 @@ for BiologicallyDerivedProductDispense {
         self.match_status.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
@@ -689,7 +679,7 @@ for BiologicallyDerivedProductDispense {
         self.destination.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_usage_instruction(&self) -> bool {
         self.usage_instruction.is_some()

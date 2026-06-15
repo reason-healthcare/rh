@@ -28,7 +28,8 @@ pub struct Medication {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for this medication
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Codes that identify this medication
     ///
     /// Binding: example (A coded concept that defines the type of a medication.)
@@ -53,30 +54,12 @@ pub struct Medication {
     #[serde(rename = "totalVolume")]
     pub total_volume: Option<Quantity>,
     /// Active or inactive ingredient
-    pub ingredient: Option<Vec<MedicationIngredient>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<MedicationIngredient>,
     /// Details about packaged medications
     pub batch: Option<MedicationBatch>,
     /// Knowledge about this medication
     pub definition: Option<Reference>,
-}
-/// Medication nested structure for the 'batch' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationBatch {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifier assigned to batch
-    #[serde(rename = "lotNumber")]
-    pub lot_number: Option<StringType>,
-    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lotNumber")]
-    pub _lot_number: Option<Element>,
-    /// When batch will expire
-    #[serde(rename = "expirationDate")]
-    pub expiration_date: Option<DateTimeType>,
-    /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_expirationDate")]
-    pub _expiration_date: Option<Element>,
 }
 /// Medication nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,6 +89,25 @@ pub struct MedicationIngredient {
     #[serde(rename = "strengthQuantity")]
     pub strength_quantity: Option<Quantity>,
 }
+/// Medication nested structure for the 'batch' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationBatch {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifier assigned to batch
+    #[serde(rename = "lotNumber")]
+    pub lot_number: Option<StringType>,
+    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lotNumber")]
+    pub _lot_number: Option<Element>,
+    /// When batch will expire
+    #[serde(rename = "expirationDate")]
+    pub expiration_date: Option<DateTimeType>,
+    /// Extension element for the 'expirationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_expirationDate")]
+    pub _expiration_date: Option<Element>,
+}
 
 impl Default for Medication {
     fn default() -> Self {
@@ -125,18 +127,6 @@ impl Default for Medication {
     }
 }
 
-impl Default for MedicationBatch {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            lot_number: Default::default(),
-            _lot_number: Default::default(),
-            expiration_date: Default::default(),
-            _expiration_date: Default::default(),
-        }
-    }
-}
-
 impl Default for MedicationIngredient {
     fn default() -> Self {
         Self {
@@ -147,6 +137,18 @@ impl Default for MedicationIngredient {
             strength_ratio: Default::default(),
             strength_codeable_concept: Default::default(),
             strength_quantity: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationBatch {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            lot_number: Default::default(),
+            _lot_number: Default::default(),
+            expiration_date: Default::default(),
+            _expiration_date: Default::default(),
         }
     }
 }
@@ -297,13 +299,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Medication {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -318,44 +320,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Medication {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -365,22 +355,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Medication {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::medication::MedicationAccessors for Medication {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn code(&self) -> Option<CodeableConcept> {
         self.code.clone()
@@ -398,7 +385,7 @@ impl crate::traits::medication::MedicationAccessors for Medication {
         self.total_volume.clone()
     }
     fn ingredient(&self) -> &[MedicationIngredient] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
     fn batch(&self) -> Option<MedicationBatch> {
         self.batch.clone()
@@ -414,12 +401,12 @@ impl crate::traits::medication::MedicationMutators for Medication {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -449,12 +436,12 @@ impl crate::traits::medication::MedicationMutators for Medication {
     }
     fn set_ingredient(self, value: Vec<MedicationIngredient>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: MedicationIngredient) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
     fn set_batch(self, value: MedicationBatch) -> Self {
@@ -471,7 +458,7 @@ impl crate::traits::medication::MedicationMutators for Medication {
 
 impl crate::traits::medication::MedicationExistence for Medication {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_code(&self) -> bool {
         self.code.is_some()
@@ -489,7 +476,7 @@ impl crate::traits::medication::MedicationExistence for Medication {
         self.total_volume.is_some()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
     fn has_batch(&self) -> bool {
         self.batch.is_some()

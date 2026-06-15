@@ -74,20 +74,23 @@ pub struct CapabilityStatement {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the capability statement
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for capability statement (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this capability statement is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -101,13 +104,17 @@ pub struct CapabilityStatement {
     /// Extension element for the 'kind' primitive field. Contains metadata and extensions.
     pub _kind: Option<Element>,
     /// Canonical URL of another capability statement this implements
-    pub instantiates: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates: Vec<StringType>,
     /// Extension element for the 'instantiates' primitive field. Contains metadata and extensions.
-    pub _instantiates: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates: Vec<Element>,
     /// Canonical URL of another capability statement this adds to
-    pub imports: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub imports: Vec<StringType>,
     /// Extension element for the 'imports' primitive field. Contains metadata and extensions.
-    pub _imports: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _imports: Vec<Element>,
     /// Software that is covered by this capability statement
     pub software: Option<CapabilityStatementSoftware>,
     /// If this describes a specific instance
@@ -121,55 +128,33 @@ pub struct CapabilityStatement {
     /// formats supported (xml | json | ttl | mime type)
     pub format: Vec<Mimetypes>,
     /// Extension element for the 'format' primitive field. Contains metadata and extensions.
-    pub _format: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _format: Vec<Element>,
     /// Patch formats supported
     #[serde(rename = "patchFormat")]
-    pub patch_format: Option<Vec<Mimetypes>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patch_format: Vec<Mimetypes>,
     /// Extension element for the 'patchFormat' primitive field. Contains metadata and extensions.
     #[serde(rename = "_patchFormat")]
-    pub _patch_format: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _patch_format: Vec<Element>,
     /// Implementation guides supported
     #[serde(rename = "implementationGuide")]
-    pub implementation_guide: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub implementation_guide: Vec<StringType>,
     /// Extension element for the 'implementationGuide' primitive field. Contains metadata and extensions.
     #[serde(rename = "_implementationGuide")]
-    pub _implementation_guide: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _implementation_guide: Vec<Element>,
     /// If the endpoint is a RESTful one
-    pub rest: Option<Vec<CapabilityStatementRest>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rest: Vec<CapabilityStatementRest>,
     /// If messaging is supported
-    pub messaging: Option<Vec<CapabilityStatementMessaging>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub messaging: Vec<CapabilityStatementMessaging>,
     /// Document definition
-    pub document: Option<Vec<CapabilityStatementDocument>>,
-}
-/// CapabilityStatement nested structure for the 'rest' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Resource served on the REST interface
-    pub resource: Option<Vec<CapabilityStatementRestResource>>,
-    /// What operations are supported?
-    pub interaction: Option<Vec<CapabilityStatementRestInteraction>>,
-    /// Information about security of implementation
-    pub security: Option<CapabilityStatementRestSecurity>,
-    /// client | server
-    pub mode: RestfulCapabilityMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// General description of implementation
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-    /// Search parameters for searching all resources
-    #[serde(rename = "searchParam")]
-    pub search_param: Option<Vec<StringType>>,
-    /// Definition of a system level operation
-    pub operation: Option<Vec<StringType>>,
-    /// Compartments served/used by system
-    pub compartment: Option<Vec<StringType>>,
-    /// Extension element for the 'compartment' primitive field. Contains metadata and extensions.
-    pub _compartment: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub document: Vec<CapabilityStatementDocument>,
 }
 /// CapabilityStatementMessaging nested structure for the 'supportedMessage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,14 +171,38 @@ pub struct CapabilityStatementMessagingSupportedmessage {
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
     pub _definition: Option<Element>,
 }
-/// CapabilityStatementRestResource nested structure for the 'interaction' field
+/// CapabilityStatement nested structure for the 'messaging' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceInteraction {
+pub struct CapabilityStatementMessaging {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// read | vread | update | patch | delete | history-instance | history-type | create | search-type
-    pub code: TypeRestfulInteraction,
+    /// Where messages should be sent
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<CapabilityStatementMessagingEndpoint>,
+    /// Messages supported by this system
+    #[serde(rename = "supportedMessage")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supported_message: Vec<CapabilityStatementMessagingSupportedmessage>,
+    /// Reliable Message Cache Length (min)
+    #[serde(rename = "reliableCache")]
+    pub reliable_cache: Option<UnsignedIntType>,
+    /// Extension element for the 'reliableCache' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_reliableCache")]
+    pub _reliable_cache: Option<Element>,
+    /// Messaging interface behavior details
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementRest nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// transaction | batch | search-system | history-system
+    pub code: SystemRestfulInteraction,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
     /// Anything special about operation behavior
@@ -201,24 +210,65 @@ pub struct CapabilityStatementRestResourceInteraction {
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
 }
-/// CapabilityStatement nested structure for the 'document' field
+/// CapabilityStatementRestResource nested structure for the 'searchParam' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementDocument {
+pub struct CapabilityStatementRestResourceSearchparam {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// producer | consumer
-    pub mode: DocumentMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Description of document support
+    /// Name of search parameter
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Source of definition for parameter
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// number | date | string | token | reference | composite | quantity | uri | special
+    #[serde(rename = "type")]
+    pub type_: SearchParamType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Server-specific usage
     pub documentation: Option<StringType>,
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
-    /// Constraint on the resources used in the document
-    pub profile: StringType,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'rest' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information about security of implementation
+    pub security: Option<CapabilityStatementRestSecurity>,
+    /// Resource served on the REST interface
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resource: Vec<CapabilityStatementRestResource>,
+    /// What operations are supported?
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interaction: Vec<CapabilityStatementRestInteraction>,
+    /// client | server
+    pub mode: RestfulCapabilityMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// General description of implementation
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+    /// Search parameters for searching all resources
+    #[serde(rename = "searchParam")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub search_param: Vec<StringType>,
+    /// Definition of a system level operation
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub operation: Vec<StringType>,
+    /// Compartments served/used by system
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub compartment: Vec<StringType>,
+    /// Extension element for the 'compartment' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _compartment: Vec<Element>,
 }
 /// CapabilityStatement nested structure for the 'software' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -240,6 +290,98 @@ pub struct CapabilityStatementSoftware {
     /// Extension element for the 'releaseDate' primitive field. Contains metadata and extensions.
     #[serde(rename = "_releaseDate")]
     pub _release_date: Option<Element>,
+}
+/// CapabilityStatement nested structure for the 'document' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementDocument {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// producer | consumer
+    pub mode: DocumentMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Description of document support
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+    /// Constraint on the resources used in the document
+    pub profile: StringType,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+}
+/// CapabilityStatementRest nested structure for the 'security' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestSecurity {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Adds CORS Headers (http://enable-cors.org/)
+    pub cors: Option<BooleanType>,
+    /// Extension element for the 'cors' primitive field. Contains metadata and extensions.
+    pub _cors: Option<Element>,
+    /// OAuth | SMART-on-FHIR | NTLM | Basic | Kerberos | Certificates
+    ///
+    /// Binding: extensible (Types of security services used with FHIR.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/restful-security-service
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service: Vec<CodeableConcept>,
+    /// General description of how security works
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'operation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceOperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name by which the operation/query is invoked
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The defined operation/query
+    pub definition: StringType,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Specific details about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
+}
+/// CapabilityStatementMessaging nested structure for the 'endpoint' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementMessagingEndpoint {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// http | ftp | mllp +
+    ///
+    /// Binding: extensible (The protocol used for message transport.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/message-transport
+    pub protocol: Coding,
+    /// Network address or identifier of the end-point
+    pub address: StringType,
+    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
+    pub _address: Option<Element>,
+}
+/// CapabilityStatementRestResource nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityStatementRestResourceInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// read | vread | update | patch | delete | history-instance | history-type | create | search-type
+    pub code: TypeRestfulInteraction,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Anything special about operation behavior
+    pub documentation: Option<StringType>,
+    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
+    pub _documentation: Option<Element>,
 }
 /// CapabilityStatement nested structure for the 'implementation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -275,10 +417,12 @@ pub struct CapabilityStatementRestResource {
     pub _profile: Option<Element>,
     /// Profiles for use cases supported
     #[serde(rename = "supportedProfile")]
-    pub supported_profile: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supported_profile: Vec<StringType>,
     /// Extension element for the 'supportedProfile' primitive field. Contains metadata and extensions.
     #[serde(rename = "_supportedProfile")]
-    pub _supported_profile: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _supported_profile: Vec<Element>,
     /// Additional information about the use of the resource type
     pub documentation: Option<StringType>,
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
@@ -325,140 +469,28 @@ pub struct CapabilityStatementRestResource {
     pub _conditional_delete: Option<Element>,
     /// literal | logical | resolves | enforced | local
     #[serde(rename = "referencePolicy")]
-    pub reference_policy: Option<Vec<ReferenceHandlingPolicy>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reference_policy: Vec<ReferenceHandlingPolicy>,
     /// Extension element for the 'referencePolicy' primitive field. Contains metadata and extensions.
     #[serde(rename = "_referencePolicy")]
-    pub _reference_policy: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _reference_policy: Vec<Element>,
     /// _include values supported by the server
     #[serde(rename = "searchInclude")]
-    pub search_include: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub search_include: Vec<StringType>,
     /// Extension element for the 'searchInclude' primitive field. Contains metadata and extensions.
     #[serde(rename = "_searchInclude")]
-    pub _search_include: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _search_include: Vec<Element>,
     /// _revinclude values supported by the server
     #[serde(rename = "searchRevInclude")]
-    pub search_rev_include: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub search_rev_include: Vec<StringType>,
     /// Extension element for the 'searchRevInclude' primitive field. Contains metadata and extensions.
     #[serde(rename = "_searchRevInclude")]
-    pub _search_rev_include: Option<Element>,
-}
-/// CapabilityStatementMessaging nested structure for the 'endpoint' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessagingEndpoint {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// http | ftp | mllp +
-    ///
-    /// Binding: extensible (The protocol used for message transport.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/message-transport
-    pub protocol: Coding,
-    /// Network address or identifier of the end-point
-    pub address: StringType,
-    /// Extension element for the 'address' primitive field. Contains metadata and extensions.
-    pub _address: Option<Element>,
-}
-/// CapabilityStatementRestResource nested structure for the 'operation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceOperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name by which the operation/query is invoked
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The defined operation/query
-    pub definition: StringType,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Specific details about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRest nested structure for the 'security' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestSecurity {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Adds CORS Headers (http://enable-cors.org/)
-    pub cors: Option<BooleanType>,
-    /// Extension element for the 'cors' primitive field. Contains metadata and extensions.
-    pub _cors: Option<Element>,
-    /// OAuth | SMART-on-FHIR | NTLM | Basic | Kerberos | Certificates
-    ///
-    /// Binding: extensible (Types of security services used with FHIR.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/restful-security-service
-    pub service: Option<Vec<CodeableConcept>>,
-    /// General description of how security works
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-}
-/// CapabilityStatement nested structure for the 'messaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementMessaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Where messages should be sent
-    pub endpoint: Option<Vec<CapabilityStatementMessagingEndpoint>>,
-    /// Messages supported by this system
-    #[serde(rename = "supportedMessage")]
-    pub supported_message: Option<Vec<CapabilityStatementMessagingSupportedmessage>>,
-    /// Reliable Message Cache Length (min)
-    #[serde(rename = "reliableCache")]
-    pub reliable_cache: Option<UnsignedIntType>,
-    /// Extension element for the 'reliableCache' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_reliableCache")]
-    pub _reliable_cache: Option<Element>,
-    /// Messaging interface behavior details
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRestResource nested structure for the 'searchParam' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestResourceSearchparam {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of search parameter
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Source of definition for parameter
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// number | date | string | token | reference | composite | quantity | uri | special
-    #[serde(rename = "type")]
-    pub type_: SearchParamType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Server-specific usage
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
-}
-/// CapabilityStatementRest nested structure for the 'interaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityStatementRestInteraction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// transaction | batch | search-system | history-system
-    pub code: SystemRestfulInteraction,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Anything special about operation behavior
-    pub documentation: Option<StringType>,
-    /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
-    pub _documentation: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _search_rev_include: Vec<Element>,
 }
 
 impl Default for CapabilityStatement {
@@ -513,25 +545,6 @@ impl Default for CapabilityStatement {
     }
 }
 
-impl Default for CapabilityStatementRest {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            resource: Default::default(),
-            interaction: Default::default(),
-            security: Default::default(),
-            mode: RestfulCapabilityMode::default(),
-            _mode: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-            search_param: Default::default(),
-            operation: Default::default(),
-            compartment: Default::default(),
-            _compartment: Default::default(),
-        }
-    }
-}
-
 impl Default for CapabilityStatementMessagingSupportedmessage {
     fn default() -> Self {
         Self {
@@ -544,7 +557,21 @@ impl Default for CapabilityStatementMessagingSupportedmessage {
     }
 }
 
-impl Default for CapabilityStatementRestResourceInteraction {
+impl Default for CapabilityStatementMessaging {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            endpoint: Default::default(),
+            supported_message: Default::default(),
+            reliable_cache: Default::default(),
+            _reliable_cache: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestInteraction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -552,6 +579,55 @@ impl Default for CapabilityStatementRestResourceInteraction {
             _code: Default::default(),
             documentation: Default::default(),
             _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceSearchparam {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRest {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            security: Default::default(),
+            resource: Default::default(),
+            interaction: Default::default(),
+            mode: RestfulCapabilityMode::default(),
+            _mode: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+            search_param: Default::default(),
+            operation: Default::default(),
+            compartment: Default::default(),
+            _compartment: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementSoftware {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            release_date: Default::default(),
+            _release_date: Default::default(),
         }
     }
 }
@@ -570,16 +646,52 @@ impl Default for CapabilityStatementDocument {
     }
 }
 
-impl Default for CapabilityStatementSoftware {
+impl Default for CapabilityStatementRestSecurity {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: StringType::default(),
+            cors: Default::default(),
+            _cors: Default::default(),
+            service: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceOperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: Default::default(),
             _name: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            release_date: Default::default(),
-            _release_date: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementMessagingEndpoint {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            protocol: Default::default(),
+            address: Default::default(),
+            _address: Default::default(),
+        }
+    }
+}
+
+impl Default for CapabilityStatementRestResourceInteraction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            documentation: Default::default(),
+            _documentation: Default::default(),
         }
     }
 }
@@ -629,86 +741,6 @@ impl Default for CapabilityStatementRestResource {
             _search_include: Default::default(),
             search_rev_include: Default::default(),
             _search_rev_include: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementMessagingEndpoint {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            protocol: Default::default(),
-            address: Default::default(),
-            _address: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceOperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestSecurity {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            cors: Default::default(),
-            _cors: Default::default(),
-            service: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementMessaging {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            endpoint: Default::default(),
-            supported_message: Default::default(),
-            reliable_cache: Default::default(),
-            _reliable_cache: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestResourceSearchparam {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
-        }
-    }
-}
-
-impl Default for CapabilityStatementRestInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            documentation: Default::default(),
-            _documentation: Default::default(),
         }
     }
 }
@@ -1382,13 +1414,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CapabilityState
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -1403,44 +1435,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CapabilityStatem
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1450,16 +1470,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for CapabilityState
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -1489,16 +1506,16 @@ impl crate::traits::capability_statement::CapabilityStatementAccessors for Capab
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -1510,10 +1527,10 @@ impl crate::traits::capability_statement::CapabilityStatementAccessors for Capab
         self.kind.clone()
     }
     fn instantiates(&self) -> &[StringType] {
-        self.instantiates.as_deref().unwrap_or(&[])
+        self.instantiates.as_slice()
     }
     fn imports(&self) -> &[StringType] {
-        self.imports.as_deref().unwrap_or(&[])
+        self.imports.as_slice()
     }
     fn software(&self) -> Option<CapabilityStatementSoftware> {
         self.software.clone()
@@ -1528,19 +1545,19 @@ impl crate::traits::capability_statement::CapabilityStatementAccessors for Capab
         &self.format
     }
     fn patch_format(&self) -> &[Mimetypes] {
-        self.patch_format.as_deref().unwrap_or(&[])
+        self.patch_format.as_slice()
     }
     fn implementation_guide(&self) -> &[StringType] {
-        self.implementation_guide.as_deref().unwrap_or(&[])
+        self.implementation_guide.as_slice()
     }
     fn rest(&self) -> &[CapabilityStatementRest] {
-        self.rest.as_deref().unwrap_or(&[])
+        self.rest.as_slice()
     }
     fn messaging(&self) -> &[CapabilityStatementMessaging] {
-        self.messaging.as_deref().unwrap_or(&[])
+        self.messaging.as_slice()
     }
     fn document(&self) -> &[CapabilityStatementDocument] {
-        self.document.as_deref().unwrap_or(&[])
+        self.document.as_slice()
     }
 }
 
@@ -1590,12 +1607,12 @@ impl crate::traits::capability_statement::CapabilityStatementMutators for Capabi
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1605,25 +1622,22 @@ impl crate::traits::capability_statement::CapabilityStatementMutators for Capabi
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1643,25 +1657,22 @@ impl crate::traits::capability_statement::CapabilityStatementMutators for Capabi
     }
     fn set_instantiates(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates = Some(value);
+        resource.instantiates = value;
         resource
     }
     fn add_instantiates(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates.push(item);
         resource
     }
     fn set_imports(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.imports = Some(value);
+        resource.imports = value;
         resource
     }
     fn add_imports(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.imports.get_or_insert_with(Vec::new).push(item);
+        resource.imports.push(item);
         resource
     }
     fn set_software(self, value: CapabilityStatementSoftware) -> Self {
@@ -1691,58 +1702,52 @@ impl crate::traits::capability_statement::CapabilityStatementMutators for Capabi
     }
     fn set_patch_format(self, value: Vec<Mimetypes>) -> Self {
         let mut resource = self.clone();
-        resource.patch_format = Some(value);
+        resource.patch_format = value;
         resource
     }
     fn add_patch_format(self, item: Mimetypes) -> Self {
         let mut resource = self.clone();
-        resource
-            .patch_format
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.patch_format.push(item);
         resource
     }
     fn set_implementation_guide(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.implementation_guide = Some(value);
+        resource.implementation_guide = value;
         resource
     }
     fn add_implementation_guide(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .implementation_guide
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.implementation_guide.push(item);
         resource
     }
     fn set_rest(self, value: Vec<CapabilityStatementRest>) -> Self {
         let mut resource = self.clone();
-        resource.rest = Some(value);
+        resource.rest = value;
         resource
     }
     fn add_rest(self, item: CapabilityStatementRest) -> Self {
         let mut resource = self.clone();
-        resource.rest.get_or_insert_with(Vec::new).push(item);
+        resource.rest.push(item);
         resource
     }
     fn set_messaging(self, value: Vec<CapabilityStatementMessaging>) -> Self {
         let mut resource = self.clone();
-        resource.messaging = Some(value);
+        resource.messaging = value;
         resource
     }
     fn add_messaging(self, item: CapabilityStatementMessaging) -> Self {
         let mut resource = self.clone();
-        resource.messaging.get_or_insert_with(Vec::new).push(item);
+        resource.messaging.push(item);
         resource
     }
     fn set_document(self, value: Vec<CapabilityStatementDocument>) -> Self {
         let mut resource = self.clone();
-        resource.document = Some(value);
+        resource.document = value;
         resource
     }
     fn add_document(self, item: CapabilityStatementDocument) -> Self {
         let mut resource = self.clone();
-        resource.document.get_or_insert_with(Vec::new).push(item);
+        resource.document.push(item);
         resource
     }
 }
@@ -1773,16 +1778,16 @@ impl crate::traits::capability_statement::CapabilityStatementExistence for Capab
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1794,10 +1799,10 @@ impl crate::traits::capability_statement::CapabilityStatementExistence for Capab
         true
     }
     fn has_instantiates(&self) -> bool {
-        self.instantiates.as_ref().is_some_and(|v| !v.is_empty())
+        !self.instantiates.is_empty()
     }
     fn has_imports(&self) -> bool {
-        self.imports.as_ref().is_some_and(|v| !v.is_empty())
+        !self.imports.is_empty()
     }
     fn has_software(&self) -> bool {
         self.software.is_some()
@@ -1812,21 +1817,19 @@ impl crate::traits::capability_statement::CapabilityStatementExistence for Capab
         !self.format.is_empty()
     }
     fn has_patch_format(&self) -> bool {
-        self.patch_format.as_ref().is_some_and(|v| !v.is_empty())
+        !self.patch_format.is_empty()
     }
     fn has_implementation_guide(&self) -> bool {
-        self.implementation_guide
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.implementation_guide.is_empty()
     }
     fn has_rest(&self) -> bool {
-        self.rest.as_ref().is_some_and(|v| !v.is_empty())
+        !self.rest.is_empty()
     }
     fn has_messaging(&self) -> bool {
-        self.messaging.as_ref().is_some_and(|v| !v.is_empty())
+        !self.messaging.is_empty()
     }
     fn has_document(&self) -> bool {
-        self.document.as_ref().is_some_and(|v| !v.is_empty())
+        !self.document.is_empty()
     }
 }
 

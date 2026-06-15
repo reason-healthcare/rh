@@ -37,7 +37,8 @@ pub struct ChargeItemDefinition {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the charge item definition
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the charge item definition
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -58,20 +59,26 @@ pub struct ChargeItemDefinition {
     pub _title: Option<Element>,
     /// Underlying externally-defined charge item definition
     #[serde(rename = "derivedFromUri")]
-    pub derived_from_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from_uri: Vec<StringType>,
     /// Extension element for the 'derivedFromUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFromUri")]
-    pub _derived_from_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from_uri: Vec<Element>,
     /// A larger definition of which this particular definition is a component or step
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<StringType>,
     /// Extension element for the 'partOf' primitive field. Contains metadata and extensions.
     #[serde(rename = "_partOf")]
-    pub _part_of: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _part_of: Vec<Element>,
     /// Completed or terminated request(s) whose function is taken by this new request
-    pub replaces: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replaces: Vec<StringType>,
     /// Extension element for the 'replaces' primitive field. Contains metadata and extensions.
-    pub _replaces: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _replaces: Vec<Element>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -89,20 +96,23 @@ pub struct ChargeItemDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the charge item definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for charge item definition (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this charge item definition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -136,24 +146,15 @@ pub struct ChargeItemDefinition {
     /// ValueSet: http://hl7.org/fhir/ValueSet/chargeitem-billingcodes
     pub code: Option<CodeableConcept>,
     /// Instances this definition applies to
-    pub instance: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instance: Vec<Reference>,
     /// Whether or not the billing code is applicable
-    pub applicability: Option<Vec<ChargeItemDefinitionApplicability>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub applicability: Vec<ChargeItemDefinitionApplicability>,
     /// Group of properties which are applicable under the same conditions
     #[serde(rename = "propertyGroup")]
-    pub property_group: Option<Vec<ChargeItemDefinitionPropertygroup>>,
-}
-/// ChargeItemDefinition nested structure for the 'propertyGroup' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChargeItemDefinitionPropertygroup {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Conditions under which the priceComponent is applicable
-    pub applicability: Option<Vec<StringType>>,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    pub price_component: Option<Vec<MonetaryComponent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property_group: Vec<ChargeItemDefinitionPropertygroup>,
 }
 /// ChargeItemDefinition nested structure for the 'applicability' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,6 +170,20 @@ pub struct ChargeItemDefinitionApplicability {
     /// Reference to / quotation of the external source of the group of properties
     #[serde(rename = "relatedArtifact")]
     pub related_artifact: Option<RelatedArtifact>,
+}
+/// ChargeItemDefinition nested structure for the 'propertyGroup' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChargeItemDefinitionPropertygroup {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Conditions under which the priceComponent is applicable
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub applicability: Vec<StringType>,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub price_component: Vec<MonetaryComponent>,
 }
 
 impl Default for ChargeItemDefinition {
@@ -223,16 +238,6 @@ impl Default for ChargeItemDefinition {
     }
 }
 
-impl Default for ChargeItemDefinitionPropertygroup {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            applicability: Default::default(),
-            price_component: Default::default(),
-        }
-    }
-}
-
 impl Default for ChargeItemDefinitionApplicability {
     fn default() -> Self {
         Self {
@@ -240,6 +245,16 @@ impl Default for ChargeItemDefinitionApplicability {
             condition: Default::default(),
             effective_period: Default::default(),
             related_artifact: Default::default(),
+        }
+    }
+}
+
+impl Default for ChargeItemDefinitionPropertygroup {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            applicability: Default::default(),
+            price_component: Default::default(),
         }
     }
 }
@@ -460,13 +475,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ChargeItemDefin
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -481,44 +496,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ChargeItemDefini
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -528,16 +531,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ChargeItemDefin
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -546,7 +546,7 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionAccessors for Ch
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -558,13 +558,13 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionAccessors for Ch
         self.title.clone()
     }
     fn derived_from_uri(&self) -> &[StringType] {
-        self.derived_from_uri.as_deref().unwrap_or(&[])
+        self.derived_from_uri.as_slice()
     }
     fn part_of(&self) -> &[StringType] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn replaces(&self) -> &[StringType] {
-        self.replaces.as_deref().unwrap_or(&[])
+        self.replaces.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
@@ -579,16 +579,16 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionAccessors for Ch
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -609,13 +609,13 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionAccessors for Ch
         self.code.clone()
     }
     fn instance(&self) -> &[Reference] {
-        self.instance.as_deref().unwrap_or(&[])
+        self.instance.as_slice()
     }
     fn applicability(&self) -> &[ChargeItemDefinitionApplicability] {
-        self.applicability.as_deref().unwrap_or(&[])
+        self.applicability.as_slice()
     }
     fn property_group(&self) -> &[ChargeItemDefinitionPropertygroup] {
-        self.property_group.as_deref().unwrap_or(&[])
+        self.property_group.as_slice()
     }
 }
 
@@ -630,12 +630,12 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionMutators for Cha
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -655,35 +655,32 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionMutators for Cha
     }
     fn set_derived_from_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from_uri = Some(value);
+        resource.derived_from_uri = value;
         resource
     }
     fn add_derived_from_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from_uri.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_replaces(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.replaces = Some(value);
+        resource.replaces = value;
         resource
     }
     fn add_replaces(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource.replaces.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -708,12 +705,12 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionMutators for Cha
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -723,25 +720,22 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionMutators for Cha
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -776,38 +770,32 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionMutators for Cha
     }
     fn set_instance(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.instance = Some(value);
+        resource.instance = value;
         resource
     }
     fn add_instance(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.instance.get_or_insert_with(Vec::new).push(item);
+        resource.instance.push(item);
         resource
     }
     fn set_applicability(self, value: Vec<ChargeItemDefinitionApplicability>) -> Self {
         let mut resource = self.clone();
-        resource.applicability = Some(value);
+        resource.applicability = value;
         resource
     }
     fn add_applicability(self, item: ChargeItemDefinitionApplicability) -> Self {
         let mut resource = self.clone();
-        resource
-            .applicability
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.applicability.push(item);
         resource
     }
     fn set_property_group(self, value: Vec<ChargeItemDefinitionPropertygroup>) -> Self {
         let mut resource = self.clone();
-        resource.property_group = Some(value);
+        resource.property_group = value;
         resource
     }
     fn add_property_group(self, item: ChargeItemDefinitionPropertygroup) -> Self {
         let mut resource = self.clone();
-        resource
-            .property_group
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.property_group.push(item);
         resource
     }
 }
@@ -820,7 +808,7 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionExistence for Ch
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -832,15 +820,13 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionExistence for Ch
         self.title.is_some()
     }
     fn has_derived_from_uri(&self) -> bool {
-        self.derived_from_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.derived_from_uri.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_replaces(&self) -> bool {
-        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+        !self.replaces.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -855,16 +841,16 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionExistence for Ch
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -885,13 +871,13 @@ impl crate::traits::charge_item_definition::ChargeItemDefinitionExistence for Ch
         self.code.is_some()
     }
     fn has_instance(&self) -> bool {
-        self.instance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.instance.is_empty()
     }
     fn has_applicability(&self) -> bool {
-        self.applicability.as_ref().is_some_and(|v| !v.is_empty())
+        !self.applicability.is_empty()
     }
     fn has_property_group(&self) -> bool {
-        self.property_group.as_ref().is_some_and(|v| !v.is_empty())
+        !self.property_group.is_empty()
     }
 }
 

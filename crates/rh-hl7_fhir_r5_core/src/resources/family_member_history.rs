@@ -31,19 +31,24 @@ pub struct FamilyMemberHistory {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Id(s) for this record
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// partial | completed | entered-in-error | health-unknown
     pub status: HistoryStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -62,7 +67,8 @@ pub struct FamilyMemberHistory {
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
     /// Who or what participated in the activities related to the family member history and how they were involved
-    pub participant: Option<Vec<FamilyMemberHistoryParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<FamilyMemberHistoryParticipant>,
     /// The family member described
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -123,13 +129,17 @@ pub struct FamilyMemberHistory {
     /// Binding: example (Codes indicating why the family member history was done.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// General note about related person
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Condition that the related person had
-    pub condition: Option<Vec<FamilyMemberHistoryCondition>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub condition: Vec<FamilyMemberHistoryCondition>,
     /// Procedures that the related person had
-    pub procedure: Option<Vec<FamilyMemberHistoryProcedure>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub procedure: Vec<FamilyMemberHistoryProcedure>,
 }
 /// FamilyMemberHistory nested structure for the 'procedure' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -171,7 +181,23 @@ pub struct FamilyMemberHistoryProcedure {
     #[serde(rename = "performedDateTime")]
     pub performed_date_time: Option<DateTimeType>,
     /// Extra information about the procedure
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// FamilyMemberHistory nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FamilyMemberHistoryParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of involvement
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
+    pub function: Option<CodeableConcept>,
+    /// Who or what participated in the activities related to the family member history
+    pub actor: Reference,
 }
 /// FamilyMemberHistory nested structure for the 'condition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -211,22 +237,8 @@ pub struct FamilyMemberHistoryCondition {
     #[serde(rename = "onsetString")]
     pub onset_string: Option<StringType>,
     /// Extra information about condition
-    pub note: Option<Vec<Annotation>>,
-}
-/// FamilyMemberHistory nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FamilyMemberHistoryParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of involvement
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/participation-role-type
-    pub function: Option<CodeableConcept>,
-    /// Who or what participated in the activities related to the family member history
-    pub actor: Reference,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 
 impl Default for FamilyMemberHistory {
@@ -288,6 +300,16 @@ impl Default for FamilyMemberHistoryProcedure {
     }
 }
 
+impl Default for FamilyMemberHistoryParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for FamilyMemberHistoryCondition {
     fn default() -> Self {
         Self {
@@ -301,16 +323,6 @@ impl Default for FamilyMemberHistoryCondition {
             onset_period: Default::default(),
             onset_string: Default::default(),
             note: Default::default(),
-        }
-    }
-}
-
-impl Default for FamilyMemberHistoryParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
         }
     }
 }
@@ -556,13 +568,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for FamilyMemberHis
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -577,44 +589,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for FamilyMemberHist
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -624,28 +624,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for FamilyMemberHis
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::family_member_history::FamilyMemberHistoryAccessors for FamilyMemberHistory {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn status(&self) -> HistoryStatus {
         self.status.clone()
@@ -660,7 +657,7 @@ impl crate::traits::family_member_history::FamilyMemberHistoryAccessors for Fami
         self.date.clone()
     }
     fn participant(&self) -> &[FamilyMemberHistoryParticipant] {
-        self.participant.as_deref().unwrap_or(&[])
+        self.participant.as_slice()
     }
     fn name(&self) -> Option<StringType> {
         self.name.clone()
@@ -675,16 +672,16 @@ impl crate::traits::family_member_history::FamilyMemberHistoryAccessors for Fami
         self.estimated_age
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn condition(&self) -> &[FamilyMemberHistoryCondition] {
-        self.condition.as_deref().unwrap_or(&[])
+        self.condition.as_slice()
     }
     fn procedure(&self) -> &[FamilyMemberHistoryProcedure] {
-        self.procedure.as_deref().unwrap_or(&[])
+        self.procedure.as_slice()
     }
 }
 
@@ -694,38 +691,32 @@ impl crate::traits::family_member_history::FamilyMemberHistoryMutators for Famil
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_status(self, value: HistoryStatus) -> Self {
@@ -750,12 +741,12 @@ impl crate::traits::family_member_history::FamilyMemberHistoryMutators for Famil
     }
     fn set_participant(self, value: Vec<FamilyMemberHistoryParticipant>) -> Self {
         let mut resource = self.clone();
-        resource.participant = Some(value);
+        resource.participant = value;
         resource
     }
     fn add_participant(self, item: FamilyMemberHistoryParticipant) -> Self {
         let mut resource = self.clone();
-        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource.participant.push(item);
         resource
     }
     fn set_name(self, value: String) -> Self {
@@ -780,49 +771,49 @@ impl crate::traits::family_member_history::FamilyMemberHistoryMutators for Famil
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_condition(self, value: Vec<FamilyMemberHistoryCondition>) -> Self {
         let mut resource = self.clone();
-        resource.condition = Some(value);
+        resource.condition = value;
         resource
     }
     fn add_condition(self, item: FamilyMemberHistoryCondition) -> Self {
         let mut resource = self.clone();
-        resource.condition.get_or_insert_with(Vec::new).push(item);
+        resource.condition.push(item);
         resource
     }
     fn set_procedure(self, value: Vec<FamilyMemberHistoryProcedure>) -> Self {
         let mut resource = self.clone();
-        resource.procedure = Some(value);
+        resource.procedure = value;
         resource
     }
     fn add_procedure(self, item: FamilyMemberHistoryProcedure) -> Self {
         let mut resource = self.clone();
-        resource.procedure.get_or_insert_with(Vec::new).push(item);
+        resource.procedure.push(item);
         resource
     }
 }
 
 impl crate::traits::family_member_history::FamilyMemberHistoryExistence for FamilyMemberHistory {
-    fn has_age(&self) -> bool {
-        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
+    fn has_born(&self) -> bool {
+        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
     }
     fn has_deceased(&self) -> bool {
         self.deceased_boolean.is_some()
@@ -831,21 +822,17 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
             || self.deceased_date.is_some()
             || self.deceased_string.is_some()
     }
-    fn has_born(&self) -> bool {
-        self.born_period.is_some() || self.born_date.is_some() || self.born_string.is_some()
+    fn has_age(&self) -> bool {
+        self.age_age.is_some() || self.age_range.is_some() || self.age_string.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -860,7 +847,7 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
         self.date.is_some()
     }
     fn has_participant(&self) -> bool {
-        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.participant.is_empty()
     }
     fn has_name(&self) -> bool {
         self.name.is_some()
@@ -875,16 +862,16 @@ impl crate::traits::family_member_history::FamilyMemberHistoryExistence for Fami
         self.estimated_age.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_condition(&self) -> bool {
-        self.condition.as_ref().is_some_and(|v| !v.is_empty())
+        !self.condition.is_empty()
     }
     fn has_procedure(&self) -> bool {
-        self.procedure.as_ref().is_some_and(|v| !v.is_empty())
+        !self.procedure.is_empty()
     }
 }
 

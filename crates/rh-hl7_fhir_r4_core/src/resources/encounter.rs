@@ -5,6 +5,7 @@ use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::coding::Coding;
 use crate::datatypes::duration::Duration;
 use crate::datatypes::element::Element;
+use crate::datatypes::extension::Extension;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::period::Period;
 use crate::datatypes::reference::Reference;
@@ -27,14 +28,16 @@ pub struct Encounter {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Identifier(s) by which this encounter is known
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
     pub status: EncounterStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// List of past encounter statuses
     #[serde(rename = "statusHistory")]
-    pub status_history: Option<Vec<EncounterStatushistory>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub status_history: Vec<EncounterStatushistory>,
     /// Classification of patient encounter
     ///
     /// Binding: extensible (Classification of the encounter.)
@@ -43,14 +46,16 @@ pub struct Encounter {
     pub class: Coding,
     /// List of past encounter classes
     #[serde(rename = "classHistory")]
-    pub class_history: Option<Vec<EncounterClasshistory>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub class_history: Vec<EncounterClasshistory>,
     /// Specific type of encounter
     ///
     /// Binding: example (The type of encounter.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Specific type of service
     ///
     /// Binding: example (Broad categorization of the service that is to be provided.)
@@ -68,14 +73,18 @@ pub struct Encounter {
     pub subject: Option<Reference>,
     /// Episode(s) of care that this encounter should be recorded against
     #[serde(rename = "episodeOfCare")]
-    pub episode_of_care: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub episode_of_care: Vec<Reference>,
     /// The ServiceRequest that initiated this encounter
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// List of participants involved in the encounter
-    pub participant: Option<Vec<EncounterParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<EncounterParticipant>,
     /// The appointment that scheduled this encounter
-    pub appointment: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub appointment: Vec<Reference>,
     /// The start and end time of the encounter
     pub period: Option<Period>,
     /// Quantity of time the encounter lasted (less time absent)
@@ -86,80 +95,29 @@ pub struct Encounter {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-reason
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Reason the encounter takes place (reference)
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// The list of diagnosis relevant to this encounter
-    pub diagnosis: Option<Vec<EncounterDiagnosis>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnosis: Vec<EncounterDiagnosis>,
     /// The set of accounts that may be used for billing for this Encounter
-    pub account: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub account: Vec<Reference>,
     /// Details about the admission to a healthcare service
     pub hospitalization: Option<EncounterHospitalization>,
     /// List of locations where the patient has been
-    pub location: Option<Vec<EncounterLocation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<EncounterLocation>,
     /// The organization (facility) responsible for this encounter
     #[serde(rename = "serviceProvider")]
     pub service_provider: Option<Reference>,
     /// Another Encounter this encounter is part of
     #[serde(rename = "partOf")]
     pub part_of: Option<Reference>,
-}
-/// Encounter nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The diagnosis or procedure relevant to the encounter
-    pub condition: Reference,
-    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
-    ///
-    /// Binding: preferred (The type of diagnosis this condition represents.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/diagnosis-role
-    #[serde(rename = "use")]
-    pub use_: Option<CodeableConcept>,
-    /// Ranking of the diagnosis (for each role type)
-    pub rank: Option<PositiveIntType>,
-    /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
-    pub _rank: Option<Element>,
-}
-/// Encounter nested structure for the 'classHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterClasshistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// inpatient | outpatient | ambulatory | emergency +
-    ///
-    /// Binding: extensible (Classification of the encounter.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActEncounterCode
-    pub class: Coding,
-    /// The time that the episode was in the specified class
-    pub period: Period,
-}
-/// Encounter nested structure for the 'participant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterParticipant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Role of participant in encounter
-    ///
-    /// Binding: extensible (Role of participant in encounter.)
-    ///
-    /// Available values:
-    /// - `SPRF`
-    /// - `PPRF`
-    /// - `PART`
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
-    /// Period of time during the encounter that the participant participated
-    pub period: Option<Period>,
-    /// Persons involved in the encounter other than the patient
-    pub individual: Option<Reference>,
 }
 /// Encounter nested structure for the 'hospitalization' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -192,7 +150,8 @@ pub struct EncounterHospitalization {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-diet
     #[serde(rename = "dietPreference")]
-    pub diet_preference: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diet_preference: Vec<CodeableConcept>,
     /// Special courtesies (VIP, board member)
     ///
     /// Binding: preferred (Special courtesies.)
@@ -205,14 +164,16 @@ pub struct EncounterHospitalization {
     /// - `VIP`
     /// - `UNK`
     #[serde(rename = "specialCourtesy")]
-    pub special_courtesy: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub special_courtesy: Vec<CodeableConcept>,
     /// Wheelchair, translator, stretcher, etc.
     ///
     /// Binding: preferred (Special arrangements.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-special-arrangements
     #[serde(rename = "specialArrangement")]
-    pub special_arrangement: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub special_arrangement: Vec<CodeableConcept>,
     /// Location/organization to which the patient is discharged
     pub destination: Option<Reference>,
     /// Category or kind of location after discharge
@@ -222,6 +183,108 @@ pub struct EncounterHospitalization {
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-discharge-disposition
     #[serde(rename = "dischargeDisposition")]
     pub discharge_disposition: Option<CodeableConcept>,
+}
+/// Encounter nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The diagnosis or procedure relevant to the encounter
+    pub condition: Reference,
+    /// Role that this diagnosis has within the encounter (e.g. admission, billing, discharge …)
+    ///
+    /// Binding: preferred (The type of diagnosis this condition represents.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/diagnosis-role
+    #[serde(rename = "use")]
+    pub use_: Option<CodeableConcept>,
+    /// Ranking of the diagnosis (for each role type)
+    pub rank: Option<PositiveIntType>,
+    /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
+    pub _rank: Option<Element>,
+}
+/// reasonCancelled
+///
+/// If the encountered was cancelled after it was planned, why? Applies only if the status is cancelled.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/encounter-reasonCancelled
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterReasonCancelled {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Encounter nested structure for the 'statusHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterStatushistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
+    pub status: EncounterStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// The time that the episode was in the specified status
+    pub period: Period,
+}
+/// Encounter nested structure for the 'participant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterParticipant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Role of participant in encounter
+    ///
+    /// Binding: extensible (Role of participant in encounter.)
+    ///
+    /// Available values:
+    /// - `SPRF`
+    /// - `PPRF`
+    /// - `PART`
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
+    /// Period of time during the encounter that the participant participated
+    pub period: Option<Period>,
+    /// Persons involved in the encounter other than the patient
+    pub individual: Option<Reference>,
+}
+/// modeOfArrival
+///
+/// Identifies whether a patient arrives at the reporting facility via ambulance and the type of ambulance that was used.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/encounter-modeOfArrival
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterModeOfArrival {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Encounter nested structure for the 'classHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncounterClasshistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// inpatient | outpatient | ambulatory | emergency +
+    ///
+    /// Binding: extensible (Classification of the encounter.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ActEncounterCode
+    pub class: Coding,
+    /// The time that the episode was in the specified class
+    pub period: Period,
 }
 /// Encounter nested structure for the 'location' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -245,18 +308,21 @@ pub struct EncounterLocation {
     /// Time period during which the patient was present at the location
     pub period: Option<Period>,
 }
-/// Encounter nested structure for the 'statusHistory' field
+/// associatedEncounter
+///
+/// This encounter occurs within the scope of the referenced encounter.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/encounter-associatedEncounter
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncounterStatushistory {
+pub struct EncounterAssociatedEncounter {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | arrived | triaged | in-progress | onleave | finished | cancelled +
-    pub status: EncounterStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// The time that the episode was in the specified status
-    pub period: Period,
+    pub base: Extension,
 }
 
 impl Default for Encounter {
@@ -291,39 +357,6 @@ impl Default for Encounter {
     }
 }
 
-impl Default for EncounterDiagnosis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            condition: Reference::default(),
-            use_: Default::default(),
-            rank: Default::default(),
-            _rank: Default::default(),
-        }
-    }
-}
-
-impl Default for EncounterClasshistory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            class: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for EncounterParticipant {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            period: Default::default(),
-            individual: Default::default(),
-        }
-    }
-}
-
 impl Default for EncounterHospitalization {
     fn default() -> Self {
         Self {
@@ -341,6 +374,66 @@ impl Default for EncounterHospitalization {
     }
 }
 
+impl Default for EncounterDiagnosis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            condition: Reference::default(),
+            use_: Default::default(),
+            rank: Default::default(),
+            _rank: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterReasonCancelled {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for EncounterStatushistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterParticipant {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            period: Default::default(),
+            individual: Default::default(),
+        }
+    }
+}
+
+impl Default for EncounterModeOfArrival {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for EncounterClasshistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            class: Default::default(),
+            period: Default::default(),
+        }
+    }
+}
+
 impl Default for EncounterLocation {
     fn default() -> Self {
         Self {
@@ -354,13 +447,10 @@ impl Default for EncounterLocation {
     }
 }
 
-impl Default for EncounterStatushistory {
+impl Default for EncounterAssociatedEncounter {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            period: Default::default(),
+            base: Extension::default(),
         }
     }
 }
@@ -605,13 +695,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Encounter {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -626,44 +716,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Encounter {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -673,37 +751,34 @@ impl crate::traits::domain_resource::DomainResourceExistence for Encounter {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::encounter::EncounterAccessors for Encounter {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> EncounterStatus {
         self.status.clone()
     }
     fn status_history(&self) -> &[EncounterStatushistory] {
-        self.status_history.as_deref().unwrap_or(&[])
+        self.status_history.as_slice()
     }
     fn class(&self) -> Coding {
         self.class.clone()
     }
     fn class_history(&self) -> &[EncounterClasshistory] {
-        self.class_history.as_deref().unwrap_or(&[])
+        self.class_history.as_slice()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn service_type(&self) -> Option<CodeableConcept> {
         self.service_type.clone()
@@ -715,16 +790,16 @@ impl crate::traits::encounter::EncounterAccessors for Encounter {
         self.subject.clone()
     }
     fn episode_of_care(&self) -> &[Reference] {
-        self.episode_of_care.as_deref().unwrap_or(&[])
+        self.episode_of_care.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn participant(&self) -> &[EncounterParticipant] {
-        self.participant.as_deref().unwrap_or(&[])
+        self.participant.as_slice()
     }
     fn appointment(&self) -> &[Reference] {
-        self.appointment.as_deref().unwrap_or(&[])
+        self.appointment.as_slice()
     }
     fn period(&self) -> Option<Period> {
         self.period.clone()
@@ -733,22 +808,22 @@ impl crate::traits::encounter::EncounterAccessors for Encounter {
         self.length.clone()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn diagnosis(&self) -> &[EncounterDiagnosis] {
-        self.diagnosis.as_deref().unwrap_or(&[])
+        self.diagnosis.as_slice()
     }
     fn account(&self) -> &[Reference] {
-        self.account.as_deref().unwrap_or(&[])
+        self.account.as_slice()
     }
     fn hospitalization(&self) -> Option<EncounterHospitalization> {
         self.hospitalization.clone()
     }
     fn location(&self) -> &[EncounterLocation] {
-        self.location.as_deref().unwrap_or(&[])
+        self.location.as_slice()
     }
     fn service_provider(&self) -> Option<Reference> {
         self.service_provider.clone()
@@ -764,12 +839,12 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: EncounterStatus) -> Self {
@@ -779,15 +854,12 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
     }
     fn set_status_history(self, value: Vec<EncounterStatushistory>) -> Self {
         let mut resource = self.clone();
-        resource.status_history = Some(value);
+        resource.status_history = value;
         resource
     }
     fn add_status_history(self, item: EncounterStatushistory) -> Self {
         let mut resource = self.clone();
-        resource
-            .status_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.status_history.push(item);
         resource
     }
     fn set_class(self, value: Coding) -> Self {
@@ -797,25 +869,22 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
     }
     fn set_class_history(self, value: Vec<EncounterClasshistory>) -> Self {
         let mut resource = self.clone();
-        resource.class_history = Some(value);
+        resource.class_history = value;
         resource
     }
     fn add_class_history(self, item: EncounterClasshistory) -> Self {
         let mut resource = self.clone();
-        resource
-            .class_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.class_history.push(item);
         resource
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_service_type(self, value: CodeableConcept) -> Self {
@@ -835,45 +904,42 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
     }
     fn set_episode_of_care(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.episode_of_care = Some(value);
+        resource.episode_of_care = value;
         resource
     }
     fn add_episode_of_care(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .episode_of_care
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.episode_of_care.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_participant(self, value: Vec<EncounterParticipant>) -> Self {
         let mut resource = self.clone();
-        resource.participant = Some(value);
+        resource.participant = value;
         resource
     }
     fn add_participant(self, item: EncounterParticipant) -> Self {
         let mut resource = self.clone();
-        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource.participant.push(item);
         resource
     }
     fn set_appointment(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.appointment = Some(value);
+        resource.appointment = value;
         resource
     }
     fn add_appointment(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.appointment.get_or_insert_with(Vec::new).push(item);
+        resource.appointment.push(item);
         resource
     }
     fn set_period(self, value: Period) -> Self {
@@ -888,45 +954,42 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_diagnosis(self, value: Vec<EncounterDiagnosis>) -> Self {
         let mut resource = self.clone();
-        resource.diagnosis = Some(value);
+        resource.diagnosis = value;
         resource
     }
     fn add_diagnosis(self, item: EncounterDiagnosis) -> Self {
         let mut resource = self.clone();
-        resource.diagnosis.get_or_insert_with(Vec::new).push(item);
+        resource.diagnosis.push(item);
         resource
     }
     fn set_account(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.account = Some(value);
+        resource.account = value;
         resource
     }
     fn add_account(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.account.get_or_insert_with(Vec::new).push(item);
+        resource.account.push(item);
         resource
     }
     fn set_hospitalization(self, value: EncounterHospitalization) -> Self {
@@ -936,12 +999,12 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
     }
     fn set_location(self, value: Vec<EncounterLocation>) -> Self {
         let mut resource = self.clone();
-        resource.location = Some(value);
+        resource.location = value;
         resource
     }
     fn add_location(self, item: EncounterLocation) -> Self {
         let mut resource = self.clone();
-        resource.location.get_or_insert_with(Vec::new).push(item);
+        resource.location.push(item);
         resource
     }
     fn set_service_provider(self, value: Reference) -> Self {
@@ -958,22 +1021,22 @@ impl crate::traits::encounter::EncounterMutators for Encounter {
 
 impl crate::traits::encounter::EncounterExistence for Encounter {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_status_history(&self) -> bool {
-        self.status_history.as_ref().is_some_and(|v| !v.is_empty())
+        !self.status_history.is_empty()
     }
     fn has_class(&self) -> bool {
         true
     }
     fn has_class_history(&self) -> bool {
-        self.class_history.as_ref().is_some_and(|v| !v.is_empty())
+        !self.class_history.is_empty()
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_service_type(&self) -> bool {
         self.service_type.is_some()
@@ -985,16 +1048,16 @@ impl crate::traits::encounter::EncounterExistence for Encounter {
         self.subject.is_some()
     }
     fn has_episode_of_care(&self) -> bool {
-        self.episode_of_care.as_ref().is_some_and(|v| !v.is_empty())
+        !self.episode_of_care.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_participant(&self) -> bool {
-        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.participant.is_empty()
     }
     fn has_appointment(&self) -> bool {
-        self.appointment.as_ref().is_some_and(|v| !v.is_empty())
+        !self.appointment.is_empty()
     }
     fn has_period(&self) -> bool {
         self.period.is_some()
@@ -1003,24 +1066,22 @@ impl crate::traits::encounter::EncounterExistence for Encounter {
         self.length.is_some()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_diagnosis(&self) -> bool {
-        self.diagnosis.as_ref().is_some_and(|v| !v.is_empty())
+        !self.diagnosis.is_empty()
     }
     fn has_account(&self) -> bool {
-        self.account.as_ref().is_some_and(|v| !v.is_empty())
+        !self.account.is_empty()
     }
     fn has_hospitalization(&self) -> bool {
         self.hospitalization.is_some()
     }
     fn has_location(&self) -> bool {
-        self.location.as_ref().is_some_and(|v| !v.is_empty())
+        !self.location.is_empty()
     }
     fn has_service_provider(&self) -> bool {
         self.service_provider.is_some()

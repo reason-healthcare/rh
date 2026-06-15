@@ -59,16 +59,20 @@ pub struct SpecimenDefinition {
     pub _title: Option<Element>,
     /// Based on FHIR definition of another SpecimenDefinition
     #[serde(rename = "derivedFromCanonical")]
-    pub derived_from_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from_canonical: Vec<StringType>,
     /// Extension element for the 'derivedFromCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFromCanonical")]
-    pub _derived_from_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from_canonical: Vec<Element>,
     /// Based on external definition
     #[serde(rename = "derivedFromUri")]
-    pub derived_from_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from_uri: Vec<StringType>,
     /// Extension element for the 'derivedFromUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFromUri")]
-    pub _derived_from_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from_uri: Vec<Element>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -92,20 +96,23 @@ pub struct SpecimenDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the SpecimenDefinition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Content intends to support these contexts
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for this SpecimenDefinition (if applicable)
     ///
     /// Binding: extensible (Codes for country, country subdivision and region for indicating where a resource is intended to be used.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this SpecimenDefinition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -148,7 +155,8 @@ pub struct SpecimenDefinition {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/prepare-patient-prior-specimen-collection
     #[serde(rename = "patientPreparation")]
-    pub patient_preparation: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patient_preparation: Vec<CodeableConcept>,
     /// Time aspect for collection
     #[serde(rename = "timeAspect")]
     pub time_aspect: Option<StringType>,
@@ -170,10 +178,25 @@ pub struct SpecimenDefinition {
     /// - `70777001`: Urine specimen collection, catheterized
     /// - `386089008`: Collection of coughed sputum
     /// - `278450005`: Finger-prick sampling
-    pub collection: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub collection: Vec<CodeableConcept>,
     /// Specimen in container intended for testing by lab
     #[serde(rename = "typeTested")]
-    pub type_tested: Option<Vec<SpecimenDefinitionTypetested>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_tested: Vec<SpecimenDefinitionTypetested>,
+}
+/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedContainerAdditive {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additive associated with container (CodeableConcept)
+    #[serde(rename = "additiveCodeableConcept")]
+    pub additive_codeable_concept: CodeableConcept,
+    /// Additive associated with container (Reference)
+    #[serde(rename = "additiveReference")]
+    pub additive_reference: Reference,
 }
 /// SpecimenDefinitionTypetested nested structure for the 'container' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,6 +243,30 @@ pub struct SpecimenDefinitionTypetestedContainer {
     /// Extension element for the 'preparation' primitive field. Contains metadata and extensions.
     pub _preparation: Option<Element>,
 }
+/// SpecimenDefinitionTypetested nested structure for the 'handling' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecimenDefinitionTypetestedHandling {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Qualifies the interval of temperature
+    ///
+    /// Binding: example (Set of handling instructions prior testing of the specimen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
+    #[serde(rename = "temperatureQualifier")]
+    pub temperature_qualifier: Option<CodeableConcept>,
+    /// Temperature range for these handling instructions
+    #[serde(rename = "temperatureRange")]
+    pub temperature_range: Option<Range>,
+    /// Maximum preservation time
+    #[serde(rename = "maxDuration")]
+    pub max_duration: Option<Duration>,
+    /// Preservation instruction
+    pub instruction: Option<StringType>,
+    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
+    pub _instruction: Option<Element>,
+}
 /// SpecimenDefinition nested structure for the 'typeTested' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecimenDefinitionTypetested {
@@ -229,7 +276,8 @@ pub struct SpecimenDefinitionTypetested {
     /// The specimen's container
     pub container: Option<SpecimenDefinitionTypetestedContainer>,
     /// Specimen handling before testing
-    pub handling: Option<Vec<SpecimenDefinitionTypetestedHandling>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub handling: Vec<SpecimenDefinitionTypetestedHandling>,
     /// Primary or secondary specimen
     #[serde(rename = "isDerived")]
     pub is_derived: Option<BooleanType>,
@@ -266,51 +314,16 @@ pub struct SpecimenDefinitionTypetested {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/rejection-criteria
     #[serde(rename = "rejectionCriterion")]
-    pub rejection_criterion: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rejection_criterion: Vec<CodeableConcept>,
     /// Where the specimen will be tested
     ///
     /// Binding: example (Codes specifying where the specimen will be tested.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/diagnostic-service-sections
     #[serde(rename = "testingDestination")]
-    pub testing_destination: Option<Vec<CodeableConcept>>,
-}
-/// SpecimenDefinitionTypetested nested structure for the 'handling' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedHandling {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Qualifies the interval of temperature
-    ///
-    /// Binding: example (Set of handling instructions prior testing of the specimen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/handling-condition
-    #[serde(rename = "temperatureQualifier")]
-    pub temperature_qualifier: Option<CodeableConcept>,
-    /// Temperature range for these handling instructions
-    #[serde(rename = "temperatureRange")]
-    pub temperature_range: Option<Range>,
-    /// Maximum preservation time
-    #[serde(rename = "maxDuration")]
-    pub max_duration: Option<Duration>,
-    /// Preservation instruction
-    pub instruction: Option<StringType>,
-    /// Extension element for the 'instruction' primitive field. Contains metadata and extensions.
-    pub _instruction: Option<Element>,
-}
-/// SpecimenDefinitionTypetestedContainer nested structure for the 'additive' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpecimenDefinitionTypetestedContainerAdditive {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additive associated with container (CodeableConcept)
-    #[serde(rename = "additiveCodeableConcept")]
-    pub additive_codeable_concept: CodeableConcept,
-    /// Additive associated with container (Reference)
-    #[serde(rename = "additiveReference")]
-    pub additive_reference: Reference,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub testing_destination: Vec<CodeableConcept>,
 }
 
 impl Default for SpecimenDefinition {
@@ -368,6 +381,16 @@ impl Default for SpecimenDefinition {
     }
 }
 
+impl Default for SpecimenDefinitionTypetestedContainerAdditive {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            additive_codeable_concept: Default::default(),
+            additive_reference: Default::default(),
+        }
+    }
+}
+
 impl Default for SpecimenDefinitionTypetestedContainer {
     fn default() -> Self {
         Self {
@@ -382,6 +405,19 @@ impl Default for SpecimenDefinitionTypetestedContainer {
             minimum_volume_string: Default::default(),
             preparation: Default::default(),
             _preparation: Default::default(),
+        }
+    }
+}
+
+impl Default for SpecimenDefinitionTypetestedHandling {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            temperature_qualifier: Default::default(),
+            temperature_range: Default::default(),
+            max_duration: Default::default(),
+            instruction: Default::default(),
+            _instruction: Default::default(),
         }
     }
 }
@@ -404,29 +440,6 @@ impl Default for SpecimenDefinitionTypetested {
             _single_use: Default::default(),
             rejection_criterion: Default::default(),
             testing_destination: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenDefinitionTypetestedHandling {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            temperature_qualifier: Default::default(),
-            temperature_range: Default::default(),
-            max_duration: Default::default(),
-            instruction: Default::default(),
-            _instruction: Default::default(),
-        }
-    }
-}
-
-impl Default for SpecimenDefinitionTypetestedContainerAdditive {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            additive_codeable_concept: Default::default(),
-            additive_reference: Default::default(),
         }
     }
 }
@@ -775,13 +788,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SpecimenDefinit
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -796,44 +809,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SpecimenDefiniti
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -843,16 +844,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SpecimenDefinit
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -873,10 +871,10 @@ impl crate::traits::specimen_definition::SpecimenDefinitionAccessors for Specime
         self.title.clone()
     }
     fn derived_from_canonical(&self) -> &[StringType] {
-        self.derived_from_canonical.as_deref().unwrap_or(&[])
+        self.derived_from_canonical.as_slice()
     }
     fn derived_from_uri(&self) -> &[StringType] {
-        self.derived_from_uri.as_deref().unwrap_or(&[])
+        self.derived_from_uri.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
@@ -891,16 +889,16 @@ impl crate::traits::specimen_definition::SpecimenDefinitionAccessors for Specime
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -924,16 +922,16 @@ impl crate::traits::specimen_definition::SpecimenDefinitionAccessors for Specime
         self.type_collected.clone()
     }
     fn patient_preparation(&self) -> &[CodeableConcept] {
-        self.patient_preparation.as_deref().unwrap_or(&[])
+        self.patient_preparation.as_slice()
     }
     fn time_aspect(&self) -> Option<StringType> {
         self.time_aspect.clone()
     }
     fn collection(&self) -> &[CodeableConcept] {
-        self.collection.as_deref().unwrap_or(&[])
+        self.collection.as_slice()
     }
     fn type_tested(&self) -> &[SpecimenDefinitionTypetested] {
-        self.type_tested.as_deref().unwrap_or(&[])
+        self.type_tested.as_slice()
     }
 }
 
@@ -968,28 +966,22 @@ impl crate::traits::specimen_definition::SpecimenDefinitionMutators for Specimen
     }
     fn set_derived_from_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from_canonical = Some(value);
+        resource.derived_from_canonical = value;
         resource
     }
     fn add_derived_from_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from_canonical.push(item);
         resource
     }
     fn set_derived_from_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from_uri = Some(value);
+        resource.derived_from_uri = value;
         resource
     }
     fn add_derived_from_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from_uri.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -1014,12 +1006,12 @@ impl crate::traits::specimen_definition::SpecimenDefinitionMutators for Specimen
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1029,25 +1021,22 @@ impl crate::traits::specimen_definition::SpecimenDefinitionMutators for Specimen
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1087,15 +1076,12 @@ impl crate::traits::specimen_definition::SpecimenDefinitionMutators for Specimen
     }
     fn set_patient_preparation(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.patient_preparation = Some(value);
+        resource.patient_preparation = value;
         resource
     }
     fn add_patient_preparation(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .patient_preparation
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.patient_preparation.push(item);
         resource
     }
     fn set_time_aspect(self, value: String) -> Self {
@@ -1105,22 +1091,22 @@ impl crate::traits::specimen_definition::SpecimenDefinitionMutators for Specimen
     }
     fn set_collection(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.collection = Some(value);
+        resource.collection = value;
         resource
     }
     fn add_collection(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.collection.get_or_insert_with(Vec::new).push(item);
+        resource.collection.push(item);
         resource
     }
     fn set_type_tested(self, value: Vec<SpecimenDefinitionTypetested>) -> Self {
         let mut resource = self.clone();
-        resource.type_tested = Some(value);
+        resource.type_tested = value;
         resource
     }
     fn add_type_tested(self, item: SpecimenDefinitionTypetested) -> Self {
         let mut resource = self.clone();
-        resource.type_tested.get_or_insert_with(Vec::new).push(item);
+        resource.type_tested.push(item);
         resource
     }
 }
@@ -1148,14 +1134,10 @@ impl crate::traits::specimen_definition::SpecimenDefinitionExistence for Specime
         self.title.is_some()
     }
     fn has_derived_from_canonical(&self) -> bool {
-        self.derived_from_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.derived_from_canonical.is_empty()
     }
     fn has_derived_from_uri(&self) -> bool {
-        self.derived_from_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.derived_from_uri.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1170,16 +1152,16 @@ impl crate::traits::specimen_definition::SpecimenDefinitionExistence for Specime
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1203,18 +1185,16 @@ impl crate::traits::specimen_definition::SpecimenDefinitionExistence for Specime
         self.type_collected.is_some()
     }
     fn has_patient_preparation(&self) -> bool {
-        self.patient_preparation
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.patient_preparation.is_empty()
     }
     fn has_time_aspect(&self) -> bool {
         self.time_aspect.is_some()
     }
     fn has_collection(&self) -> bool {
-        self.collection.as_ref().is_some_and(|v| !v.is_empty())
+        !self.collection.is_empty()
     }
     fn has_type_tested(&self) -> bool {
-        self.type_tested.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_tested.is_empty()
     }
 }
 

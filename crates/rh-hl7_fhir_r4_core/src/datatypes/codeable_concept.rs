@@ -18,7 +18,8 @@ pub struct CodeableConcept {
     #[serde(flatten)]
     pub base: Element,
     /// Code defined by a terminology system
-    pub coding: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coding: Vec<Coding>,
     /// Plain text representation of the concept
     pub text: Option<StringType>,
     /// Extension element for the 'text' primitive field. Contains metadata and extensions.

@@ -31,7 +31,8 @@ pub struct Consent {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Identifier for this record (external references)
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | proposed | active | rejected | inactive | entered-in-error
     pub status: ConsentStateCodes,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -61,9 +62,11 @@ pub struct Consent {
     #[serde(rename = "_dateTime")]
     pub _date_time: Option<Element>,
     /// Who is agreeing to the policy and rules
-    pub performer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<Reference>,
     /// Custodian of the consent
-    pub organization: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub organization: Vec<Reference>,
     /// Source from which this consent is taken (Attachment)
     #[serde(rename = "sourceAttachment")]
     pub source_attachment: Option<Attachment>,
@@ -71,7 +74,8 @@ pub struct Consent {
     #[serde(rename = "sourceReference")]
     pub source_reference: Option<Reference>,
     /// Policies covered by this consent
-    pub policy: Option<Vec<ConsentPolicy>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub policy: Vec<ConsentPolicy>,
     /// Regulation that this consents to
     ///
     /// Binding: extensible (Regulatory policy examples.)
@@ -80,9 +84,138 @@ pub struct Consent {
     #[serde(rename = "policyRule")]
     pub policy_rule: Option<CodeableConcept>,
     /// Consent Verified by patient or family
-    pub verification: Option<Vec<ConsentVerification>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub verification: Vec<ConsentVerification>,
     /// Constraints to the base Consent.policyRule
     pub provision: Option<ConsentProvision>,
+}
+/// Consent nested structure for the 'policy' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentPolicy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Enforcement source for policy
+    pub authority: Option<StringType>,
+    /// Extension element for the 'authority' primitive field. Contains metadata and extensions.
+    pub _authority: Option<Element>,
+    /// Specific policy covered by this consent
+    pub uri: Option<StringType>,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+}
+/// Consent nested structure for the 'provision' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentProvision {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Data controlled by this rule
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<ConsentProvisionData>,
+    /// Who|what controlled by this rule (or group, by role)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actor: Vec<ConsentProvisionActor>,
+    /// deny | permit
+    #[serde(rename = "type")]
+    pub type_: Option<ConsentProvisionType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Timeframe for this rule
+    pub period: Option<Period>,
+    /// Actions controlled by this rule
+    ///
+    /// Binding: example (Detailed codes for the consent action.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-action
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub action: Vec<CodeableConcept>,
+    /// Security Labels that define affected resources
+    ///
+    /// Binding: extensible (Security Labels from the Healthcare Privacy and Security Classification System.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/security-labels
+    #[serde(rename = "securityLabel")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security_label: Vec<Coding>,
+    /// Context of activities covered by this rule
+    ///
+    /// Binding: extensible (What purposes of use are controlled by this exception. If more than one label is specified, operations must have all the specified labels.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub purpose: Vec<Coding>,
+    /// e.g. Resource Type, Profile, CDA, etc.
+    ///
+    /// Binding: extensible (The class (type) of information a consent rule covers.)
+    ///
+    /// Available values:
+    /// - `http://hl7.org/fhir/StructureDefinition/lipidprofile`: Lipid Lab Report
+    /// - `application/hl7-cda+xml`: CDA Documents
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub class: Vec<Coding>,
+    /// e.g. LOINC or SNOMED CT code, etc. in the content
+    ///
+    /// Binding: example (If this code is found in an instance, then the exception applies.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-content-code
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
+    /// Timeframe for data controlled by this rule
+    #[serde(rename = "dataPeriod")]
+    pub data_period: Option<Period>,
+    /// Nested Exception Rules
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provision: Vec<StringType>,
+}
+/// Consent nested structure for the 'verification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentVerification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Has been verified
+    pub verified: BooleanType,
+    /// Extension element for the 'verified' primitive field. Contains metadata and extensions.
+    pub _verified: Option<Element>,
+    /// Person who verified
+    #[serde(rename = "verifiedWith")]
+    pub verified_with: Option<Reference>,
+    /// When consent verified
+    #[serde(rename = "verificationDate")]
+    pub verification_date: Option<DateTimeType>,
+    /// Extension element for the 'verificationDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_verificationDate")]
+    pub _verification_date: Option<Element>,
+}
+/// Disclosure Notification Endpoint
+///
+/// Endpoint for sending Disclosure notifications in the form of FHIR AuditEvent records.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-NotificationEndpoint
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentNotificationEndpoint {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// ConsentProvision nested structure for the 'data' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentProvisionData {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// instance | related | dependents | authoredby
+    pub meaning: ConsentDataMeaning,
+    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
+    pub _meaning: Option<Element>,
+    /// The actual data reference
+    pub reference: Reference,
 }
 /// Location of Access restriction
 ///
@@ -100,6 +233,22 @@ pub struct ConsentLocation {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// Witness
+///
+/// Any witness to the consent.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/consent-Witness
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentWitness {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 /// Transcriber
 ///
 /// Any person/thing who transcribed the consent into the system.
@@ -112,37 +261,6 @@ pub struct ConsentLocation {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsentTranscriber {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// Consent nested structure for the 'policy' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentPolicy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Enforcement source for policy
-    pub authority: Option<StringType>,
-    /// Extension element for the 'authority' primitive field. Contains metadata and extensions.
-    pub _authority: Option<Element>,
-    /// Specific policy covered by this consent
-    pub uri: Option<StringType>,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-}
-/// Disclosure Notification Endpoint
-///
-/// Endpoint for sending Disclosure notifications in the form of FHIR AuditEvent records.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/consent-NotificationEndpoint
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentNotificationEndpoint {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -173,95 +291,6 @@ pub struct ConsentProvisionActor {
     /// Resource for the actor (or group, by role)
     pub reference: Reference,
 }
-/// ConsentProvision nested structure for the 'data' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvisionData {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// instance | related | dependents | authoredby
-    pub meaning: ConsentDataMeaning,
-    /// Extension element for the 'meaning' primitive field. Contains metadata and extensions.
-    pub _meaning: Option<Element>,
-    /// The actual data reference
-    pub reference: Reference,
-}
-/// Consent nested structure for the 'provision' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentProvision {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Data controlled by this rule
-    pub data: Option<Vec<ConsentProvisionData>>,
-    /// Who|what controlled by this rule (or group, by role)
-    pub actor: Option<Vec<ConsentProvisionActor>>,
-    /// deny | permit
-    #[serde(rename = "type")]
-    pub type_: Option<ConsentProvisionType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Timeframe for this rule
-    pub period: Option<Period>,
-    /// Actions controlled by this rule
-    ///
-    /// Binding: example (Detailed codes for the consent action.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-action
-    pub action: Option<Vec<CodeableConcept>>,
-    /// Security Labels that define affected resources
-    ///
-    /// Binding: extensible (Security Labels from the Healthcare Privacy and Security Classification System.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/security-labels
-    #[serde(rename = "securityLabel")]
-    pub security_label: Option<Vec<Coding>>,
-    /// Context of activities covered by this rule
-    ///
-    /// Binding: extensible (What purposes of use are controlled by this exception. If more than one label is specified, operations must have all the specified labels.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
-    pub purpose: Option<Vec<Coding>>,
-    /// e.g. Resource Type, Profile, CDA, etc.
-    ///
-    /// Binding: extensible (The class (type) of information a consent rule covers.)
-    ///
-    /// Available values:
-    /// - `http://hl7.org/fhir/StructureDefinition/lipidprofile`: Lipid Lab Report
-    /// - `application/hl7-cda+xml`: CDA Documents
-    pub class: Option<Vec<Coding>>,
-    /// e.g. LOINC or SNOMED CT code, etc. in the content
-    ///
-    /// Binding: example (If this code is found in an instance, then the exception applies.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/consent-content-code
-    pub code: Option<Vec<CodeableConcept>>,
-    /// Timeframe for data controlled by this rule
-    #[serde(rename = "dataPeriod")]
-    pub data_period: Option<Period>,
-    /// Nested Exception Rules
-    pub provision: Option<Vec<StringType>>,
-}
-/// Consent nested structure for the 'verification' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsentVerification {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Has been verified
-    pub verified: BooleanType,
-    /// Extension element for the 'verified' primitive field. Contains metadata and extensions.
-    pub _verified: Option<Element>,
-    /// Person who verified
-    #[serde(rename = "verifiedWith")]
-    pub verified_with: Option<Reference>,
-    /// When consent verified
-    #[serde(rename = "verificationDate")]
-    pub verification_date: Option<DateTimeType>,
-    /// Extension element for the 'verificationDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_verificationDate")]
-    pub _verification_date: Option<Element>,
-}
 
 impl Default for Consent {
     fn default() -> Self {
@@ -287,22 +316,6 @@ impl Default for Consent {
     }
 }
 
-impl Default for ConsentLocation {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ConsentTranscriber {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
 impl Default for ConsentPolicy {
     fn default() -> Self {
         Self {
@@ -311,35 +324,6 @@ impl Default for ConsentPolicy {
             _authority: Default::default(),
             uri: Default::default(),
             _uri: Default::default(),
-        }
-    }
-}
-
-impl Default for ConsentNotificationEndpoint {
-    fn default() -> Self {
-        Self {
-            base: Extension::default(),
-        }
-    }
-}
-
-impl Default for ConsentProvisionActor {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            role: Default::default(),
-            reference: Default::default(),
-        }
-    }
-}
-
-impl Default for ConsentProvisionData {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            meaning: Default::default(),
-            _meaning: Default::default(),
-            reference: Default::default(),
         }
     }
 }
@@ -373,6 +357,59 @@ impl Default for ConsentVerification {
             verified_with: Default::default(),
             verification_date: Default::default(),
             _verification_date: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentNotificationEndpoint {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionData {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            meaning: Default::default(),
+            _meaning: Default::default(),
+            reference: Default::default(),
+        }
+    }
+}
+
+impl Default for ConsentLocation {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConsentWitness {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConsentTranscriber {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConsentProvisionActor {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            role: Default::default(),
+            reference: Default::default(),
         }
     }
 }
@@ -555,13 +592,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Consent {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -576,44 +613,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Consent {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -623,22 +648,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Consent {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::consent::ConsentAccessors for Consent {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ConsentStateCodes {
         self.status.clone()
@@ -656,19 +678,19 @@ impl crate::traits::consent::ConsentAccessors for Consent {
         self.date_time.clone()
     }
     fn performer(&self) -> &[Reference] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn organization(&self) -> &[Reference] {
-        self.organization.as_deref().unwrap_or(&[])
+        self.organization.as_slice()
     }
     fn policy(&self) -> &[ConsentPolicy] {
-        self.policy.as_deref().unwrap_or(&[])
+        self.policy.as_slice()
     }
     fn policy_rule(&self) -> Option<CodeableConcept> {
         self.policy_rule.clone()
     }
     fn verification(&self) -> &[ConsentVerification] {
-        self.verification.as_deref().unwrap_or(&[])
+        self.verification.as_slice()
     }
     fn provision(&self) -> Option<ConsentProvision> {
         self.provision.clone()
@@ -681,12 +703,12 @@ impl crate::traits::consent::ConsentMutators for Consent {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ConsentStateCodes) -> Self {
@@ -721,35 +743,32 @@ impl crate::traits::consent::ConsentMutators for Consent {
     }
     fn set_performer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_organization(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.organization = Some(value);
+        resource.organization = value;
         resource
     }
     fn add_organization(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .organization
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.organization.push(item);
         resource
     }
     fn set_policy(self, value: Vec<ConsentPolicy>) -> Self {
         let mut resource = self.clone();
-        resource.policy = Some(value);
+        resource.policy = value;
         resource
     }
     fn add_policy(self, item: ConsentPolicy) -> Self {
         let mut resource = self.clone();
-        resource.policy.get_or_insert_with(Vec::new).push(item);
+        resource.policy.push(item);
         resource
     }
     fn set_policy_rule(self, value: CodeableConcept) -> Self {
@@ -759,15 +778,12 @@ impl crate::traits::consent::ConsentMutators for Consent {
     }
     fn set_verification(self, value: Vec<ConsentVerification>) -> Self {
         let mut resource = self.clone();
-        resource.verification = Some(value);
+        resource.verification = value;
         resource
     }
     fn add_verification(self, item: ConsentVerification) -> Self {
         let mut resource = self.clone();
-        resource
-            .verification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.verification.push(item);
         resource
     }
     fn set_provision(self, value: ConsentProvision) -> Self {
@@ -782,7 +798,7 @@ impl crate::traits::consent::ConsentExistence for Consent {
         self.source_attachment.is_some() || self.source_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -800,19 +816,19 @@ impl crate::traits::consent::ConsentExistence for Consent {
         self.date_time.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_organization(&self) -> bool {
-        self.organization.as_ref().is_some_and(|v| !v.is_empty())
+        !self.organization.is_empty()
     }
     fn has_policy(&self) -> bool {
-        self.policy.as_ref().is_some_and(|v| !v.is_empty())
+        !self.policy.is_empty()
     }
     fn has_policy_rule(&self) -> bool {
         self.policy_rule.is_some()
     }
     fn has_verification(&self) -> bool {
-        self.verification.as_ref().is_some_and(|v| !v.is_empty())
+        !self.verification.is_empty()
     }
     fn has_provision(&self) -> bool {
         self.provision.is_some()

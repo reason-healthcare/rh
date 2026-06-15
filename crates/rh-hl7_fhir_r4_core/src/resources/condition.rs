@@ -3,6 +3,7 @@ use crate::datatypes::annotation::Annotation;
 use crate::datatypes::backbone_element::BackboneElement;
 use crate::datatypes::codeable_concept::CodeableConcept;
 use crate::datatypes::element::Element;
+use crate::datatypes::extension::Extension;
 use crate::datatypes::identifier::Identifier;
 use crate::datatypes::period::Period;
 use crate::datatypes::range::Range;
@@ -27,7 +28,8 @@ pub struct Condition {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this condition
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | recurrence | relapse | inactive | remission | resolved
     #[serde(rename = "clinicalStatus")]
     pub clinical_status: Option<CodeableConcept>,
@@ -39,7 +41,8 @@ pub struct Condition {
     /// Binding: extensible (A category assigned to the condition.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/condition-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Subjective severity of condition
     ///
     /// Binding: preferred (A subjective assessment of the severity of the condition as evaluated by the clinician.)
@@ -62,7 +65,8 @@ pub struct Condition {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/body-site
     #[serde(rename = "bodySite")]
-    pub body_site: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_site: Vec<CodeableConcept>,
     /// Who has the condition?
     pub subject: Reference,
     /// Encounter created as part of
@@ -108,26 +112,62 @@ pub struct Condition {
     /// Person who asserts this condition
     pub asserter: Option<Reference>,
     /// Stage/grade, usually assessed formally
-    pub stage: Option<Vec<ConditionStage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stage: Vec<ConditionStage>,
     /// Supporting evidence
-    pub evidence: Option<Vec<ConditionEvidence>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<ConditionEvidence>,
     /// Additional information about the Condition
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
-/// Condition nested structure for the 'evidence' field
+/// occurredFollowing
+///
+/// Further conditions, problems, diagnoses, procedures or events or the substance that preceded this Condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-occurredFollowing
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionEvidence {
+pub struct ConditionOccurredFollowing {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Manifestation/symptom
-    ///
-    /// Binding: example (Codes that describe the manifestation or symptoms of a condition.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    pub code: Option<Vec<CodeableConcept>>,
-    /// Supporting information found elsewhere
-    pub detail: Option<Vec<Reference>>,
+    pub base: Extension,
+}
+/// assertedDate
+///
+/// The date on which the existence of the Condition was first asserted or acknowledged.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-assertedDate
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionAssertedDate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// related
+///
+/// This condition has an unspecified relationship with another condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-related
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionRelated {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 /// Condition nested structure for the 'stage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,7 +182,8 @@ pub struct ConditionStage {
     /// ValueSet: http://hl7.org/fhir/ValueSet/condition-stage
     pub summary: Option<CodeableConcept>,
     /// Formal record of assessment
-    pub assessment: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub assessment: Vec<Reference>,
     /// Kind of staging
     ///
     /// Binding: example (Codes describing the kind of condition staging (e.g. clinical or pathological).)
@@ -152,6 +193,55 @@ pub struct ConditionStage {
     /// - `260998006`: Clinical staging (qualifier value)
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
+}
+/// Condition nested structure for the 'evidence' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionEvidence {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Manifestation/symptom
+    ///
+    /// Binding: example (Codes that describe the manifestation or symptoms of a condition.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
+    /// Supporting information found elsewhere
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
+}
+/// ruledOut
+///
+/// Identifies what potential diagnoses have been ruled out for this condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-ruledOut
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionRuledOut {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// dueTo
+///
+/// Further conditions, problems, diagnoses, procedures or events or the substance that caused/triggered this Condition.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/condition-dueTo
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDueTo {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
 }
 
 impl Default for Condition {
@@ -188,12 +278,26 @@ impl Default for Condition {
     }
 }
 
-impl Default for ConditionEvidence {
+impl Default for ConditionOccurredFollowing {
     fn default() -> Self {
         Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            detail: Default::default(),
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConditionAssertedDate {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConditionRelated {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -205,6 +309,32 @@ impl Default for ConditionStage {
             summary: Default::default(),
             assessment: Default::default(),
             type_: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionEvidence {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            detail: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionRuledOut {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for ConditionDueTo {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -350,13 +480,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Condition {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -371,44 +501,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Condition {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -418,22 +536,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Condition {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::condition::ConditionAccessors for Condition {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn clinical_status(&self) -> Option<CodeableConcept> {
         self.clinical_status.clone()
@@ -442,7 +557,7 @@ impl crate::traits::condition::ConditionAccessors for Condition {
         self.verification_status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn severity(&self) -> Option<CodeableConcept> {
         self.severity.clone()
@@ -451,7 +566,7 @@ impl crate::traits::condition::ConditionAccessors for Condition {
         self.code.clone()
     }
     fn body_site(&self) -> &[CodeableConcept] {
-        self.body_site.as_deref().unwrap_or(&[])
+        self.body_site.as_slice()
     }
     fn subject(&self) -> Reference {
         self.subject.clone()
@@ -469,13 +584,13 @@ impl crate::traits::condition::ConditionAccessors for Condition {
         self.asserter.clone()
     }
     fn stage(&self) -> &[ConditionStage] {
-        self.stage.as_deref().unwrap_or(&[])
+        self.stage.as_slice()
     }
     fn evidence(&self) -> &[ConditionEvidence] {
-        self.evidence.as_deref().unwrap_or(&[])
+        self.evidence.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -485,12 +600,12 @@ impl crate::traits::condition::ConditionMutators for Condition {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_clinical_status(self, value: CodeableConcept) -> Self {
@@ -505,12 +620,12 @@ impl crate::traits::condition::ConditionMutators for Condition {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_severity(self, value: CodeableConcept) -> Self {
@@ -525,12 +640,12 @@ impl crate::traits::condition::ConditionMutators for Condition {
     }
     fn set_body_site(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.body_site = Some(value);
+        resource.body_site = value;
         resource
     }
     fn add_body_site(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.body_site.get_or_insert_with(Vec::new).push(item);
+        resource.body_site.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -560,44 +675,37 @@ impl crate::traits::condition::ConditionMutators for Condition {
     }
     fn set_stage(self, value: Vec<ConditionStage>) -> Self {
         let mut resource = self.clone();
-        resource.stage = Some(value);
+        resource.stage = value;
         resource
     }
     fn add_stage(self, item: ConditionStage) -> Self {
         let mut resource = self.clone();
-        resource.stage.get_or_insert_with(Vec::new).push(item);
+        resource.stage.push(item);
         resource
     }
     fn set_evidence(self, value: Vec<ConditionEvidence>) -> Self {
         let mut resource = self.clone();
-        resource.evidence = Some(value);
+        resource.evidence = value;
         resource
     }
     fn add_evidence(self, item: ConditionEvidence) -> Self {
         let mut resource = self.clone();
-        resource.evidence.get_or_insert_with(Vec::new).push(item);
+        resource.evidence.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::condition::ConditionExistence for Condition {
-    fn has_onset(&self) -> bool {
-        self.onset_date_time.is_some()
-            || self.onset_age.is_some()
-            || self.onset_period.is_some()
-            || self.onset_range.is_some()
-            || self.onset_string.is_some()
-    }
     fn has_abatement(&self) -> bool {
         self.abatement_date_time.is_some()
             || self.abatement_age.is_some()
@@ -605,8 +713,15 @@ impl crate::traits::condition::ConditionExistence for Condition {
             || self.abatement_range.is_some()
             || self.abatement_string.is_some()
     }
+    fn has_onset(&self) -> bool {
+        self.onset_date_time.is_some()
+            || self.onset_age.is_some()
+            || self.onset_period.is_some()
+            || self.onset_range.is_some()
+            || self.onset_string.is_some()
+    }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_clinical_status(&self) -> bool {
         self.clinical_status.is_some()
@@ -615,7 +730,7 @@ impl crate::traits::condition::ConditionExistence for Condition {
         self.verification_status.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_severity(&self) -> bool {
         self.severity.is_some()
@@ -624,7 +739,7 @@ impl crate::traits::condition::ConditionExistence for Condition {
         self.code.is_some()
     }
     fn has_body_site(&self) -> bool {
-        self.body_site.as_ref().is_some_and(|v| !v.is_empty())
+        !self.body_site.is_empty()
     }
     fn has_subject(&self) -> bool {
         true
@@ -642,13 +757,13 @@ impl crate::traits::condition::ConditionExistence for Condition {
         self.asserter.is_some()
     }
     fn has_stage(&self) -> bool {
-        self.stage.as_ref().is_some_and(|v| !v.is_empty())
+        !self.stage.is_empty()
     }
     fn has_evidence(&self) -> bool {
-        self.evidence.as_ref().is_some_and(|v| !v.is_empty())
+        !self.evidence.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

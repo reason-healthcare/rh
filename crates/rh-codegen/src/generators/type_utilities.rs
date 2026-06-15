@@ -10,6 +10,18 @@ use crate::value_sets::ValueSetManager;
 pub struct TypeUtilities;
 
 impl TypeUtilities {
+    /// Check if a StructureDefinition is an example/sample artifact that should not
+    /// generate Rust API surface.
+    pub fn is_example_structure_definition(structure_def: &StructureDefinition) -> bool {
+        let definition_slug = structure_def
+            .url
+            .rsplit('/')
+            .next()
+            .unwrap_or(&structure_def.url)
+            .to_lowercase();
+        definition_slug.starts_with("example-")
+    }
+
     /// Check if a type name represents a known FHIR data type
     pub fn is_fhir_datatype(name: &str) -> bool {
         matches!(

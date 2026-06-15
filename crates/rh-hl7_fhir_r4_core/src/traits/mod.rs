@@ -1,32 +1,5 @@
-//! FHIR traits for common functionality
-//!
-//! This module contains traits that define common interfaces for FHIR types.
+//! FHIR trait definitions for resources and profiles
 
-// Placeholder traits - these would be generated based on FHIR structure definitions
-
-/// Trait for types that have extensions
-pub trait HasExtensions {
-    /// Get the extensions for this type
-    fn extensions(&self) -> &[crate::datatypes::extension::Extension];
-}
-
-/// Trait for FHIR resources
-pub trait Resource {
-    /// Get the resource type name
-    fn resource_type(&self) -> &'static str;
-
-    /// Get the logical id of this resource
-    fn id(&self) -> Option<&str>;
-
-    /// Get the metadata about this resource
-    fn meta(&self) -> Option<&crate::datatypes::meta::Meta>;
-}
-
-/// Trait for domain resources (resources that can have narrative)
-pub trait DomainResource: Resource + HasExtensions {
-    /// Get the narrative text for this domain resource
-    fn narrative(&self) -> Option<&crate::datatypes::narrative::Narrative>;
-}
 pub mod account;
 pub mod activity_definition;
 pub mod actualgroup;
@@ -98,6 +71,7 @@ pub mod episode_of_care;
 pub mod event_definition;
 pub mod evidence;
 pub mod evidence_variable;
+pub mod example_scenario;
 pub mod explanation_of_benefit;
 pub mod family_member_history;
 pub mod familymemberhistory_genetic;

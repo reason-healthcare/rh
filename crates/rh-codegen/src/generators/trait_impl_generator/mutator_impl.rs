@@ -316,15 +316,9 @@ impl TraitImplGenerator {
             };
 
             let set_method_name = format!("set_{rust_field_name}");
-            let set_body = if is_optional {
-                format!(
-                    "let mut resource = self.clone();\n        resource.{rust_field_name} = Some(value);\n        resource"
-                )
-            } else {
-                format!(
-                    "let mut resource = self.clone();\n        resource.{rust_field_name} = value;\n        resource"
-                )
-            };
+            let set_body = format!(
+                "let mut resource = self.clone();\n        resource.{rust_field_name} = value;\n        resource"
+            );
 
             methods.push(
                 RustTraitImplMethod::new(set_method_name)

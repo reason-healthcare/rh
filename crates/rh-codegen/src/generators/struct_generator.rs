@@ -47,8 +47,9 @@ impl<'a> StructGenerator<'a> {
             });
         }
 
-        // Skip examples
-        if structure_def.url.to_lowercase().contains("example") {
+        // Skip sample/example profiles such as `example-composition`, but do not skip
+        // real FHIR types whose names contain "Example" (for example, ExampleScenario).
+        if TypeUtilities::is_example_structure_definition(structure_def) {
             return Err(CodegenError::Generation {
                 message: format!(
                     "Skipping example StructureDefinition '{}'",
