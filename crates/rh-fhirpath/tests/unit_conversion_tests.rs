@@ -1,6 +1,7 @@
 //! Tests for FHIRPath quantity unit conversion functionality
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
 use serde_json::json;
 
 #[test]
@@ -15,7 +16,7 @@ fn test_mass_unit_conversion() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 1.5).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
         assert_eq!(unit, &Some("kg".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
@@ -34,7 +35,7 @@ fn test_length_unit_conversion() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 1.5).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
         assert_eq!(unit, &Some("m".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
@@ -53,7 +54,7 @@ fn test_volume_unit_conversion() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 1.5).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
         assert_eq!(unit, &Some("L".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
@@ -72,7 +73,7 @@ fn test_subtraction_with_conversion() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 0.8).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 0.8).abs() < 0.001);
         assert_eq!(unit, &Some("kg".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
@@ -93,7 +94,7 @@ fn test_division_same_units() {
     // Same-unit and compatible-unit division now returns Quantity{ratio, "1"}
     // per UCUM — the dimensionless unit is '1', not a bare Number.
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 5.0).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 5.0).abs() < 0.001);
         assert_eq!(unit.as_deref(), Some("1"));
     } else {
         panic!("Expected Quantity with unit '1', got {result:?}");
@@ -112,7 +113,7 @@ fn test_division_compatible_units() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 2.0).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 2.0).abs() < 0.001);
         assert_eq!(unit.as_deref(), Some("1"));
     } else {
         panic!("Expected Quantity with unit '1', got {result:?}");
@@ -131,7 +132,7 @@ fn test_scalar_multiplication() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 15.0).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 15.0).abs() < 0.001);
         assert_eq!(unit, &Some("g".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
@@ -150,7 +151,7 @@ fn test_scalar_division() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 5.0).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 5.0).abs() < 0.001);
         assert_eq!(unit, &Some("g".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
@@ -183,7 +184,7 @@ fn test_time_unit_conversion() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value - 1.5).abs() < 0.001);
+        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
         assert_eq!(unit, &Some("h".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");

@@ -3,6 +3,7 @@
 //! Tests for mathematical operations in FHIRPath expressions
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
 use serde_json::json;
 
 #[test]
@@ -24,7 +25,7 @@ fn test_addition() {
     let expr = parser.parse("2.5 + 1.5").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Number(sum) = result {
-        assert!((sum - 4.0).abs() < f64::EPSILON);
+        assert!((sum.to_f64().unwrap() - 4.0).abs() < f64::EPSILON);
     } else {
         panic!("Expected decimal value, got {result:?}");
     }
@@ -72,7 +73,7 @@ fn test_division() {
     let expr = parser.parse("10 / 2").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Number(quotient) = result {
-        assert!((quotient - 5.0).abs() < f64::EPSILON);
+        assert!((quotient.to_f64().unwrap() - 5.0).abs() < f64::EPSILON);
     } else {
         panic!("Expected decimal value for division, got {result:?}");
     }
@@ -136,7 +137,7 @@ fn test_mixed_type_arithmetic() {
     let expr = parser.parse("5 + 2.5").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Number(sum) = result {
-        assert!((sum - 7.5).abs() < f64::EPSILON);
+        assert!((sum.to_f64().unwrap() - 7.5).abs() < f64::EPSILON);
     } else {
         panic!("Expected decimal value, got {result:?}");
     }
@@ -145,7 +146,7 @@ fn test_mixed_type_arithmetic() {
     let expr = parser.parse("3.5 * 2").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Number(product) = result {
-        assert!((product - 7.0).abs() < f64::EPSILON);
+        assert!((product.to_f64().unwrap() - 7.0).abs() < f64::EPSILON);
     } else {
         panic!("Expected decimal value, got {result:?}");
     }
@@ -155,7 +156,7 @@ fn test_mixed_type_arithmetic() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Integer(val) => assert_eq!(val, 11),
-        FhirPathValue::Number(val) => assert!((val - 11.0).abs() < f64::EPSILON),
+        FhirPathValue::Number(val) => assert!((val.to_f64().unwrap() - 11.0).abs() < f64::EPSILON),
         _ => panic!("Expected numeric value, got {result:?}"),
     }
 }
@@ -197,7 +198,7 @@ fn test_negative_numbers() {
     let expr = parser.parse("-9.0 / 3").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::Number(val) = result {
-        assert!((val - (-3.0)).abs() < f64::EPSILON);
+        assert!((val.to_f64().unwrap() - (-3.0)).abs() < f64::EPSILON);
     } else {
         panic!("Expected decimal value, got {result:?}");
     }

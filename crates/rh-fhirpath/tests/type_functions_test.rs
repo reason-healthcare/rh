@@ -4,6 +4,8 @@
 /// with the 'is' and 'as' operators. These functions provide the same functionality
 /// as their operator counterparts but in callable function form.
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use serde_json::json;
 
 #[test]
@@ -227,7 +229,11 @@ fn test_as_function_with_number() {
         .evaluate(&ast, &context)
         .expect("Failed to evaluate");
 
-    assert_eq!(result, FhirPathValue::Number(123.456));
+    if let FhirPathValue::Number(n) = result {
+        assert!((n.to_f64().unwrap() - 123.456).abs() < 0.001);
+    } else {
+        panic!("Expected Number result, got: {result:?}");
+    }
 
     // Test number value as String type (should be empty)
     let ast = parser
@@ -406,7 +412,10 @@ fn test_as_function_with_literal_values() {
         .evaluate(&ast, &context)
         .expect("Failed to evaluate");
 
-    assert_eq!(result, FhirPathValue::Number(4.14));
+    assert_eq!(
+        result,
+        FhirPathValue::Number(Decimal::from_str_exact("4.14").unwrap())
+    );
 
     // Test literal boolean
     let ast = parser

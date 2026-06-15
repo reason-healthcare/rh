@@ -30,6 +30,15 @@ pub struct EvaluationContext {
     pub constants: HashMap<String, FhirPathValue>,
     /// Trace logs collected during evaluation
     pub trace_logs: Rc<RefCell<Vec<TraceLog>>>,
+    /// When `true`, choice-type suffixed keys (e.g. `valueQuantity`) are
+    /// rejected — the canonical base name (`value`) must be used instead.
+    /// Conforms to HL7 FHIRPath `mode="strict"` semantics.
+    pub strict_mode: bool,
+    /// When `true`, order-sensitive functions (`skip`, `tail`, `first`,
+    /// `last`, `orderBy`, `reverse`) applied to unordered collections
+    /// (e.g. `children()`) produce a semantic error rather than a result.
+    /// Conforms to HL7 FHIRPath `checkOrderedFunctions="true"` semantics.
+    pub check_ordered_functions: bool,
 }
 
 impl EvaluationContext {
@@ -43,6 +52,8 @@ impl EvaluationContext {
             index_value: None,
             constants: HashMap::new(),
             trace_logs: Rc::new(RefCell::new(Vec::new())),
+            strict_mode: false,
+            check_ordered_functions: false,
         }
     }
 
@@ -76,6 +87,8 @@ impl EvaluationContext {
             index_value: self.index_value,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
+            strict_mode: self.strict_mode,
+            check_ordered_functions: self.check_ordered_functions,
         }
     }
 
@@ -86,9 +99,11 @@ impl EvaluationContext {
             current: this_value.to_json(),
             this_value: Some(this_value),
             total_value: self.total_value.clone(),
-            index_value: self.index_value, // preserve $index from outer iteration context
+            index_value: self.index_value,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
+            strict_mode: self.strict_mode,
+            check_ordered_functions: self.check_ordered_functions,
         }
     }
 
@@ -102,6 +117,8 @@ impl EvaluationContext {
             index_value: Some(index),
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
+            strict_mode: self.strict_mode,
+            check_ordered_functions: self.check_ordered_functions,
         }
     }
 
@@ -117,6 +134,8 @@ impl EvaluationContext {
             index_value: self.index_value,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
+            strict_mode: self.strict_mode,
+            check_ordered_functions: self.check_ordered_functions,
         }
     }
 
@@ -134,6 +153,8 @@ impl EvaluationContext {
             index_value: None,
             constants: self.constants.clone(),
             trace_logs: self.trace_logs.clone(),
+            strict_mode: self.strict_mode,
+            check_ordered_functions: self.check_ordered_functions,
         }
     }
 }

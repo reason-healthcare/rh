@@ -107,7 +107,8 @@ fn extension_function(
         }
         FhirPathValue::FhirPrimitive { extensions, .. } => {
             // Primitive value with extension data — search the extensions array
-            let ext_array = extensions.get("extension")
+            let ext_array = extensions
+                .get("extension")
                 .and_then(|v| v.as_array())
                 .cloned()
                 .unwrap_or_default();
@@ -273,6 +274,7 @@ fn get_value_function(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
     use serde_json::json;
 
     #[test]
@@ -430,14 +432,14 @@ mod tests {
 
         // Quantity primitive should return itself
         let quantity_value = FhirPathValue::Quantity {
-            value: 42.0,
+            value: Decimal::from_str_exact("42.0").unwrap(),
             unit: Some("kg".to_string()),
         };
         let result = get_value_function(&quantity_value, &params).unwrap();
         assert_eq!(
             result,
             FhirPathValue::Quantity {
-                value: 42.0,
+                value: Decimal::from_str_exact("42.0").unwrap(),
                 unit: Some("kg".to_string())
             }
         );

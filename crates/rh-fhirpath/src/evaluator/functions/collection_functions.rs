@@ -3,6 +3,7 @@
 use crate::error::*;
 use crate::evaluator::operations::collection::CollectionEvaluator;
 use crate::evaluator::types::FhirPathValue;
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 
 use super::FhirPathFunction;
@@ -73,7 +74,8 @@ pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFun
         "conformsTo".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
             let url = match params.first() {
-                Some(FhirPathValue::String(s)) | Some(FhirPathValue::TypedString { value: s, .. }) => s.clone(),
+                Some(FhirPathValue::String(s))
+                | Some(FhirPathValue::TypedString { value: s, .. }) => s.clone(),
                 _ => {
                     return Err(FhirPathError::FunctionError {
                         message: "conformsTo() requires a URL string parameter".to_string(),
@@ -89,17 +91,13 @@ pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFun
                 });
             }
             // Extract the resource/type name from the URL
-            let type_name = url
-                .rsplit('/')
-                .next()
-                .unwrap_or("");
+            let type_name = url.rsplit('/').next().unwrap_or("");
             // Check if the target resource type matches (base resource conformance)
             let matches = match target {
-                FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
-                    obj.get("resourceType")
-                        .and_then(|v| v.as_str())
-                        .is_some_and(|rt| rt.eq_ignore_ascii_case(type_name))
-                }
+                FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => obj
+                    .get("resourceType")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|rt| rt.eq_ignore_ascii_case(type_name)),
                 _ => false,
             };
             Ok(FhirPathValue::Boolean(matches))
@@ -160,31 +158,31 @@ pub fn register_subsetting_functions(functions: &mut HashMap<String, FhirPathFun
         }),
     );
 
-    // first() function
+    // first() function - also handled directly by evaluator for ordered checks
     functions.insert(
         "first".to_string(),
         Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            CollectionEvaluator::first(target)
+            CollectionEvaluator::first(target, false)
         }),
     );
 
-    // last() function
+    // last() function - also handled directly by evaluator for ordered checks
     functions.insert(
         "last".to_string(),
         Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            CollectionEvaluator::last(target)
+            CollectionEvaluator::last(target, false)
         }),
     );
 
-    // tail() function
+    // tail() function - also handled directly by evaluator for ordered checks
     functions.insert(
         "tail".to_string(),
         Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            CollectionEvaluator::tail(target)
+            CollectionEvaluator::tail(target, false)
         }),
     );
 
-    // skip() function
+    // skip() function - also handled directly by evaluator for ordered checks
     functions.insert(
         "skip".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
@@ -194,7 +192,7 @@ pub fn register_subsetting_functions(functions: &mut HashMap<String, FhirPathFun
                 });
             }
             match &params[0] {
-                FhirPathValue::Integer(count) => CollectionEvaluator::skip(target, *count),
+                FhirPathValue::Integer(count) => CollectionEvaluator::skip(target, *count, false),
                 _ => Err(FhirPathError::InvalidOperation {
                     message: "skip() count parameter must be an integer".to_string(),
                 }),
@@ -335,7 +333,7 @@ pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunc
         Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
             let items: Vec<FhirPathValue> = match target {
                 FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-                FhirPathValue::Collection(v) => v.clone(),
+                FhirPathValue::Collection(v) | FhirPathValue::UnorderedCollection(v) => v.clone(),
                 other => return Ok(other.clone()),
             };
             let mut sorted = items;
@@ -381,9 +379,10 @@ pub fn compare_for_sort_pub(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::O
 fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     use FhirPathValue::*;
-    // Empty/missing values sort LAST (treated as greater than all concrete values).
-    let a_empty = matches!(a, Empty) || matches!(a, Collection(c) if c.is_empty());
-    let b_empty = matches!(b, Empty) || matches!(b, Collection(c) if c.is_empty());
+    let a_empty =
+        matches!(a, Empty) || matches!(a, Collection(c) | UnorderedCollection(c) if c.is_empty());
+    let b_empty =
+        matches!(b, Empty) || matches!(b, Collection(c) | UnorderedCollection(c) if c.is_empty());
     if a_empty && b_empty {
         return Ordering::Equal;
     }
@@ -402,10 +401,10 @@ fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering 
         (Integer(x), Long(y)) | (Long(x), Integer(y)) => x.cmp(y),
         (Number(x), Number(y)) => x.partial_cmp(y).unwrap_or(Ordering::Equal),
         (Integer(x), Number(y)) | (Long(x), Number(y)) => {
-            (*x as f64).partial_cmp(y).unwrap_or(Ordering::Equal)
+            Decimal::from(*x).partial_cmp(y).unwrap_or(Ordering::Equal)
         }
         (Number(x), Integer(y)) | (Number(x), Long(y)) => {
-            x.partial_cmp(&(*y as f64)).unwrap_or(Ordering::Equal)
+            x.partial_cmp(&Decimal::from(*y)).unwrap_or(Ordering::Equal)
         }
         (String(x), String(y))
         | (Date(x), Date(y))
@@ -463,6 +462,9 @@ fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
                 FhirPathValue::DateTime(_) => "DateTime",
                 FhirPathValue::Time(_) => "Time",
                 FhirPathValue::Quantity { .. } => "Quantity",
+                FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => {
+                    "Collection"
+                }
                 _ => "Any",
             };
             ("System".to_string(), name.to_string())

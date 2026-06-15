@@ -40,7 +40,7 @@ fn test_skip_with_various_counts() {
     // Skip 0 elements (should return original collection)
     let expr = parser.parse("(1 | 2 | 3 | 4 | 5).skip(0)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 5);
         assert!(matches!(items[0], FhirPathValue::Integer(1)));
         assert!(matches!(items[4], FhirPathValue::Integer(5)));
@@ -51,7 +51,7 @@ fn test_skip_with_various_counts() {
     // Skip 2 elements
     let expr = parser.parse("(1 | 2 | 3 | 4 | 5).skip(2)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
         assert!(matches!(items[0], FhirPathValue::Integer(3)));
         assert!(matches!(items[2], FhirPathValue::Integer(5)));
@@ -88,7 +88,7 @@ fn test_take_with_various_counts() {
     // Take 3 elements
     let expr = parser.parse("(1 | 2 | 3 | 4 | 5).take(3)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
         assert!(matches!(items[0], FhirPathValue::Integer(1)));
         assert!(matches!(items[2], FhirPathValue::Integer(3)));
@@ -99,7 +99,7 @@ fn test_take_with_various_counts() {
     // Take more elements than collection size
     let expr = parser.parse("(1 | 2 | 3).take(10)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
         assert!(matches!(items[0], FhirPathValue::Integer(1)));
         assert!(matches!(items[2], FhirPathValue::Integer(3)));
@@ -128,7 +128,7 @@ fn test_intersect_operations() {
         .parse("(1 | 2 | 3 | 4).intersect(2 | 3 | 5 | 6)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(2))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(3))));
@@ -163,7 +163,7 @@ fn test_exclude_operations() {
     // Exclude some elements
     let expr = parser.parse("(1 | 2 | 3 | 4 | 5).exclude(2 | 4)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(1))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(3))));
@@ -177,7 +177,7 @@ fn test_exclude_operations() {
     // Exclude non-existent elements
     let expr = parser.parse("(1 | 2 | 3).exclude(4 | 5 | 6)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(1))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(2))));
@@ -208,7 +208,7 @@ fn test_combined_collection_operations() {
         .parse("(1 | 2 | 3 | 4 | 5 | 6 | 7 | 8).skip(2).take(3)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
         assert!(matches!(items[0], FhirPathValue::Integer(3)));
         assert!(matches!(items[1], FhirPathValue::Integer(4)));
@@ -222,7 +222,7 @@ fn test_combined_collection_operations() {
         .parse("(1 | 2 | 2 | 3 | 3 | 4).distinct().intersect(2 | 3 | 5)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(2))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(3))));
@@ -256,7 +256,7 @@ fn test_collection_functions_with_mixed_types() {
         .parse("(1 | 'hello' | true | 2).intersect('hello' | 1 | false)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(1))));
         assert!(items
@@ -271,7 +271,7 @@ fn test_collection_functions_with_mixed_types() {
         .parse("(1 | 'test' | true | 2.5).exclude('test' | true)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 2);
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Integer(1))));
         assert!(items.iter().any(|v| matches!(v, FhirPathValue::Number(_))));
@@ -289,7 +289,7 @@ fn test_collection_functions_with_fhir_data() {
     // Test with actual FHIR paths
     let expr = parser.parse("name.given.skip(1).take(2)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         // Should skip first "John" and take "James" and "Jane"
         assert_eq!(items.len(), 2);
     } else {
@@ -299,7 +299,7 @@ fn test_collection_functions_with_fhir_data() {
     // Test exclude with telecom systems
     let expr = parser.parse("telecom.system.exclude('email')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         // Should have 2 phone systems, no email
         assert_eq!(items.len(), 2);
         for item in items {
@@ -316,7 +316,7 @@ fn test_collection_functions_with_fhir_data() {
         .parse("name.given.intersect('John' | 'Mary' | 'Jane')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         // Should find "John" and "Jane"
         assert_eq!(items.len(), 2);
         assert!(items
@@ -361,7 +361,7 @@ fn test_edge_cases_and_error_conditions() {
 
     let expr = parser.parse("(1 | 2 | 3).take(1000000)").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 3);
     } else {
         panic!("Expected collection result");
@@ -391,7 +391,7 @@ fn test_children_function() {
     // Test children() on object with properties
     let expr = parser.parse("patient.children()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 4); // name, age, active, nested
 
         // Check that we have the expected values (order is undefined)
@@ -431,7 +431,7 @@ fn test_children_function() {
         FhirPathValue::String(s) => {
             assert_eq!(s, "test");
         }
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             assert_eq!(items.len(), 1);
             if let FhirPathValue::String(s) = &items[0] {
                 assert_eq!(s, "test");
@@ -453,7 +453,7 @@ fn test_children_function() {
 
     let expr = parser.parse("items.children()").unwrap();
     let result = evaluator.evaluate(&expr, &collection_context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         assert_eq!(items.len(), 4); // 1, 2, 3, 4
 
         let values: Vec<i64> = items
@@ -507,7 +507,7 @@ fn test_descendants_function() {
     // Test descendants() on complex nested object
     let expr = parser.parse("patient.descendants()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         // Should contain all descendants: name object, given array, family string, age, active, address object,
         // line array, city, state, postalCode, country object, code, display, plus all array elements
         assert!(
@@ -589,7 +589,7 @@ fn test_descendants_function() {
     let context = EvaluationContext::new(collection_data);
     let expr = parser.parse("items.descendants()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::Collection(items) = result {
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
         // Should contain all descendants from both items in the collection
         assert!(items.len() >= 8); // At least 8 descendants
 

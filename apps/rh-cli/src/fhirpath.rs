@@ -29,8 +29,13 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
             Value::String(s.clone())
         }
         FhirPathValue::Number(n) => {
-            if let Some(json_num) = serde_json::Number::from_f64(*n) {
-                Value::Number(json_num)
+            use rust_decimal::prelude::ToPrimitive;
+            if let Some(f) = n.to_f64() {
+                if let Some(json_num) = serde_json::Number::from_f64(f) {
+                    Value::Number(json_num)
+                } else {
+                    Value::Null
+                }
             } else {
                 Value::Null
             }
@@ -42,11 +47,14 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
         }
         FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
         FhirPathValue::Quantity { value, unit } => {
+            use rust_decimal::prelude::ToPrimitive;
             let mut obj = serde_json::Map::new();
             obj.insert(
                 "value".to_string(),
                 Value::Number(
-                    serde_json::Number::from_f64(*value)
+                    value
+                        .to_f64()
+                        .and_then(serde_json::Number::from_f64)
                         .unwrap_or_else(|| serde_json::Number::from(0)),
                 ),
             );
@@ -56,11 +64,13 @@ fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
             Value::Object(obj)
         }
         FhirPathValue::DateTimePrecision(precision) => Value::String(precision.to_string()),
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             let json_items: Vec<Value> = items.iter().map(fhirpath_value_to_json).collect();
             Value::Array(json_items)
         }
         FhirPathValue::Object(obj) => obj.clone(),
+        FhirPathValue::TypedObject { value, .. } => value.clone(),
+        FhirPathValue::FhirPrimitive { inner, .. } => fhirpath_value_to_json(inner),
         FhirPathValue::Empty => Value::Null,
     }
 }

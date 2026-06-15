@@ -7,6 +7,7 @@
 
 use crate::evaluator::types::FhirPathValue;
 use rh_hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType};
+use rust_decimal::Decimal;
 
 /// Get the FHIR type for a field in a resource
 ///
@@ -56,9 +57,8 @@ pub fn typed_value_from_string(value: String, field_type: &FhirFieldType) -> Fhi
                     .unwrap_or_else(|_| FhirPathValue::String(value))
             }
             FhirPrimitiveType::Decimal => {
-                // Try to parse as decimal
-                value
-                    .parse::<f64>()
+                // Try to parse as decimal (preserves trailing zeros)
+                Decimal::from_str_exact(&value)
                     .map(FhirPathValue::Number)
                     .unwrap_or_else(|_| FhirPathValue::String(value))
             }
@@ -422,7 +422,7 @@ mod tests {
         let value = typed_value_from_string("4.14159".to_string(), &field_type);
 
         match value {
-            FhirPathValue::Number(n) => assert!((n - 4.14159).abs() < 0.00001),
+            FhirPathValue::Number(n) => assert_eq!(n, Decimal::from_str_exact("4.14159").unwrap()),
             _ => panic!("Expected Number value for Decimal"),
         }
     }

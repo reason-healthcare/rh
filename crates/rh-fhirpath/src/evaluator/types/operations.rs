@@ -135,7 +135,10 @@ fn matches_system_type(value: &FhirPathValue, lower_name: &str, exact: bool) -> 
         "datetime" => matches!(value, FhirPathValue::DateTime(_)),
         "time" => matches!(value, FhirPathValue::Time(_)),
         "quantity" => matches!(value, FhirPathValue::Quantity { .. }),
-        "collection" => matches!(value, FhirPathValue::Collection(_)),
+        "collection" => matches!(
+            value,
+            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_)
+        ),
         "object" | "resource" => matches!(value, FhirPathValue::Object(_)),
         _ => false,
     }
@@ -215,8 +218,9 @@ impl TypeEvaluator {
         let type_name = Self::get_type_name(type_specifier);
 
         match value {
-            FhirPathValue::Collection(items) if items.len() > 1 => {
-                // Per FHIRPath spec: as() on a multi-item collection is a runtime error.
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() > 1 =>
+            {
                 Err(crate::error::FhirPathError::EvaluationError {
                     message: format!(
                         "as({type_name}) cannot be applied to a collection with {} items (expected 0 or 1)",
@@ -224,7 +228,7 @@ impl TypeEvaluator {
                     ),
                 })
             }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 match items.first() {
                     Some(item) if Self::value_is_exact_type(item, &type_name)? => Ok(item.clone()),
                     _ => Ok(FhirPathValue::Empty),
@@ -253,7 +257,7 @@ impl TypeEvaluator {
         let type_name = Self::get_type_name(type_specifier);
 
         match value {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut filtered_items = Vec::new();
                 for item in items {
                     if Self::value_is_exact_type(item, &type_name)? {
@@ -294,7 +298,9 @@ impl TypeEvaluator {
                 }
                 match value {
                     FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
-                        if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        if let Some(resource_type) =
+                            obj.get("resourceType").and_then(|v| v.as_str())
+                        {
                             return Ok(resource_type.eq_ignore_ascii_case(raw_name));
                         }
                         if let FhirPathValue::TypedObject { fhir_type, .. } = value {
@@ -315,7 +321,8 @@ impl TypeEvaluator {
                 if lower_name.ends_with("[]") {
                     let element_type = &raw_name[..raw_name.len() - 2];
                     return match value {
-                        FhirPathValue::Collection(items) => {
+                        FhirPathValue::Collection(items)
+                        | FhirPathValue::UnorderedCollection(items) => {
                             for item in items {
                                 if !Self::value_is_type(item, element_type)? {
                                     return Ok(false);
@@ -332,7 +339,8 @@ impl TypeEvaluator {
             _ if lower_name.ends_with("[]") => {
                 let element_type = &raw_name[..raw_name.len() - 2];
                 match value {
-                    FhirPathValue::Collection(items) => {
+                    FhirPathValue::Collection(items)
+                    | FhirPathValue::UnorderedCollection(items) => {
                         for item in items {
                             if !Self::value_is_type(item, element_type)? {
                                 return Ok(false);
@@ -356,14 +364,19 @@ impl TypeEvaluator {
                             }
                         }
                     }
-                    FhirPathValue::TypedObject { value: obj, fhir_type } => {
+                    FhirPathValue::TypedObject {
+                        value: obj,
+                        fhir_type,
+                    } => {
                         // Check against declared FHIR type (exact match or subtype)
                         if fhir_type.eq_ignore_ascii_case(resource_name)
                             || fhir_is_subtype_of(fhir_type, resource_name)
                         {
                             return Ok(true);
                         }
-                        if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        if let Some(resource_type) =
+                            obj.get("resourceType").and_then(|v| v.as_str())
+                        {
                             return Ok(resource_type.eq_ignore_ascii_case(resource_name));
                         }
                     }
@@ -392,15 +405,22 @@ impl TypeEvaluator {
                 }
                 match value {
                     FhirPathValue::Object(obj) => {
-                        if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        if let Some(resource_type) =
+                            obj.get("resourceType").and_then(|v| v.as_str())
+                        {
                             return Ok(resource_type.eq_ignore_ascii_case(raw_name));
                         }
                     }
-                    FhirPathValue::TypedObject { value: obj, fhir_type } => {
+                    FhirPathValue::TypedObject {
+                        value: obj,
+                        fhir_type,
+                    } => {
                         if fhir_type.eq_ignore_ascii_case(raw_name) {
                             return Ok(true);
                         }
-                        if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        if let Some(resource_type) =
+                            obj.get("resourceType").and_then(|v| v.as_str())
+                        {
                             return Ok(resource_type.eq_ignore_ascii_case(raw_name));
                         }
                     }
@@ -416,7 +436,8 @@ impl TypeEvaluator {
                 if lower_name.ends_with("[]") {
                     let element_type = &raw_name[..raw_name.len() - 2];
                     return match value {
-                        FhirPathValue::Collection(items) => {
+                        FhirPathValue::Collection(items)
+                        | FhirPathValue::UnorderedCollection(items) => {
                             for item in items {
                                 if !Self::value_is_exact_type(item, element_type)? {
                                     return Ok(false);
@@ -432,7 +453,8 @@ impl TypeEvaluator {
             _ if lower_name.ends_with("[]") => {
                 let element_type = &raw_name[..raw_name.len() - 2];
                 match value {
-                    FhirPathValue::Collection(items) => {
+                    FhirPathValue::Collection(items)
+                    | FhirPathValue::UnorderedCollection(items) => {
                         for item in items {
                             if !Self::value_is_exact_type(item, element_type)? {
                                 return Ok(false);
@@ -450,15 +472,22 @@ impl TypeEvaluator {
                 let resource_name = raw_name;
                 match value {
                     FhirPathValue::Object(obj) => {
-                        if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        if let Some(resource_type) =
+                            obj.get("resourceType").and_then(|v| v.as_str())
+                        {
                             return Ok(resource_type.eq_ignore_ascii_case(resource_name));
                         }
                     }
-                    FhirPathValue::TypedObject { value: obj, fhir_type } => {
+                    FhirPathValue::TypedObject {
+                        value: obj,
+                        fhir_type,
+                    } => {
                         if fhir_type.eq_ignore_ascii_case(resource_name) {
                             return Ok(true);
                         }
-                        if let Some(resource_type) = obj.get("resourceType").and_then(|v| v.as_str()) {
+                        if let Some(resource_type) =
+                            obj.get("resourceType").and_then(|v| v.as_str())
+                        {
                             return Ok(resource_type.eq_ignore_ascii_case(resource_name));
                         }
                     }
@@ -473,6 +502,7 @@ impl TypeEvaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
 
     #[test]
     fn test_is_operator_basic_types() {
@@ -597,7 +627,9 @@ mod tests {
     #[test]
     fn test_numeric_types() {
         let integer_val = FhirPathValue::Integer(42);
-        let number_val = FhirPathValue::Number(std::f64::consts::PI);
+        let number_val = FhirPathValue::Number(
+            Decimal::from_f64_retain(std::f64::consts::PI).unwrap_or(Decimal::ZERO),
+        );
 
         let integer_type = TypeSpecifier {
             qualified_name: vec!["Integer".to_string()],

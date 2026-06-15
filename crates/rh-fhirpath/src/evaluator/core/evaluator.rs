@@ -11,6 +11,7 @@ use crate::evaluator::{
     },
     types::{operations::TypeEvaluator, FhirPathValue},
 };
+use rust_decimal::Decimal;
 
 /// FHIRPath expression evaluator
 pub struct FhirPathEvaluator {
@@ -135,7 +136,8 @@ impl FhirPathEvaluator {
                 ArithmeticEvaluator::evaluate_multiplicative(&left_result, operator, &right_result)
             }
             Expression::Polarity { operator, operand } => {
-                let operand_result = strip_fhir_primitive(self.evaluate_expression(operand, context)?);
+                let operand_result =
+                    strip_fhir_primitive(self.evaluate_expression(operand, context)?);
                 ArithmeticEvaluator::evaluate_polarity(operator, &operand_result)
             }
             Expression::Type {
@@ -213,7 +215,7 @@ impl FhirPathEvaluator {
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
         match invocation {
-            Invocation::Member(name) => self.evaluate_member_access(target, name),
+            Invocation::Member(name) => self.evaluate_member_access(target, name, context),
             Invocation::Function { name, parameters } => {
                 // Special handling for functions that need to evaluate expressions themselves
                 match name.as_str() {
@@ -234,6 +236,24 @@ impl FhirPathEvaluator {
                     }
                     "all" if !parameters.is_empty() => {
                         self.evaluate_all_with_criterion(target, parameters, context)
+                    }
+                    "first" | "last" | "tail" => {
+                        let check = context.check_ordered_functions;
+                        let param_values: Result<Vec<_>, _> = parameters
+                            .iter()
+                            .map(|p| self.evaluate_expression(p, context))
+                            .collect();
+                        let param_values = param_values?;
+                        self.evaluate_ordered_collection_fn(target, name, &param_values, check)
+                    }
+                    "skip" => {
+                        let check = context.check_ordered_functions;
+                        let param_values: Result<Vec<_>, _> = parameters
+                            .iter()
+                            .map(|p| self.evaluate_expression(p, context))
+                            .collect();
+                        let param_values = param_values?;
+                        self.evaluate_ordered_collection_fn(target, name, &param_values, check)
                     }
                     _ => {
                         // Regular functions: evaluate parameters first
@@ -279,6 +299,7 @@ impl FhirPathEvaluator {
         &self,
         target: &FhirPathValue,
         member: &str,
+        context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
@@ -298,9 +319,24 @@ impl FhirPathEvaluator {
                 }
 
                 if let Some(value) = obj.get(member) {
+                    // In strict mode, reject choice-type suffixed keys (e.g.
+                    // `valueQuantity`); the canonical base name (`value`) must
+                    // be used instead per the FHIRPath spec.
+                    if context.strict_mode {
+                        if let Some(base) = choice_type_base(resource_type.as_deref(), member) {
+                            return Err(FhirPathError::EvaluationError {
+                                message: format!(
+                                    "Invalid choice-type access: use '{}[x]' instead of '{}'",
+                                    base, member
+                                ),
+                            });
+                        }
+                    }
+
                     // Check for a `_fieldName` sibling carrying extension data for primitives
                     let underscore_key = format!("_{member}");
-                    let ext_sibling = obj.get(&underscore_key)
+                    let ext_sibling = obj
+                        .get(&underscore_key)
                         .and_then(|v| v.as_object())
                         .cloned();
 
@@ -314,7 +350,10 @@ impl FhirPathEvaluator {
                     // Wrap in FhirPrimitive if there's extension sibling data
                     if let Some(ext_map) = ext_sibling {
                         // Only wrap if the value is a primitive (not a collection/object)
-                        if !matches!(typed, FhirPathValue::Object(_) | FhirPathValue::Collection(_)) {
+                        if !matches!(
+                            typed,
+                            FhirPathValue::Object(_) | FhirPathValue::Collection(_)
+                        ) {
                             return Ok(FhirPathValue::FhirPrimitive {
                                 inner: Box::new(typed),
                                 extensions: ext_map,
@@ -333,6 +372,14 @@ impl FhirPathEvaluator {
                                     .nth(member.len())
                                     .is_some_and(|c| c.is_uppercase())
                             {
+                                if context.strict_mode {
+                                    return Err(FhirPathError::EvaluationError {
+                                        message: format!(
+                                            "Invalid choice-type access: use '{}[x]' instead of '{}' in strict mode",
+                                            member, key
+                                        ),
+                                    });
+                                }
                                 let suffix = &key[member.len()..];
                                 if let Some(typed) = construct_typed_choice_value(suffix, value) {
                                     return Ok(typed);
@@ -351,19 +398,18 @@ impl FhirPathEvaluator {
             }
             FhirPathValue::FhirPrimitive { inner, .. } => {
                 // Delegate member access to the inner value
-                self.evaluate_member_access(inner, member)
+                self.evaluate_member_access(inner, member, context)
             }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut result_items = Vec::new();
                 for item in items {
-                    let member_result = self.evaluate_member_access(item, member)?;
+                    let member_result = self.evaluate_member_access(item, member, context)?;
                     match member_result {
-                        FhirPathValue::Collection(mut nested_items) => {
+                        FhirPathValue::Collection(mut nested_items)
+                        | FhirPathValue::UnorderedCollection(mut nested_items) => {
                             result_items.append(&mut nested_items);
                         }
-                        FhirPathValue::Empty => {
-                            // Skip empty results
-                        }
+                        FhirPathValue::Empty => {}
                         value => {
                             result_items.push(value);
                         }
@@ -390,6 +436,58 @@ impl FhirPathEvaluator {
                 _ => Ok(FhirPathValue::Empty),
             },
             _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    /// Evaluate order-sensitive collection functions (first, last, tail, skip)
+    /// with UnorderedCollection checking.
+    fn evaluate_ordered_collection_fn(
+        &self,
+        target: &FhirPathValue,
+        name: &str,
+        params: &[FhirPathValue],
+        check_ordered: bool,
+    ) -> FhirPathResult<FhirPathValue> {
+        use crate::evaluator::operations::collection::CollectionEvaluator;
+
+        // Normalize UnorderedCollection → Collection for order-sensitive ops,
+        // but error if check_ordered is enabled and target is unordered.
+        let normalized = match target {
+            FhirPathValue::UnorderedCollection(_) if check_ordered => {
+                return Err(FhirPathError::EvaluationError {
+                    message: format!(
+                        "Cannot apply order-dependent function '{}' to unordered collection",
+                        name
+                    ),
+                });
+            }
+            FhirPathValue::UnorderedCollection(items) => FhirPathValue::Collection(items.clone()),
+            other => other.clone(),
+        };
+
+        match name {
+            "first" => CollectionEvaluator::first(&normalized, check_ordered),
+            "last" => CollectionEvaluator::last(&normalized, check_ordered),
+            "tail" => CollectionEvaluator::tail(&normalized, check_ordered),
+            "skip" => {
+                let count = match params.first() {
+                    Some(FhirPathValue::Integer(n)) => *n,
+                    Some(_) => {
+                        return Err(FhirPathError::InvalidOperation {
+                            message: "skip() count parameter must be an integer".to_string(),
+                        })
+                    }
+                    None => {
+                        return Err(FhirPathError::InvalidOperation {
+                            message: "skip() requires exactly one parameter (count)".to_string(),
+                        })
+                    }
+                };
+                CollectionEvaluator::skip(&normalized, count, check_ordered)
+            }
+            _ => Err(FhirPathError::FunctionError {
+                message: format!("Unknown order-dependent function: {name}"),
+            }),
         }
     }
 
@@ -425,7 +523,7 @@ impl FhirPathEvaluator {
         let criteria_expr = &parameters[0];
 
         match target {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut filtered_items = Vec::new();
 
                 for (idx, item) in items.iter().enumerate() {
@@ -481,7 +579,8 @@ impl FhirPathEvaluator {
         // iif() on a multi-element collection is an error per FHIRPath spec.
         // Single-element collections are unwrapped; empty collections become Empty.
         // However, non-collection values (objects, booleans, etc.) are fine.
-        if let FhirPathValue::Collection(items) = target {
+        if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = target
+        {
             if items.len() > 1 {
                 return Err(FhirPathError::EvaluationError {
                     message: "iif() can only be called on a singleton or empty collection"
@@ -498,9 +597,17 @@ impl FhirPathEvaluator {
         let criterion_val = self.evaluate_expression(&parameters[0], &iif_ctx)?;
 
         let effective = match &criterion_val {
-            FhirPathValue::Collection(items) if items.len() == 1 => items[0].clone(),
-            FhirPathValue::Collection(items) if items.is_empty() => FhirPathValue::Empty,
-            FhirPathValue::Collection(_) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                items[0].clone()
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                FhirPathValue::Empty
+            }
+            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => {
                 return Err(FhirPathError::EvaluationError {
                     message:
                         "iif() criterion must be a single Boolean; got a multi-item collection"
@@ -542,9 +649,19 @@ impl FhirPathEvaluator {
         parameters: &[Expression],
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
+        // Order-sensitive: error on UnorderedCollection when check_ordered_functions
+        if matches!(target, FhirPathValue::UnorderedCollection(_))
+            && context.check_ordered_functions
+        {
+            return Err(FhirPathError::EvaluationError {
+                message: "Cannot apply order-dependent function to unordered collection"
+                    .to_string(),
+            });
+        }
+
         let items: Vec<FhirPathValue> = match target {
             FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(v) => v.clone(),
+            FhirPathValue::Collection(v) | FhirPathValue::UnorderedCollection(v) => v.clone(),
             other => return Ok(other.clone()),
         };
 
@@ -607,7 +724,9 @@ impl FhirPathEvaluator {
         }
         let criterion = &parameters[0];
         let items: Vec<&FhirPathValue> = match target {
-            FhirPathValue::Collection(items) => items.iter().collect(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.iter().collect()
+            }
             FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(false)),
             v => vec![v],
         };
@@ -635,7 +754,9 @@ impl FhirPathEvaluator {
         }
         let criterion = &parameters[0];
         let items: Vec<&FhirPathValue> = match target {
-            FhirPathValue::Collection(items) => items.iter().collect(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.iter().collect()
+            }
             FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(true)),
             v => vec![v],
         };
@@ -665,25 +786,21 @@ impl FhirPathEvaluator {
         let projection_expr = &parameters[0];
 
         match target {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut selected_items = Vec::new();
 
                 for (idx, item) in items.iter().enumerate() {
-                    // Create new context with current item as $this and index as $index
                     let item_context = context.with_this_and_index(item.clone(), idx as i64);
 
-                    // Evaluate the projection expression in the item context
                     let projection_result =
                         self.evaluate_expression(projection_expr, &item_context)?;
 
-                    // Add the result to the selected items
                     match projection_result {
-                        FhirPathValue::Collection(mut items) => {
+                        FhirPathValue::Collection(mut items)
+                        | FhirPathValue::UnorderedCollection(mut items) => {
                             selected_items.append(&mut items);
                         }
-                        FhirPathValue::Empty => {
-                            // Don't add empty values
-                        }
+                        FhirPathValue::Empty => {}
                         value => {
                             selected_items.push(value);
                         }
@@ -740,7 +857,7 @@ impl FhirPathEvaluator {
             let projection_expr = &parameters[1];
 
             match target {
-                FhirPathValue::Collection(items) => {
+                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                     let mut projected_items = Vec::new();
 
                     for item in items {
@@ -749,7 +866,8 @@ impl FhirPathEvaluator {
                             self.evaluate_expression(projection_expr, &item_context)?;
 
                         match projection_result {
-                            FhirPathValue::Collection(mut items) => {
+                            FhirPathValue::Collection(mut items)
+                            | FhirPathValue::UnorderedCollection(mut items) => {
                                 projected_items.append(&mut items);
                             }
                             FhirPathValue::Empty => {}
@@ -807,7 +925,7 @@ impl FhirPathEvaluator {
 
         // Initialize the current collection with the target
         match target {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 current_collection.extend(items.clone());
             }
             FhirPathValue::Empty => {
@@ -835,7 +953,8 @@ impl FhirPathEvaluator {
 
                 // Collect new items from the projection result
                 match projection_result {
-                    FhirPathValue::Collection(items) => {
+                    FhirPathValue::Collection(items)
+                    | FhirPathValue::UnorderedCollection(items) => {
                         for new_item in items {
                             if !seen
                                 .iter()
@@ -975,7 +1094,9 @@ impl FhirPathEvaluator {
         };
 
         let items: Vec<FhirPathValue> = match target {
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             FhirPathValue::Empty => return Ok(init),
             other => vec![other.clone()],
         };
@@ -1036,8 +1157,88 @@ fn strip_fhir_primitive(value: FhirPathValue) -> FhirPathValue {
         FhirPathValue::Collection(items) => {
             FhirPathValue::Collection(items.into_iter().map(strip_fhir_primitive).collect())
         }
+        FhirPathValue::UnorderedCollection(items) => FhirPathValue::UnorderedCollection(
+            items.into_iter().map(strip_fhir_primitive).collect(),
+        ),
         other => other,
     }
+}
+
+/// Check if `member` is a FHIR choice-type suffixed key (e.g. `valueQuantity`
+/// is `value` + `Quantity`). Returns the base name (`value`) if so.
+///
+/// Uses the FHIR metadata registry to distinguish real element names like
+/// `birthDate` (registered) from suffixed choice-type keys like
+/// `valueQuantity` (not registered; the real element is `value[x]`).
+fn choice_type_base<'a>(resource_type: Option<&'a str>, member: &'a str) -> Option<&'a str> {
+    const FHIR_TYPE_SUFFIXES: &[&str] = &[
+        "Quantity",
+        "Age",
+        "Distance",
+        "Duration",
+        "Count",
+        "Money",
+        "Boolean",
+        "Integer",
+        "UnsignedInt",
+        "PositiveInt",
+        "Decimal",
+        "String",
+        "Code",
+        "Uri",
+        "Uuid",
+        "Url",
+        "Canonical",
+        "Oid",
+        "Id",
+        "Markdown",
+        "Base64Binary",
+        "Date",
+        "DateTime",
+        "Instant",
+        "Time",
+        "Reference",
+        "Identifier",
+        "Annotation",
+        "Attachment",
+        "CodeableConcept",
+        "Coding",
+        "Ratio",
+        "SampledData",
+        "HumanName",
+        "Address",
+        "ContactPoint",
+        "Period",
+        "Meta",
+        "Narrative",
+        "Dosage",
+    ];
+    for suffix in FHIR_TYPE_SUFFIXES {
+        if member.ends_with(suffix) && member.len() > suffix.len() {
+            let split_at = member.len() - suffix.len();
+            if member
+                .as_bytes()
+                .get(split_at)
+                .is_some_and(|&c| c.is_ascii_uppercase())
+            {
+                let base = &member[..split_at];
+                // Only flag as choice-type if the base + "[x]" element exists
+                // in the FHIR metadata for the resource. This distinguishes
+                // `valueQuantity` (from `value[x]`) from `linkId` (a regular
+                // BackboneElement sub-field) and `birthDate` (a regular date).
+                if let Some(rt) = resource_type {
+                    let choice_key = format!("{}[x]", base);
+                    if crate::evaluator::metadata::get_field_type(rt, &choice_key).is_some() {
+                        return Some(base);
+                    }
+                }
+                // If no resource type metadata is available, we can't
+                // reliably detect choice-type suffixed keys, so we don't
+                // flag them.
+            }
+        }
+    }
+    None
 }
 
 /// Build a typed `FhirPathValue` for a FHIR choice-type field based on the
@@ -1057,22 +1258,25 @@ fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Opti
                 .and_then(Value::as_str)
                 .or_else(|| obj.get("code").and_then(Value::as_str))
                 .map(str::to_string);
-            Some(FhirPathValue::Quantity { value: num, unit })
+            Some(FhirPathValue::Quantity {
+                value: Decimal::from_f64_retain(num).unwrap_or(Decimal::ZERO),
+                unit,
+            })
         }
         // Quantity profiles: return as TypedObject so that `is Age`, `is Quantity`
         // (subtype), and member access (`.value`, `.unit`) all work correctly.
-        "Age" | "Distance" | "Duration" | "Count" | "Money" => {
-            Some(FhirPathValue::TypedObject {
-                value: value.clone(),
-                fhir_type: suffix.to_string(),
-            })
-        }
+        "Age" | "Distance" | "Duration" | "Count" | "Money" => Some(FhirPathValue::TypedObject {
+            value: value.clone(),
+            fhir_type: suffix.to_string(),
+        }),
         "Boolean" => value.as_bool().map(|b| FhirPathValue::TypedBoolean {
             value: b,
             fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean,
         }),
         "Integer" | "UnsignedInt" | "PositiveInt" => value.as_i64().map(FhirPathValue::Integer),
-        "Decimal" => value.as_f64().map(FhirPathValue::Number),
+        "Decimal" => value
+            .as_f64()
+            .map(|f| FhirPathValue::Number(Decimal::from_f64_retain(f).unwrap_or(Decimal::ZERO))),
         "String" => value.as_str().map(|s| FhirPathValue::TypedString {
             value: s.to_string(),
             fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::String,

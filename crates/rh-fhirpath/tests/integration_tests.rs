@@ -12,6 +12,7 @@
 #[cfg(test)]
 mod tests {
     use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+    use rust_decimal::Decimal;
     use serde_json::json;
 
     fn sample_patient() -> serde_json::Value {
@@ -97,7 +98,10 @@ mod tests {
 
         let expr = parser.parse("15 / 3").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(5.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("5.0").unwrap())
+        );
 
         let expr = parser.parse("17 mod 5").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
@@ -305,7 +309,10 @@ mod tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
 
         match result {
-            FhirPathValue::Object(name_obj) | FhirPathValue::TypedObject { value: name_obj, .. } => {
+            FhirPathValue::Object(name_obj)
+            | FhirPathValue::TypedObject {
+                value: name_obj, ..
+            } => {
                 // Verify it's the first name object with "official" use
                 if let Some(serde_json::Value::String(use_str)) = name_obj.get("use") {
                     assert_eq!(use_str, "official");
@@ -323,7 +330,10 @@ mod tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
 
         match result {
-            FhirPathValue::Object(name_obj) | FhirPathValue::TypedObject { value: name_obj, .. } => {
+            FhirPathValue::Object(name_obj)
+            | FhirPathValue::TypedObject {
+                value: name_obj, ..
+            } => {
                 // Verify it's the second name object with "usual" use
                 if let Some(serde_json::Value::String(use_str)) = name_obj.get("use") {
                     assert_eq!(use_str, "usual");

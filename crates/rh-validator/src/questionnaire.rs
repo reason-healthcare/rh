@@ -679,7 +679,9 @@ impl<'a> QuestionnaireResponseValidator<'a> {
     ) {
         use rh_fhirpath::UnitConverter;
 
-        let answer_value = quantity.get("value").and_then(|v| v.as_f64());
+        let answer_value = quantity.get("value").and_then(|v| v.as_f64()).map(|f| {
+            rust_decimal::Decimal::from_f64_retain(f).unwrap_or(rust_decimal::Decimal::ZERO)
+        });
         let answer_unit = quantity.get("unit").and_then(|v| v.as_str());
         let answer_code = quantity.get("code").and_then(|v| v.as_str());
 
@@ -777,7 +779,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
     #[allow(clippy::too_many_arguments)]
     fn validate_quantity_comparison(
         &self,
-        answer_value: f64,
+        answer_value: rust_decimal::Decimal,
         answer_code: Option<&str>,
         answer_unit: Option<&str>,
         constraint: &Quantity,
@@ -791,6 +793,8 @@ impl<'a> QuestionnaireResponseValidator<'a> {
             Some(v) => v,
             None => return,
         };
+        let constraint_value_decimal = rust_decimal::Decimal::from_f64_retain(constraint_value)
+            .unwrap_or(rust_decimal::Decimal::ZERO);
 
         let constraint_code = constraint.code.as_deref();
         let answer_unit_display = answer_unit.unwrap_or("(no unit)");
@@ -805,7 +809,8 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                 ValidationIssue::error(
                     IssueCode::Invariant,
                     format!(
-                        "The quantity {answer_value} {answer_unit_display} cannot be compared to the allowed {constraint_name} of {constraint_value} {constraint_unit_display} because no formal units are specified"
+                        "The quantity {answer_value} {answer_unit_display} cannot be compared to the allowed {constraint_name} of {} {constraint_unit_display} because no formal units are specified",
+                        constraint.value.unwrap_or(0.0)
                     ),
                 )
                 .with_path(path),
@@ -837,7 +842,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         let comparison = unit_converter.compare_quantities(
             answer_value,
             &answer_opt,
-            constraint_value,
+            constraint_value_decimal,
             &constraint_opt,
         );
 

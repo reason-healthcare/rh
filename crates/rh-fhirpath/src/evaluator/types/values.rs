@@ -3,6 +3,8 @@
 use crate::ast::DateTimePrecision;
 use crate::error::*;
 use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,7 +21,9 @@ pub enum FhirPathValue {
         value: bool,
         fhir_type: FhirPrimitiveType,
     },
-    Number(f64),
+    /// Decimal value preserving trailing-zero precision (FHIRPath spec requires
+    /// `1.58700.precision() = 5`, which `f64` cannot represent).
+    Number(Decimal),
     Integer(i64),
     Long(i64),
     Date(String),
@@ -31,11 +35,17 @@ pub enum FhirPathValue {
     },
     Time(String),
     Quantity {
-        value: f64,
+        value: Decimal,
         unit: Option<String>,
     },
     DateTimePrecision(DateTimePrecision),
     Collection(Vec<FhirPathValue>),
+    /// A collection whose element order is not defined (e.g. from `children()`).
+    /// Order-sensitive functions (`skip`, `tail`, `first`, `last`, `orderBy`,
+    /// `reverse`) must not be applied in strict mode with
+    /// `checkOrderedFunctions=true`.  In lenient mode, it behaves identically
+    /// to `Collection`.
+    UnorderedCollection(Vec<FhirPathValue>),
     Object(Value),
     /// A FHIR complex object carrying its declared FHIR type name (e.g. "HumanName").
     TypedObject {
@@ -52,6 +62,20 @@ pub enum FhirPathValue {
 }
 
 impl FhirPathValue {
+    /// Returns `true` if this is an `UnorderedCollection`.
+    pub fn is_unordered(&self) -> bool {
+        matches!(self, FhirPathValue::UnorderedCollection(_))
+    }
+
+    /// Normalize `UnorderedCollection` → `Collection`; all other variants
+    /// pass through unchanged.
+    pub fn normalize(self) -> Self {
+        match self {
+            FhirPathValue::UnorderedCollection(items) => FhirPathValue::Collection(items),
+            other => other,
+        }
+    }
+
     /// Get the string content if this is a String or TypedString value
     pub fn as_str(&self) -> Option<&str> {
         match self {
@@ -108,9 +132,9 @@ impl FhirPathValue {
             (FhirPathValue::Integer(a), FhirPathValue::Long(b))
             | (FhirPathValue::Long(a), FhirPathValue::Integer(b)) => a == b,
             (FhirPathValue::Integer(a), FhirPathValue::Number(b))
-            | (FhirPathValue::Long(a), FhirPathValue::Number(b)) => *a as f64 == *b,
+            | (FhirPathValue::Long(a), FhirPathValue::Number(b)) => Decimal::from(*a) == *b,
             (FhirPathValue::Number(a), FhirPathValue::Integer(b))
-            | (FhirPathValue::Number(a), FhirPathValue::Long(b)) => *a == *b as f64,
+            | (FhirPathValue::Number(a), FhirPathValue::Long(b)) => *a == Decimal::from(*b),
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::TypedDateTime { value: b, .. })
@@ -151,9 +175,16 @@ impl FhirPathValue {
                         .all(|(x, y)| Self::equals_static(x, y))
             }
             (FhirPathValue::Object(a), FhirPathValue::Object(b)) => a == b,
-            (FhirPathValue::TypedObject { value: a, fhir_type: ta }, FhirPathValue::TypedObject { value: b, fhir_type: tb }) => {
-                ta == tb && a == b
-            }
+            (
+                FhirPathValue::TypedObject {
+                    value: a,
+                    fhir_type: ta,
+                },
+                FhirPathValue::TypedObject {
+                    value: b,
+                    fhir_type: tb,
+                },
+            ) => ta == tb && a == b,
             (FhirPathValue::TypedObject { value: a, .. }, FhirPathValue::Object(b))
             | (FhirPathValue::Object(a), FhirPathValue::TypedObject { value: b, .. }) => a == b,
             (FhirPathValue::FhirPrimitive { inner: a, .. }, other)
@@ -162,9 +193,10 @@ impl FhirPathValue {
             {
                 Self::equals_static(a, other)
             }
-            (FhirPathValue::FhirPrimitive { inner: a, .. }, FhirPathValue::FhirPrimitive { inner: b, .. }) => {
-                Self::equals_static(a, b)
-            }
+            (
+                FhirPathValue::FhirPrimitive { inner: a, .. },
+                FhirPathValue::FhirPrimitive { inner: b, .. },
+            ) => Self::equals_static(a, b),
             (
                 FhirPathValue::Quantity {
                     value: v1,
@@ -194,7 +226,9 @@ impl FhirPathValue {
             FhirPathValue::TypedBoolean { value, .. } => *value,
             FhirPathValue::FhirPrimitive { inner, .. } => inner.is_truthy(),
             FhirPathValue::Empty => false,
-            FhirPathValue::Collection(items) => !items.is_empty(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                !items.is_empty()
+            }
             _ => true,
         }
     }
@@ -205,7 +239,9 @@ impl FhirPathValue {
             FhirPathValue::Boolean(b) => *b,
             FhirPathValue::TypedBoolean { value, .. } => *value,
             FhirPathValue::Empty => false,
-            FhirPathValue::Collection(items) => !items.is_empty(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                !items.is_empty()
+            }
             _ => true,
         }
     }
@@ -238,9 +274,9 @@ impl FhirPathValue {
                 if let Some(i) = n.as_i64() {
                     FhirPathValue::Integer(i)
                 } else if let Some(f) = n.as_f64() {
-                    FhirPathValue::Number(f)
+                    FhirPathValue::Number(Decimal::from_f64_retain(f).unwrap_or(Decimal::ZERO))
                 } else {
-                    FhirPathValue::Number(0.0)
+                    FhirPathValue::Number(Decimal::ZERO)
                 }
             }
             Value::String(s) => FhirPathValue::String(s.clone()),
@@ -264,20 +300,28 @@ impl FhirPathValue {
             FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
                 Value::String(s.clone())
             }
-            FhirPathValue::Number(n) => Value::Number(
-                serde_json::Number::from_f64(*n).unwrap_or_else(|| serde_json::Number::from(0)),
-            ),
+            FhirPathValue::Number(n) => {
+                let fval = n.to_f64().unwrap_or(0.0);
+                Value::Number(
+                    serde_json::Number::from_f64(fval)
+                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                )
+            }
             FhirPathValue::Integer(i) => Value::Number(serde_json::Number::from(*i)),
             FhirPathValue::Long(l) => Value::Number(serde_json::Number::from(*l)),
             FhirPathValue::Date(s) => Value::String(s.clone()),
             FhirPathValue::DateTime(s) => Value::String(s.clone()),
             FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
             FhirPathValue::Time(s) => Value::String(s.clone()),
-            FhirPathValue::Quantity { value, unit: _ } => Value::Number(
-                serde_json::Number::from_f64(*value).unwrap_or_else(|| serde_json::Number::from(0)),
-            ),
+            FhirPathValue::Quantity { value, unit: _ } => {
+                let fval = value.to_f64().unwrap_or(0.0);
+                Value::Number(
+                    serde_json::Number::from_f64(fval)
+                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                )
+            }
             FhirPathValue::DateTimePrecision(_) => Value::Null,
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let json_items: Vec<Value> = items.iter().map(|item| item.to_json()).collect();
                 Value::Array(json_items)
             }
@@ -320,10 +364,10 @@ impl FhirPathValue {
             }
             (FhirPathValue::Integer(a), FhirPathValue::Number(b))
             | (FhirPathValue::Long(a), FhirPathValue::Number(b)) => {
-                let a_f = *a as f64;
-                if a_f < *b {
+                let a_dec = Decimal::from(*a);
+                if a_dec < *b {
                     Ok(-1)
-                } else if a_f > *b {
+                } else if a_dec > *b {
                     Ok(1)
                 } else {
                     Ok(0)
@@ -331,10 +375,10 @@ impl FhirPathValue {
             }
             (FhirPathValue::Number(a), FhirPathValue::Integer(b))
             | (FhirPathValue::Number(a), FhirPathValue::Long(b)) => {
-                let b_f = *b as f64;
-                if *a < b_f {
+                let b_dec = Decimal::from(*b);
+                if *a < b_dec {
                     Ok(-1)
-                } else if *a > b_f {
+                } else if *a > b_dec {
                     Ok(1)
                 } else {
                     Ok(0)
@@ -414,7 +458,7 @@ impl FhirPathValue {
     /// Check if a value is a member of a collection
     pub fn is_member_of(&self, collection: &FhirPathValue) -> FhirPathResult<bool> {
         match collection {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 Ok(items.iter().any(|item| Self::equals_static(self, item)))
             }
             FhirPathValue::Empty => Ok(false),
