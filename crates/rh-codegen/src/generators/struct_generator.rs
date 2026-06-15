@@ -665,7 +665,17 @@ impl<'a> StructGenerator<'a> {
         field_generator.create_fields_from_element(element)
     }
 
-    /// Apply Box wrapper to field types to prevent circular dependencies
+    /// Apply `Box` wrapper to field types that form circular dependencies.
+    ///
+    /// FHIR's `Identifier.assigner` is `Reference`, and `Reference.identifier` is `Identifier`,
+    /// forming a direct cycle. Rust structs cannot contain themselves (even indirectly) without
+    /// indirection, so we wrap these cross-references in `Box<T>` to break the cycle.
+    ///
+    /// Currently the only known cycle is `Identifier ↔ Reference`. If future FHIR versions
+    /// introduce additional cycles, add them to the `circular_dependencies` table below.
+    ///
+    /// The recursive handling of `Option<T>` and `Vec<T>` ensures that `Option<Box<Reference>>`
+    /// and `Vec<Box<Reference>>` are emitted correctly rather than `Box<Option<Reference>>`.
     fn apply_box_for_circular_dependencies(
         field_type: RustType,
         current_struct_name: &str,
