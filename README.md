@@ -6,12 +6,11 @@
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.91%2B-orange.svg)](https://www.rust-lang.org)
 
+**Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in Rust. It ships as a cross-platform **CLI**, a set of **Rust library crates**, and **WebAssembly-backed npm packages** — all without the overhead of JVM- or .NET-based stacks.
 
-**Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extensible. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: composable commands, strong UX, and automation-friendly output.
+---
 
-Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. `rh-fhirpath`, `rh-vcl`, and `rh-cql` also ship **WebAssembly** targets and public `@reasonhealth/*` npm packages for browser, Node.js, and bundler use cases.
-
-## Install
+## Install the CLI
 
 | Platform | Method | Command |
 |----------|--------|---------|
@@ -21,310 +20,123 @@ Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. `r
 | Any | Docker | `docker pull ghcr.io/reason-healthcare/rh:latest` |
 | Any | Cargo | `cargo install rh-cli` |
 
-Other install methods (pre-built binaries from GitHub Releases) are documented in the [CLI README](apps/rh-cli/README.md).
+Pre-built binaries for all platforms are also available on the [GitHub Releases page](https://github.com/reason-healthcare/rh/releases). See the [CLI README](apps/rh-cli/README.md) for full installation details including Docker usage.
 
-## Components
-
-| Status | Component | Description |
-|--------|-----------|-------------|
-| ✅ | [rh-cli](apps/rh-cli/README.md) | Unified CLI for FHIR processing tools |
-| ✅ | [rh-codegen](crates/rh-codegen/README.md) | Code generation library for creating Rust types from FHIR StructureDefinitions |
-| ✅ | [rh-fhirpath](crates/rh-fhirpath/README.md) | FHIRPath expression parser and evaluator (`@reasonhealth/fhirpath`) |
-| ✅ | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) compiler — transforms FSH source into FHIR JSON packages |
-| ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser, translator, and explainer (`@reasonhealth/vcl`) |
-| ✅ | [rh-foundation](crates/rh-foundation/README.md) | Foundation utilities (errors, HTTP, I/O, CLI, package loader, snapshot generation) |
-| ✅ | [rh-validator](crates/rh-validator/README.md) | Hybrid FHIR R4 validator with snapshot-based profile validation |
-| ✅ | [rh-packager](crates/rh-packager/README.md) | FHIR Package assembler with built-in processors (snapshot, validate, CQL, FSH) |
-| ✅ | [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, source maps, and WASM package (`@reasonhealth/cql`) |
-| ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md) | **Generated** R4 FHIR types for Rust (1,388 public types) |
-| ✅ | [rh-hl7_fhir_r5_core](crates/rh-hl7_fhir_r5_core/README.md) | **Generated** R5 FHIR types for Rust |
-| 🔜 | rh-hl7_fhir_r6_core | **Generated** R6 FHIR for Rust |
-
-## Quick Start
+### Quick start
 
 ```bash
-# Clone and build the entire workspace
-git clone <repo-url>
-cd rh
-cargo build
-```
-
-## Workspace Structure
-
-```
-.
-├── Cargo.toml              # Workspace root configuration
-├── crates/                 # Library crates
-│   ├── rh-codegen/            # FHIR code generation library
-│   ├── rh-cql/                # CQL compiler and evaluator
-│   ├── rh-foundation/         # Foundation utilities (errors, HTTP, I/O, CLI, loader, snapshot)
-│   ├── rh-fhirpath/           # FHIRPath expression parser and evaluator
-│   ├── rh-fsh/                # FHIR Shorthand (FSH) to FHIR JSON compiler
-│   ├── rh-packager/           # FHIR Package assembler
-│   ├── rh-validator/          # Hybrid FHIR R4 validator
-│   ├── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
-│   ├── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
-│   └── rh-hl7_fhir_r5_core/   # Generated R5 FHIR types
-├── apps/                   # Executable applications
-│   └── rh-cli/                # Unified cross-platform CLI for FHIR
-├── packages/               # Public WebAssembly-backed npm packages
-│   ├── fhirpath/              # @reasonhealth/fhirpath
-│   ├── vcl/                   # @reasonhealth/vcl
-│   └── cql/                   # @reasonhealth/cql
-├── examples/
-│   └── playground/            # Vite playground for the npm packages
-├── justfile                # Task runner commands
-└── setup.sh                # Development setup script
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Rust 1.91 or later
-- Cargo (comes with Rust)
-
-### Development Setup
-
-Run the setup script to configure your development environment:
-
-```bash
-./setup.sh  # or: just setup
-```
-
-What the script does:
-
-- Verifies Rust toolchain (>= 1.91) and active `rustup` toolchain
-- Ensures `clippy` and `rustfmt` components are installed
-- Optionally installs `cargo-audit`, `cargo-watch`, and `cargo-nextest`
-- Formats the workspace and runs unified checks via `just check` (or equivalent commands if `just` is not installed)
-
-Tips:
-
-- Skip optional tool installs (useful for CI/offline):
-  ```bash
-  SKIP_INSTALL=1 ./setup.sh
-  ```
-- Install `just` for convenient tasks: https://github.com/casey/just
-- After setup, run:
-  ```bash
-  just check
-  rh --help
-  ```
-
-### Building
-
-Build all packages in the workspace:
-
-```bash
-cargo build
-```
-
-Build a specific package:
-
-```bash
-cargo build -p <package-name>
-```
-
-### Testing
-
-Run all tests:
-
-```bash
-cargo test
-```
-
-Run tests for a specific package:
-
-```bash
-cargo test -p <package-name>
-```
-
-NOTE: You can also use `just`
-```bash
-just --help
-```
-
-### Development Commands
-
-All functionality is available through the unified `rh` CLI.
-
-**For complete CLI documentation and examples, see the [RH CLI documentation](apps/rh-cli/README.md)**
-
-```bash
-rh --help
-```
-
-**Subcommands:**
-
-| Command | Description |
-|---------|-------------|
-| `rh codegen` | Generate organized Rust crates from FHIR Packages |
-| `rh cql` | Compile CQL (Clinical Quality Language) to ELM |
-| `rh download` | Download and install FHIR packages from npm-style registries |
-| `rh fhirpath` | Parse and evaluate FHIRPath expressions |
-| `rh fsh` | Compile and work with FHIR Shorthand (FSH) files |
-| `rh vcl` | Parse and translate VCL (ValueSet Compose Language) expressions |
-| `rh snapshot` | Generate and manage StructureDefinition snapshots |
-| `rh package` | Assemble a conformant FHIR Package from a source directory |
-| `rh validate` | Validate FHIR resources |
-
-### WASM and npm packages
-
-The WebAssembly packages live in the pnpm workspace under `packages/`:
-
-```bash
-pnpm install
-pnpm -r build
-pnpm -r test
-```
-
-Use `just wasm-check` for Rust compile-only coverage across `rh-foundation`,
-`rh-fhirpath`, `rh-vcl`, and `rh-cql`. The interactive playground is documented
-in [examples/playground/README.md](examples/playground/README.md), and the local
-npm publish process is documented in [packages/RELEASE.md](packages/RELEASE.md).
-
-### Automation output
-
-Every CLI command supports `--format human|json|ndjson`. Use `--format json`
-for automation; successful output is wrapped as:
-
-```json
-{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.0", "command": "rh"}}
-```
-
-Errors use the same envelope and preserve the process exit code:
-
-| Exit code | Meaning |
-|---|---|
-| `0` | Success |
-| `1` | Operational error such as I/O, network, or missing file |
-| `2` | Usage error from argument parsing |
-| `3` | Validation or conformance failure |
-| `4` | User-input parse error for FHIRPath, CQL, FSH, or VCL |
-
-**Examples:**
-
-```bash
-# Code generation — generate Rust types from a FHIR package
-rh codegen hl7.fhir.r4.core 4.0.1
-
-# FHIRPath — evaluate an expression against FHIR data
-rh fhirpath eval "Patient.name.given" -d patient.json
-
-# FHIRPath — interactive REPL
-rh fhirpath repl
-
-# FSH — compile FSH source to FHIR JSON
-rh fsh compile myprofile.fsh --output output/
-
-# VCL — translate a VCL expression to FHIR ValueSet.compose
-rh vcl translate "http://loinc.org|718-7*"
-
-# CQL — compile CQL source to ELM JSON
-rh cql compile measure.cql
-
-# CQL — evaluate a named expression
-rh cql eval measure.cql "InitialPopulation" --data patients.ndjson
-
-# Validate a single FHIR resource
-rh validate resource -i patient.json
-
-# Validate multiple resources from NDJSON with a terminology server
-rh validate batch -i resources.ndjson --terminology-server https://tx.fhir.org/r4
-
 # Download a FHIR package
 rh download package hl7.fhir.r4.core 4.0.1
+
+# Evaluate a FHIRPath expression against FHIR data
+rh fhirpath eval "Patient.name.given" -d patient.json
+
+# Interactive FHIRPath REPL
+rh fhirpath repl
+
+# Compile FSH source to FHIR JSON
+rh fsh compile myprofile.fsh --output output/
+
+# Translate a VCL expression to FHIR ValueSet.compose
+rh vcl translate "http://loinc.org|718-7*"
+
+# Compile CQL to ELM JSON
+rh cql compile measure.cql
+
+# Validate a FHIR resource
+rh validate resource -i patient.json
 
 # Generate a StructureDefinition snapshot
 rh snapshot generate http://hl7.org/fhir/StructureDefinition/Patient
 
-# Package — scaffold, build, and pack a FHIR Package
+# Scaffold, build, and pack a FHIR package
 rh package init --canonical https://example.org/fhir my-package/
 rh package build my-package/
 rh package pack my-package/output/
 ```
 
-Check code formatting:
+Every command supports `--format human|json|ndjson`. Use `--format json` for scripting and automation:
+
+```json
+{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.0", "command": "rh"}}
+```
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Success |
+| `1` | Operational error (I/O, network, missing file) |
+| `2` | Usage error from argument parsing |
+| `3` | Validation or conformance failure |
+| `4` | Parse error (FHIRPath, CQL, FSH, or VCL) |
+
+See `rh --help` or the [CLI README](apps/rh-cli/README.md) for the full command reference.
+
+---
+
+## npm Packages
+
+`rh-fhirpath`, `rh-vcl`, and `rh-cql` compile to WebAssembly and are published as typed TypeScript wrappers on npm. Try them in the **[interactive playground →](https://reason-healthcare.github.io/rh/)**.
+
+### Install
 
 ```bash
-cargo fmt --check
+npm install @reasonhealth/fhirpath
+npm install @reasonhealth/vcl
+npm install @reasonhealth/cql
 ```
 
-Apply formatting:
+### Usage
 
-```bash
-cargo fmt
+```ts
+// Node.js
+import { evaluateExpression } from "@reasonhealth/fhirpath/node";
+
+const result = evaluateExpression("name.given", {
+  resourceType: "Patient",
+  name: [{ given: ["Ada"] }],
+});
 ```
 
-Run clippy lints:
+Each package exports three entry points:
 
-```bash
-cargo clippy
-```
+| Entry point | Target |
+|-------------|--------|
+| `@reasonhealth/<pkg>/node` | Node.js |
+| `@reasonhealth/<pkg>/web` | Direct browser loading (call `init*()` first) |
+| `@reasonhealth/<pkg>/bundler` | Vite, webpack, Rollup, and similar bundlers |
 
-Run clippy with all features:
+---
 
-```bash
-cargo clippy --all-features
-```
+## Crates
 
-Run tests:
+| Crate | Description | npm |
+|-------|-------------|-----|
+| [rh-cli](apps/rh-cli/README.md) | Unified CLI for all FHIR tools | — |
+| [rh-fhirpath](crates/rh-fhirpath/README.md) | FHIRPath expression parser and evaluator | [`@reasonhealth/fhirpath`](https://www.npmjs.com/package/@reasonhealth/fhirpath) |
+| [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, and source maps | [`@reasonhealth/cql`](https://www.npmjs.com/package/@reasonhealth/cql) |
+| [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator | [`@reasonhealth/vcl`](https://www.npmjs.com/package/@reasonhealth/vcl) |
+| [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) compiler | — |
+| [rh-validator](crates/rh-validator/README.md) | Hybrid FHIR R4 validator with snapshot-based profile validation | — |
+| [rh-packager](crates/rh-packager/README.md) | FHIR package assembler with built-in processors | — |
+| [rh-codegen](crates/rh-codegen/README.md) | Code generation from FHIR StructureDefinitions | — |
+| [rh-foundation](crates/rh-foundation/README.md) | Foundation utilities (errors, HTTP, I/O, package loader, snapshot) | — |
+| [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md) | Generated R4 FHIR types for Rust (1,388 public types) | — |
+| [rh-hl7_fhir_r5_core](crates/rh-hl7_fhir_r5_core/README.md) | Generated R5 FHIR types for Rust | — |
 
-```bash
-cargo test
-```
-
-## Dependency Management
-
-### Workspace Dependencies
-
-Add common dependencies to the root `Cargo.toml`, e.g.:
-
-```toml
-[workspace.dependencies]
-serde = "1.0"
-tokio = "1.0"
-anyhow = "1.0"
-```
-
-Then reference them in individual crates, e.g.:
-
-```toml
-[dependencies]
-serde = { workspace = true }
-tokio = { workspace = true }
-```
-
-### Crate-specific Dependencies
-
-Add directly to the crate's `Cargo.toml`, e.g.:
-
-```toml
-[dependencies]
-regex = "1.0"
-```
-
-## Development Workflow
-
-1. **Setup**: Run `./setup.sh` (or `just setup`) once to configure your environment
-2. **Development**: Work in individual crates with full workspace support
-3. **Testing**: `just test` (or `cargo test`) runs all tests across the workspace
-4. **Building**: `just build` (or `cargo build`) builds everything with optimized dependencies
-5. **Linting**: `just check` (or `cargo clippy`) checks all code for best practices
-
-## Release Management
-
-The workspace supports coordinated releases of the shared-version crates plus the independently versioned validator crate. See [RELEASING.md](RELEASING.md) for the current release workflow, version bump commands, and publish order.
+---
 
 ## License
 
-This project is licensed under either of
+Licensed under either of
 
-- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 - MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+## Contributing & Development
+
+See [DEVELOPER.md](DEVELOPER.md) for build setup, testing, workspace structure, and release workflow. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## Supported By
 
