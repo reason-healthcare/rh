@@ -1,4 +1,4 @@
-# FHIR DevDays 2025 — Live Demos
+# FHIR DevDays 2026 — Live Demos
 
 Scripts and fixture data for the `rh` live demo session.
 
