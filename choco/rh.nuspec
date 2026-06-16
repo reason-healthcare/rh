@@ -2,7 +2,7 @@
 <package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <metadata>
     <id>rh</id>
-    <version>0.2.0-beta.2</version>
+    <version>0.2.0</version>
     <title>RH - FHIR CLI</title>
     <authors>Reason Healthcare</authors>
     <owners>Reason Healthcare</owners>

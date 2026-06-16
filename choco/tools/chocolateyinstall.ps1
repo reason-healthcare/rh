@@ -1,5 +1,5 @@
 $version = $env:ChocolateyPackageVersion
-if (-not $version) { $version = "0.2.0-beta.2" }
+if (-not $version) { $version = "0.2.0" }
 
 $url = "https://github.com/reason-healthcare/rh/releases/download/v$version/rh-x86_64-pc-windows-msvc.zip"
 

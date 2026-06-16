@@ -190,7 +190,7 @@ Every CLI command supports `--format human|json|ndjson`. Use `--format json`
 for automation; successful output is wrapped as:
 
 ```json
-{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.0-beta.2", "command": "rh"}}
+{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.0", "command": "rh"}}
 ```
 
 Errors use the same envelope and preserve the process exit code:

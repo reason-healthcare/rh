@@ -49,7 +49,7 @@ time rh --version
 ```
 
 ```
-rh 0.2.0-beta.2
+rh 0.2.0
 real  0m0.007s
 ```
 

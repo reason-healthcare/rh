@@ -53,7 +53,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rh_hl7_fhir_r4_core = "0.2.0-beta.2"
+rh_hl7_fhir_r4_core = "0.2.0"
 ```
 
 ### Deserializing FHIR Resources
