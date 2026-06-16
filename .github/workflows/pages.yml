@@ -53,10 +53,9 @@ jobs:
 
       - name: Build packages and playground
         run: |
-          pnpm --filter @reason-healthcare/fhirpath build
-          pnpm --filter @reason-healthcare/vcl build
-          pnpm --filter @reason-healthcare/cql build
-          pnpm --filter @reason-healthcare/playground build
+          pnpm --filter @reasonhealth/playground build:deps
+          pnpm --filter @reasonhealth/playground build
+          test -d examples/playground/dist
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

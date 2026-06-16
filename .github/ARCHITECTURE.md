@@ -74,9 +74,9 @@ rh-vcl: rh-foundation
 | Crate | Feature | Root check | NPM package | Notes |
 |---|---|---|---|---|
 | `rh-foundation` | `wasm` | `cargo check -p rh-foundation --target wasm32-unknown-unknown --no-default-features --features wasm` | n/a | Shared panic hook and `WasmResult` infrastructure only |
-| `rh-fhirpath` | `wasm` | `just wasm-build fhirpath <target>` | `@reason-healthcare/fhirpath` | Exports parse/evaluate wrappers for node, web, and bundler targets |
-| `rh-vcl` | `wasm` | `just wasm-build vcl <target>` | `@reason-healthcare/vcl` | Exports parse, translate, validate, and explain wrappers |
-| `rh-cql` | `wasm` | `just wasm-build cql <target>` | `@reason-healthcare/cql` | Exports CQL compile and ELM evaluation wrappers |
+| `rh-fhirpath` | `wasm` | `just wasm-build fhirpath <target>` | `@reasonhealth/fhirpath` | Exports parse/evaluate wrappers for node, web, and bundler targets |
+| `rh-vcl` | `wasm` | `just wasm-build vcl <target>` | `@reasonhealth/vcl` | Exports parse, translate, validate, and explain wrappers |
+| `rh-cql` | `wasm` | `just wasm-build cql <target>` | `@reasonhealth/cql` | Exports CQL compile and ELM evaluation wrappers |
 
 Use `just wasm-check` for compile-only checks and `pnpm -r build && pnpm -r
 test` for the npm package/build test path.
@@ -86,9 +86,9 @@ test` for the npm package/build test path.
 The `packages/` directory is a pnpm workspace containing the public
 WebAssembly-backed packages:
 
-- `packages/fhirpath` -> `@reason-healthcare/fhirpath`
-- `packages/vcl` -> `@reason-healthcare/vcl`
-- `packages/cql` -> `@reason-healthcare/cql`
+- `packages/fhirpath` -> `@reasonhealth/fhirpath`
+- `packages/vcl` -> `@reasonhealth/vcl`
+- `packages/cql` -> `@reasonhealth/cql`
 
 The `examples/playground` package is a private Vite app that exercises all
 three npm packages and is deployed through the Pages workflow.
