@@ -4,6 +4,7 @@ use super::*;
 use phf::{phf_map, Map};
 
 /// Field metadata for Account
+#[rustfmt::skip]
 pub static ACCOUNT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -122,6 +123,7 @@ pub static ACCOUNT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ActivityDefinition
+#[rustfmt::skip]
 pub static ACTIVITYDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -450,9 +452,12 @@ pub static ACTIVITYDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Actual Group
-pub static ACTUAL_GROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static ACTUAL_GROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for AdverseEvent
+#[rustfmt::skip]
 pub static ADVERSEEVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "actuality" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -625,6 +630,7 @@ pub static ADVERSEEVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for AllergyIntolerance
+#[rustfmt::skip]
 pub static ALLERGYINTOLERANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "asserter" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -773,6 +779,7 @@ pub static ALLERGYINTOLERANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Appointment
+#[rustfmt::skip]
 pub static APPOINTMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "appointmentType" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -957,6 +964,7 @@ pub static APPOINTMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for AppointmentResponse
+#[rustfmt::skip]
 pub static APPOINTMENTRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "actor" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -1057,6 +1065,7 @@ pub static APPOINTMENTRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for AuditEvent
+#[rustfmt::skip]
 pub static AUDITEVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "action" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -1175,6 +1184,7 @@ pub static AUDITEVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Basic
+#[rustfmt::skip]
 pub static BASIC_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -1257,6 +1267,7 @@ pub static BASIC_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Binary
+#[rustfmt::skip]
 pub static BINARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contentType" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -1303,6 +1314,7 @@ pub static BINARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for BiologicallyDerivedProduct
+#[rustfmt::skip]
 pub static BIOLOGICALLYDERIVEDPRODUCT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "collection" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -1421,6 +1433,7 @@ pub static BIOLOGICALLYDERIVEDPRODUCT_FIELDS: Map<&'static str, FieldInfo> = phf
 };
 
 /// Field metadata for BodyStructure
+#[rustfmt::skip]
 pub static BODYSTRUCTURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -1521,6 +1534,7 @@ pub static BODYSTRUCTURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Bundle
+#[rustfmt::skip]
 pub static BUNDLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "entry" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -1591,21 +1605,32 @@ pub static BUNDLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CDS Hooks GuidanceResponse
-pub static CDS_HOOKS_GUIDANCERESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static CDS_HOOKS_GUIDANCERESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for CDS Hooks RequestGroup
-pub static CDS_HOOKS_REQUESTGROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static CDS_HOOKS_REQUESTGROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for CDS Hooks Service PlanDefinition
-pub static CDS_HOOKS_SERVICE_PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static CDS_HOOKS_SERVICE_PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for CQF-Questionnaire
-pub static CQF_QUESTIONNAIRE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static CQF_QUESTIONNAIRE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for CQL Library
-pub static CQL_LIBRARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static CQL_LIBRARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for CapabilityStatement
+#[rustfmt::skip]
 pub static CAPABILITYSTATEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -1814,6 +1839,7 @@ pub static CAPABILITYSTATEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CarePlan
+#[rustfmt::skip]
 pub static CAREPLAN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "activity" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -2004,6 +2030,7 @@ pub static CAREPLAN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CareTeam
+#[rustfmt::skip]
 pub static CARETEAM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "category" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -2134,6 +2161,7 @@ pub static CARETEAM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CatalogEntry
+#[rustfmt::skip]
 pub static CATALOGENTRY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "additionalCharacteristic" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -2264,6 +2292,7 @@ pub static CATALOGENTRY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ChargeItem
+#[rustfmt::skip]
 pub static CHARGEITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "account" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -2472,6 +2501,7 @@ pub static CHARGEITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ChargeItemDefinition
+#[rustfmt::skip]
 pub static CHARGEITEMDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "applicability" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -2662,6 +2692,7 @@ pub static CHARGEITEMDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
 };
 
 /// Field metadata for Claim
+#[rustfmt::skip]
 pub static CLAIM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "accident" => FieldInfo {
         field_type: FhirFieldType::Complex("Address"),
@@ -2876,6 +2907,7 @@ pub static CLAIM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ClaimResponse
+#[rustfmt::skip]
 pub static CLAIMRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "addItem" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
@@ -3084,9 +3116,12 @@ pub static CLAIMRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Clinical Document
-pub static CLINICAL_DOCUMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static CLINICAL_DOCUMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for ClinicalImpression
+#[rustfmt::skip]
 pub static CLINICALIMPRESSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "assessor" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -3259,6 +3294,7 @@ pub static CLINICALIMPRESSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CodeSystem
+#[rustfmt::skip]
 pub static CODESYSTEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "caseSensitive" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -3467,6 +3503,7 @@ pub static CODESYSTEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Communication
+#[rustfmt::skip]
 pub static COMMUNICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "about" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -3657,6 +3694,7 @@ pub static COMMUNICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CommunicationRequest
+#[rustfmt::skip]
 pub static COMMUNICATIONREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "about" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -3841,6 +3879,7 @@ pub static COMMUNICATIONREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
 };
 
 /// Field metadata for CompartmentDefinition
+#[rustfmt::skip]
 pub static COMPARTMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -3977,6 +4016,7 @@ pub static COMPARTMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map!
 };
 
 /// Field metadata for Composition
+#[rustfmt::skip]
 pub static COMPOSITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "attester" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -4119,9 +4159,12 @@ pub static COMPOSITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Computable PlanDefinition
-pub static COMPUTABLE_PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static COMPUTABLE_PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for ConceptMap
+#[rustfmt::skip]
 pub static CONCEPTMAP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -4282,6 +4325,7 @@ pub static CONCEPTMAP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Condition
+#[rustfmt::skip]
 pub static CONDITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "abatement[x]" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -4436,6 +4480,7 @@ pub static CONDITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Consent
+#[rustfmt::skip]
 pub static CONSENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "category" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -4566,6 +4611,7 @@ pub static CONSENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Contract
+#[rustfmt::skip]
 pub static CONTRACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "alias" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -4816,6 +4862,7 @@ pub static CONTRACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Coverage
+#[rustfmt::skip]
 pub static COVERAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "beneficiary" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -4970,6 +5017,7 @@ pub static COVERAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CoverageEligibilityRequest
+#[rustfmt::skip]
 pub static COVERAGEELIGIBILITYREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -5106,6 +5154,7 @@ pub static COVERAGEELIGIBILITYREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf
 };
 
 /// Field metadata for CoverageEligibilityResponse
+#[rustfmt::skip]
 pub static COVERAGEELIGIBILITYRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -5248,6 +5297,7 @@ pub static COVERAGEELIGIBILITYRESPONSE_FIELDS: Map<&'static str, FieldInfo> = ph
 };
 
 /// Field metadata for DetectedIssue
+#[rustfmt::skip]
 pub static DETECTEDISSUE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -5372,6 +5422,7 @@ pub static DETECTEDISSUE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Device
+#[rustfmt::skip]
 pub static DEVICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactPoint"),
@@ -5580,9 +5631,12 @@ pub static DEVICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Device Metric Observation Profile
-pub static DEVICE_METRIC_OBSERVATION_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static DEVICE_METRIC_OBSERVATION_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for DeviceDefinition
+#[rustfmt::skip]
 pub static DEVICEDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "capability" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -5767,6 +5821,7 @@ pub static DEVICEDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DeviceMetric
+#[rustfmt::skip]
 pub static DEVICEMETRIC_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "calibration" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Instant),
@@ -5879,6 +5934,7 @@ pub static DEVICEMETRIC_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DeviceRequest
+#[rustfmt::skip]
 pub static DEVICEREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authoredOn" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -6075,6 +6131,7 @@ pub static DEVICEREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DeviceUseStatement
+#[rustfmt::skip]
 pub static DEVICEUSESTATEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -6205,6 +6262,7 @@ pub static DEVICEUSESTATEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DiagnosticReport
+#[rustfmt::skip]
 pub static DIAGNOSTICREPORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -6365,9 +6423,12 @@ pub static DIAGNOSTICREPORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DiagnosticReport-Genetics
-pub static DIAGNOSTICREPORT_GENETICS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static DIAGNOSTICREPORT_GENETICS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for DocumentManifest
+#[rustfmt::skip]
 pub static DOCUMENTMANIFEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -6492,6 +6553,7 @@ pub static DOCUMENTMANIFEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DocumentReference
+#[rustfmt::skip]
 pub static DOCUMENTREFERENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authenticator" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -6640,6 +6702,7 @@ pub static DOCUMENTREFERENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DomainResource
+#[rustfmt::skip]
 pub static DOMAINRESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -6692,14 +6755,17 @@ pub static DOMAINRESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for EHRS FM Record Lifecycle Event - Audit Event
-pub static EHRS_FM_RECORD_LIFECYCLE_EVENT___AUDIT_EVENT_FIELDS: Map<&'static str, FieldInfo> =
-    phf_map! {};
+#[rustfmt::skip]
+pub static EHRS_FM_RECORD_LIFECYCLE_EVENT___AUDIT_EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for EHRS FM Record Lifecycle Event - Provenance
-pub static EHRS_FM_RECORD_LIFECYCLE_EVENT___PROVENANCE_FIELDS: Map<&'static str, FieldInfo> =
-    phf_map! {};
+#[rustfmt::skip]
+pub static EHRS_FM_RECORD_LIFECYCLE_EVENT___PROVENANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for EffectEvidenceSynthesis
+#[rustfmt::skip]
 pub static EFFECTEVIDENCESYNTHESIS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -6950,6 +7016,7 @@ pub static EFFECTEVIDENCESYNTHESIS_FIELDS: Map<&'static str, FieldInfo> = phf_ma
 };
 
 /// Field metadata for Encounter
+#[rustfmt::skip]
 pub static ENCOUNTER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "account" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -7140,6 +7207,7 @@ pub static ENCOUNTER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Endpoint
+#[rustfmt::skip]
 pub static ENDPOINT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "address" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Url),
@@ -7258,6 +7326,7 @@ pub static ENDPOINT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for EnrollmentRequest
+#[rustfmt::skip]
 pub static ENROLLMENTREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "candidate" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -7352,6 +7421,7 @@ pub static ENROLLMENTREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for EnrollmentResponse
+#[rustfmt::skip]
 pub static ENROLLMENTRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -7452,6 +7522,7 @@ pub static ENROLLMENTRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for EpisodeOfCare
+#[rustfmt::skip]
 pub static EPISODEOFCARE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "account" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -7576,6 +7647,7 @@ pub static EPISODEOFCARE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for EventDefinition
+#[rustfmt::skip]
 pub static EVENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -7796,6 +7868,7 @@ pub static EVENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Evidence
+#[rustfmt::skip]
 pub static EVIDENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -8016,9 +8089,12 @@ pub static EVIDENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Evidence Synthesis Profile
-pub static EVIDENCE_SYNTHESIS_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static EVIDENCE_SYNTHESIS_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for EvidenceVariable
+#[rustfmt::skip]
 pub static EVIDENCEVARIABLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -8233,9 +8309,12 @@ pub static EVIDENCEVARIABLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Example Lipid Profile
-pub static EXAMPLE_LIPID_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static EXAMPLE_LIPID_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for ExampleScenario
+#[rustfmt::skip]
 pub static EXAMPLESCENARIO_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "actor" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
@@ -8390,6 +8469,7 @@ pub static EXAMPLESCENARIO_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ExplanationOfBenefit
+#[rustfmt::skip]
 pub static EXPLANATIONOFBENEFIT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "accident" => FieldInfo {
         field_type: FhirFieldType::Complex("Address"),
@@ -8694,10 +8774,12 @@ pub static EXPLANATIONOFBENEFIT_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
 };
 
 /// Field metadata for Family member history for genetics analysis
-pub static FAMILY_MEMBER_HISTORY_FOR_GENETICS_ANALYSIS_FIELDS: Map<&'static str, FieldInfo> =
-    phf_map! {};
+#[rustfmt::skip]
+pub static FAMILY_MEMBER_HISTORY_FOR_GENETICS_ANALYSIS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Flag
+#[rustfmt::skip]
 pub static FLAG_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -8798,6 +8880,7 @@ pub static FLAG_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Goal
+#[rustfmt::skip]
 pub static GOAL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "achievementStatus" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -8946,6 +9029,7 @@ pub static GOAL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for GraphDefinition
+#[rustfmt::skip]
 pub static GRAPHDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -9088,6 +9172,7 @@ pub static GRAPHDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Group
+#[rustfmt::skip]
 pub static GROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -9200,9 +9285,12 @@ pub static GROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Group Definition
-pub static GROUP_DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static GROUP_DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for GuidanceResponse
+#[rustfmt::skip]
 pub static GUIDANCERESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -9345,6 +9433,7 @@ pub static GUIDANCERESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for HealthcareService
+#[rustfmt::skip]
 pub static HEALTHCARESERVICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -9541,6 +9630,7 @@ pub static HEALTHCARESERVICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ImagingStudy
+#[rustfmt::skip]
 pub static IMAGINGSTUDY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -9713,6 +9803,7 @@ pub static IMAGINGSTUDY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Immunization
+#[rustfmt::skip]
 pub static IMMUNIZATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -9933,6 +10024,7 @@ pub static IMMUNIZATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ImmunizationEvaluation
+#[rustfmt::skip]
 pub static IMMUNIZATIONEVALUATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authority" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -10063,6 +10155,7 @@ pub static IMMUNIZATIONEVALUATION_FIELDS: Map<&'static str, FieldInfo> = phf_map
 };
 
 /// Field metadata for ImmunizationRecommendation
+#[rustfmt::skip]
 pub static IMMUNIZATIONRECOMMENDATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authority" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -10145,6 +10238,7 @@ pub static IMMUNIZATIONRECOMMENDATION_FIELDS: Map<&'static str, FieldInfo> = phf
 };
 
 /// Field metadata for ImplementationGuide
+#[rustfmt::skip]
 pub static IMPLEMENTATIONGUIDE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -10317,6 +10411,7 @@ pub static IMPLEMENTATIONGUIDE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for InsurancePlan
+#[rustfmt::skip]
 pub static INSURANCEPLAN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "administeredBy" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -10453,6 +10548,7 @@ pub static INSURANCEPLAN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Invoice
+#[rustfmt::skip]
 pub static INVOICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "account" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -10595,6 +10691,7 @@ pub static INVOICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Library
+#[rustfmt::skip]
 pub static LIBRARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -10833,6 +10930,7 @@ pub static LIBRARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Linkage
+#[rustfmt::skip]
 pub static LINKAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -10903,6 +11001,7 @@ pub static LINKAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for List
+#[rustfmt::skip]
 pub static LIST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -11033,6 +11132,7 @@ pub static LIST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Location
+#[rustfmt::skip]
 pub static LOCATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "address" => FieldInfo {
         field_type: FhirFieldType::Complex("Address"),
@@ -11187,6 +11287,7 @@ pub static LOCATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Measure
+#[rustfmt::skip]
 pub static MEASURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -11485,6 +11586,7 @@ pub static MEASURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MeasureReport
+#[rustfmt::skip]
 pub static MEASUREREPORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -11603,6 +11705,7 @@ pub static MEASUREREPORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Media
+#[rustfmt::skip]
 pub static MEDIA_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -11787,6 +11890,7 @@ pub static MEDIA_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Medication
+#[rustfmt::skip]
 pub static MEDICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "amount" => FieldInfo {
         field_type: FhirFieldType::Complex("Ratio"),
@@ -11887,6 +11991,7 @@ pub static MEDICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MedicationAdministration
+#[rustfmt::skip]
 pub static MEDICATIONADMINISTRATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "category" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -12053,6 +12158,7 @@ pub static MEDICATIONADMINISTRATION_FIELDS: Map<&'static str, FieldInfo> = phf_m
 };
 
 /// Field metadata for MedicationDispense
+#[rustfmt::skip]
 pub static MEDICATIONDISPENSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authorizingPrescription" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -12249,6 +12355,7 @@ pub static MEDICATIONDISPENSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MedicationKnowledge
+#[rustfmt::skip]
 pub static MEDICATIONKNOWLEDGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "administrationGuidelines" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -12433,6 +12540,7 @@ pub static MEDICATIONKNOWLEDGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MedicationRequest
+#[rustfmt::skip]
 pub static MEDICATIONREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authoredOn" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -12677,6 +12785,7 @@ pub static MEDICATIONREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MedicationStatement
+#[rustfmt::skip]
 pub static MEDICATIONSTATEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -12831,6 +12940,7 @@ pub static MEDICATIONSTATEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MedicinalProduct
+#[rustfmt::skip]
 pub static MEDICINALPRODUCT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "additionalMonitoringIndicator" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -13003,6 +13113,7 @@ pub static MEDICINALPRODUCT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MedicinalProductAuthorization
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTAUTHORIZATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -13151,6 +13262,7 @@ pub static MEDICINALPRODUCTAUTHORIZATION_FIELDS: Map<&'static str, FieldInfo> = 
 };
 
 /// Field metadata for MedicinalProductContraindication
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTCONTRAINDICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "comorbidity" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -13245,6 +13357,7 @@ pub static MEDICINALPRODUCTCONTRAINDICATION_FIELDS: Map<&'static str, FieldInfo>
 };
 
 /// Field metadata for MedicinalProductIndication
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTINDICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "comorbidity" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -13351,6 +13464,7 @@ pub static MEDICINALPRODUCTINDICATION_FIELDS: Map<&'static str, FieldInfo> = phf
 };
 
 /// Field metadata for MedicinalProductIngredient
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTINGREDIENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "allergenicIndicator" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -13439,6 +13553,7 @@ pub static MEDICINALPRODUCTINGREDIENT_FIELDS: Map<&'static str, FieldInfo> = phf
 };
 
 /// Field metadata for MedicinalProductInteraction
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTINTERACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -13533,6 +13648,7 @@ pub static MEDICINALPRODUCTINTERACTION_FIELDS: Map<&'static str, FieldInfo> = ph
 };
 
 /// Field metadata for MedicinalProductManufactured
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTMANUFACTURED_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -13627,6 +13743,7 @@ pub static MEDICINALPRODUCTMANUFACTURED_FIELDS: Map<&'static str, FieldInfo> = p
 };
 
 /// Field metadata for MedicinalProductPackaged
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTPACKAGED_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "batchIdentifier" => FieldInfo {
         field_type: FhirFieldType::Complex("Identifier"),
@@ -13733,6 +13850,7 @@ pub static MEDICINALPRODUCTPACKAGED_FIELDS: Map<&'static str, FieldInfo> = phf_m
 };
 
 /// Field metadata for MedicinalProductPharmaceutical
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTPHARMACEUTICAL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "administrableDoseForm" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -13827,6 +13945,7 @@ pub static MEDICINALPRODUCTPHARMACEUTICAL_FIELDS: Map<&'static str, FieldInfo> =
 };
 
 /// Field metadata for MedicinalProductUndesirableEffect
+#[rustfmt::skip]
 pub static MEDICINALPRODUCTUNDESIRABLEEFFECT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "classification" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -13909,6 +14028,7 @@ pub static MEDICINALPRODUCTUNDESIRABLEEFFECT_FIELDS: Map<&'static str, FieldInfo
 };
 
 /// Field metadata for MessageDefinition
+#[rustfmt::skip]
 pub static MESSAGEDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "allowedResponse" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
@@ -14105,6 +14225,7 @@ pub static MESSAGEDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MessageHeader
+#[rustfmt::skip]
 pub static MESSAGEHEADER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -14223,6 +14344,7 @@ pub static MESSAGEHEADER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MolecularSequence
+#[rustfmt::skip]
 pub static MOLECULARSEQUENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -14371,6 +14493,7 @@ pub static MOLECULARSEQUENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for NamingSystem
+#[rustfmt::skip]
 pub static NAMINGSYSTEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -14501,6 +14624,7 @@ pub static NAMINGSYSTEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for NutritionOrder
+#[rustfmt::skip]
 pub static NUTRITIONORDER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "allergyIntolerance" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -14655,6 +14779,7 @@ pub static NUTRITIONORDER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Observation
+#[rustfmt::skip]
 pub static OBSERVATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -14851,9 +14976,12 @@ pub static OBSERVATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Observation-genetics
-pub static OBSERVATION_GENETICS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_GENETICS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for ObservationDefinition
+#[rustfmt::skip]
 pub static OBSERVATIONDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "abnormalCodedValueSet" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -14984,6 +15112,7 @@ pub static OBSERVATIONDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map!
 };
 
 /// Field metadata for OperationDefinition
+#[rustfmt::skip]
 pub static OPERATIONDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "affectsState" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -15192,6 +15321,7 @@ pub static OPERATIONDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for OperationOutcome
+#[rustfmt::skip]
 pub static OPERATIONOUTCOME_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -15250,6 +15380,7 @@ pub static OPERATIONOUTCOME_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Organization
+#[rustfmt::skip]
 pub static ORGANIZATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -15362,6 +15493,7 @@ pub static ORGANIZATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for OrganizationAffiliation
+#[rustfmt::skip]
 pub static ORGANIZATIONAFFILIATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -15486,9 +15618,12 @@ pub static ORGANIZATIONAFFILIATION_FIELDS: Map<&'static str, FieldInfo> = phf_ma
 };
 
 /// Field metadata for PICO Element Profile
-pub static PICO_ELEMENT_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static PICO_ELEMENT_PROFILE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Parameters
+#[rustfmt::skip]
 pub static PARAMETERS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "id" => FieldInfo {
         field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
@@ -15523,6 +15658,7 @@ pub static PARAMETERS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Patient
+#[rustfmt::skip]
 pub static PATIENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -15671,6 +15807,7 @@ pub static PATIENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for PaymentNotice
+#[rustfmt::skip]
 pub static PAYMENTNOTICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "amount" => FieldInfo {
         field_type: FhirFieldType::Complex("Money"),
@@ -15795,6 +15932,7 @@ pub static PAYMENTNOTICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for PaymentReconciliation
+#[rustfmt::skip]
 pub static PAYMENTRECONCILIATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -15937,6 +16075,7 @@ pub static PAYMENTRECONCILIATION_FIELDS: Map<&'static str, FieldInfo> = phf_map!
 };
 
 /// Field metadata for Person
+#[rustfmt::skip]
 pub static PERSON_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -16049,6 +16188,7 @@ pub static PERSON_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for PlanDefinition
+#[rustfmt::skip]
 pub static PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "action" => FieldInfo {
         field_type: FhirFieldType::Complex("Expression"),
@@ -16287,6 +16427,7 @@ pub static PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Practitioner
+#[rustfmt::skip]
 pub static PRACTITIONER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -16399,6 +16540,7 @@ pub static PRACTITIONER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for PractitionerRole
+#[rustfmt::skip]
 pub static PRACTITIONERROLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -16535,6 +16677,7 @@ pub static PRACTITIONERROLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Procedure
+#[rustfmt::skip]
 pub static PROCEDURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "asserter" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -16755,12 +16898,17 @@ pub static PROCEDURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Profile for Catalog
-pub static PROFILE_FOR_CATALOG_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static PROFILE_FOR_CATALOG_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Profile for HLA Genotyping Results
-pub static PROFILE_FOR_HLA_GENOTYPING_RESULTS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static PROFILE_FOR_HLA_GENOTYPING_RESULTS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Provenance
+#[rustfmt::skip]
 pub static PROVENANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "activity" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -16873,9 +17021,12 @@ pub static PROVENANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Provenance Relevant History
-pub static PROVENANCE_RELEVANT_HISTORY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static PROVENANCE_RELEVANT_HISTORY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Questionnaire
+#[rustfmt::skip]
 pub static QUESTIONNAIRE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -17060,6 +17211,7 @@ pub static QUESTIONNAIRE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for QuestionnaireResponse
+#[rustfmt::skip]
 pub static QUESTIONNAIRERESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -17178,6 +17330,7 @@ pub static QUESTIONNAIRERESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map!
 };
 
 /// Field metadata for RelatedPerson
+#[rustfmt::skip]
 pub static RELATEDPERSON_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -17302,6 +17455,7 @@ pub static RELATEDPERSON_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for RequestGroup
+#[rustfmt::skip]
 pub static REQUESTGROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "action" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -17462,6 +17616,7 @@ pub static REQUESTGROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ResearchDefinition
+#[rustfmt::skip]
 pub static RESEARCHDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -17718,6 +17873,7 @@ pub static RESEARCHDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ResearchElementDefinition
+#[rustfmt::skip]
 pub static RESEARCHELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -17968,6 +18124,7 @@ pub static RESEARCHELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_
 };
 
 /// Field metadata for ResearchStudy
+#[rustfmt::skip]
 pub static RESEARCHSTUDY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "arm" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -18164,6 +18321,7 @@ pub static RESEARCHSTUDY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ResearchSubject
+#[rustfmt::skip]
 pub static RESEARCHSUBJECT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "actualArm" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -18264,6 +18422,7 @@ pub static RESEARCHSUBJECT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Resource
+#[rustfmt::skip]
 pub static RESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "id" => FieldInfo {
         field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
@@ -18292,6 +18451,7 @@ pub static RESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for RiskAssessment
+#[rustfmt::skip]
 pub static RISKASSESSMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -18446,6 +18606,7 @@ pub static RISKASSESSMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for RiskEvidenceSynthesis
+#[rustfmt::skip]
 pub static RISKEVIDENCESYNTHESIS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -18684,6 +18845,7 @@ pub static RISKEVIDENCESYNTHESIS_FIELDS: Map<&'static str, FieldInfo> = phf_map!
 };
 
 /// Field metadata for Schedule
+#[rustfmt::skip]
 pub static SCHEDULE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "active" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -18784,6 +18946,7 @@ pub static SCHEDULE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SearchParameter
+#[rustfmt::skip]
 pub static SEARCHPARAMETER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "base" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -18992,6 +19155,7 @@ pub static SEARCHPARAMETER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ServiceRequest
+#[rustfmt::skip]
 pub static SERVICEREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "asNeeded[x]" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -19242,27 +19406,42 @@ pub static SERVICEREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ServiceRequest-Genetics
-pub static SERVICEREQUEST_GENETICS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SERVICEREQUEST_GENETICS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Shareable ActivityDefinition
-pub static SHAREABLE_ACTIVITYDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SHAREABLE_ACTIVITYDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Shareable CodeSystem
-pub static SHAREABLE_CODESYSTEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SHAREABLE_CODESYSTEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Shareable Library
-pub static SHAREABLE_LIBRARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SHAREABLE_LIBRARY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Shareable Measure
-pub static SHAREABLE_MEASURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SHAREABLE_MEASURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Shareable PlanDefinition
-pub static SHAREABLE_PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SHAREABLE_PLANDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Shareable ValueSet
-pub static SHAREABLE_VALUESET_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SHAREABLE_VALUESET_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Slot
+#[rustfmt::skip]
 pub static SLOT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "appointmentType" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -19381,6 +19560,7 @@ pub static SLOT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Specimen
+#[rustfmt::skip]
 pub static SPECIMEN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "accessionIdentifier" => FieldInfo {
         field_type: FhirFieldType::Complex("Identifier"),
@@ -19511,6 +19691,7 @@ pub static SPECIMEN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SpecimenDefinition
+#[rustfmt::skip]
 pub static SPECIMENDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "collection" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -19599,6 +19780,7 @@ pub static SPECIMENDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for StructureDefinition
+#[rustfmt::skip]
 pub static STRUCTUREDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "abstract" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -19813,6 +19995,7 @@ pub static STRUCTUREDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for StructureMap
+#[rustfmt::skip]
 pub static STRUCTUREMAP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -19973,6 +20156,7 @@ pub static STRUCTUREMAP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Subscription
+#[rustfmt::skip]
 pub static SUBSCRIPTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "channel" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -20067,6 +20251,7 @@ pub static SUBSCRIPTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Substance
+#[rustfmt::skip]
 pub static SUBSTANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "category" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -20161,6 +20346,7 @@ pub static SUBSTANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SubstanceNucleicAcid
+#[rustfmt::skip]
 pub static SUBSTANCENUCLEICACID_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "areaOfHybridisation" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -20243,6 +20429,7 @@ pub static SUBSTANCENUCLEICACID_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
 };
 
 /// Field metadata for SubstancePolymer
+#[rustfmt::skip]
 pub static SUBSTANCEPOLYMER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "class" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -20331,6 +20518,7 @@ pub static SUBSTANCEPOLYMER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SubstanceProtein
+#[rustfmt::skip]
 pub static SUBSTANCEPROTEIN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -20407,6 +20595,7 @@ pub static SUBSTANCEPROTEIN_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SubstanceReferenceInformation
+#[rustfmt::skip]
 pub static SUBSTANCEREFERENCEINFORMATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "classification" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -20489,6 +20678,7 @@ pub static SUBSTANCEREFERENCEINFORMATION_FIELDS: Map<&'static str, FieldInfo> = 
 };
 
 /// Field metadata for SubstanceSourceMaterial
+#[rustfmt::skip]
 pub static SUBSTANCESOURCEMATERIAL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -20619,6 +20809,7 @@ pub static SUBSTANCESOURCEMATERIAL_FIELDS: Map<&'static str, FieldInfo> = phf_ma
 };
 
 /// Field metadata for SubstanceSpecification
+#[rustfmt::skip]
 pub static SUBSTANCESPECIFICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -20779,6 +20970,7 @@ pub static SUBSTANCESPECIFICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map
 };
 
 /// Field metadata for SupplyDelivery
+#[rustfmt::skip]
 pub static SUPPLYDELIVERY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -20897,6 +21089,7 @@ pub static SUPPLYDELIVERY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SupplyRequest
+#[rustfmt::skip]
 pub static SUPPLYREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authoredOn" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -21039,6 +21232,7 @@ pub static SUPPLYREQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Task
+#[rustfmt::skip]
 pub static TASK_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authoredOn" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -21277,6 +21471,7 @@ pub static TASK_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for TerminologyCapabilities
+#[rustfmt::skip]
 pub static TERMINOLOGYCAPABILITIES_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "closure" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
@@ -21473,6 +21668,7 @@ pub static TERMINOLOGYCAPABILITIES_FIELDS: Map<&'static str, FieldInfo> = phf_ma
 };
 
 /// Field metadata for TestReport
+#[rustfmt::skip]
 pub static TESTREPORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -21597,6 +21793,7 @@ pub static TESTREPORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for TestScript
+#[rustfmt::skip]
 pub static TESTSCRIPT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -21793,6 +21990,7 @@ pub static TESTSCRIPT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ValueSet
+#[rustfmt::skip]
 pub static VALUESET_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "compose" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
@@ -21953,6 +22151,7 @@ pub static VALUESET_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for VerificationResult
+#[rustfmt::skip]
 pub static VERIFICATIONRESULT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "attestation" => FieldInfo {
         field_type: FhirFieldType::Complex("Signature"),
@@ -22089,6 +22288,7 @@ pub static VERIFICATIONRESULT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for VisionPrescription
+#[rustfmt::skip]
 pub static VISIONPRESCRIPTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contained" => FieldInfo {
         field_type: FhirFieldType::Complex("Resource"),
@@ -22189,34 +22389,56 @@ pub static VISIONPRESCRIPTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for observation-bmi
-pub static OBSERVATION_BMI_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_BMI_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-bodyheight
-pub static OBSERVATION_BODYHEIGHT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_BODYHEIGHT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-bodytemp
-pub static OBSERVATION_BODYTEMP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_BODYTEMP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-bodyweight
-pub static OBSERVATION_BODYWEIGHT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_BODYWEIGHT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-bp
-pub static OBSERVATION_BP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_BP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-headcircum
-pub static OBSERVATION_HEADCIRCUM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_HEADCIRCUM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-heartrate
-pub static OBSERVATION_HEARTRATE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_HEARTRATE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-oxygensat
-pub static OBSERVATION_OXYGENSAT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_OXYGENSAT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-resprate
-pub static OBSERVATION_RESPRATE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_RESPRATE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-vitalsigns
-pub static OBSERVATION_VITALSIGNS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_VITALSIGNS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for observation-vitalspanel
-pub static OBSERVATION_VITALSPANEL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static OBSERVATION_VITALSPANEL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};

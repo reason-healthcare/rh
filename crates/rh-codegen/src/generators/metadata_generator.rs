@@ -250,7 +250,7 @@ pub struct FieldInfo {
     let mut generated_consts = std::collections::HashSet::new();
 
     let mut sorted_types: Vec<_> = registry.types.iter().collect();
-    sorted_types.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+    sorted_types.sort_by_key(|(left_name, _)| *left_name);
 
     // Generate phf maps for each type (skip duplicates)
     for (type_name, type_metadata) in sorted_types {
@@ -328,12 +328,13 @@ fn generate_type_map(code: &mut String, type_name: &str, type_metadata: &TypeMet
     let const_name = format!("{}_FIELDS", sanitized_name.to_uppercase());
 
     code.push_str(&format!("/// Field metadata for {type_name}\n"));
+    code.push_str("#[rustfmt::skip]\n");
     code.push_str(&format!(
         "pub static {const_name}: Map<&'static str, FieldInfo> = phf_map! {{\n"
     ));
 
     let mut sorted_fields: Vec<_> = type_metadata.fields.iter().collect();
-    sorted_fields.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+    sorted_fields.sort_by_key(|(left_name, _)| *left_name);
 
     for (field_name, field_info) in sorted_fields {
         code.push_str(&format!("    \"{field_name}\" => FieldInfo {{\n"));
@@ -431,7 +432,7 @@ pub fn generate_metadata_code_split(
     // Partition types by category
     let mut categories: HashMap<MetadataCategory, Vec<(&String, &TypeMetadata)>> = HashMap::new();
     let mut sorted_registry_types: Vec<_> = registry.types.iter().collect();
-    sorted_registry_types.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+    sorted_registry_types.sort_by_key(|(left_name, _)| *left_name);
 
     for (type_name, type_metadata) in sorted_registry_types {
         let category = name_to_category
@@ -458,7 +459,7 @@ pub fn generate_metadata_code_split(
 
     for &category in &category_order {
         let mut types = categories.get(&category).cloned().unwrap_or_default();
-        types.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+        types.sort_by_key(|(left_name, _)| *left_name);
         if types.is_empty() {
             continue;
         }

@@ -167,7 +167,7 @@ impl<'a> StructGenerator<'a> {
 
         // First pass: Generate nested structs for BackboneElements
         let mut nested_structs: Vec<_> = nested_structs_info.iter().collect();
-        nested_structs.sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+        nested_structs.sort_by_key(|(left_name, _)| *left_name);
 
         for (nested_field_name, nested_elements) in nested_structs {
             if let Some(nested_struct) = self.generate_nested_struct(
@@ -342,8 +342,7 @@ impl<'a> StructGenerator<'a> {
 
         // First, generate any sub-nested structs
         let mut sorted_sub_nested_structs: Vec<_> = sub_nested_structs.iter().collect();
-        sorted_sub_nested_structs
-            .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+        sorted_sub_nested_structs.sort_by_key(|(left_name, _)| *left_name);
 
         for (sub_nested_field_name, sub_nested_elements) in sorted_sub_nested_structs {
             // For recursive calls, we need to create a modified context
@@ -434,8 +433,7 @@ impl<'a> StructGenerator<'a> {
                 // First, recursively generate any further sub-nested structs
                 let mut sorted_sub_sub_nested_structs: Vec<_> =
                     sub_sub_nested_structs.iter().collect();
-                sorted_sub_sub_nested_structs
-                    .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+                sorted_sub_sub_nested_structs.sort_by_key(|(left_name, _)| *left_name);
 
                 for (sub_sub_nested_field_name, sub_sub_nested_elements) in
                     sorted_sub_sub_nested_structs
@@ -592,8 +590,7 @@ impl<'a> StructGenerator<'a> {
 
             // First, recursively generate any further nested structs
             let mut sorted_sub_nested_structs: Vec<_> = sub_nested_structs.iter().collect();
-            sorted_sub_nested_structs
-                .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+            sorted_sub_nested_structs.sort_by_key(|(left_name, _)| *left_name);
 
             for (sub_nested_field_name, sub_nested_elements) in sorted_sub_nested_structs {
                 self.generate_deeply_nested_struct(

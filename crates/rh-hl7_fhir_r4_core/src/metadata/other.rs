@@ -4,6 +4,7 @@ use super::*;
 use phf::{phf_map, Map};
 
 /// Field metadata for Definition
+#[rustfmt::skip]
 pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "approvalDate" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
@@ -146,6 +147,7 @@ pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Event
+#[rustfmt::skip]
 pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "basedOn" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -264,6 +266,7 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for FiveWs
+#[rustfmt::skip]
 pub static FIVEWS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "actor" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -388,6 +391,7 @@ pub static FIVEWS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MetadataResource
+#[rustfmt::skip]
 pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -512,6 +516,7 @@ pub static METADATARESOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Request
+#[rustfmt::skip]
 pub static REQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "authoredOn" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),

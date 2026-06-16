@@ -4,6 +4,7 @@ use super::*;
 use phf::{phf_map, Map};
 
 /// Field metadata for Address
+#[rustfmt::skip]
 pub static ADDRESS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "city" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -80,6 +81,7 @@ pub static ADDRESS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Age
+#[rustfmt::skip]
 pub static AGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -126,6 +128,7 @@ pub static AGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Annotation
+#[rustfmt::skip]
 pub static ANNOTATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "author[x]" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -160,6 +163,7 @@ pub static ANNOTATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Attachment
+#[rustfmt::skip]
 pub static ATTACHMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contentType" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -254,6 +258,7 @@ pub static ATTACHMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Availability
+#[rustfmt::skip]
 pub static AVAILABILITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "availableTime" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Time),
@@ -282,6 +287,7 @@ pub static AVAILABILITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for BackboneElement
+#[rustfmt::skip]
 pub static BACKBONEELEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -304,6 +310,7 @@ pub static BACKBONEELEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for BackboneType
+#[rustfmt::skip]
 pub static BACKBONETYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -326,9 +333,12 @@ pub static BACKBONETYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Base
-pub static BASE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static BASE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for CodeableConcept
+#[rustfmt::skip]
 pub static CODEABLECONCEPT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "coding" => FieldInfo {
         field_type: FhirFieldType::Complex("Coding"),
@@ -357,6 +367,7 @@ pub static CODEABLECONCEPT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for CodeableReference
+#[rustfmt::skip]
 pub static CODEABLEREFERENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "concept" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -385,6 +396,7 @@ pub static CODEABLEREFERENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Coding
+#[rustfmt::skip]
 pub static CODING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -431,6 +443,7 @@ pub static CODING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ContactDetail
+#[rustfmt::skip]
 pub static CONTACTDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -459,6 +472,7 @@ pub static CONTACTDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ContactPoint
+#[rustfmt::skip]
 pub static CONTACTPOINT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -505,6 +519,7 @@ pub static CONTACTPOINT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Contributor
+#[rustfmt::skip]
 pub static CONTRIBUTOR_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "contact" => FieldInfo {
         field_type: FhirFieldType::Complex("ContactDetail"),
@@ -539,6 +554,7 @@ pub static CONTRIBUTOR_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Count
+#[rustfmt::skip]
 pub static COUNT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -585,12 +601,12 @@ pub static COUNT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DataElement constraint on ElementDefinition data type
-pub static DATAELEMENT_CONSTRAINT_ON_ELEMENTDEFINITION_DATA_TYPE_FIELDS: Map<
-    &'static str,
-    FieldInfo,
-> = phf_map! {};
+#[rustfmt::skip]
+pub static DATAELEMENT_CONSTRAINT_ON_ELEMENTDEFINITION_DATA_TYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for DataRequirement
+#[rustfmt::skip]
 pub static DATAREQUIREMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "codeFilter" => FieldInfo {
         field_type: FhirFieldType::Complex("Coding"),
@@ -661,6 +677,7 @@ pub static DATAREQUIREMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for DataType
+#[rustfmt::skip]
 pub static DATATYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -677,6 +694,7 @@ pub static DATATYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Distance
+#[rustfmt::skip]
 pub static DISTANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -723,6 +741,7 @@ pub static DISTANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Dosage
+#[rustfmt::skip]
 pub static DOSAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "additionalInstruction" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -829,6 +848,7 @@ pub static DOSAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Duration
+#[rustfmt::skip]
 pub static DURATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -875,6 +895,7 @@ pub static DURATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Element
+#[rustfmt::skip]
 pub static ELEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -891,6 +912,7 @@ pub static ELEMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ElementDefinition
+#[rustfmt::skip]
 pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "alias" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -1129,6 +1151,7 @@ pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Expression
+#[rustfmt::skip]
 pub static EXPRESSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "description" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -1175,6 +1198,7 @@ pub static EXPRESSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ExtendedContactDetail
+#[rustfmt::skip]
 pub static EXTENDEDCONTACTDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "address" => FieldInfo {
         field_type: FhirFieldType::Complex("Address"),
@@ -1227,6 +1251,7 @@ pub static EXTENDEDCONTACTDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map!
 };
 
 /// Field metadata for Extension
+#[rustfmt::skip]
 pub static EXTENSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -1255,6 +1280,7 @@ pub static EXTENSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for HumanName
+#[rustfmt::skip]
 pub static HUMANNAME_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -1313,6 +1339,7 @@ pub static HUMANNAME_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Identifier
+#[rustfmt::skip]
 pub static IDENTIFIER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "assigner" => FieldInfo {
         field_type: FhirFieldType::Reference,
@@ -1365,6 +1392,7 @@ pub static IDENTIFIER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MarketingStatus
+#[rustfmt::skip]
 pub static MARKETINGSTATUS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "country" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -1417,6 +1445,7 @@ pub static MARKETINGSTATUS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Meta
+#[rustfmt::skip]
 pub static META_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -1469,6 +1498,7 @@ pub static META_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MonetaryComponent
+#[rustfmt::skip]
 pub static MONETARYCOMPONENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "amount" => FieldInfo {
         field_type: FhirFieldType::Complex("Money"),
@@ -1509,6 +1539,7 @@ pub static MONETARYCOMPONENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Money
+#[rustfmt::skip]
 pub static MONEY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "currency" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -1537,9 +1568,12 @@ pub static MONEY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for MoneyQuantity
-pub static MONEYQUANTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static MONEYQUANTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Narrative
+#[rustfmt::skip]
 pub static NARRATIVE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "div" => FieldInfo {
         field_type: FhirFieldType::Complex("xhtml"),
@@ -1568,6 +1602,7 @@ pub static NARRATIVE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ParameterDefinition
+#[rustfmt::skip]
 pub static PARAMETERDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "documentation" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -1626,6 +1661,7 @@ pub static PARAMETERDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Period
+#[rustfmt::skip]
 pub static PERIOD_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "end" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
@@ -1654,6 +1690,7 @@ pub static PERIOD_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for PrimitiveType
+#[rustfmt::skip]
 pub static PRIMITIVETYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -1670,6 +1707,7 @@ pub static PRIMITIVETYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for ProductShelfLife
+#[rustfmt::skip]
 pub static PRODUCTSHELFLIFE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -1710,6 +1748,7 @@ pub static PRODUCTSHELFLIFE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Quantity
+#[rustfmt::skip]
 pub static QUANTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
@@ -1756,6 +1795,7 @@ pub static QUANTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Range
+#[rustfmt::skip]
 pub static RANGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
@@ -1784,6 +1824,7 @@ pub static RANGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Ratio
+#[rustfmt::skip]
 pub static RATIO_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "denominator" => FieldInfo {
         field_type: FhirFieldType::Complex("Quantity"),
@@ -1812,6 +1853,7 @@ pub static RATIO_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for RatioRange
+#[rustfmt::skip]
 pub static RATIORANGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "denominator" => FieldInfo {
         field_type: FhirFieldType::Complex("Quantity"),
@@ -1846,6 +1888,7 @@ pub static RATIORANGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Reference
+#[rustfmt::skip]
 pub static REFERENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "display" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
@@ -1886,6 +1929,7 @@ pub static REFERENCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for RelatedArtifact
+#[rustfmt::skip]
 pub static RELATEDARTIFACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "citation" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
@@ -1962,6 +2006,7 @@ pub static RELATEDARTIFACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SampledData
+#[rustfmt::skip]
 pub static SAMPLEDDATA_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "codeMap" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
@@ -2038,6 +2083,7 @@ pub static SAMPLEDDATA_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for Signature
+#[rustfmt::skip]
 pub static SIGNATURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "data" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Base64Binary),
@@ -2096,9 +2142,12 @@ pub static SIGNATURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for SimpleQuantity
-pub static SIMPLEQUANTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {};
+#[rustfmt::skip]
+pub static SIMPLEQUANTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+};
 
 /// Field metadata for Timing
+#[rustfmt::skip]
 pub static TIMING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -2139,6 +2188,7 @@ pub static TIMING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for TriggerDefinition
+#[rustfmt::skip]
 pub static TRIGGERDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
@@ -2197,6 +2247,7 @@ pub static TRIGGERDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for UsageContext
+#[rustfmt::skip]
 pub static USAGECONTEXT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "code" => FieldInfo {
         field_type: FhirFieldType::Complex("Coding"),
@@ -2225,6 +2276,7 @@ pub static USAGECONTEXT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
 /// Field metadata for VirtualServiceDetail
+#[rustfmt::skip]
 pub static VIRTUALSERVICEDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "additionalInfo" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Url),
