@@ -1,12 +1,19 @@
 //! Integration tests for arithmetic operations with date/time functions
 
-use chrono::{Datelike, Local};
+use chrono::{DateTime, Datelike, Local};
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 #[cfg(test)]
 mod datetime_function_arithmetic_tests {
     use super::*;
+
+    fn assert_valid_datetime(datetime_str: &str) {
+        assert!(datetime_str.contains('T'));
+        DateTime::parse_from_rfc3339(datetime_str).unwrap_or_else(|err| {
+            panic!("DateTime should be valid RFC3339: {datetime_str}: {err}")
+        });
+    }
 
     #[test]
     fn test_now_minus_days() {
@@ -19,8 +26,7 @@ mod datetime_function_arithmetic_tests {
 
         if let FhirPathValue::DateTime(datetime_str) = result {
             // Verify it's a valid datetime format and roughly 10 days ago
-            assert!(datetime_str.ends_with('Z'));
-            assert!(datetime_str.contains('T'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ now() - 10 days → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
@@ -38,8 +44,7 @@ mod datetime_function_arithmetic_tests {
 
         if let FhirPathValue::DateTime(datetime_str) = result {
             // Verify it's a valid datetime format
-            assert!(datetime_str.ends_with('Z'));
-            assert!(datetime_str.contains('T'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ now() + 5 hours → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
@@ -57,8 +62,7 @@ mod datetime_function_arithmetic_tests {
 
         if let FhirPathValue::DateTime(datetime_str) = result {
             // Verify it's a valid datetime format
-            assert!(datetime_str.ends_with('Z'));
-            assert!(datetime_str.contains('T'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ now() - 30 minutes → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
@@ -76,8 +80,7 @@ mod datetime_function_arithmetic_tests {
 
         if let FhirPathValue::DateTime(datetime_str) = result {
             // Verify it's a valid datetime format
-            assert!(datetime_str.ends_with('Z'));
-            assert!(datetime_str.contains('T'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ now() + 90 seconds → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
@@ -95,8 +98,7 @@ mod datetime_function_arithmetic_tests {
 
         if let FhirPathValue::DateTime(datetime_str) = result {
             // Verify it's a valid datetime format
-            assert!(datetime_str.ends_with('Z'));
-            assert!(datetime_str.contains('T'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ now() + 3 months → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
@@ -175,8 +177,7 @@ mod datetime_function_arithmetic_tests {
 
         if let FhirPathValue::DateTime(datetime_str) = result {
             // Verify it's a valid datetime format
-            assert!(datetime_str.ends_with('Z'));
-            assert!(datetime_str.contains('T'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ now() - 1 day + 12 hours → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
@@ -246,7 +247,7 @@ mod datetime_function_arithmetic_tests {
         let result = evaluator.evaluate(&expr, &context).unwrap();
 
         if let FhirPathValue::DateTime(datetime_str) = result {
-            assert!(datetime_str.ends_with('Z'));
+            assert_valid_datetime(&datetime_str);
             println!("✓ 2 hours + now() → {datetime_str}");
         } else {
             panic!("Expected DateTime result, got: {result:?}");
