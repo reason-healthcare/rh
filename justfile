@@ -324,19 +324,28 @@ regen-r5:
 regen-check:
     #!/usr/bin/env bash
     set -euo pipefail
+    PKG_DIR=$(mktemp -d)
+    EXT_OUTPUT=""
+    trap 'rm -rf "$PKG_DIR" /tmp/rh-regen-check-r4 /tmp/rh-regen-check-r5 "$EXT_OUTPUT"' EXIT
     echo "Checking R4 crate for drift..."
     cargo run -p rh-cli -- codegen hl7.fhir.r4.core 4.0.1 \
+        --package-dir "$PKG_DIR" \
+        --overwrite \
         --output /tmp/rh-regen-check-r4 \
         --crate-name rh-hl7-fhir-r4-core \
         --force 2>/dev/null
     echo "Checking R5 crate for drift..."
     cargo run -p rh-cli -- codegen hl7.fhir.r5.core 5.0.0 \
+        --package-dir "$PKG_DIR" \
+        --overwrite \
         --output /tmp/rh-regen-check-r5 \
         --crate-name rh-hl7-fhir-r5-core \
         --force 2>/dev/null
     echo "Adding R5 extensions for drift check..."
     EXT_OUTPUT=$(mktemp -d)
     if cargo run -p rh-cli -- codegen hl7.fhir.uv.extensions 5.1.0-snapshot1 \
+        --package-dir "$PKG_DIR" \
+        --overwrite \
         --output "$EXT_OUTPUT" \
         --crate-name rh-hl7-fhir-r5-core \
         --force 2>/dev/null; then
@@ -352,12 +361,10 @@ regen-check:
     else
         echo "Warning: R5 extensions package not available, skipping"
     fi
-    rm -rf "$EXT_OUTPUT"
     # Compare only src/ (generated content), not tests/ (hand-authored)
     R4_DIFF=0; R5_DIFF=0
     diff -rq crates/rh-hl7_fhir_r4_core/src /tmp/rh-regen-check-r4/src || R4_DIFF=$?
     diff -rq crates/rh-hl7_fhir_r5_core/src /tmp/rh-regen-check-r5/src || R5_DIFF=$?
-    rm -rf /tmp/rh-regen-check-r4 /tmp/rh-regen-check-r5
     if [ "$R4_DIFF" -ne 0 ] || [ "$R5_DIFF" -ne 0 ]; then
         echo "ERROR: Generated crates have drifted from codegen output."
         echo "Run just regen-r4 and just regen-r5 to update, then commit."
