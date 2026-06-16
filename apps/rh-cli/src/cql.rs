@@ -10,6 +10,7 @@ use tracing::{error, info};
 
 use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
+use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap, compile_with_libraries, elm::AccessModifier,
     evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile, explain_parse,
@@ -82,6 +83,10 @@ pub enum CqlCommands {
         /// Enable debug mode (annotations, locators, result types)
         #[clap(long)]
         debug: bool,
+
+        /// Include result type metadata in output
+        #[clap(long)]
+        result_types: bool,
 
         /// Enable strict mode (disable implicit conversions)
         #[clap(long)]
@@ -176,6 +181,7 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             compact,
             debug,
             strict,
+            result_types,
             signatures,
             source_map,
             source_map_output,
@@ -186,6 +192,7 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
                 compact,
                 debug,
                 strict,
+                result_types,
                 signatures,
                 source_map,
                 source_map_output.as_deref(),
@@ -423,6 +430,7 @@ fn compile_cql(
     compact: bool,
     debug: bool,
     strict: bool,
+    result_types: bool,
     signatures: bool,
     emit_source_map: bool,
     source_map_output: Option<&Path>,
@@ -438,9 +446,19 @@ fn compile_cql(
         }
         opts
     } else if strict {
-        CompilerOptions::strict()
+        let mut opts = CompilerOptions::strict();
+        if result_types {
+            opts = opts.with_option(CompilerOption::EnableResultTypes);
+        }
+        if signatures {
+            opts = opts.with_signature_level(SignatureLevel::All);
+        }
+        opts
     } else {
         let mut opts = CompilerOptions::default();
+        if result_types {
+            opts = opts.with_option(CompilerOption::EnableResultTypes);
+        }
         if signatures {
             opts = opts.with_signature_level(SignatureLevel::All);
         }

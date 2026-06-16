@@ -214,7 +214,15 @@ pub fn library_to_json_with_options(
 /// Convenience function to convert an ELM library to compact JSON (no pretty printing).
 pub fn library_to_compact_json(library: &Library) -> Result<String, OutputError> {
     let options = CompilerOptions::default();
-    ElmWriter::new(&options)
+    library_to_compact_json_with_options(library, &options)
+}
+
+/// Convenience function to convert an ELM library to compact JSON with specific options.
+pub fn library_to_compact_json_with_options(
+    library: &Library,
+    options: &CompilerOptions,
+) -> Result<String, OutputError> {
+    ElmWriter::new(options)
         .with_pretty_print(false)
         .to_json(library)
 }

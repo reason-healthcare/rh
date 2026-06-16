@@ -1,10 +1,13 @@
 use super::*;
-use crate::datatype::{DataType, SystemType};
+use crate::datatype::{DataType, SystemType, TupleElement};
 use crate::options::{CompilerOption, CompilerOptions};
-use crate::parser::ast::Literal;
+use crate::parser::ast::{
+    FunctionParameter, ListTypeSpecifier as AstListTypeSpecifier, Literal,
+    NamedTypeSpecifier as AstNamedTypeSpecifier, TypeSpecifier as AstTypeSpecifier,
+};
 use crate::semantics::typed_ast::{
     NodeId, SemanticMeta, SourceLocation, SourceSpan, TypedCase, TypedCaseItem, TypedExpression,
-    TypedNode,
+    TypedNode, TypedStatement,
 };
 
 // -----------------------------------------------------------------------
@@ -49,6 +52,34 @@ fn emitter() -> ElmEmitter {
 
 fn emitter_with_options(opts: CompilerOptions) -> ElmEmitter {
     ElmEmitter::new(opts)
+}
+
+fn empty_typed_library_with_statement(statement: TypedNode<TypedStatement>) -> TypedLibrary {
+    TypedLibrary {
+        identifier: None,
+        usings: vec![],
+        includes: vec![],
+        codesystems: vec![],
+        valuesets: vec![],
+        codes: vec![],
+        concepts: vec![],
+        parameters: vec![],
+        contexts: vec![],
+        statements: vec![statement],
+    }
+}
+
+fn ast_named_type(name: &str) -> AstTypeSpecifier {
+    AstTypeSpecifier::Named(AstNamedTypeSpecifier {
+        namespace: None,
+        name: name.to_string(),
+    })
+}
+
+fn ast_list_type(element_type: AstTypeSpecifier) -> AstTypeSpecifier {
+    AstTypeSpecifier::List(AstListTypeSpecifier {
+        element_type: Box::new(element_type),
+    })
 }
 
 // -----------------------------------------------------------------------
@@ -126,6 +157,26 @@ fn test_element_fields_result_type_name_populated_when_enabled() {
 }
 
 #[test]
+fn test_element_fields_structural_result_type_specifier_when_enabled() {
+    let mut node = node_int(42);
+    node.data_type = DataType::list(DataType::integer());
+    let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
+    let mut emitter = emitter_with_options(opts);
+    let fields = emitter.element_fields(&node);
+
+    assert!(fields.result_type_name.is_none());
+    match fields.result_type_specifier {
+        Some(crate::elm::TypeSpecifier::List(list)) => {
+            assert!(matches!(
+                list.element_type.as_deref(),
+                Some(crate::elm::TypeSpecifier::Named(_))
+            ));
+        }
+        other => panic!("expected ListTypeSpecifier, got {other:?}"),
+    }
+}
+
+#[test]
 fn test_element_fields_local_id_populated_when_annotations_enabled() {
     let node = node_int(1);
     let opts = CompilerOptions::default().with_option(CompilerOption::EnableAnnotations);
@@ -156,6 +207,251 @@ fn test_datatype_to_qname_system_string() {
 fn test_datatype_to_qname_list() {
     let qn = datatype_to_qname(&DataType::list(DataType::string()));
     assert_eq!(qn, "{urn:hl7-org:elm-types:r1}List<String>");
+}
+
+#[test]
+fn test_datatype_to_result_type_named_uses_result_type_name() {
+    let metadata = datatype_to_result_type(&DataType::model("http://hl7.org/fhir", "Reference"));
+
+    assert_eq!(
+        metadata.result_type_name.as_deref(),
+        Some("{http://hl7.org/fhir}Reference")
+    );
+    assert!(metadata.result_type_specifier.is_none());
+}
+
+#[test]
+fn test_datatype_to_result_type_list_uses_result_type_specifier() {
+    let metadata = datatype_to_result_type(&DataType::list(DataType::model(
+        "http://hl7.org/fhir",
+        "Observation",
+    )));
+
+    assert!(metadata.result_type_name.is_none());
+    match metadata.result_type_specifier {
+        Some(crate::elm::TypeSpecifier::List(list)) => match list.element_type.as_deref() {
+            Some(crate::elm::TypeSpecifier::Named(named)) => {
+                assert_eq!(named.name, "{http://hl7.org/fhir}Observation");
+            }
+            other => panic!("expected named element type, got {other:?}"),
+        },
+        other => panic!("expected ListTypeSpecifier, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_datatype_to_result_type_tuple_uses_result_type_specifier() {
+    let metadata = datatype_to_result_type(&DataType::tuple(vec![
+        TupleElement {
+            name: "reference".to_string(),
+            element_type: Box::new(DataType::model("http://hl7.org/fhir", "Reference")),
+        },
+        TupleElement {
+            name: "label".to_string(),
+            element_type: Box::new(DataType::string()),
+        },
+    ]));
+
+    assert!(metadata.result_type_name.is_none());
+    match metadata.result_type_specifier {
+        Some(crate::elm::TypeSpecifier::Tuple(tuple)) => {
+            assert_eq!(tuple.element.len(), 2);
+            assert_eq!(tuple.element[0].name, "reference");
+            assert_eq!(tuple.element[1].name, "label");
+        }
+        other => panic!("expected TupleTypeSpecifier, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_result_type_metadata_is_mutually_exclusive() {
+    let named = datatype_to_result_type(&DataType::integer());
+    assert!(named.result_type_name.is_some());
+    assert!(named.result_type_specifier.is_none());
+
+    let structural = datatype_to_result_type(&DataType::list(DataType::integer()));
+    assert!(structural.result_type_name.is_none());
+    assert!(structural.result_type_specifier.is_some());
+
+    let unknown = datatype_to_result_type(&DataType::Unknown);
+    assert!(unknown.result_type_name.is_none());
+    assert!(unknown.result_type_specifier.is_none());
+}
+
+#[test]
+fn test_expression_def_result_type_metadata_when_enabled() {
+    let typed_lib = empty_typed_library_with_statement(TypedNode {
+        node_id: NodeId(1),
+        data_type: DataType::list(DataType::integer()),
+        span: SourceSpan::default(),
+        meta: SemanticMeta::default(),
+        inner: TypedStatement::ExpressionDef {
+            name: "Numbers".to_string(),
+            body: TypedNode {
+                node_id: NodeId(2),
+                data_type: DataType::list(DataType::integer()),
+                span: SourceSpan::default(),
+                meta: SemanticMeta::default(),
+                inner: TypedExpression::ListExpression(vec![node_int(1), node_int(2)]),
+            },
+        },
+    });
+
+    let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
+    let mut emitter = emitter_with_options(opts);
+    let elm_lib = emitter.emit(typed_lib);
+    let statements = elm_lib.statements.expect("statements");
+    let crate::elm::StatementDef::Expression(def) = &statements.defs[0] else {
+        panic!("expected expression def");
+    };
+
+    assert!(def.result_type_name.is_none());
+    assert!(matches!(
+        def.result_type_specifier,
+        Some(crate::elm::TypeSpecifier::List(_))
+    ));
+}
+
+#[test]
+fn test_expression_def_and_body_result_type_metadata_are_cohesive() {
+    let typed_lib = empty_typed_library_with_statement(TypedNode {
+        node_id: NodeId(1),
+        data_type: DataType::list(DataType::integer()),
+        span: SourceSpan::default(),
+        meta: SemanticMeta::default(),
+        inner: TypedStatement::ExpressionDef {
+            name: "Numbers".to_string(),
+            body: TypedNode {
+                node_id: NodeId(2),
+                data_type: DataType::list(DataType::integer()),
+                span: SourceSpan::default(),
+                meta: SemanticMeta::default(),
+                inner: TypedExpression::ListExpression(vec![node_int(1), node_int(2)]),
+            },
+        },
+    });
+
+    let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
+    let mut emitter = emitter_with_options(opts);
+    let elm_lib = emitter.emit(typed_lib);
+    let statements = elm_lib.statements.expect("statements");
+    let crate::elm::StatementDef::Expression(def) = &statements.defs[0] else {
+        panic!("expected expression def");
+    };
+
+    assert!(def.result_type_name.is_none());
+    assert!(matches!(
+        def.result_type_specifier,
+        Some(crate::elm::TypeSpecifier::List(_))
+    ));
+
+    let expression = def.expression.as_deref().expect("expression body");
+    let crate::elm::Expression::List(list) = expression else {
+        panic!("expected list expression body, got {expression:?}");
+    };
+    assert!(list.element.result_type_name.is_none());
+    assert!(matches!(
+        list.element.result_type_specifier,
+        Some(crate::elm::TypeSpecifier::List(_))
+    ));
+}
+
+#[test]
+fn test_function_def_operand_body_and_result_type_metadata_are_cohesive() {
+    let list_type = ast_list_type(ast_named_type("Integer"));
+    let typed_lib = empty_typed_library_with_statement(TypedNode {
+        node_id: NodeId(1),
+        data_type: DataType::list(DataType::integer()),
+        span: SourceSpan::default(),
+        meta: SemanticMeta::default(),
+        inner: TypedStatement::FunctionDef {
+            name: "EchoList".to_string(),
+            parameters: vec![FunctionParameter {
+                name: "items".to_string(),
+                type_specifier: Some(list_type.clone()),
+            }],
+            return_type: Some(list_type),
+            body: Some(TypedNode {
+                node_id: NodeId(2),
+                data_type: DataType::list(DataType::integer()),
+                span: SourceSpan::default(),
+                meta: SemanticMeta::default(),
+                inner: TypedExpression::ListExpression(vec![node_int(1)]),
+            }),
+            fluent: false,
+        },
+    });
+
+    let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
+    let mut emitter = emitter_with_options(opts);
+    let elm_lib = emitter.emit(typed_lib);
+    let statements = elm_lib.statements.expect("statements");
+    let crate::elm::StatementDef::Function(def) = &statements.defs[0] else {
+        panic!("expected function def");
+    };
+
+    assert!(def.result_type_name.is_none());
+    assert!(matches!(
+        def.result_type_specifier,
+        Some(crate::elm::TypeSpecifier::List(_))
+    ));
+    assert_eq!(def.operand.len(), 1);
+    assert!(def.operand[0].operand_type_name.is_none());
+    assert!(matches!(
+        def.operand[0].operand_type_specifier,
+        Some(crate::elm::TypeSpecifier::List(_))
+    ));
+
+    let expression = def.expression.as_deref().expect("function body");
+    let crate::elm::Expression::List(list) = expression else {
+        panic!("expected list function body, got {expression:?}");
+    };
+    assert!(list.element.result_type_name.is_none());
+    assert!(matches!(
+        list.element.result_type_specifier,
+        Some(crate::elm::TypeSpecifier::List(_))
+    ));
+}
+
+#[test]
+fn test_named_function_def_and_body_result_type_metadata_are_cohesive() {
+    let typed_lib = empty_typed_library_with_statement(TypedNode {
+        node_id: NodeId(1),
+        data_type: DataType::integer(),
+        span: SourceSpan::default(),
+        meta: SemanticMeta::default(),
+        inner: TypedStatement::FunctionDef {
+            name: "One".to_string(),
+            parameters: vec![],
+            return_type: Some(ast_named_type("Integer")),
+            body: Some(node_int(1)),
+            fluent: false,
+        },
+    });
+
+    let opts = CompilerOptions::new().with_option(CompilerOption::EnableResultTypes);
+    let mut emitter = emitter_with_options(opts);
+    let elm_lib = emitter.emit(typed_lib);
+    let statements = elm_lib.statements.expect("statements");
+    let crate::elm::StatementDef::Function(def) = &statements.defs[0] else {
+        panic!("expected function def");
+    };
+
+    assert_eq!(
+        def.result_type_name.as_deref(),
+        Some("{urn:hl7-org:elm-types:r1}Integer")
+    );
+    assert!(def.result_type_specifier.is_none());
+
+    let expression = def.expression.as_deref().expect("function body");
+    let crate::elm::Expression::Literal(literal) = expression else {
+        panic!("expected literal function body, got {expression:?}");
+    };
+    assert_eq!(
+        literal.element.result_type_name.as_deref(),
+        Some("{urn:hl7-org:elm-types:r1}Integer")
+    );
+    assert!(literal.element.result_type_specifier.is_none());
 }
 
 #[test]

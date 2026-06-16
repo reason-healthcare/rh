@@ -24,6 +24,7 @@ rh cql compile [OPTIONS] <FILE>
 - `-o, --output <OUTPUT>` - Output file path (defaults to stdout)
 - `--compact` - Output compact JSON (no pretty-printing)
 - `--debug` - Enable debug mode (includes annotations, locators, and result types in output)
+- `--result-types` - Include result type metadata in output
 - `--strict` - Enable strict mode (disable implicit conversions)
 - `--signatures` - Include all signatures in output
 - `--source-map` - Also emit a source-map sidecar file alongside the ELM output
@@ -42,6 +43,9 @@ rh cql compile library.cql --output library.elm.json
 
 # Compile with debug annotations
 rh cql compile library.cql --debug
+
+# Compile with ELM result type metadata
+rh cql compile library.cql --result-types
 
 # Compile in strict mode
 rh cql compile library.cql --strict

@@ -317,6 +317,39 @@ fn test_validate_verbose_shows_location_on_error() {
         );
 }
 
+#[test]
+fn test_compile_result_types_flag_emits_structural_type_metadata() {
+    let cql = r#"library ResultTypes version '1.0'
+
+define Numbers: { 1, 2 }
+"#;
+
+    rh_cmd()
+        .args(["cql", "compile", "--result-types", "-"])
+        .write_stdin(cql)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("resultTypeSpecifier"))
+        .stdout(predicate::str::contains("ListTypeSpecifier"))
+        .stdout(predicate::str::contains("EnableResultTypes"));
+}
+
+#[test]
+fn test_compile_omits_result_type_metadata_by_default() {
+    let cql = r#"library ResultTypes version '1.0'
+
+define Numbers: { 1, 2 }
+"#;
+
+    rh_cmd()
+        .args(["cql", "compile", "-"])
+        .write_stdin(cql)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("resultTypeSpecifier").not())
+        .stdout(predicate::str::contains("EnableResultTypes").not());
+}
+
 // ---------------------------------------------------------------------------
 // compile – exit code behavior (task 2.4)
 // ---------------------------------------------------------------------------

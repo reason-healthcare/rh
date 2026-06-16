@@ -1,4 +1,4 @@
-use crate::datatype::DataType;
+use crate::datatype::{DataType, TupleElement};
 use crate::operators::OperatorResolver;
 use crate::options::CompilerOptions;
 use crate::parser::ast;
@@ -678,12 +678,7 @@ impl SemanticAnalyzer {
             ast::Expression::IfThenElse(e) => return self.analyze_if_then_else(e),
             ast::Expression::Case(e) => return self.analyze_case(e),
             ast::Expression::IntervalExpression(e) => return self.analyze_interval_expression(e),
-            ast::Expression::ListExpression(e) => TypedExpression::ListExpression(
-                e.elements
-                    .iter()
-                    .map(|elem| self.analyze_expression(elem))
-                    .collect(),
-            ),
+            ast::Expression::ListExpression(e) => return self.analyze_list_expression(e),
             ast::Expression::TupleExpression(e) => return self.analyze_tuple_expression(e),
             ast::Expression::Instance(e) => return self.analyze_instance_expression(e),
             ast::Expression::Let(e) => TypedExpression::LetClause(
@@ -1005,6 +1000,36 @@ impl SemanticAnalyzer {
         }
     }
 
+    pub fn analyze_list_expression(
+        &mut self,
+        e: &ast::ListExpression,
+    ) -> TypedNode<TypedExpression> {
+        let id = self.generate_node_id();
+        let meta = SemanticMeta::default();
+        let span = SourceSpan::default();
+
+        let typed_elements: Vec<_> = e
+            .elements
+            .iter()
+            .map(|elem| self.analyze_expression(elem))
+            .collect();
+        let element_type = typed_elements
+            .iter()
+            .map(|elem| elem.data_type.clone())
+            .reduce(|left, right| left.common_type(&right))
+            .unwrap_or_else(DataType::any);
+        let dt = DataType::list(element_type);
+        let inner = TypedExpression::ListExpression(typed_elements);
+
+        TypedNode {
+            node_id: id,
+            inner,
+            data_type: dt,
+            meta,
+            span,
+        }
+    }
+
     pub fn analyze_tuple_expression(
         &mut self,
         e: &ast::TupleExpression,
@@ -1014,17 +1039,21 @@ impl SemanticAnalyzer {
         let span = SourceSpan::default();
 
         let mut typed_elements = Vec::new();
-        // tuple type is an aggregate of its element types. To keep things simpler we construct an Any type for now.
-        let dt = DataType::any();
+        let mut tuple_elements = Vec::new();
 
         for elem in &e.elements {
             let typed_val = self.analyze_expression(&elem.value);
+            tuple_elements.push(TupleElement {
+                name: elem.name.clone(),
+                element_type: Box::new(typed_val.data_type.clone()),
+            });
             typed_elements.push(crate::semantics::typed_ast::TypedTupleElement {
                 name: elem.name.clone(),
                 value: Box::new(typed_val),
             });
         }
 
+        let dt = DataType::tuple(tuple_elements);
         let inner = TypedExpression::TupleExpression(typed_elements);
 
         TypedNode {

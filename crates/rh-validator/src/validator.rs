@@ -2978,8 +2978,10 @@ impl FhirValidator {
     ) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
 
+        let normalized_expression = normalize_invariant_expression(&rule.expression);
+
         // Parse the FHIRPath expression
-        let expression = match self.fhirpath_parser.parse(&rule.expression) {
+        let expression = match self.fhirpath_parser.parse(&normalized_expression) {
             Ok(expr) => expr,
             Err(e) => {
                 // Handle parse errors gracefully - skip validation but log
@@ -3174,6 +3176,19 @@ fn extract_codes_from_value(value: &Value) -> Vec<(String, String)> {
     }
 
     codes
+}
+
+fn normalize_invariant_expression(expression: &str) -> String {
+    // FHIR R4 dom-3 uses `descendants().as(canonical|uri|url)` as a collection
+    // type filter. FHIRPath `as()` itself remains strict for multi-item
+    // collections, so normalize just this core invariant idiom to `ofType()`.
+    expression
+        .replace(
+            "descendants().as(canonical)",
+            "descendants().ofType(canonical)",
+        )
+        .replace("descendants().as(uri)", "descendants().ofType(uri)")
+        .replace("descendants().as(url)", "descendants().ofType(url)")
 }
 
 /// Check if a primitive field has extension elements (_field) without corresponding values (field).

@@ -36,7 +36,7 @@
 
 use crate::elm;
 use crate::options::CompilerOptions;
-use crate::output::{library_to_compact_json, library_to_json_with_options};
+use crate::output::{library_to_compact_json_with_options, library_to_json_with_options};
 use crate::parser::CqlParser;
 use crate::reporting::{Diagnostic, Severity};
 use crate::semantics::typed_ast::TypedLibrary;
@@ -337,6 +337,8 @@ fn resolve_includes_to_elm(
 pub struct CompilationResult {
     /// The translated ELM library.
     pub library: elm::Library,
+    /// Compiler options used to produce the ELM library.
+    pub options: CompilerOptions,
     /// Error-level diagnostics from compilation.
     pub errors: Vec<Diagnostic>,
     /// Warning-level diagnostics from compilation.
@@ -368,14 +370,14 @@ impl CompilationResult {
 
     /// Convert the library to JSON string with pretty formatting.
     pub fn to_json(&self) -> Result<String, CompilationError> {
-        let options = CompilerOptions::default();
-        library_to_json_with_options(&self.library, &options)
+        library_to_json_with_options(&self.library, &self.options)
             .map_err(|e| CompilationError::Output(e.to_string()))
     }
 
     /// Convert the library to compact JSON string.
     pub fn to_compact_json(&self) -> Result<String, CompilationError> {
-        library_to_compact_json(&self.library).map_err(|e| CompilationError::Output(e.to_string()))
+        library_to_compact_json_with_options(&self.library, &self.options)
+            .map_err(|e| CompilationError::Output(e.to_string()))
     }
 }
 
@@ -482,6 +484,7 @@ pub fn compile_with_model(
 
     Ok(CompilationResult {
         library,
+        options,
         errors,
         warnings,
         messages,
@@ -538,6 +541,8 @@ pub fn compile_to_json(
 pub struct SourceMapCompilationResult {
     /// The translated ELM library.
     pub library: elm::Library,
+    /// Compiler options used to produce the ELM library.
+    pub options: CompilerOptions,
     /// Source-map correlating CQL spans to ELM nodes.
     pub source_map: crate::sourcemap::SourceMap,
     /// Error-level diagnostics from compilation.
@@ -566,14 +571,14 @@ impl SourceMapCompilationResult {
 
     /// Convert the library to JSON string with pretty formatting.
     pub fn to_json(&self) -> Result<String, CompilationError> {
-        let options = CompilerOptions::default();
-        library_to_json_with_options(&self.library, &options)
+        library_to_json_with_options(&self.library, &self.options)
             .map_err(|e| CompilationError::Output(e.to_string()))
     }
 
     /// Convert the library to compact JSON string.
     pub fn to_compact_json(&self) -> Result<String, CompilationError> {
-        library_to_compact_json(&self.library).map_err(|e| CompilationError::Output(e.to_string()))
+        library_to_compact_json_with_options(&self.library, &self.options)
+            .map_err(|e| CompilationError::Output(e.to_string()))
     }
 
     /// Serialize the source map to a sidecar JSON string (`*.elm.sourcemap.json`).
@@ -641,6 +646,7 @@ pub fn compile_to_elm_with_sourcemap(
 
     Ok(SourceMapCompilationResult {
         library,
+        options,
         source_map,
         errors,
         warnings,
@@ -747,6 +753,7 @@ pub fn compile_with_libraries(
     Ok(CompileOutputWithLibs {
         result: CompilationResult {
             library,
+            options,
             errors,
             warnings,
             messages,
@@ -1343,6 +1350,25 @@ mod tests {
             "compact JSON must contain id: {compact}"
         );
         let _sm_json = sm.source_map_json().unwrap(); // must not panic
+    }
+
+    #[test]
+    fn test_sourcemap_result_json_preserves_result_type_option() {
+        let source = r#"library ResultTypes version '1.0'
+
+define Numbers: { 1, 2 }
+"#;
+        let options = CompilerOptions::new()
+            .with_option(crate::options::CompilerOption::EnableAnnotations)
+            .with_option(crate::options::CompilerOption::EnableLocators)
+            .with_option(crate::options::CompilerOption::EnableResultTypes);
+
+        let sm = compile_to_elm_with_sourcemap(source, Some(options), None).unwrap();
+        assert!(sm.is_success());
+        let json = sm.to_json().unwrap();
+        assert!(json.contains("EnableResultTypes"), "json: {json}");
+        assert!(json.contains("resultTypeSpecifier"), "json: {json}");
+        assert!(json.contains("ListTypeSpecifier"), "json: {json}");
     }
 
     #[test]

@@ -58,7 +58,7 @@ rh package pack my-package/output/
 Every command supports `--format human|json|ndjson`. Use `--format json` for scripting and automation:
 
 ```json
-{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.0", "command": "rh"}}
+{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.1", "command": "rh"}}
 ```
 
 | Exit code | Meaning |

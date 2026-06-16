@@ -14,6 +14,12 @@ use crate::elm;
 use crate::options::CompilerOptions;
 use crate::semantics::typed_ast::{TypedExpression, TypedLibrary, TypedNode};
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ResultTypeMetadata {
+    pub result_type_name: Option<elm::QName>,
+    pub result_type_specifier: Option<elm::TypeSpecifier>,
+}
+
 pub struct ElmEmitter {
     _local_id_counter: usize,
     _options: CompilerOptions,
@@ -37,7 +43,7 @@ impl ElmEmitter {
     /// Build `ElementFields` for a typed node, populating:
     /// - `local_id`        when annotations are enabled  (task 4.13)
     /// - `locator`         when locators are enabled      (task 4.11)
-    /// - `result_type_name` when result types are enabled (task 4.12)
+    /// - result type metadata when result types are enabled (task 4.12)
     ///
     /// Also records an [`ElmNodeMeta`] and (when the span is non-trivial) a
     /// [`SourceElmMapping`] in the source-map side-channel (task 7.4).
@@ -63,9 +69,11 @@ impl ElmEmitter {
             ));
         }
 
-        // 4.12 – result types enabled → derive the QName from the data type
+        // 4.12 – result types enabled → emit named or structural type metadata.
         if self._options.result_types_enabled() {
-            fields.result_type_name = Some(datatype_to_qname(&node.data_type));
+            let metadata = datatype_to_result_type(&node.data_type);
+            fields.result_type_name = metadata.result_type_name;
+            fields.result_type_specifier = metadata.result_type_specifier;
         }
 
         // Task 7.4 – record NodeId → ElmNodeMeta in source-map side-channel
@@ -243,12 +251,21 @@ impl ElmEmitter {
 
         let mut parameters = Vec::new();
         for p in typed_library.parameters {
+            let metadata = p
+                .type_specifier
+                .as_ref()
+                .map(type_specifier_to_result_type)
+                .unwrap_or_default();
+            let default_value = p
+                .default
+                .as_ref()
+                .map(|default| Box::new(self.emit_expression(default)));
             parameters.push(elm::ParameterDef {
                 name: Some(p.name),
                 access_level: Some(elm::AccessModifier::Public),
-                parameter_type_name: None,
-                parameter_type_specifier: None,
-                default_value: None,
+                parameter_type_name: metadata.result_type_name,
+                parameter_type_specifier: metadata.result_type_specifier,
+                default_value,
             });
         }
         let parameters = if parameters.is_empty() {
@@ -343,6 +360,11 @@ impl ElmEmitter {
             match s.inner {
                 TypedStatement::ExpressionDef { name, body } => {
                     let expression = self.emit_expression(&body);
+                    let metadata = if self._options.result_types_enabled() {
+                        datatype_to_result_type(&body.data_type)
+                    } else {
+                        ResultTypeMetadata::default()
+                    };
                     statements.push(elm::StatementDef::Expression(elm::ExpressionDef {
                         name: Some(name),
                         context: active_context.clone(),
@@ -350,19 +372,42 @@ impl ElmEmitter {
                         expression: Some(Box::new(expression)),
                         local_id: None,
                         locator: None,
-                        result_type_name: None,
-                        result_type_specifier: None,
+                        result_type_name: metadata.result_type_name,
+                        result_type_specifier: metadata.result_type_specifier,
                         annotation: vec![],
                     }));
                 }
                 TypedStatement::FunctionDef {
                     name,
-                    parameters: _params,
-                    return_type: _ret,
+                    parameters,
+                    return_type,
                     body,
-                    fluent: _fluent,
+                    fluent,
                 } => {
                     let expression = body.as_ref().map(|b| Box::new(self.emit_expression(b)));
+                    let metadata = if self._options.result_types_enabled() {
+                        body.as_ref()
+                            .map(|b| datatype_to_result_type(&b.data_type))
+                            .or_else(|| return_type.as_ref().map(type_specifier_to_result_type))
+                            .unwrap_or_default()
+                    } else {
+                        ResultTypeMetadata::default()
+                    };
+                    let operand = parameters
+                        .into_iter()
+                        .map(|param| {
+                            let metadata = param
+                                .type_specifier
+                                .as_ref()
+                                .map(type_specifier_to_result_type)
+                                .unwrap_or_default();
+                            elm::OperandDef {
+                                name: Some(param.name),
+                                operand_type_name: metadata.result_type_name,
+                                operand_type_specifier: metadata.result_type_specifier,
+                            }
+                        })
+                        .collect();
                     statements.push(elm::StatementDef::Function(elm::FunctionDef {
                         name: Some(name),
                         context: active_context.clone(),
@@ -370,11 +415,11 @@ impl ElmEmitter {
                         expression,
                         local_id: None,
                         locator: None,
-                        result_type_name: None,
-                        result_type_specifier: None,
-                        operand: vec![],
+                        result_type_name: metadata.result_type_name,
+                        result_type_specifier: metadata.result_type_specifier,
+                        operand,
                         external: None,
-                        fluent: None,
+                        fluent: if fluent { Some(true) } else { None },
                         annotation: vec![],
                     }));
                 }
@@ -462,6 +507,101 @@ pub fn datatype_to_qname(dt: &DataType) -> elm::QName {
         DataType::Choice(_) => qname_system("Any"),
         DataType::TypeParameter(name) => qname_system(name),
         DataType::Unknown => qname_system("Any"),
+    }
+}
+
+pub fn datatype_to_result_type(dt: &DataType) -> ResultTypeMetadata {
+    if let Some(result_type_name) = datatype_to_named_qname(dt) {
+        ResultTypeMetadata {
+            result_type_name: Some(result_type_name),
+            result_type_specifier: None,
+        }
+    } else if matches!(dt, DataType::Unknown) {
+        ResultTypeMetadata::default()
+    } else {
+        ResultTypeMetadata {
+            result_type_name: None,
+            result_type_specifier: Some(datatype_to_type_specifier(dt)),
+        }
+    }
+}
+
+pub fn datatype_to_type_specifier(dt: &DataType) -> elm::TypeSpecifier {
+    match dt {
+        DataType::System(_) | DataType::Model { .. } => {
+            elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+                local_id: None,
+                locator: None,
+                name: datatype_to_qname(dt),
+            })
+        }
+        DataType::List(elem) => elm::TypeSpecifier::List(elm::ListTypeSpecifier {
+            local_id: None,
+            locator: None,
+            element_type: Some(Box::new(datatype_to_type_specifier(elem))),
+        }),
+        DataType::Interval(point) => elm::TypeSpecifier::Interval(elm::IntervalTypeSpecifier {
+            local_id: None,
+            locator: None,
+            point_type: Some(Box::new(datatype_to_type_specifier(point))),
+        }),
+        DataType::Tuple(elements) => elm::TypeSpecifier::Tuple(elm::TupleTypeSpecifier {
+            local_id: None,
+            locator: None,
+            element: elements
+                .iter()
+                .map(|element| elm::TupleElementDefinition {
+                    name: element.name.clone(),
+                    element_type: Some(Box::new(datatype_to_type_specifier(&element.element_type))),
+                    type_specifier: None,
+                })
+                .collect(),
+        }),
+        DataType::Choice(types) => elm::TypeSpecifier::Choice(elm::ChoiceTypeSpecifier {
+            local_id: None,
+            locator: None,
+            choice: types.iter().map(datatype_to_type_specifier).collect(),
+        }),
+        DataType::TypeParameter(name) => {
+            elm::TypeSpecifier::Parameter(elm::ParameterTypeSpecifier {
+                local_id: None,
+                locator: None,
+                parameter_name: Some(name.clone()),
+            })
+        }
+        DataType::Unknown => elm::TypeSpecifier::Named(elm::NamedTypeSpecifier {
+            local_id: None,
+            locator: None,
+            name: qname_system("Any"),
+        }),
+    }
+}
+
+pub fn type_specifier_to_result_type(ts: &crate::parser::ast::TypeSpecifier) -> ResultTypeMetadata {
+    if let Some(result_type_name) = type_specifier_to_named_qname(ts) {
+        ResultTypeMetadata {
+            result_type_name: Some(result_type_name),
+            result_type_specifier: None,
+        }
+    } else {
+        ResultTypeMetadata {
+            result_type_name: None,
+            result_type_specifier: Some(crate::emit::types::emit_type_specifier(ts)),
+        }
+    }
+}
+
+fn datatype_to_named_qname(dt: &DataType) -> Option<elm::QName> {
+    match dt {
+        DataType::System(_) | DataType::Model { .. } => Some(datatype_to_qname(dt)),
+        _ => None,
+    }
+}
+
+fn type_specifier_to_named_qname(ts: &crate::parser::ast::TypeSpecifier) -> Option<elm::QName> {
+    match ts {
+        crate::parser::ast::TypeSpecifier::Named(_) => Some(type_specifier_to_qname(ts)),
+        _ => None,
     }
 }
 
