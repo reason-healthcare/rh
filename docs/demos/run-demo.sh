@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# FHIR DevDays 2025  —  rh live demo runner
+# FHIR DevDays 2026  —  rh live demo runner
 #
 # Usage:
 #   ./run-demo.sh            # interactive — press Enter between demos
@@ -9,12 +9,15 @@
 #
 # All demos assume `rh` is on PATH.  Install with:
 #   brew tap reason-healthcare/rh && brew install rh
+# The WASM playground demo also works from source with:
+#   pnpm --filter @reason-healthcare/playground dev
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA="$DIR/data"
 RH="${RH:-rh}"          # override with RH=/path/to/rh ./run-demo.sh
+PLAYGROUND_URL="${PLAYGROUND_URL:-https://reason-healthcare.github.io/rh/}"
 
 # ── colours ──────────────────────────────────────────────────────────────────
 BOLD=$'\033[1m'; DIM=$'\033[2m'; RESET=$'\033[0m'
@@ -216,8 +219,25 @@ demo_8() {
   echo "${GREEN}${BOLD}  Compose rh with any Unix tool: jq, awk, xargs, CI pipelines.${RESET}"
 }
 
+# ── Demo 9 — WASM playground ────────────────────────────────────────────────
+demo_9() {
+  banner "Demo 9 — WASM playground: FHIR in the browser"
+  echo "  The same Rust crates now ship as typed npm packages:"
+  echo "    @reason-healthcare/fhirpath"
+  echo "    @reason-healthcare/vcl"
+  echo "    @reason-healthcare/cql"
+  echo ""
+  echo "  Public playground:"
+  echo "    $PLAYGROUND_URL"
+  echo ""
+  cmd "pnpm --filter @reason-healthcare/playground dev"
+  echo "  Local Vite dev server uses /rh/ to match the GitHub Pages path."
+  echo ""
+  echo "${GREEN}${BOLD}  Demo flow: FHIRPath eval, VCL explain/translate, CQL compile-to-ELM — all in browser WASM.${RESET}"
+}
+
 # ── Dispatch ──────────────────────────────────────────────────────────────────
-DEMOS=(1 2 3 4 5 6 7 8)
+DEMOS=(1 2 3 4 5 6 7 8 9)
 
 if [[ "$MODE" =~ ^[0-9]+$ ]]; then
   "demo_${MODE}"
