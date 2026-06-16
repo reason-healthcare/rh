@@ -1,9 +1,9 @@
-# @reason-healthcare/fhirpath
+# @reasonhealth/fhirpath
 
 Typed TypeScript wrapper for the Reason Health FHIRPath WebAssembly build.
 
 ```ts
-import { evaluateExpression } from "@reason-healthcare/fhirpath/node";
+import { evaluateExpression } from "@reasonhealth/fhirpath/node";
 
 const result = evaluateExpression("name.given", {
   resourceType: "Patient",
@@ -13,6 +13,6 @@ const result = evaluateExpression("name.given", {
 
 Exports:
 
-- `@reason-healthcare/fhirpath/node` for Node.js.
-- `@reason-healthcare/fhirpath/web` for direct browser loading. Call `initFhirPath()` before invoking wrapper functions.
-- `@reason-healthcare/fhirpath/bundler` for Vite, webpack, Rollup, and similar bundlers.
+- `@reasonhealth/fhirpath/node` for Node.js.
+- `@reasonhealth/fhirpath/web` for direct browser loading. Call `initFhirPath()` before invoking wrapper functions.
+- `@reasonhealth/fhirpath/bundler` for Vite, webpack, Rollup, and similar bundlers.

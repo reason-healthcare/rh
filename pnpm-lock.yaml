@@ -23,13 +23,13 @@ importers:
 
   examples/playground:
     dependencies:
-      '@reason-healthcare/cql':
+      '@reasonhealth/cql':
         specifier: workspace:*
         version: link:../../packages/cql
-      '@reason-healthcare/fhirpath':
+      '@reasonhealth/fhirpath':
         specifier: workspace:*
         version: link:../../packages/fhirpath
-      '@reason-healthcare/vcl':
+      '@reasonhealth/vcl':
         specifier: workspace:*
         version: link:../../packages/vcl
     devDependencies:

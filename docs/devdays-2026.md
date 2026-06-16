@@ -574,9 +574,9 @@ Single static binary. No JDK. No .NET. No `npm install`.
 
 Typed npm packages backed by the same Rust crates:
 
-- **`@reason-healthcare/fhirpath`** — FHIRPath parse/eval
-- **`@reason-healthcare/vcl`** — VCL explain/translate
-- **`@reason-healthcare/cql`** — CQL compile/evaluate
+- **`@reasonhealth/fhirpath`** — FHIRPath parse/eval
+- **`@reasonhealth/vcl`** — VCL explain/translate
+- **`@reasonhealth/cql`** — CQL compile/evaluate
 
 Targets: **web**, **Node.js**, and **bundlers**.
 
@@ -585,7 +585,7 @@ Targets: **web**, **Node.js**, and **bundlers**.
 https://reason-healthcare.github.io/rh/
 
 ```
-pnpm --filter @reason-healthcare/playground dev
+pnpm --filter @reasonhealth/playground dev
 ```
 
 FHIRPath + VCL + CQL run in the browser with no server round-trip.

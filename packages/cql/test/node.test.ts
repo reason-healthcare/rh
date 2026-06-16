@@ -3,7 +3,7 @@ import { compile, evaluate, explainCompile, explainParse, version } from "../dis
 
 const source = "library Test version '1.0' define X: 1 + 2";
 
-describe("@reason-healthcare/cql node wrapper", () => {
+describe("@reasonhealth/cql node wrapper", () => {
   it("compiles CQL to ELM JSON", () => {
     const result = compile(source);
 

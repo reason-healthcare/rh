@@ -5,9 +5,9 @@ Interactive Vite playground for the Reason Health WebAssembly packages.
 The playground runs the same TypeScript wrappers that are published from
 `packages/`:
 
-- `@reason-healthcare/fhirpath` for FHIRPath parsing, validation, and evaluation.
-- `@reason-healthcare/vcl` for VCL validation, explanation, and ValueSet compose translation.
-- `@reason-healthcare/cql` for CQL compile-to-ELM JSON.
+- `@reasonhealth/fhirpath` for FHIRPath parsing, validation, and evaluation.
+- `@reasonhealth/vcl` for VCL validation, explanation, and ValueSet compose translation.
+- `@reasonhealth/cql` for CQL compile-to-ELM JSON.
 
 ## Prerequisites
 
@@ -30,13 +30,13 @@ cargo install wasm-pack
 From the repository root:
 
 ```bash
-pnpm --filter @reason-healthcare/playground dev
+pnpm --filter @reasonhealth/playground dev
 ```
 
 The `predev` script first builds the three local WASM wrapper packages:
 
 ```bash
-pnpm --filter @reason-healthcare/playground build:deps
+pnpm --filter @reasonhealth/playground build:deps
 ```
 
 After dependency builds finish, Vite prints a local URL like:
@@ -53,7 +53,7 @@ deployment path.
 Build the full playground bundle:
 
 ```bash
-pnpm --filter @reason-healthcare/playground build
+pnpm --filter @reasonhealth/playground build
 ```
 
 This runs TypeScript checking and `vite build`. The output goes to
@@ -70,7 +70,7 @@ pnpm -r build
 Run the playground smoke tests:
 
 ```bash
-pnpm --filter @reason-healthcare/playground test
+pnpm --filter @reasonhealth/playground test
 ```
 
 Run all package and playground tests:
@@ -89,9 +89,9 @@ The workflow:
 1. Installs Rust with the `wasm32-unknown-unknown` target.
 2. Installs `wasm-pack`.
 3. Installs pnpm and Node.js.
-4. Builds `@reason-healthcare/fhirpath`, `@reason-healthcare/vcl`, and
-   `@reason-healthcare/cql`.
-5. Builds `@reason-healthcare/playground`.
+4. Builds `@reasonhealth/fhirpath`, `@reasonhealth/vcl`, and
+   `@reasonhealth/cql`.
+5. Builds `@reasonhealth/playground`.
 6. Uploads `examples/playground/dist/` to GitHub Pages.
 
 ## Troubleshooting
@@ -99,7 +99,7 @@ The workflow:
 If Vite fails to resolve a WASM package, rebuild the wrapper artifacts:
 
 ```bash
-pnpm --filter @reason-healthcare/playground build:deps
+pnpm --filter @reasonhealth/playground build:deps
 ```
 
 If generated JavaScript appears under `examples/playground/src/` or
@@ -111,5 +111,5 @@ your platform, it falls back to installing/building the tool locally. That
 warning is non-fatal when the command exits successfully.
 
 If pnpm reports ignored build scripts for `esbuild`, Vite can still build in
-the current workspace setup as long as `pnpm --filter @reason-healthcare/playground build`
+the current workspace setup as long as `pnpm --filter @reasonhealth/playground build`
 passes.

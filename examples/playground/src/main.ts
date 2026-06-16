@@ -4,21 +4,21 @@ import {
   parseExpression as parseFhirPath,
   validateExpression as validateFhirPath,
   version as fhirPathVersion
-} from "@reason-healthcare/fhirpath/web";
+} from "@reasonhealth/fhirpath/web";
 import {
   explainExpression as explainVcl,
   initVcl,
   translateExpression as translateVcl,
   validateExpression as validateVcl,
   version as vclVersion
-} from "@reason-healthcare/vcl/web";
+} from "@reasonhealth/vcl/web";
 import {
   compile as compileCql,
   explainCompile as explainCqlCompile,
   explainParse as explainCqlParse,
   initCql,
   version as cqlVersion
-} from "@reason-healthcare/cql/web";
+} from "@reasonhealth/cql/web";
 import "./styles.css";
 import {
   cqlSource,

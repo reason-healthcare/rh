@@ -276,8 +276,8 @@ pnpm -r pack:dry-run
 ```
 
 Then follow [`packages/RELEASE.md`](packages/RELEASE.md) to publish
-`@reason-healthcare/fhirpath`, `@reason-healthcare/vcl`, and
-`@reason-healthcare/cql` locally.
+`@reasonhealth/fhirpath`, `@reasonhealth/vcl`, and
+`@reasonhealth/cql` locally.
 
 ## Generated FHIR Crate Release Policy
 

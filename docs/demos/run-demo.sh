@@ -10,7 +10,7 @@
 # All demos assume `rh` is on PATH.  Install with:
 #   brew tap reason-healthcare/rh && brew install rh
 # The WASM playground demo also works from source with:
-#   pnpm --filter @reason-healthcare/playground dev
+#   pnpm --filter @reasonhealth/playground dev
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -223,14 +223,14 @@ demo_8() {
 demo_9() {
   banner "Demo 9 — WASM playground: FHIR in the browser"
   echo "  The same Rust crates now ship as typed npm packages:"
-  echo "    @reason-healthcare/fhirpath"
-  echo "    @reason-healthcare/vcl"
-  echo "    @reason-healthcare/cql"
+  echo "    @reasonhealth/fhirpath"
+  echo "    @reasonhealth/vcl"
+  echo "    @reasonhealth/cql"
   echo ""
   echo "  Public playground:"
   echo "    $PLAYGROUND_URL"
   echo ""
-  cmd "pnpm --filter @reason-healthcare/playground dev"
+  cmd "pnpm --filter @reasonhealth/playground dev"
   echo "  Local Vite dev server uses /rh/ to match the GitHub Pages path."
   echo ""
   echo "${GREEN}${BOLD}  Demo flow: FHIRPath eval, VCL explain/translate, CQL compile-to-ELM — all in browser WASM.${RESET}"

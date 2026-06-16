@@ -7,7 +7,7 @@ run, build, test, deployment, and troubleshooting notes.
 Run it from the workspace root:
 
 ```bash
-pnpm --filter @reason-healthcare/playground dev
+pnpm --filter @reasonhealth/playground dev
 ```
 
 The playground exercises the FHIRPath, VCL, and CQL WebAssembly packages through

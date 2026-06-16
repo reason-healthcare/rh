@@ -35,7 +35,7 @@ cd docs/demos
 | 6 | [CQL → ELM](#demo-6--cql--elm-compilation) | `rh cql compile` + `explain` | Full compiler in 9 ms |
 | 7 | [VCL](#demo-7--valueset-compose-language-vcl) | `rh vcl explain` + `translate` | ValueSet DSL → FHIR compose |
 | 8 | [Pipes](#demo-8--composability-and-pipes) | `rh … \| rh validate` | Unix-style composability |
-| 9 | [WASM playground](#demo-9--wasm-playground) | `pnpm --filter @reason-healthcare/playground dev` | FHIRPath, VCL, and CQL in browser WASM |
+| 9 | [WASM playground](#demo-9--wasm-playground) | `pnpm --filter @reasonhealth/playground dev` | FHIRPath, VCL, and CQL in browser WASM |
 | 10 | [FHIRPath REPL](#demo-10--fhirpath-repl-run-manually) | `rh fhirpath repl` | Live FHIRPath exploration |
 | 11 | [VCL REPL](#demo-11--vcl-repl-run-manually) | `rh vcl repl --explain --translate` | Iterative ValueSet authoring |
 | 12 | [CQL REPL](#demo-12--cql-repl-run-manually) | `rh cql repl` | Instant ELM feedback loop |
@@ -380,14 +380,14 @@ Local run from the repository root:
 
 ```bash
 pnpm install
-pnpm --filter @reason-healthcare/playground dev
+pnpm --filter @reasonhealth/playground dev
 ```
 
 The app has three tabs:
 
-- **FHIRPath** — expression + Patient JSON → parsed/evaluated result through `@reason-healthcare/fhirpath`
-- **VCL** — compact ValueSet expression → explanation and `ValueSet.compose` through `@reason-healthcare/vcl`
-- **CQL** — CQL source → ELM JSON through `@reason-healthcare/cql`
+- **FHIRPath** — expression + Patient JSON → parsed/evaluated result through `@reasonhealth/fhirpath`
+- **VCL** — compact ValueSet expression → explanation and `ValueSet.compose` through `@reasonhealth/vcl`
+- **CQL** — CQL source → ELM JSON through `@reasonhealth/cql`
 
 **Why it matters:** This is not a toy rewrite in JavaScript. It is the production Rust parser/compiler code compiled to WASM, packaged for npm, and run directly in the browser with no FHIR server or backend API call.
 

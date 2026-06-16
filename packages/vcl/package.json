@@ -1,5 +1,5 @@
 {
-  "name": "@reason-healthcare/vcl",
+  "name": "@reasonhealth/vcl",
   "version": "0.2.0",
   "description": "Typed TypeScript wrappers for the Reason Health VCL WebAssembly package.",
   "license": "MIT OR Apache-2.0",

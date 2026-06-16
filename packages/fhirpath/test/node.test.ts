@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateExpression, parseExpression, validateExpression, version } from "../dist/node.js";
 
-describe("@reason-healthcare/fhirpath node wrapper", () => {
+describe("@reasonhealth/fhirpath node wrapper", () => {
   it("parses a FHIRPath expression", () => {
     const result = parseExpression("Patient.name.given");
 

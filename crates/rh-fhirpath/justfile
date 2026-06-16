@@ -77,9 +77,9 @@ dev-web: wasm-web
 # Build shared playground app from the workspace root.
 build-demo:
     #!/usr/bin/env bash
-    cd ../.. && pnpm --filter @reason-healthcare/playground build
+    cd ../.. && pnpm --filter @reasonhealth/playground build
 
 # Build and serve shared playground locally.
 demo:
     #!/usr/bin/env bash
-    cd ../.. && pnpm --filter @reason-healthcare/playground dev
+    cd ../.. && pnpm --filter @reasonhealth/playground dev

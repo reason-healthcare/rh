@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { explainExpression, parseExpression, translateExpression, validateExpression, version } from "../dist/node.js";
 
-describe("@reason-healthcare/vcl node wrapper", () => {
+describe("@reasonhealth/vcl node wrapper", () => {
   it("parses a VCL expression", () => {
     const result = parseExpression("123456");
 

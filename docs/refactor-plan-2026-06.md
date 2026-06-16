@@ -14,7 +14,7 @@
 | WS3 CLI | ✅ done |3.1-3.7 all complete |
 | WS4 Codegen | ✅ done (2026-06-15) | **4.1✅** regen harness + CI drift. **4.2✅** R5 patches. **4.3✅** golden tests. **4.4✅** god-file splits. **4.5✅** borrow-checker clones. **4.6✅** unwraps. **4.7✅** rayon parallelization. **4.8✅** (needs R4/R5 regen): Vec<T> with serde(default). **4.9✅** Box doc. **4.10✅** metadata split. **4.11✅** R5 extensions parity (regen recipe + extension_by_url helper). **4.12✅** parse tests. |
 | WS5 Performance | ⏸ deferred (2026-06-15) | Deferred by maintainer decision; WS6 starts first because it can proceed after WS1 and stable crate APIs. |
-| WS6 WASM/NPM | ✅ complete (2026-06-15) | 6.1 done: root `just wasm-build <crate> <target>` and `just wasm-check` added; CI compile-checks foundation, fhirpath, vcl, and cql for `wasm32-unknown-unknown`. 6.2 done: pnpm workspace with `@reason-healthcare/fhirpath` and `@reason-healthcare/vcl`. 6.3 deferred by maintainer decision. 6.4 done: shared Vite playground and Pages workflow. 6.5 done: `rh-cql` WASM feature/export module plus `@reason-healthcare/cql` package. 6.6 deferred as stretch. 6.7 done: foundation WASM docs clarified. |
+| WS6 WASM/NPM | ✅ complete (2026-06-15) | 6.1 done: root `just wasm-build <crate> <target>` and `just wasm-check` added; CI compile-checks foundation, fhirpath, vcl, and cql for `wasm32-unknown-unknown`. 6.2 done: pnpm workspace with `@reasonhealth/fhirpath` and `@reasonhealth/vcl`. 6.3 deferred by maintainer decision. 6.4 done: shared Vite playground and Pages workflow. 6.5 done: `rh-cql` WASM feature/export module plus `@reasonhealth/cql` package. 6.6 deferred as stretch. 6.7 done: foundation WASM docs clarified. |
 | WS7 Docs + gates | ✅ done (2026-06-16) | Architecture graph sync, README sweep, release docs, `just docs-sync`, docs-sync CI, and MSRV CI added. |
 
 ---
@@ -254,12 +254,12 @@ crates/rh-<name>/
   src/wasm.rs         # #[wasm_bindgen] facade: thin, JSON-in/JSON-out, options structs,
                       #   WasmResult envelope from rh-foundation::wasm
 packages/             # NEW top-level dir (npm workspace, pnpm)
-  fhirpath/           # npm: @reason-healthcare/fhirpath
+  fhirpath/           # npm: @reasonhealth/fhirpath
     package.json      # wraps wasm-pack output; exports map for node/web/bundler
     src/index.ts      # TS wrapper: ergonomic API over raw bindgen exports, typed
     test/             # vitest tests against the built wasm
-  vcl/                # npm: @reason-healthcare/vcl
-  cql/                # npm: @reason-healthcare/cql (after 6.5)
+  vcl/                # npm: @reasonhealth/vcl
+  cql/                # npm: @reasonhealth/cql (after 6.5)
 examples/
   playground/         # reference web application (single app, all packages)
 ```
@@ -274,10 +274,10 @@ Rules:
 | # | Task | Files | Acceptance criteria |
 |---|---|---|---|
 | 6.1 | Extract the common justfile WASM recipes into root justfile parameterized by crate (`just wasm-build fhirpath web`); add `wasm32-unknown-unknown` check for fhirpath, vcl, foundation(no-default-features), cql-core to CI. | `justfile`, `.github/workflows/ci.yml` | CI fails if any wasm-capable crate regresses wasm compilation |
-| 6.2 | Create `packages/` pnpm workspace with `@reason-healthcare/fhirpath` and `@reason-healthcare/vcl`: TS wrappers, typed options, exports map (node/web/bundler via wasm-pack `--target` variants), vitest suites, README each. | `packages/*` | `pnpm -r build && pnpm -r test` green; `npm pack` produces installable tarballs |
+| 6.2 | Create `packages/` pnpm workspace with `@reasonhealth/fhirpath` and `@reasonhealth/vcl`: TS wrappers, typed options, exports map (node/web/bundler via wasm-pack `--target` variants), vitest suites, README each. | `packages/*` | `pnpm -r build && pnpm -r test` green; `npm pack` produces installable tarballs |
 | 6.3 | ⏸ Deferred: NPM release automation: extend `release.yml` with a job building wasm + publishing packages on `v*` tags (npm provenance, `NPM_TOKEN` secret); document in RELEASING.md (and fix RELEASING.md:266 pointing at WASM_BUILD.md docs — verify paths). | `.github/workflows/release.yml`, `RELEASING.md` | Dry-run publish (`npm publish --dry-run`) wired into CI |
 | 6.4 | ✅ Done: Reference app: `examples/playground/` — Vite + TS web app with tabs: FHIRPath evaluator (expression + resource JSON → result), VCL translator/explainer, and CQL compile→ELM viewer. Replaces/absorbs `crates/rh-fhirpath/demo/`. Deployed to GitHub Pages via workflow. | `examples/playground/`, `.github/workflows/pages.yml` | `pnpm dev` runs locally; Pages deploy job on main; rh-fhirpath/demo removed with pointer |
-| 6.5 | ✅ Done: rh-cql WASM feature mirroring the pattern; feature-gate file/package library providers (`src/library/providers/{file,package}.rs`) behind `fs` (default on, off for wasm); `src/wasm.rs` exposing `compile(source, options) → ELM JSON` and `evaluate(elm, data, parameters)` with in-memory providers. Then `packages/cql`. | `crates/rh-cql/`, `packages/cql/`, `justfile` | `cargo check -p rh-cql --target wasm32-unknown-unknown --no-default-features --features wasm` passes; `pnpm --filter @reason-healthcare/cql build && pnpm --filter @reason-healthcare/cql test` green |
+| 6.5 | ✅ Done: rh-cql WASM feature mirroring the pattern; feature-gate file/package library providers (`src/library/providers/{file,package}.rs`) behind `fs` (default on, off for wasm); `src/wasm.rs` exposing `compile(source, options) → ELM JSON` and `evaluate(elm, data, parameters)` with in-memory providers. Then `packages/cql`. | `crates/rh-cql/`, `packages/cql/`, `justfile` | `cargo check -p rh-cql --target wasm32-unknown-unknown --no-default-features --features wasm` passes; `pnpm --filter @reasonhealth/cql build && pnpm --filter @reasonhealth/cql test` green |
 | 6.6 | ⏸ Deferred: rh-fsh WASM (stretch, do last): make rayon optional (`parallel` feature, sequential fallback iterator) and split file-I/O entry points (`compile_fsh_files`) from pure `compile_fsh(sources: &[(name, content)])`. | `crates/rh-fsh/` | wasm32 check passes with `--no-default-features`; native perf unchanged with `parallel` on (bench) |
 | 6.7 | ✅ Done: rh-foundation: keep `wasm` feature as internal plumbing (WasmResult, panic hook), document it as "WASM support infrastructure, not a user-facing WASM API"; ensure README/docs say so (ties to 0.6). | `crates/rh-foundation/README.md` | No doc overstates foundation WASM |
 
@@ -325,7 +325,7 @@ docs sync and `cargo +1.91.0 check`.
 **Open decisions requiring maintainer input (defaults chosen, flag in PRs):**
 1. (0.4) ffq command: gate as unstable vs delete. Default: gate.
 2. (4.8) `Option<Vec<T>>` → `Vec<T>` changes the generated-crate public API — needs version bump policy for rh-hl7_fhir_r{4,5}_core. Default: do it; bump generated crates to 0.3.0.
-3. (6.2) npm scope name `@reason-healthcare/*`. Default assumed.
+3. (6.2) npm scope name `@reasonhealth/*`. Default assumed.
 4. (5.3 stage 2) Internal FHIRPath value model decoupled from serde_json — large; only proceed if stage-1 Arc wrapping shows insufficient gains.
 
 **Verification note for implementers:** audit findings above were produced by parallel code surveys on 2026-06-12; spot-verified items are marked. Before acting on any specific file:line, re-read the file — line numbers drift. Two audit claims were found wrong during verification and corrected here: WASM_BUILD.md files DO exist for rh-fhirpath and rh-vcl; `docs/devdays-2025-perf.md` DOES exist. The CQL "1105 unwrap" figure is unverified and likely includes test code — re-count during 2.4–2.6.

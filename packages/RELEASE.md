@@ -1,13 +1,13 @@
 # Releasing NPM Packages
 
 This document describes the local release process for the public
-`@reason-healthcare/*` WebAssembly packages published to npmjs.com.
+`@reasonhealth/*` WebAssembly packages published to npmjs.com.
 
 Published packages:
 
-- `@reason-healthcare/fhirpath`
-- `@reason-healthcare/vcl`
-- `@reason-healthcare/cql`
+- `@reasonhealth/fhirpath`
+- `@reasonhealth/vcl`
+- `@reasonhealth/cql`
 
 The private playground package is not published.
 
@@ -17,7 +17,7 @@ The private playground package is not published.
 - pnpm 10.11.0
 - Rust stable with the `wasm32-unknown-unknown` target
 - `wasm-pack`
-- npm account with publish access to the `@reason-healthcare` scope
+- npm account with publish access to the `@reasonhealth` scope
 
 Install local prerequisites:
 
@@ -94,18 +94,18 @@ This checklist was dry-run locally for the initial WS6 package setup using:
 Publish packages from the repository root in this order:
 
 ```bash
-npm publish --workspace @reason-healthcare/fhirpath --access public
-npm publish --workspace @reason-healthcare/vcl --access public
-npm publish --workspace @reason-healthcare/cql --access public
+npm publish --workspace @reasonhealth/fhirpath --access public
+npm publish --workspace @reasonhealth/vcl --access public
+npm publish --workspace @reasonhealth/cql --access public
 ```
 
 Use `--tag beta` for beta releases if the version is prerelease and should not
 become npm's `latest` dist-tag:
 
 ```bash
-npm publish --workspace @reason-healthcare/fhirpath --access public --tag beta
-npm publish --workspace @reason-healthcare/vcl --access public --tag beta
-npm publish --workspace @reason-healthcare/cql --access public --tag beta
+npm publish --workspace @reasonhealth/fhirpath --access public --tag beta
+npm publish --workspace @reasonhealth/vcl --access public --tag beta
+npm publish --workspace @reasonhealth/cql --access public --tag beta
 ```
 
 Use `--provenance` only when publishing from a supported CI environment with
@@ -116,9 +116,9 @@ OIDC enabled. For the local release process, omit `--provenance`.
 Confirm package metadata and dist-tags:
 
 ```bash
-npm view @reason-healthcare/fhirpath version dist-tags
-npm view @reason-healthcare/vcl version dist-tags
-npm view @reason-healthcare/cql version dist-tags
+npm view @reasonhealth/fhirpath version dist-tags
+npm view @reasonhealth/vcl version dist-tags
+npm view @reasonhealth/cql version dist-tags
 ```
 
 Optionally install into a temporary project:
@@ -127,7 +127,7 @@ Optionally install into a temporary project:
 tmpdir="$(mktemp -d)"
 cd "$tmpdir"
 pnpm init
-pnpm add @reason-healthcare/fhirpath @reason-healthcare/vcl @reason-healthcare/cql
+pnpm add @reasonhealth/fhirpath @reasonhealth/vcl @reasonhealth/cql
 ```
 
 ## Recovery
@@ -139,8 +139,8 @@ the validation steps.
 If a package was published with the wrong dist-tag, move tags explicitly:
 
 ```bash
-npm dist-tag add @reason-healthcare/fhirpath@<version> beta
-npm dist-tag rm @reason-healthcare/fhirpath latest
+npm dist-tag add @reasonhealth/fhirpath@<version> beta
+npm dist-tag rm @reasonhealth/fhirpath latest
 ```
 
 Repeat for `vcl` and `cql` as needed.
