@@ -25,7 +25,7 @@ just clean-wasm
 # Development: build and serve web target
 just dev-web
 
-# Build and serve demo locally
+# Build and serve the shared playground locally
 just demo
 ```
 
@@ -34,14 +34,14 @@ just demo
 - `wasm-pack` (automatically installed if missing)
 - Rust with `wasm32-unknown-unknown` target
 - Node.js (for testing)
-- Python 3 (for development server)
+- pnpm (for the shared playground)
 
 ## Output Directories
 
 - `pkg/web/` - Web target (ES6 modules)
 - `pkg/node/` - Node.js target (CommonJS)  
 - `pkg/bundler/` - Bundler target
-- `build/` - Demo application files (gitignored)
+- `../../examples/playground/dist/` - Shared playground build output (gitignored)
 
 ## Compatibility
 
@@ -50,18 +50,18 @@ This Justfile handles different Rust installations:
 - Works with asdf-managed Rust
 - Automatically uses appropriate PATH for wasm-pack
 
-## Demo Application
+## Shared Playground
 
-The demo application provides an interactive web interface for:
+The former standalone demo is now the shared workspace playground at
+`examples/playground`. It provides an interactive web interface for:
 - Parsing FHIRPath expressions
 - Evaluating FHIRPath against FHIR resources
-- Real-time syntax validation
-- Example FHIR Patient resources
-- JSON output visualization
+- Translating and explaining VCL
+- Compiling CQL to ELM JSON
 
 Build and run with:
 ```bash
 just demo
 ```
 
-Then open http://localhost:8000 in your browser.
+The Vite server prints the local URL.
