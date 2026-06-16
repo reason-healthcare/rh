@@ -28,6 +28,18 @@ import {
 } from "./samples";
 
 type Tool = "fhirpath" | "vcl" | "cql";
+type OutputMode = "rendered" | "source";
+
+interface PlaygroundResult<T = unknown> {
+  success?: boolean;
+  data?: string;
+  error?: string;
+  value?: T;
+}
+
+interface RenderOptions {
+  title: string;
+}
 
 const state = {
   activeTool: "fhirpath" as Tool
@@ -163,10 +175,14 @@ function bindFhirPath(): void {
     evaluateFhirPathForm();
   });
   requiredElement<HTMLButtonElement>("fhirpath-parse").addEventListener("click", () => {
-    renderResult("fhirpath-output", parseFhirPath(expressionValue("fhirpath-expression")));
+    renderResult("fhirpath-output", parseFhirPath(expressionValue("fhirpath-expression")), {
+      title: "FHIRPath parse"
+    });
   });
   requiredElement<HTMLButtonElement>("fhirpath-validate").addEventListener("click", () => {
-    renderResult("fhirpath-output", validateFhirPath(expressionValue("fhirpath-expression")));
+    renderResult("fhirpath-output", validateFhirPath(expressionValue("fhirpath-expression")), {
+      title: "FHIRPath validation"
+    });
   });
 }
 
@@ -175,7 +191,8 @@ function evaluateFhirPathForm(): void {
     const resource = parseJson(textValue("fhirpath-resource"));
     renderResult(
       "fhirpath-output",
-      evaluateFhirPath(expressionValue("fhirpath-expression"), resource)
+      evaluateFhirPath(expressionValue("fhirpath-expression"), resource),
+      { title: "FHIRPath result" }
     );
   } catch (error) {
     renderError("fhirpath-output", error);
@@ -189,14 +206,19 @@ function bindVcl(): void {
       "vcl-output",
       translateVcl(textValue("vcl-expression"), {
         defaultSystem: optionalValue("vcl-default-system")
-      })
+      }),
+      { title: "FHIR ValueSet compose" }
     );
   });
   requiredElement<HTMLButtonElement>("vcl-explain").addEventListener("click", () => {
-    renderResult("vcl-output", explainVcl(textValue("vcl-expression"), optionalValue("vcl-default-system")));
+    renderResult("vcl-output", explainVcl(textValue("vcl-expression"), optionalValue("vcl-default-system")), {
+      title: "VCL explanation"
+    });
   });
   requiredElement<HTMLButtonElement>("vcl-validate").addEventListener("click", () => {
-    renderResult("vcl-output", validateVcl(textValue("vcl-expression")));
+    renderResult("vcl-output", validateVcl(textValue("vcl-expression")), {
+      title: "VCL validation"
+    });
   });
 }
 
@@ -207,7 +229,8 @@ function bindCql(): void {
       "cql-output",
       compileCql(textValue("cql-source"), {
         sourceMap: requiredElement<HTMLInputElement>("cql-source-map").checked
-      })
+      }),
+      { title: "CQL ELM output" }
     );
   });
 }
@@ -218,16 +241,218 @@ function renderVersions(): void {
   setText("cql-version", cqlVersion());
 }
 
-function renderResult(targetId: string, value: unknown): void {
+function renderResult(targetId: string, value: unknown, options: RenderOptions): void {
   const target = requiredElement<HTMLOutputElement>(targetId);
   target.classList.remove("error");
-  target.innerHTML = `<pre>${escapeHtml(formatJson(value))}</pre>`;
+  const source = formatJson(value);
+  const rendered = renderOutputBody(value);
+  target.innerHTML = [
+    `<div class="result-toolbar">`,
+    `<div>`,
+    `<p class="result-eyebrow">Output</p>`,
+    `<h2>${escapeHtml(options.title)}</h2>`,
+    `</div>`,
+    `<div class="view-toggle" role="group" aria-label="Output view">`,
+    `<button type="button" class="active" data-output-view="rendered">Rendered</button>`,
+    `<button type="button" data-output-view="source">Source</button>`,
+    `</div>`,
+    `</div>`,
+    `<div class="result-view active" data-output-panel="rendered">${rendered}</div>`,
+    `<div class="result-view" data-output-panel="source"><pre>${escapeHtml(source)}</pre></div>`
+  ].join("");
+  bindOutputToggle(target);
 }
 
 function renderError(targetId: string, error: unknown): void {
   const target = requiredElement<HTMLOutputElement>(targetId);
   target.classList.add("error");
-  target.innerHTML = `<pre>${escapeHtml(error instanceof Error ? error.message : String(error))}</pre>`;
+  const message = error instanceof Error ? error.message : String(error);
+  target.innerHTML = [
+    `<div class="result-toolbar">`,
+    `<div>`,
+    `<p class="result-eyebrow">Error</p>`,
+    `<h2>Unable to render</h2>`,
+    `</div>`,
+    `</div>`,
+    `<div class="result-view active">`,
+    `<section class="rendered-block danger">`,
+    `<h3>Request failed</h3>`,
+    `<p>${escapeHtml(message)}</p>`,
+    `</section>`,
+    `</div>`
+  ].join("");
+}
+
+function bindOutputToggle(target: HTMLElement): void {
+  const buttons = [...target.querySelectorAll<HTMLButtonElement>("[data-output-view]")];
+  const panels = [...target.querySelectorAll<HTMLElement>("[data-output-panel]")];
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.outputView as OutputMode;
+      buttons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+      panels.forEach((panel) => panel.classList.toggle("active", panel.dataset.outputPanel === mode));
+    });
+  });
+}
+
+function renderOutputBody(value: unknown): string {
+  const result = asPlaygroundResult(value);
+  const payload = result.value ?? parseMaybeJson(result.data) ?? value;
+  const status = renderStatus(result);
+
+  if (result.success === false) {
+    return `${status}<section class="rendered-block danger"><h3>Error</h3><p>${escapeHtml(result.error ?? "The operation failed.")}</p></section>`;
+  }
+
+  return `${status}${renderPayload(payload)}`;
+}
+
+function renderStatus(result: PlaygroundResult): string {
+  if (result.success === undefined) {
+    return "";
+  }
+  const label = result.success ? "Success" : "Failed";
+  const tone = result.success ? "success" : "danger";
+  return `<div class="status-line ${tone}"><span>${label}</span>${result.error ? `<p>${escapeHtml(result.error)}</p>` : ""}</div>`;
+}
+
+function renderPayload(payload: unknown): string {
+  if (isValidationPayload(payload)) {
+    return renderValidationPayload(payload);
+  }
+  if (isElmLibraryPayload(payload)) {
+    return renderElmLibrary(payload);
+  }
+  if (isValueSetComposePayload(payload)) {
+    return renderValueSetCompose(payload);
+  }
+  if (Array.isArray(payload)) {
+    return renderArrayPayload(payload);
+  }
+  if (isRecord(payload)) {
+    return renderObjectPayload(payload);
+  }
+  return `<section class="rendered-block"><h3>Value</h3><p class="scalar">${escapeHtml(String(payload ?? ""))}</p></section>`;
+}
+
+function renderValidationPayload(payload: { valid: boolean; message?: string }): string {
+  return `
+    <section class="rendered-block ${payload.valid ? "success" : "danger"}">
+      <h3>${payload.valid ? "Valid" : "Invalid"}</h3>
+      <p>${escapeHtml(payload.message ?? (payload.valid ? "No issues found." : "Validation failed."))}</p>
+    </section>
+  `;
+}
+
+function renderElmLibrary(payload: { library: unknown }): string {
+  const library = isRecord(payload.library) ? payload.library : {};
+  const identifier = isRecord(library.identifier) ? library.identifier : {};
+  const statements = isRecord(library.statements) && Array.isArray(library.statements.def)
+    ? library.statements.def
+    : [];
+  const title = [identifier.id, identifier.version].filter(Boolean).join(" ") || "Anonymous library";
+  const rows = statements.map((statement) => {
+    const row = isRecord(statement) ? statement : {};
+    const expression = isRecord(row.expression) ? row.expression : {};
+    return `<tr><td>${escapeHtml(String(row.name ?? "(unnamed)"))}</td><td>${escapeHtml(String(expression.type ?? "expression"))}</td></tr>`;
+  }).join("");
+
+  return `
+    <section class="rendered-block">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${statements.length} definition${statements.length === 1 ? "" : "s"} emitted to ELM.</p>
+      ${rows ? `<table><thead><tr><th>Definition</th><th>Expression</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
+    </section>
+  `;
+}
+
+function renderValueSetCompose(payload: { include?: unknown[]; exclude?: unknown[] }): string {
+  const include = Array.isArray(payload.include) ? payload.include : [];
+  const exclude = Array.isArray(payload.exclude) ? payload.exclude : [];
+  const rows = [...include.map((entry) => renderComposeRow("include", entry)), ...exclude.map((entry) => renderComposeRow("exclude", entry))].join("");
+  return `
+    <section class="rendered-block">
+      <h3>ValueSet.compose</h3>
+      <p>${include.length} include block${include.length === 1 ? "" : "s"}${exclude.length ? `, ${exclude.length} exclude block${exclude.length === 1 ? "" : "s"}` : ""}.</p>
+      ${rows ? `<table><thead><tr><th>Mode</th><th>System</th><th>Filters / concepts</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
+    </section>
+  `;
+}
+
+function renderComposeRow(mode: string, entry: unknown): string {
+  const row = isRecord(entry) ? entry : {};
+  const filters = Array.isArray(row.filter)
+    ? row.filter.map((filter) => isRecord(filter) ? `${filter.property ?? "property"} ${filter.op ?? "="} ${filter.value ?? ""}` : String(filter))
+    : [];
+  const concepts = Array.isArray(row.concept)
+    ? row.concept.map((concept) => isRecord(concept) ? String(concept.code ?? concept.display ?? "concept") : String(concept))
+    : [];
+  const details = [...filters, ...concepts].join("; ") || "All codes in system";
+  return `<tr><td>${escapeHtml(mode)}</td><td>${escapeHtml(String(row.system ?? "(default)"))}</td><td>${escapeHtml(details)}</td></tr>`;
+}
+
+function renderArrayPayload(payload: unknown[]): string {
+  if (payload.length === 0) {
+    return `<section class="rendered-block"><h3>Collection</h3><p>No values returned.</p></section>`;
+  }
+  const items = payload.map((item) => `<li>${renderInlineValue(item)}</li>`).join("");
+  return `<section class="rendered-block"><h3>Collection</h3><ul>${items}</ul></section>`;
+}
+
+function renderObjectPayload(payload: Record<string, unknown>): string {
+  const entries = Object.entries(payload);
+  if (entries.length === 0) {
+    return `<section class="rendered-block"><h3>Object</h3><p>No fields returned.</p></section>`;
+  }
+  const rows = entries.map(([key, entry]) => `<tr><th>${escapeHtml(key)}</th><td>${renderInlineValue(entry)}</td></tr>`).join("");
+  return `<section class="rendered-block"><h3>Rendered fields</h3><table><tbody>${rows}</tbody></table></section>`;
+}
+
+function renderInlineValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return `<span class="muted">null</span>`;
+  }
+  if (Array.isArray(value)) {
+    return escapeHtml(value.map((item) => typeof item === "object" ? JSON.stringify(item) : String(item)).join(", "));
+  }
+  if (isRecord(value)) {
+    const preferred = value.value ?? value.code ?? value.display ?? value.name ?? value.type;
+    return escapeHtml(preferred === undefined ? JSON.stringify(value) : String(preferred));
+  }
+  return escapeHtml(String(value));
+}
+
+function asPlaygroundResult(value: unknown): PlaygroundResult {
+  return isRecord(value) && ("success" in value || "data" in value || "error" in value)
+    ? value as PlaygroundResult
+    : {};
+}
+
+function parseMaybeJson(value: string | undefined): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function isValidationPayload(value: unknown): value is { valid: boolean; message?: string } {
+  return isRecord(value) && typeof value.valid === "boolean";
+}
+
+function isElmLibraryPayload(value: unknown): value is { library: unknown } {
+  return isRecord(value) && isRecord(value.library);
+}
+
+function isValueSetComposePayload(value: unknown): value is { include?: unknown[]; exclude?: unknown[] } {
+  return isRecord(value) && (Array.isArray(value.include) || Array.isArray(value.exclude));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function expressionValue(id: string): string {
