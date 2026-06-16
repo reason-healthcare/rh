@@ -366,6 +366,15 @@ regen-check:
     diff -rq crates/rh-hl7_fhir_r4_core/src /tmp/rh-regen-check-r4/src || R4_DIFF=$?
     diff -rq crates/rh-hl7_fhir_r5_core/src /tmp/rh-regen-check-r5/src || R5_DIFF=$?
     if [ "$R4_DIFF" -ne 0 ] || [ "$R5_DIFF" -ne 0 ]; then
+        echo "Drift diff preview:"
+        for checked in crates/rh-hl7_fhir_r4_core/src/metadata/datatypes.rs crates/rh-hl7_fhir_r4_core/src/metadata/primitives.rs crates/rh-hl7_fhir_r5_core/src/metadata/datatypes.rs crates/rh-hl7_fhir_r5_core/src/metadata/primitives.rs; do
+            generated="${checked/crates\/rh-hl7_fhir_r4_core\/src/\/tmp\/rh-regen-check-r4\/src}"
+            generated="${generated/crates\/rh-hl7_fhir_r5_core\/src/\/tmp\/rh-regen-check-r5\/src}"
+            if [ -f "$generated" ] && ! cmp -s "$checked" "$generated"; then
+                echo "--- $checked"
+                diff -u "$checked" "$generated" | sed -n '1,220p' || true
+            fi
+        done
         echo "ERROR: Generated crates have drifted from codegen output."
         echo "Run just regen-r4 and just regen-r5 to update, then commit."
         exit 1
