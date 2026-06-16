@@ -36,6 +36,22 @@ export function compile<T = unknown>(
   }
 }
 
+export function explainParse(source: string): WasmCallResult<string> {
+  return toPlainResult<string>(wasm.explain_cql_parse(source), false);
+}
+
+export function explainCompile(
+  source: string,
+  options: CompileOptions = {}
+): WasmCallResult<string> {
+  const rawOptions = compileOptions(options);
+  try {
+    return toPlainResult<string>(wasm.explain_cql_compile(source, rawOptions), false);
+  } finally {
+    rawOptions.free();
+  }
+}
+
 export function evaluate<T = unknown>(
   elmJson: string | unknown,
   options: EvaluateOptions

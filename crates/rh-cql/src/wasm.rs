@@ -8,8 +8,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::eval::value::{CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
 use crate::{
-    compile_to_elm_with_sourcemap, compile_to_json, evaluate_elm, CompilerOptions,
-    EvalContextBuilder, FixedClock, InMemoryDataProvider,
+    compile_to_elm_with_sourcemap, compile_to_json, evaluate_elm, explain_compile, explain_parse,
+    CompilerOptions, EvalContextBuilder, FixedClock, InMemoryDataProvider,
 };
 
 pub use rh_foundation::wasm::WasmResult;
@@ -173,6 +173,25 @@ pub fn evaluate_cql_elm(elm_json: &str, options: &EvaluateOptions) -> WasmResult
 pub fn compile_cql_simple(source: &str) -> WasmResult {
     let options = CompileOptions::new();
     compile_cql(source, &options)
+}
+
+#[wasm_bindgen]
+pub fn explain_cql_parse(source: &str) -> WasmResult {
+    explain_parse(source).map_or_else(parse_explain_err, WasmResult::ok)
+}
+
+#[wasm_bindgen]
+pub fn explain_cql_compile(source: &str, _options: &CompileOptions) -> WasmResult {
+    let result = explain_compile(source, Some(CompilerOptions::default()));
+    result.map_or_else(compile_explain_err, WasmResult::ok)
+}
+
+fn parse_explain_err(err: crate::CompilationError) -> WasmResult {
+    WasmResult::err(format!("Failed to explain CQL parse: {err}"))
+}
+
+fn compile_explain_err(err: crate::CompilationError) -> WasmResult {
+    WasmResult::err(format!("Failed to explain CQL compile: {err}"))
 }
 
 #[wasm_bindgen]

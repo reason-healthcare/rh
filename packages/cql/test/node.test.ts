@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compile, evaluate, version } from "../dist/node.js";
+import { compile, evaluate, explainCompile, explainParse, version } from "../dist/node.js";
 
 const source = "library Test version '1.0' define X: 1 + 2";
 
@@ -30,6 +30,20 @@ describe("@reason-healthcare/cql node wrapper", () => {
       result: 3,
       type: "integer"
     });
+  });
+
+  it("explains CQL parse output", () => {
+    const result = explainParse(source);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toContain("ExpressionDef(X)");
+  });
+
+  it("explains CQL compile output", () => {
+    const result = explainCompile(source);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toContain("ExpressionDef(X)");
   });
 
   it("exposes the crate version", () => {
