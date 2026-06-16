@@ -110,17 +110,20 @@ rh package init --canonical https://example.org/fhir --name com.example.fhir
 
 ## Command Reference
 
+<!-- docs-sync:cli-commands:start -->
 | Command | Description | Docs |
 |---------|-------------|------|
-| `rh codegen` | Generate Rust types from FHIR packages | [CODEGEN.md](docs/CODEGEN.md) |
-| `rh download` | Download FHIR packages from registries | [DOWNLOAD.md](docs/DOWNLOAD.md) |
+| `rh codegen` | Generate organized Rust crates from FHIR Packages | [CODEGEN.md](docs/CODEGEN.md) |
+| `rh cql` | Compile CQL (Clinical Quality Language) to ELM | [CQL.md](docs/CQL.md) |
+| `rh download` | Download and install FHIR packages from npm-style registries | [DOWNLOAD.md](docs/DOWNLOAD.md) |
 | `rh fhirpath` | Parse and evaluate FHIRPath expressions | [FHIRPATH.md](docs/FHIRPATH.md) |
-| `rh fsh` | Compile FSH to FHIR JSON | [FSH.md](docs/FSH.md) |
-| `rh vcl` | Parse and translate VCL expressions | [VCL.md](docs/VCL.md) |
-| `rh cql` | Compile CQL to ELM | [CQL.md](docs/CQL.md) |
-| `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
+| `rh vcl` | Parse and translate VCL (ValueSet Compose Language) expressions | [VCL.md](docs/VCL.md) |
+| `rh fsh` | Compile and work with FHIR Shorthand (FSH) files | [FSH.md](docs/FSH.md) |
 | `rh snapshot` | Generate and manage StructureDefinition snapshots | — |
-| `rh package` | Build and publish FHIR Packages from a source directory | [PACKAGER.md](docs/PACKAGER.md) |
+| `rh package` | Assemble a conformant FHIR Package from a source directory | [PACKAGER.md](docs/PACKAGER.md) |
+| `rh validate` | Validate FHIR resources | [VALIDATOR.md](docs/VALIDATOR.md) |
+| `rh help` | Print this message or the help of the given subcommand(s) | — |
+<!-- docs-sync:cli-commands:end -->
 
 ### `rh package` subcommands
 
@@ -152,14 +155,16 @@ See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including th
 
 These options apply to every `rh` subcommand:
 
+<!-- docs-sync:cli-options:start -->
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--format <FORMAT>` | | Output format: `human` (default), `json`, `ndjson` |
-| `--quiet` | `-q` | Suppress informational output on stderr |
-| `--verbose` | `-v` | Increase verbosity; repeat for more detail (`-v` debug, `-vv` trace) |
-| `--color <WHEN>` | | Color output: `auto` (default), `always`, `never` |
-| `--help` | `-h` | Print help for any command or subcommand |
+| `--quiet` | `-q` | Suppress informational output (stderr) |
+| `--verbose` | `-v` | Increase verbosity; repeat for more detail (`-v` info, `-vv` debug, `-vvv` trace) |
+| `--color <WHEN>` | | Color output policy: `auto` (default), `always`, `never` |
+| `--help` | `-h` | Print help |
 | `--version` | `-V` | Print version |
+<!-- docs-sync:cli-options:end -->
 
 ## Exit Codes
 

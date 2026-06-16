@@ -9,7 +9,7 @@
 
 **Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in **Rust**. It provides ergonomic, developer-friendly APIs that are modular, easy to understand, and highly extensible. It also ships with a powerful **command-line interface (CLI)** designed with the **Unix philosophy** in mind: composable commands, strong UX, and automation-friendly output.
 
-Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. Two crates (`rh-fhirpath`, `rh-vcl`) also support **WebAssembly** targets for browser and embedded use cases.
+Cross-platform and fast, RH avoids the overhead of JVM- or .NET-based stacks. `rh-fhirpath`, `rh-vcl`, and `rh-cql` also ship **WebAssembly** targets and public `@reason-healthcare/*` npm packages for browser, Node.js, and bundler use cases.
 
 ## Install
 
@@ -29,13 +29,13 @@ Other install methods (pre-built binaries from GitHub Releases) are documented i
 |--------|-----------|-------------|
 | ✅ | [rh-cli](apps/rh-cli/README.md) | Unified CLI for FHIR processing tools |
 | ✅ | [rh-codegen](crates/rh-codegen/README.md) | Code generation library for creating Rust types from FHIR StructureDefinitions |
-| ✅ | [rh-fhirpath](crates/rh-fhirpath/README.md) | FHIRPath expression parser and evaluator (WASM support) |
+| ✅ | [rh-fhirpath](crates/rh-fhirpath/README.md) | FHIRPath expression parser and evaluator (`@reason-healthcare/fhirpath`) |
 | ✅ | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) compiler — transforms FSH source into FHIR JSON packages |
-| ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser, translator, and explainer (WASM support) |
+| ✅ | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser, translator, and explainer (`@reason-healthcare/vcl`) |
 | ✅ | [rh-foundation](crates/rh-foundation/README.md) | Foundation utilities (errors, HTTP, I/O, CLI, package loader, snapshot generation) |
 | ✅ | [rh-validator](crates/rh-validator/README.md) | Hybrid FHIR R4 validator with snapshot-based profile validation |
 | ✅ | [rh-packager](crates/rh-packager/README.md) | FHIR Package assembler with built-in processors (snapshot, validate, CQL, FSH) |
-| ✅ | [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, and source maps |
+| ✅ | [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, source maps, and WASM package (`@reason-healthcare/cql`) |
 | ✅ | [rh-hl7_fhir_r4_core](crates/rh-hl7_fhir_r4_core/README.md) | **Generated** R4 FHIR types for Rust (1,388 public types) |
 | ✅ | [rh-hl7_fhir_r5_core](crates/rh-hl7_fhir_r5_core/README.md) | **Generated** R5 FHIR types for Rust |
 | 🔜 | rh-hl7_fhir_r6_core | **Generated** R6 FHIR for Rust |
@@ -63,9 +63,16 @@ cargo build
 │   ├── rh-packager/           # FHIR Package assembler
 │   ├── rh-validator/          # Hybrid FHIR R4 validator
 │   ├── rh-vcl/                # ValueSet Compose Language (VCL) parser and translator
-│   └── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
+│   ├── rh-hl7_fhir_r4_core/   # Generated R4 FHIR types
+│   └── rh-hl7_fhir_r5_core/   # Generated R5 FHIR types
 ├── apps/                   # Executable applications
 │   └── rh-cli/                # Unified cross-platform CLI for FHIR
+├── packages/               # Public WebAssembly-backed npm packages
+│   ├── fhirpath/              # @reason-healthcare/fhirpath
+│   ├── vcl/                   # @reason-healthcare/vcl
+│   └── cql/                   # @reason-healthcare/cql
+├── examples/
+│   └── playground/            # Vite playground for the npm packages
 ├── justfile                # Task runner commands
 └── setup.sh                # Development setup script
 ```
@@ -161,6 +168,40 @@ rh --help
 | `rh snapshot` | Generate and manage StructureDefinition snapshots |
 | `rh package` | Assemble a conformant FHIR Package from a source directory |
 | `rh validate` | Validate FHIR resources |
+
+### WASM and npm packages
+
+The WebAssembly packages live in the pnpm workspace under `packages/`:
+
+```bash
+pnpm install
+pnpm -r build
+pnpm -r test
+```
+
+Use `just wasm-check` for Rust compile-only coverage across `rh-foundation`,
+`rh-fhirpath`, `rh-vcl`, and `rh-cql`. The interactive playground is documented
+in [examples/playground/README.md](examples/playground/README.md), and the local
+npm publish process is documented in [packages/RELEASE.md](packages/RELEASE.md).
+
+### Automation output
+
+Every CLI command supports `--format human|json|ndjson`. Use `--format json`
+for automation; successful output is wrapped as:
+
+```json
+{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.0-beta.2", "command": "rh"}}
+```
+
+Errors use the same envelope and preserve the process exit code:
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | Operational error such as I/O, network, or missing file |
+| `2` | Usage error from argument parsing |
+| `3` | Validation or conformance failure |
+| `4` | User-input parse error for FHIRPath, CQL, FSH, or VCL |
 
 **Examples:**
 
