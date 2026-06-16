@@ -460,12 +460,23 @@ fn my_function() -> CodegenResult<()> {
 - Compile-time metadata generation for type resolution
 - Primitive field extension support
 
-### In Progress
+### Shipped in the current generator
 
-- Complex type references and inheritance
-- Dynamic ValueSet fetching from FHIR servers
-- Extension handling and extension definitions
-- Profile validation and constraint checking
+- Complex type references and inheritance through generated accessor,
+  mutator, and existence traits
+- Extension module generation for R4 and R5 packages
+- `extension_by_url()` helpers for generated element and domain-resource traits
+- Split metadata modules for resources, datatypes, primitives, profiles, and
+  other definitions
+- Hermetic R4/R5 regeneration through `just regen-r4`, `just regen-r5`, and
+  `just regen-check`
+
+### Known limitations
+
+- Dynamic ValueSet fetching from live FHIR terminology servers is not part of
+  code generation
+- Constraint checking is delegated to validator/package workflows rather than
+  generated model constructors
 
 ### Planned
 

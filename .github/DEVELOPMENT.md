@@ -31,8 +31,12 @@ Run `just` or `just --list` to see all available commands.
     - `just test-fhir-50` (Extended - 50 cases)
     - `just test-fhir-all` (Full suite - ~570 cases)
 - **WASM Builds**:
-    - `just build-wasm` (Web target)
-    - `just build-wasm-node` (Node.js target)
+    - `just wasm-check` (compile-check all WASM-capable crates)
+    - `just wasm-build fhirpath all`
+    - `just wasm-build vcl all`
+    - `just wasm-build cql all`
+- **Docs Drift**:
+    - `just docs-sync` (checks architecture dependency docs and CLI help docs)
 
 ## Linting & Formatting
 
@@ -43,13 +47,14 @@ Run `just` or `just --list` to see all available commands.
 
 ## Running the CLI
 
-- **Development**: `cargo run -p rh -- <subcommand>`
-- **Help**: `cargo run -p rh -- --help`
-- **FHIRPath Eval**: `cargo run -p rh -- fhirpath eval '...'`
-- **Validate**: `cargo run -p rh -- validate <resource>`
+- **Development**: `cargo run -p rh-cli -- <subcommand>`
+- **Help**: `cargo run -p rh-cli -- --help`
+- **FHIRPath Eval**: `cargo run -p rh-cli -- fhirpath eval '...'`
+- **Validate**: `cargo run -p rh-cli -- validate resource --input patient.json`
 
 ## Task Completion Protocol
 
 After completing tasks, always run:
 1. `just check` (preferred) or `cargo test && cargo clippy --all-targets --all-features`
-2. `cargo fmt`
+2. `just docs-sync` for documentation, CLI, architecture, or workspace dependency changes
+3. `cargo fmt`

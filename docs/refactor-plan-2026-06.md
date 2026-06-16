@@ -15,7 +15,7 @@
 | WS4 Codegen | ✅ done (2026-06-15) | **4.1✅** regen harness + CI drift. **4.2✅** R5 patches. **4.3✅** golden tests. **4.4✅** god-file splits. **4.5✅** borrow-checker clones. **4.6✅** unwraps. **4.7✅** rayon parallelization. **4.8✅** (needs R4/R5 regen): Vec<T> with serde(default). **4.9✅** Box doc. **4.10✅** metadata split. **4.11✅** R5 extensions parity (regen recipe + extension_by_url helper). **4.12✅** parse tests. |
 | WS5 Performance | ⏸ deferred (2026-06-15) | Deferred by maintainer decision; WS6 starts first because it can proceed after WS1 and stable crate APIs. |
 | WS6 WASM/NPM | ✅ complete (2026-06-15) | 6.1 done: root `just wasm-build <crate> <target>` and `just wasm-check` added; CI compile-checks foundation, fhirpath, vcl, and cql for `wasm32-unknown-unknown`. 6.2 done: pnpm workspace with `@reason-healthcare/fhirpath` and `@reason-healthcare/vcl`. 6.3 deferred by maintainer decision. 6.4 done: shared Vite playground and Pages workflow. 6.5 done: `rh-cql` WASM feature/export module plus `@reason-healthcare/cql` package. 6.6 deferred as stretch. 6.7 done: foundation WASM docs clarified. |
-| WS7 Docs + gates | ⬜ not started | |
+| WS7 Docs + gates | ✅ done (2026-06-16) | Architecture graph sync, README sweep, release docs, `just docs-sync`, docs-sync CI, and MSRV CI added. |
 
 ---
 
@@ -283,17 +283,22 @@ Rules:
 
 ---
 
-## 10. WS7 — Documentation Sync + CI Gates (size: S-M, 3–4 days; final sweep LAST)
+## 10. WS7 — Documentation Sync + CI Gates (size: S-M, 3–4 days; final sweep LAST) ✅ COMPLETED
 
-Quick fixes already landed in 0.6. This is the systematic pass after code workstreams settle.
+Completed 2026-06-16. Quick fixes already landed in 0.6; this final sweep
+updated the architecture graph, root/CLI/agent/release docs, targeted crate
+READMEs, generated-crate notes, and CI gates. `scripts/check-docs-sync.sh`
+checks the architecture dependency block against `cargo metadata` and checks
+the CLI README command/global-option tables against `rh --help`. CI now runs
+docs sync and `cargo +1.91.0 check`.
 
 | # | Task | Files | Acceptance criteria |
 |---|---|---|---|
-| 7.1 | Rewrite `.github/ARCHITECTURE.md` from the corrected graph (§1), including layer table, WASM-capable matrix, and the packages/ + examples/ additions from WS6. | `.github/ARCHITECTURE.md` | Graph mechanically matches `cargo metadata` (see 7.5) |
-| 7.2 | Per-crate README pass: rh-codegen (remove stale "In Progress" features or mark shipped), rh-fhirpath (link CONFORMANCE.md, record suite pass rate), rh-vcl (2.10), generated-crate READMEs gain version-specific notes (R5 quirks: integer64, CodeableReference, binding count). | crate READMEs | Each README's examples compile as doc tests where feasible |
-| 7.3 | Root README: component table accurate (R5 ✅), WASM section pointing at packages/ + playground, exit-code + `--format json` documentation for agents. AGENTS.md: add pointers to CONFORMANCE.md files and `just` recipes agents should run. | `README.md`, `AGENTS.md` | — |
-| 7.4 | RELEASING.md: npm publish flow (6.3), regenerated-crates release policy (when codegen changes require R4/R5 crate version bumps), verify WASM doc paths. | `RELEASING.md` | Dry-run release checklist executed once |
-| 7.5 | Drift guards in CI: (a) script that diffs ARCHITECTURE.md's dependency list against `cargo metadata`; (b) script that diffs apps/rh-cli/README.md command/flag table against `rh <cmd> --help` output; (c) MSRV job (`cargo +1.91 check`). | `scripts/check-docs-sync.sh`, `ci.yml` | CI fails on doc drift; MSRV enforced |
+| 7.1 | ✅ Rewrite `.github/ARCHITECTURE.md` from the corrected graph (§1), including layer table, WASM-capable matrix, and the packages/ + examples/ additions from WS6. | `.github/ARCHITECTURE.md` | Graph mechanically matches `cargo metadata` (see 7.5) |
+| 7.2 | ✅ Per-crate README pass: rh-codegen (remove stale "In Progress" features or mark shipped), rh-fhirpath (link CONFORMANCE.md, record suite pass rate), rh-vcl (2.10), generated-crate READMEs gain version-specific notes (R5 quirks: integer64, CodeableReference, binding count). | crate READMEs | Each README's examples compile as doc tests where feasible |
+| 7.3 | ✅ Root README: component table accurate (R5 ✅), WASM section pointing at packages/ + playground, exit-code + `--format json` documentation for agents. AGENTS.md: add pointers to CONFORMANCE.md files and `just` recipes agents should run. | `README.md`, `AGENTS.md` | — |
+| 7.4 | ✅ RELEASING.md: npm publish flow (6.3), regenerated-crates release policy (when codegen changes require R4/R5 crate version bumps), verify WASM doc paths. | `RELEASING.md` | Dry-run release checklist executed once |
+| 7.5 | ✅ Drift guards in CI: (a) script that diffs ARCHITECTURE.md's dependency list against `cargo metadata`; (b) script that diffs apps/rh-cli/README.md command/flag table against `rh <cmd> --help` output; (c) MSRV job (`cargo +1.91 check`). | `scripts/check-docs-sync.sh`, `ci.yml` | CI fails on doc drift; MSRV enforced |
 
 ---
 

@@ -279,6 +279,33 @@ Then follow [`packages/RELEASE.md`](packages/RELEASE.md) to publish
 `@reason-healthcare/fhirpath`, `@reason-healthcare/vcl`, and
 `@reason-healthcare/cql` locally.
 
+## Generated FHIR Crate Release Policy
+
+The R4 and R5 crates are generated artifacts and share the workspace version.
+Any codegen change that alters committed generated output must be treated as a
+generated-crate release change:
+
+1. Regenerate both committed crates:
+   ```bash
+   just regen-r4
+   just regen-r5
+   ```
+2. Run the drift gate:
+   ```bash
+   just regen-check
+   ```
+3. Build and test generated crates:
+   ```bash
+   cargo test -p rh-hl7-fhir-r4-core
+   cargo test -p rh-hl7-fhir-r5-core
+   ```
+4. Include the generated output diff in the release commit and bump the
+   workspace version before publishing.
+
+If a codegen change is internal-only and `just regen-check` reports no diff,
+the generated crates do not need special release treatment beyond the normal
+workspace publish order.
+
 ## Releasing a single crate
 
 Occasionally you may need to release one crate at a different version — for example, a patch fix in `rh-validator` without touching the rest of the workspace. Use the targeted recipes:

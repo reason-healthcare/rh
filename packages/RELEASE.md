@@ -86,6 +86,9 @@ copies the generated artifacts into each package, and runs TypeScript builds.
 
 The playground is private and has no `pack:dry-run` script.
 
+This checklist was dry-run locally for the initial WS6 package setup using:
+`pnpm -r build`, `pnpm -r test`, and `pnpm -r pack:dry-run`.
+
 ## Publish
 
 Publish packages from the repository root in this order:

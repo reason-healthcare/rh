@@ -22,7 +22,20 @@ rh codegen hl7.fhir.r5.core 5.0.0 --output crates/rh-hl7_fhir_r5_core --force --
 * **Version** 5.0.0
 * **Canonical URL** `http://hl7.org/fhir`
 
-**Statistics: 0 structs, 0 enums, 0 total types**
+**Statistics:** 162 resources, 51 datatypes, 61 profiles, 546 extensions, and 245 required-binding enum modules.
+
+**Version-specific notes:**
+
+- Generated from FHIR R5 `hl7.fhir.r5.core` version `5.0.0`.
+- R5-only model shapes such as `integer64` and `CodeableReference` are emitted
+  from the package definitions.
+- Repeating fields are emitted as `Vec<T>` with serde defaults so missing JSON
+  arrays deserialize as empty vectors.
+- Metadata is split under `src/metadata/` by resource, datatype, primitive,
+  profile, and other categories.
+- R5 extension definitions are generated under `src/extensions/`; use the
+  generated `extension_by_url()` helpers from accessor traits to inspect
+  extension lists.
 
 ## Description
 
@@ -42,7 +55,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rh_hl7_fhir_r5_core = "0.1.0"
+rh_hl7_fhir_r5_core = "0.2.0-beta.2"
 ```
 
 ### Deserializing FHIR Resources
@@ -178,6 +191,13 @@ This crate organizes FHIR types into logical modules:
 - **traits/** - Mutator, accessor, and existence traits for all types
 - **prelude.rs** - Commonly used traits (ValidatableResource, ResourceMutators, etc.)
 - **metadata/** - Type metadata split by category (resources, datatypes, primitives) for faster incremental compilation
+
+R5-specific compatibility:
+
+- This crate targets FHIR R5 `5.0.0`; do not use it for R4 validation or R4
+  package output.
+- Binding enum modules are generated for required value sets; this crate
+  currently has 245 required-binding modules.
 
 ## Regenerating This Crate
 

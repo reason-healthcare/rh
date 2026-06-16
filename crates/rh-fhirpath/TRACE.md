@@ -75,7 +75,7 @@ let expr = parser.parse(
 ### In `rh fhirpath eval`
 
 ```bash
-cargo run -p rh -- fhirpath eval -d patient.json "Patient.name.trace('names').family"
+cargo run -p rh-cli -- fhirpath eval -d patient.json "Patient.name.trace('names').family"
 ```
 
 Output includes a trace log section:
@@ -90,7 +90,7 @@ Result: String("Smith")
 ### In the REPL
 
 ```bash
-cargo run -p rh -- fhirpath repl -d patient.json
+cargo run -p rh-cli -- fhirpath repl -d patient.json
 ```
 
 ```

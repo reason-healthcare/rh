@@ -143,6 +143,10 @@ run-example *args:
 docs:
     cargo doc --all-features --no-deps --open
 
+# Check machine-verifiable documentation sections against current workspace facts.
+docs-sync:
+    scripts/check-docs-sync.sh
+
 # Update all dependencies
 update:
     cargo update

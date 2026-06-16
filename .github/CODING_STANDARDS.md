@@ -22,4 +22,4 @@
     - `boolean` → `bool`
     - `decimal` → `f64`
     - `dateTime` → `String`
-- **Generated Code**: Includes serde annotations, uses `Option<T>` for optional fields, `Vec<T>` for arrays.
+- **Generated Code**: Includes serde annotations, uses `Option<T>` for optional singular fields, `Vec<T>` with serde defaults for repeating fields.

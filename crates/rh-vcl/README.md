@@ -30,7 +30,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rh-vcl = "0.1.0"
+rh-vcl = "0.2.0-beta.2"
 ```
 
 ## Quick Start
@@ -274,7 +274,7 @@ This crate can be compiled to WebAssembly for use in web applications and Node.j
 #### From rh-vcl crate directory:
 
 ```bash
-# Build all WASM targets
+# Build all WASM targets for this crate
 just wasm
 
 # Build specific targets
@@ -295,8 +295,13 @@ just dev-web
 #### From workspace root:
 
 ```bash
-# Build all WASM crates
-just wasm
+# Build all npm-backed WASM crates
+just wasm-build fhirpath all
+just wasm-build vcl all
+just wasm-build cql all
+
+# Compile-check the WASM-capable Rust crates
+just wasm-check
 ```
 
 ### Web Usage
@@ -366,10 +371,10 @@ if (explainResult.success) {
 
 ### Available Functions
 
-- **Simple functions**: `parse_vcl_simple()`, `translate_vcl_simple()`, `translate_vcl_with_system()`, `explain_vcl_simple()`
-- **Advanced**: `parse_vcl_expression()`, `translate_vcl_expression()`, `explain_vcl_expression()` with options
+- **Simple functions**: `parse_vcl_simple()`, `translate_vcl_simple()`, `translate_vcl_with_system()`, `explain_vcl_simple()`, `explain_vcl_with_system()`
+- **Advanced**: `parse_vcl_expression()`, `translate_vcl_expression()` with options
 - **Utilities**: `validate_vcl_expression()`, `get_version()`
-- **Options**: `ParseOptions`, `TranslateOptions`, `ExplainOptions` classes
+- **Options**: `ParseOptions` and `TranslateOptions` classes
 
 All functions return `WasmResult` objects with `success`, `data`, and `error` properties.
 
