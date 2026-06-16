@@ -37,6 +37,13 @@ textarea {
   border-bottom: 1px solid #d9e2e4;
 }
 
+.topbar-tools {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  min-width: min(620px, 100%);
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: #53666d;
@@ -77,6 +84,17 @@ h1 {
   margin: 2px 0 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
+}
+
+.share-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #0f766e;
+  border-radius: 6px;
+  color: #0f766e;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .tabs {
@@ -452,6 +470,15 @@ textarea.short {
 
   .versions {
     grid-template-columns: 1fr;
+  }
+
+  .topbar-tools {
+    justify-items: stretch;
+    min-width: 0;
+  }
+
+  .share-button {
+    width: 100%;
   }
 
   .tabs {

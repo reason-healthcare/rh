@@ -28,8 +28,13 @@ import {
   patientResource,
   vclExamples
 } from "./samples";
+import {
+  parseShareableState,
+  serializeShareableState,
+  type ShareableState,
+  type Tool
+} from "./url-state";
 
-type Tool = "fhirpath" | "vcl" | "cql";
 type OutputMode = "rendered" | "source";
 
 interface PlaygroundResult<T = unknown> {
@@ -46,6 +51,7 @@ interface RenderOptions {
 const state = {
   activeTool: "fhirpath" as Tool
 };
+let shareStatusTimeout: number | undefined;
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -60,11 +66,14 @@ app.innerHTML = `
         <p class="eyebrow">Reason Health</p>
         <h1>WASM Playground</h1>
       </div>
-      <dl class="versions">
-        <div><dt>FHIRPath</dt><dd id="fhirpath-version">...</dd></div>
-        <div><dt>VCL</dt><dd id="vcl-version">...</dd></div>
-        <div><dt>CQL</dt><dd id="cql-version">...</dd></div>
-      </dl>
+      <div class="topbar-tools">
+        <dl class="versions">
+          <div><dt>FHIRPath</dt><dd id="fhirpath-version">...</dd></div>
+          <div><dt>VCL</dt><dd id="vcl-version">...</dd></div>
+          <div><dt>CQL</dt><dd id="cql-version">...</dd></div>
+        </dl>
+        <button class="share-button" type="button" id="share-link">Share link</button>
+      </div>
     </header>
 
     <nav class="tabs" aria-label="Tool">
@@ -133,6 +142,9 @@ bindExamples("vcl-examples", vclExamples, "vcl-expression");
 bindFhirPath();
 bindVcl();
 bindCql();
+bindShareLink();
+bindShareableInputs();
+applyShareableStateFromUrl();
 void initializeWasm();
 
 async function initializeWasm(): Promise<void> {
@@ -145,13 +157,8 @@ function bindTabs(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((button) => {
     button.addEventListener("click", () => {
       const tool = button.dataset.tool as Tool;
-      state.activeTool = tool;
-      document.querySelectorAll("[data-tool]").forEach((tab) => {
-        tab.classList.toggle("active", tab === button);
-      });
-      document.querySelectorAll<HTMLElement>("[data-panel]").forEach((panel) => {
-        panel.classList.toggle("active", panel.dataset.panel === state.activeTool);
-      });
+      activateTool(tool);
+      syncShareUrl();
     });
   });
 }
@@ -167,10 +174,104 @@ function bindExamples(containerId: string, examples: readonly string[], targetId
       button.textContent = example;
       button.addEventListener("click", () => {
         target.value = example;
+        syncShareUrl();
       });
       return button;
     })
   );
+}
+
+function bindShareLink(): void {
+  requiredElement<HTMLButtonElement>("share-link").addEventListener("click", async () => {
+    const url = syncShareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      showShareStatus("Copied");
+    } catch {
+      showShareStatus("Link ready");
+      window.prompt("Share link", url);
+    }
+  });
+
+  window.addEventListener("popstate", () => {
+    applyShareableStateFromUrl();
+  });
+}
+
+function bindShareableInputs(): void {
+  [
+    "fhirpath-expression",
+    "fhirpath-resource",
+    "vcl-expression",
+    "vcl-default-system",
+    "cql-source",
+    "cql-source-map"
+  ].forEach((id) => {
+    requiredElement<HTMLInputElement | HTMLTextAreaElement>(id).addEventListener("input", () => {
+      syncShareUrl();
+    });
+  });
+}
+
+function activateTool(tool: Tool): void {
+  state.activeTool = tool;
+  document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.tool === state.activeTool);
+  });
+  document.querySelectorAll<HTMLElement>("[data-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.panel === state.activeTool);
+  });
+}
+
+function applyShareableStateFromUrl(): void {
+  const shared = parseShareableState(window.location.search);
+  if (shared.fhirpathExpression !== undefined) {
+    requiredElement<HTMLInputElement>("fhirpath-expression").value = shared.fhirpathExpression;
+  }
+  if (shared.fhirpathResource !== undefined) {
+    requiredElement<HTMLTextAreaElement>("fhirpath-resource").value = shared.fhirpathResource;
+  }
+  if (shared.vclExpression !== undefined) {
+    requiredElement<HTMLTextAreaElement>("vcl-expression").value = shared.vclExpression;
+  }
+  if (shared.vclDefaultSystem !== undefined) {
+    requiredElement<HTMLInputElement>("vcl-default-system").value = shared.vclDefaultSystem;
+  }
+  if (shared.cqlSource !== undefined) {
+    requiredElement<HTMLTextAreaElement>("cql-source").value = shared.cqlSource;
+  }
+  if (shared.cqlSourceMap !== undefined) {
+    requiredElement<HTMLInputElement>("cql-source-map").checked = shared.cqlSourceMap;
+  }
+  activateTool(shared.tool ?? state.activeTool);
+}
+
+function syncShareUrl(): string {
+  const search = serializeShareableState(currentShareableState());
+  const url = `${window.location.pathname}${search}${window.location.hash}`;
+  window.history.replaceState(null, "", url);
+  return window.location.href;
+}
+
+function currentShareableState(): ShareableState {
+  return {
+    tool: state.activeTool,
+    fhirpathExpression: requiredElement<HTMLInputElement>("fhirpath-expression").value,
+    fhirpathResource: requiredElement<HTMLTextAreaElement>("fhirpath-resource").value,
+    vclExpression: requiredElement<HTMLTextAreaElement>("vcl-expression").value,
+    vclDefaultSystem: requiredElement<HTMLInputElement>("vcl-default-system").value,
+    cqlSource: requiredElement<HTMLTextAreaElement>("cql-source").value,
+    cqlSourceMap: requiredElement<HTMLInputElement>("cql-source-map").checked
+  };
+}
+
+function showShareStatus(label: string): void {
+  const button = requiredElement<HTMLButtonElement>("share-link");
+  button.textContent = label;
+  window.clearTimeout(shareStatusTimeout);
+  shareStatusTimeout = window.setTimeout(() => {
+    button.textContent = "Share link";
+  }, 1400);
 }
 
 function bindFhirPath(): void {
