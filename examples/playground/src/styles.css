@@ -368,6 +368,38 @@ textarea.short {
   font-size: 0.88rem;
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.metric-grid div {
+  padding: 10px;
+  border: 1px solid #d9e2e4;
+  border-radius: 6px;
+  background: #f8fafb;
+}
+
+.metric-grid span {
+  display: block;
+  color: #0f766e;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.metric-grid p {
+  margin: 2px 0 0;
+  color: #53666d;
+  font-size: 0.78rem;
+}
+
+.explanation-pre {
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
 .rendered-block th,
 .rendered-block td {
   padding: 9px 10px;
@@ -441,5 +473,9 @@ textarea.short {
 
   .view-toggle {
     width: 100%;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
   }
 }

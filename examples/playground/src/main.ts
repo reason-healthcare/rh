@@ -14,6 +14,8 @@ import {
 } from "@reason-healthcare/vcl/web";
 import {
   compile as compileCql,
+  explainCompile as explainCqlCompile,
+  explainParse as explainCqlParse,
   initCql,
   version as cqlVersion
 } from "@reason-healthcare/cql/web";
@@ -114,6 +116,8 @@ app.innerHTML = `
           <textarea id="cql-source" spellcheck="false">${cqlSource}</textarea>
           <div class="actions">
             <button type="submit">Compile</button>
+<button type="button" class="secondary" id="cql-explain-compile">Explain Compile</button>
+<button type="button" class="secondary" id="cql-explain-parse">Explain Parse</button>
             <label class="toggle"><input type="checkbox" id="cql-source-map" /> Source map</label>
           </div>
         </form>
@@ -233,6 +237,18 @@ function bindCql(): void {
       { title: "CQL ELM output" }
     );
   });
+  requiredElement<HTMLButtonElement>("cql-explain-compile").addEventListener("click", () => {
+    renderResult(
+      "cql-output",
+      explainCqlCompile(textValue("cql-source"), { sourceMap: requiredElement<HTMLInputElement>("cql-source-map").checked }),
+      { title: "CQL compile explanation" }
+    );
+  });
+  requiredElement<HTMLButtonElement>("cql-explain-parse").addEventListener("click", () => {
+    renderResult("cql-output", explainCqlParse(textValue("cql-source")), {
+      title: "CQL parse explanation"
+    });
+  });
 }
 
 function renderVersions(): void {
@@ -320,6 +336,9 @@ function renderPayload(payload: unknown): string {
   if (isValidationPayload(payload)) {
     return renderValidationPayload(payload);
   }
+  if (isCqlSourceMapPayload(payload)) {
+    return renderCqlSourceMapPayload(payload);
+  }
   if (isElmLibraryPayload(payload)) {
     return renderElmLibrary(payload);
   }
@@ -331,6 +350,9 @@ function renderPayload(payload: unknown): string {
   }
   if (isRecord(payload)) {
     return renderObjectPayload(payload);
+  }
+  if (typeof payload === "string" && payload.includes("\n")) {
+    return renderTextPayload(payload);
   }
   return `<section class="rendered-block"><h3>Value</h3><p class="scalar">${escapeHtml(String(payload ?? ""))}</p></section>`;
 }
@@ -364,6 +386,39 @@ function renderElmLibrary(payload: { library: unknown }): string {
       ${rows ? `<table><thead><tr><th>Definition</th><th>Expression</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
     </section>
   `;
+}
+
+function renderCqlSourceMapPayload(payload: { library: unknown; sourceMap: unknown }): string {
+  const library = isRecord(payload.library) ? payload.library : {};
+  const identifier = isRecord(library.identifier) ? library.identifier : {};
+  const sourceMap = isRecord(payload.sourceMap) ? payload.sourceMap : {};
+  const sourceDocuments = Array.isArray(sourceMap.source_documents) ? sourceMap.source_documents : [];
+  const mappings = Array.isArray(sourceMap.mappings) ? sourceMap.mappings : [];
+  const nodeMetas = Array.isArray(sourceMap.elm_node_metas) ? sourceMap.elm_node_metas : [];
+  const record = payload as Record<string, unknown>;
+  const diagnostics = ["errors", "warnings", "messages"].map((key) => {
+    const values = Array.isArray(record[key]) ? record[key] : [];
+    return { key, count: values.length };
+  });
+  const rows = sourceDocuments.map((entry) => {
+    const doc = isRecord(entry) ? entry : {};
+    return `<tr><td>${escapeHtml(String(doc.doc_id ?? "(document)"))}</td><td>${escapeHtml(String(doc.uri ?? "(inline source)"))}</td></tr>`;
+  }).join("");
+  const title = [identifier.id, identifier.version].filter(Boolean).join(" ") || "Anonymous library";
+  const diagnosticText = diagnostics.map(({ key, count }) => `${count} ${key}`).join(", ");
+
+  return [
+    `<section class="rendered-block">`,
+    `<h3>${escapeHtml(title)} source map</h3>`,
+    `<div class="metric-grid">`,
+    `<div><span>${sourceDocuments.length}</span><p>source document${sourceDocuments.length === 1 ? "" : "s"}</p></div>`,
+    `<div><span>${mappings.length}</span><p>mapping${mappings.length === 1 ? "" : "s"}</p></div>`,
+    `<div><span>${nodeMetas.length}</span><p>ELM node${nodeMetas.length === 1 ? "" : "s"}</p></div>`,
+    `</div>`,
+    `<p>${escapeHtml(diagnosticText)}.</p>`,
+    rows ? `<table><thead><tr><th>Document</th><th>URI</th></tr></thead><tbody>${rows}</tbody></table>` : "",
+    `</section>`
+  ].join("");
 }
 
 function renderValueSetCompose(payload: { include?: unknown[]; exclude?: unknown[] }): string {
@@ -408,6 +463,10 @@ function renderObjectPayload(payload: Record<string, unknown>): string {
   return `<section class="rendered-block"><h3>Rendered fields</h3><table><tbody>${rows}</tbody></table></section>`;
 }
 
+function renderTextPayload(payload: string): string {
+  return `<section class="rendered-block"><h3>Explanation</h3><pre class="explanation-pre">${escapeHtml(payload)}</pre></section>`;
+}
+
 function renderInlineValue(value: unknown): string {
   if (value === null || value === undefined) {
     return `<span class="muted">null</span>`;
@@ -445,6 +504,10 @@ function isValidationPayload(value: unknown): value is { valid: boolean; message
 
 function isElmLibraryPayload(value: unknown): value is { library: unknown } {
   return isRecord(value) && isRecord(value.library);
+}
+
+function isCqlSourceMapPayload(value: unknown): value is { library: unknown; sourceMap: unknown } {
+  return isRecord(value) && isRecord(value.library) && isRecord(value.sourceMap);
 }
 
 function isValueSetComposePayload(value: unknown): value is { include?: unknown[]; exclude?: unknown[] } {
