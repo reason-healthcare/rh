@@ -97,7 +97,7 @@ impl CompilationContext {
     pub(crate) fn resolve_provider(&self) -> Arc<dyn crate::provider::ModelInfoProvider> {
         self.model_provider
             .clone()
-            .unwrap_or_else(|| Arc::new(crate::provider::fhir_r4_provider_from_package()))
+            .unwrap_or_else(|| Arc::new(crate::provider::default_fhir_r4_provider()))
     }
 }
 

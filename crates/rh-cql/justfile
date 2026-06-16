@@ -1,0 +1,60 @@
+# Justfile for rh-cql WASM builds
+
+default:
+    @just --list
+
+check-wasm-pack:
+    #!/usr/bin/env bash
+    if ! command -v wasm-pack >/dev/null 2>&1; then
+        echo "wasm-pack not found. Installing..."
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    fi
+
+wasm: wasm-web wasm-node wasm-bundler
+
+wasm-web: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building CQL WASM for web target..."
+    mkdir -p pkg/web
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target web --out-dir pkg/web --no-default-features --features wasm
+    else
+        wasm-pack build --target web --out-dir pkg/web --no-default-features --features wasm
+    fi
+    echo "Web WASM build complete! Output in pkg/web/"
+
+wasm-node: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building CQL WASM for Node.js target..."
+    mkdir -p pkg/node
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target nodejs --out-dir pkg/node --no-default-features --features wasm
+    else
+        wasm-pack build --target nodejs --out-dir pkg/node --no-default-features --features wasm
+    fi
+    echo "Node.js WASM build complete! Output in pkg/node/"
+
+wasm-bundler: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building CQL WASM for bundler target..."
+    mkdir -p pkg/bundler
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target bundler --out-dir pkg/bundler --no-default-features --features wasm
+    else
+        wasm-pack build --target bundler --out-dir pkg/bundler --no-default-features --features wasm
+    fi
+    echo "Bundler WASM build complete! Output in pkg/bundler/"
+
+clean-wasm:
+    @echo "Cleaning CQL WASM build artifacts..."
+    @rm -rf pkg/
+    @echo "WASM artifacts cleaned"
+
+test-wasm: wasm-node
+    #!/usr/bin/env bash
+    echo "Testing Node.js CQL WASM build..."
+    cd pkg/node && node -e "const {get_version,compile_cql_simple}=require('./rh_cql.js'); console.log('Version:',get_version()); const result=compile_cql_simple(\"library Test version '1.0' define X: 1 + 2\"); console.log('Compile test:',result.success ? 'PASS' : 'FAIL');"
+    echo "WASM test complete!"

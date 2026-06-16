@@ -1,13 +1,17 @@
 //! Library source provider trait and re-exports.
 
 pub mod composite;
+#[cfg(feature = "fs")]
 pub mod file;
 pub mod memory;
+#[cfg(feature = "fs")]
 pub mod package;
 
 pub use composite::CompositeLibrarySourceProvider;
+#[cfg(feature = "fs")]
 pub use file::FileLibrarySourceProvider;
 pub use memory::MemoryLibrarySourceProvider;
+#[cfg(feature = "fs")]
 pub use package::PackageLibrarySourceProvider;
 
 use super::identifiers::LibraryIdentifier;

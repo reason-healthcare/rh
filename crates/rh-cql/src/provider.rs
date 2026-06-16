@@ -594,10 +594,23 @@ pub fn fhir_r4_provider() -> MemoryModelInfoProvider {
     provider
 }
 
+/// Create the default FHIR R4 provider for the active feature set.
+#[cfg(not(feature = "fs"))]
+pub fn default_fhir_r4_provider() -> MemoryModelInfoProvider {
+    fhir_r4_provider()
+}
+
+/// Create the default FHIR R4 provider for native builds.
+#[cfg(feature = "fs")]
+pub fn default_fhir_r4_provider() -> MemoryModelInfoProvider {
+    fhir_r4_provider_from_package()
+}
+
 // =============================================================================
 // FHIR Package ModelInfo Loading
 // =============================================================================
 
+#[cfg(feature = "fs")]
 use std::path::Path;
 
 /// Load ModelInfo from a FHIR package directory.
@@ -624,6 +637,7 @@ use std::path::Path;
 /// let model_info = load_modelinfo_from_package(package_dir).unwrap();
 /// assert_eq!(model_info.name, Some("FHIR".to_string()));
 /// ```
+#[cfg(feature = "fs")]
 pub fn load_modelinfo_from_package(package_dir: &Path) -> anyhow::Result<ModelInfo> {
     // Look for Library-FHIR-ModelInfo.json or similar files
     let package_path = package_dir.join("package");
@@ -674,6 +688,7 @@ pub fn load_modelinfo_from_package(package_dir: &Path) -> anyhow::Result<ModelIn
 ///
 /// The Library resource is expected to have a `content` array with an entry
 /// containing the ModelInfo XML as base64-encoded data.
+#[cfg(feature = "fs")]
 fn load_modelinfo_from_library_file(file_path: &Path) -> anyhow::Result<ModelInfo> {
     use anyhow::Context;
 
@@ -707,6 +722,7 @@ fn load_modelinfo_from_library_file(file_path: &Path) -> anyhow::Result<ModelInf
 }
 
 /// Simple base64 decoder (no external dependency).
+#[cfg(feature = "fs")]
 pub(crate) fn decode_base64(input: &str) -> anyhow::Result<Vec<u8>> {
     fn char_to_value(c: u8) -> Option<u8> {
         match c {
@@ -765,6 +781,7 @@ pub(crate) fn decode_base64(input: &str) -> anyhow::Result<Vec<u8>> {
 /// Get the default FHIR packages directory.
 ///
 /// Returns `~/.fhir/packages` on Unix or `%USERPROFILE%\.fhir\packages` on Windows.
+#[cfg(feature = "fs")]
 pub fn get_default_packages_dir() -> anyhow::Result<std::path::PathBuf> {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
@@ -784,6 +801,7 @@ pub fn get_default_packages_dir() -> anyhow::Result<std::path::PathBuf> {
 /// # Returns
 ///
 /// The path to the package directory (e.g., `~/.fhir/packages/fhir.cqf.common#4.0.1`)
+#[cfg(feature = "fs")]
 pub fn get_package_dir(package_name: &str, version: &str) -> anyhow::Result<std::path::PathBuf> {
     let packages_dir = get_default_packages_dir()?;
     Ok(packages_dir.join(format!("{package_name}#{version}")))
@@ -804,6 +822,7 @@ pub fn get_package_dir(package_name: &str, version: &str) -> anyhow::Result<std:
 /// assert_eq!(model_info.name, Some("FHIR".to_string()));
 /// assert!(model_info.conversion_info.len() > 200);
 /// ```
+#[cfg(feature = "fs")]
 pub fn load_fhir_r4_modelinfo_from_package() -> anyhow::Result<ModelInfo> {
     let package_dir = get_package_dir("fhir.cqf.common", "4.0.1")?;
 
@@ -828,6 +847,7 @@ pub fn load_fhir_r4_modelinfo_from_package() -> anyhow::Result<ModelInfo> {
 ///
 /// Falls back to the built-in minimal `fhir_r4_model_info()` if the package
 /// is not available.
+#[cfg(feature = "fs")]
 pub fn fhir_r4_provider_from_package() -> MemoryModelInfoProvider {
     let provider = MemoryModelInfoProvider::new();
 

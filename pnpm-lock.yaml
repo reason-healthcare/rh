@@ -18,6 +18,8 @@ importers:
         specifier: ^4.0.14
         version: 4.1.9(@types/node@24.13.2)(vite@8.0.16(@types/node@24.13.2))
 
+  packages/cql: {}
+
   packages/fhirpath: {}
 
   packages/vcl: {}

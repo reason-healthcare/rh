@@ -87,6 +87,8 @@ pub mod reporting;
 pub mod semantics;
 pub mod sourcemap;
 pub mod types;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
 
 // Primary public API - compile CQL to ELM
 pub use compiler::{
@@ -104,10 +106,12 @@ pub use conversion::{
 pub use datatype::{DataType, SystemType, TupleElement};
 pub use error::{CqlError, Result};
 pub use library::{
-    CompiledLibrary, CompositeLibrarySourceProvider, DefinitionRef, FileLibrarySourceProvider,
-    FunctionRef, LibraryError, LibraryIdentifier, LibraryManager, LibraryResult, LibrarySource,
-    LibrarySourceProvider, MemoryLibrarySourceProvider, PackageLibrarySourceProvider,
+    CompiledLibrary, CompositeLibrarySourceProvider, DefinitionRef, FunctionRef, LibraryError,
+    LibraryIdentifier, LibraryManager, LibraryResult, LibrarySource, LibrarySourceProvider,
+    MemoryLibrarySourceProvider,
 };
+#[cfg(feature = "fs")]
+pub use library::{FileLibrarySourceProvider, PackageLibrarySourceProvider};
 pub use operators::{
     OperatorError, OperatorKind, OperatorResolver, OperatorResult, OperatorSignature,
     ResolvedOperator,
@@ -123,9 +127,13 @@ pub use preprocessor::{
     LibraryDependency, LibraryInfo, ModelDependency, ParameterInfo, Preprocessor, ValueSetInfo,
 };
 pub use provider::{
-    fhir_r4_model_info, fhir_r4_provider, fhir_r4_provider_from_package, get_default_packages_dir,
-    get_package_dir, load_fhir_r4_modelinfo_from_package, load_modelinfo_from_package,
-    MemoryModelInfoProvider, ModelInfoProvider,
+    default_fhir_r4_provider, fhir_r4_model_info, fhir_r4_provider, MemoryModelInfoProvider,
+    ModelInfoProvider,
+};
+#[cfg(feature = "fs")]
+pub use provider::{
+    fhir_r4_provider_from_package, get_default_packages_dir, get_package_dir,
+    load_fhir_r4_modelinfo_from_package, load_modelinfo_from_package,
 };
 pub use reporting::{
     CqlCompilerException, Diagnostic, DiagnosticCode, DiagnosticCollection, DiagnosticStage,

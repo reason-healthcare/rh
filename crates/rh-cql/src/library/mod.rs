@@ -38,9 +38,10 @@ pub use compiled::{CompiledLibrary, DefinitionRef, FunctionRef};
 pub use identifiers::LibraryIdentifier;
 pub use manager::{LibraryError, LibraryManager, LibraryResult};
 pub use providers::{
-    CompositeLibrarySourceProvider, FileLibrarySourceProvider, LibrarySourceProvider,
-    MemoryLibrarySourceProvider, PackageLibrarySourceProvider,
+    CompositeLibrarySourceProvider, LibrarySourceProvider, MemoryLibrarySourceProvider,
 };
+#[cfg(feature = "fs")]
+pub use providers::{FileLibrarySourceProvider, PackageLibrarySourceProvider};
 pub use sources::LibrarySource;
 
 #[cfg(test)]
