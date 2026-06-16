@@ -262,6 +262,11 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
       - name: Install wasm-pack
         uses: taiki-e/install-action@v2
         with:
