@@ -35,9 +35,10 @@ cd docs/demos
 | 6 | [CQL → ELM](#demo-6--cql--elm-compilation) | `rh cql compile` + `explain` | Full compiler in 9 ms |
 | 7 | [VCL](#demo-7--valueset-compose-language-vcl) | `rh vcl explain` + `translate` | ValueSet DSL → FHIR compose |
 | 8 | [Pipes](#demo-8--composability-and-pipes) | `rh … \| rh validate` | Unix-style composability |
-| 9 | [FHIRPath REPL](#demo-9--fhirpath-repl-run-manually) | `rh fhirpath repl` | Live FHIRPath exploration |
-| 10 | [VCL REPL](#demo-10--vcl-repl-run-manually) | `rh vcl repl --explain --translate` | Iterative ValueSet authoring |
-| 11 | [CQL REPL](#demo-11--cql-repl-run-manually) | `rh cql repl` | Instant ELM feedback loop |
+| 9 | [WASM playground](#demo-9--wasm-playground) | `pnpm --filter @reason-healthcare/playground dev` | FHIRPath, VCL, and CQL in browser WASM |
+| 10 | [FHIRPath REPL](#demo-10--fhirpath-repl-run-manually) | `rh fhirpath repl` | Live FHIRPath exploration |
+| 11 | [VCL REPL](#demo-11--vcl-repl-run-manually) | `rh vcl repl --explain --translate` | Iterative ValueSet authoring |
+| 12 | [CQL REPL](#demo-12--cql-repl-run-manually) | `rh cql repl` | Instant ELM feedback loop |
 
 ---
 
@@ -256,7 +257,7 @@ The `explain` command externalises the intermediate representations — useful f
 
 **What the output means:** The output is ELM JSON — the same format produced by the HL7 Java CQL Translation Service. It can be handed directly to a CQL engine (such as cql-execution, the JavaScript reference evaluator, or rh's own `rh cql eval`) for execution against patient data.
 
-**Why it matters:** The Java CQL Translation Service is the HL7 reference implementation. It produces correct ELM but requires a JVM (~3–6 s startup) and is typically run as a persistent microservice rather than a CLI tool. `rh cql compile` produces compatible ELM JSON in ~9 ms as a one-shot command, enabling it to be embedded in build pipelines, pre-commit hooks, or agent-driven authoring workflows.
+**Why it matters:** The Java CQL Translation Service is the HL7 reference implementation. It produces mature, broad ELM coverage but requires a JVM (~3–6 s startup) and is typically run as a persistent microservice rather than a CLI tool. `rh cql compile` produces compatible ELM JSON for the supported subset in ~9 ms as a one-shot command, enabling it to be embedded in build pipelines, pre-commit hooks, or agent-driven authoring workflows.
 
 ---
 
@@ -365,17 +366,40 @@ The demos show four composability patterns:
 
 ---
 
-## Performance slides
+## Demo 9 — WASM playground
 
-`../devdays-2025-perf.md` — 13 slides with reproducible benchmark numbers comparing rh to HAPI FHIR (Java), Firely (.NET), fhirpath.js (Node.js), and SUSHI.
+The browser playground demonstrates the WebAssembly work from WS6: the same Rust logic is built with `wasm-pack`, wrapped in typed TypeScript packages, tested through pnpm, and exercised in a Vite app.
+
+Public playground:
+
+```text
+https://reason-healthcare.github.io/rh/
+```
+
+Local run from the repository root:
 
 ```bash
-npx @marp-team/marp-cli@latest ../devdays-2025-perf.md --html
+pnpm install
+pnpm --filter @reason-healthcare/playground dev
 ```
+
+The app has three tabs:
+
+- **FHIRPath** — expression + Patient JSON → parsed/evaluated result through `@reason-healthcare/fhirpath`
+- **VCL** — compact ValueSet expression → explanation and `ValueSet.compose` through `@reason-healthcare/vcl`
+- **CQL** — CQL source → ELM JSON through `@reason-healthcare/cql`
+
+**Why it matters:** This is not a toy rewrite in JavaScript. It is the production Rust parser/compiler code compiled to WASM, packaged for npm, and run directly in the browser with no FHIR server or backend API call.
 
 ---
 
-## Demo 9 — FHIRPath REPL *(run manually)*
+## Performance slide
+
+The 2026 deck intentionally rolls performance into one transparent comparison slide. The numbers are useful for explaining cold-start and CI/agent-loop advantages, but they are not a claim that `rh` has broader FHIR conformance than the Java/.NET reference ecosystems.
+
+---
+
+## Demo 10 — FHIRPath REPL *(run manually)*
 
 ```bash
 rh fhirpath repl -d data/patient.json
@@ -431,7 +455,7 @@ Goodbye!
 
 ---
 
-## Demo 10 — VCL REPL *(run manually)*
+## Demo 11 — VCL REPL *(run manually)*
 
 ```bash
 rh vcl repl --explain --translate -s "http://snomed.info/sct"
@@ -501,7 +525,7 @@ Goodbye! 👋
 
 ---
 
-## Demo 11 — CQL REPL *(run manually)*
+## Demo 12 — CQL REPL *(run manually)*
 
 ```bash
 rh cql repl

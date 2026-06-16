@@ -398,13 +398,11 @@ rh download   Download FHIR packages from registries
             rh-hl7-fhir-r5-core   ← generated R5 types  🆕
 ```
 
-**9 crates** — each independently versioned and published to crates.io
+**11 Rust workspace packages** — CLI plus independently reusable crates, with the WASM-facing crates also wrapped for npm
 
 ---
 
 ## FHIR Types — `rh-hl7-fhir-r4-core` & `rh-hl7-fhir-r5-core`
-
-> *All FHIR types — generated, typed, serializable*
 
 ```bash
 rh codegen hl7.fhir.r5.core 5.0.0 --output crates/rh-hl7_fhir_r5_core
@@ -415,14 +413,13 @@ use rh_hl7_fhir_r5_core::resources::patient::{Patient, PatientMutators};
 
 let patient = Patient::new()
     .set_id("p-001".to_string())
-    .set_active(true)
-    .add_name(HumanName { family: Some("Smith".to_string()), .. });
+    .set_active(true);
 ```
 
 - FHIR **R4** and **R5** 🆕
-- Generated structs with builder traits, serde, and compile-time metadata
+- Generated structs with serde, builders, and compile-time metadata
 - Bindings for `required`-strength ValueSet enums
-- `rh-codegen` downloads FHIR packages, parses StructureDefinitions, and emits idiomatic Rust with `ValidatableResource` impls
+- `rh-codegen` downloads packages, parses StructureDefinitions, and emits idiomatic Rust
 
 <span class="pill">R4 ✅</span> <span class="pill">R5 ✅ NEW</span>
 
@@ -492,10 +489,10 @@ let result = compile_fsh(fsh_source)?;
 
 Three-stage pipeline: **Parse → Semantic Analysis (Typed AST) → ELM Emit**
 
-- Complete CQL-to-ELM compiler — compatible with the reference implementation
+- CQL-to-ELM compiler — compatible ELM JSON for the supported subset
 - Source maps: CQL span ↔ ELM node correlation
 - Explain mode: human-readable parse tree and typed AST
-- **ELM/CQL execution engine** — evaluate CQL measures against FHIR bundles
+- **ELM/CQL execution engine** — evaluate supported CQL expressions against FHIR data
 - Pure-Rust ELM evaluator with TVL (three-valued logic)
 - Context, CodeProperty, and CodeRef in ELM output ✅ (recent fix)
 
@@ -575,26 +572,23 @@ Single static binary. No JDK. No .NET. No `npm install`.
 
 ## WASM: FHIR in the Browser
 
-Three crates ship WebAssembly npm packages:
+Typed npm packages backed by the same Rust crates:
 
-- **`@reason-healthcare/rh-fhirpath`** — evaluate FHIRPath in any browser form
-- **`@reason-healthcare/rh-vcl`** — VCL editing and explain in a web UI
-- **`@reason-healthcare/rh-cql`** — CQL-to-ELM compilation in WASM (evaluator requires server)
+- **`@reason-healthcare/fhirpath`** — FHIRPath parse/eval
+- **`@reason-healthcare/vcl`** — VCL explain/translate
+- **`@reason-healthcare/cql`** — CQL compile/evaluate
 
-Each package targets **web**, **Node.js**, and **bundler (webpack)**.
+Targets: **web**, **Node.js**, and **bundlers**.
 
-### DevDays Demo
+### Playground
+
+https://reason-healthcare.github.io/rh/
 
 ```
-just wasm         # build all WASM targets
-just demo         # launch local demo at localhost:3000
+pnpm --filter @reason-healthcare/playground dev
 ```
 
-1. **FHIRPath** — evaluate expressions against a Patient resource
-2. **VCL** — author and explain ValueSet compose rules
-3. **Validation** — validate a resource against a US Core profile, see invariant and slicing errors in real time
-
-Live demo running entirely in the browser — no server, no runtime, just WASM.
+FHIRPath + VCL + CQL run in the browser with no server round-trip.
 
 ---
 
@@ -605,6 +599,7 @@ Live demo running entirely in the browser — no server, no runtime, just WASM.
 - Every command has `--format json` output
 - Stable flag names and exit codes
 - Piping: `rh fhirpath eval … | rh validate --stdin`
+- CI gates now check docs drift, MSRV, WASM compilation, and npm package/playground builds
 - `rh` is already used in agent-driven IG authoring workflows at Reason Healthcare
 
 The AIC experiment taught us: **regularity and predictability matter** — for LLMs as much as for compilers.
@@ -613,215 +608,17 @@ The AIC experiment taught us: **regularity and predictability matter** — for L
 
 ---
 
-<!-- _class: lead -->
+## Performance, In Context
 
-# ⚡ Performance
+| Scenario | `rh` demo number | Reference implementation context | Fair comparison note |
+|---|---:|---:|---|
+| CLI startup | **~7 ms** | JVM tools often **3–8 s**; Node/.NET CLIs often **~180–400 ms** | Cold process wall time; runtime startup dominates references |
+| FHIRPath CLI eval | **~7 ms** | Node/.NET CLIs **~200–400 ms**; Java CLI **seconds** | Single expression over small Patient JSON; not an in-process engine benchmark |
+| CQL compile | **~9 ms** | Java CQL Translation Service commonly **seconds** when cold | `rh` supports a growing subset; Java reference has broader maturity |
+| Batch validation | **1,000 Patients in ~0.61 s** | Java validators are strong but heavier to start and host | Base/profile rules with cached snapshots; terminology depth differs by setup |
+| Distribution | **single native binary + WASM packages** | JVM/.NET/Node require installed runtimes | Smaller deploy surface, but reference stacks have deeper ecosystem coverage |
 
-### Real measurements vs. reference implementations
-
----
-
-## What we measured (macOS Apple Silicon M1 Max)
-
-All numbers are **wall-clock time from process spawn** — no warm-up tricks.
-
-Reference implementations tested:
-
-| Tool | Language | Version |
-|---|---|---|
-| **rh** | Rust | 0.2.0-beta.2 |
-| HAPI FHIR Validator | Java 17 | 6.2.x |
-| Firely .NET SDK CLI | .NET 6 | 4.x |
-| fhirpath.js (Node.js) | JavaScript | 3.x |
-| SUSHI | Node.js / TypeScript | 3.x |
-
-> Java and .NET numbers from published benchmarks and community measurements.
-> rh numbers are reproducible: `./docs/demos/run-demo.sh`
-
----
-
-## Startup time
-
-> *"How long before I get any output?"*
-
-```
-$ time rh --version
-rh 0.2.0-beta.2
-
-real  0m0.007s      ← 7 milliseconds
-```
-
-| Tool | Cold startup | Notes |
-|---|---|---|
-| **rh** | **7 ms** | Native binary, instant |
-| fhirpath.js | ~200 ms | Node.js runtime init |
-| Firely .NET CLI | ~180 ms | .NET runtime init |
-| HAPI FHIR Validator | **3 000–8 000 ms** | JVM class loading |
-| HAPI FHIR Server | **15 000–30 000 ms** | Spring + JVM boot |
-
-<p class="note">* JVM warm-up documented in HAPI FHIR issue tracker and HL7 FHIR Chat.</p>
-
----
-
-## Binary distribution
-
-> *"What do I need to install?"*
-
-| | **rh** | Java tools | .NET tools | Node tools |
-|---|---|---|---|---|
-| Binary size | **17 MB** | 400–600 MB JAR+JDK | 80–200 MB | 50–150 MB + node |
-| Runtime required | **None** | JDK 11–17 | .NET 6–8 | Node.js 16+ |
-| Install command | `brew install rh` | Install JDK, download JAR | Install SDK, install tool | `npm install -g` |
-| Works offline | **Yes** | Yes (after JDK install) | Yes | Yes |
-| Works in Alpine Linux | **Yes** | Requires JDK layer | Requires .NET layer | Requires Node layer |
-| Docker image size | **~25 MB** | ~400 MB with JRE | ~200 MB | ~150 MB |
-
-<p class="note">Single static binary — copy it anywhere, it runs.</p>
-
----
-
-## FHIRPath evaluation
-
-```
-$ time rh fhirpath eval "Patient.name.where(use='official').family" \
-       -d patient.json
-
-✅  Result: String("van der Berg")
-real  0m0.007s
-```
-
-| Tool | Single expression | Notes |
-|---|---|---|
-| **rh** | **7 ms** | Includes process spawn |
-| fhirpath.js (CLI) | ~200–400 ms | Node startup dominates |
-| Java FHIRPath (HAPI) | ~3 000–5 000 ms | JVM startup dominates |
-| Firely .NET FHIRPath | ~200–400 ms | .NET startup dominates |
-
-> For **library-embedded** (in-process) use, rh is ~50–200 µs per expression.
-> The bottleneck for all tools in CLI mode is **runtime startup**, not evaluation.
-
-<p class="note">Measurement: macOS M1 Max, 5 runs averaged.</p>
-
----
-
-## CQL compilation
-
-```
-$ time rh cql compile measure.cql
-
-{ "library": { "identifier": { "id": "DevDaysMeasure" ... } } }
-real  0m0.009s      ← 9 milliseconds
-```
-
-| Tool | Compile (small library) | Notes |
-|---|---|---|
-| **rh** | **9 ms** | Parse → Semantic → ELM |
-| CQL Translation Service (Java) | ~3 000–6 000 ms | JVM startup + ANTLR warm-up |
-| CQL Runner (Node.js) | ~400–800 ms | Transpiled from Java |
-
-> rh-cql is a **native Rust implementation** — not a port or wrapper.
-> The Java CQL Translation Service is the HL7 reference implementation.
-
----
-
-## CQL (ELM) evaluation
-
-```
-$ time rh cql eval measure.cql --expression "InDemographic"
-
-true
-real  0m0.011s      ← 11 milliseconds
-```
-
-| Tool | Evaluate (single expression) | Notes |
-|---|---|---|
-| **rh** | **11 ms** | Includes process spawn |
-| Java CQL Engine | ~3 000–8 000 ms | JVM startup + ELM loading |
-| CQL Runner (Node.js) | ~400–1 000 ms | Transpiled engine |
-
-> rh-cql evaluates CQL measures against FHIR bundles using a pure-Rust ELM evaluator
-> with three-valued logic (TVL) — no JVM, no Node dependency.
-
----
-
-## FSH compilation
-
-```
-$ time rh fsh compile profile.fsh
-
-{ "resourceType": "StructureDefinition" … }
-real  0m0.009s      ← 9 milliseconds
-```
-
-| Tool | Compile (1 profile) | 10 profiles | Notes |
-|---|---|---|---|
-| **rh** | **9 ms** | **15 ms** | Parallel with rayon |
-| SUSHI (Node.js) | ~3 000 ms | ~4 000 ms | Full IG toolchain |
-| GoFSH (Node.js) | ~2 000 ms | ~3 000 ms | Node startup |
-
-> SUSHI is the reference FSH compiler — it does much more (full IG build).
-> rh-fsh focuses on FSH→FHIR JSON as a composable step in a pipeline.
-
-<p class="note">SUSHI numbers: typical reported warm IG build times from HL7 community.</p>
-
----
-
-## Validation throughput
-
-```
-$ time rh validate batch -i patients-1000.ndjson
-
-  ✅ Valid: 1000 / ❌ Invalid: 0
-  real  0m0.611s
-```
-
-| Resources | Time | Rate | Memory |
-|---|---|---|---|
-| 1 | 0.36 s | — | ~65 MB |
-| 100 | 0.43 s | ~230/s | ~66 MB |
-| **1 000** | **0.61 s** | **~1 600/s** | ~69 MB |
-| **10 000** | **2.79 s** | **~3 600/s** | ~80 MB |
-
-> First 0.35 s is profile snapshot loading (one-time per run).
-> After that: **~0.25 ms/resource** on average.
-
----
-
-## Validation: memory comparison
-
-> *Validating 1,000 Patient resources*
-
-| Tool | Peak RSS | Notes |
-|---|---|---|
-| **rh** | **69 MB** | LRU cache, no GC |
-| HAPI FHIR Validator | ~512 MB | JVM heap minimum |
-| Firely .NET Validator | ~150–250 MB | .NET GC managed |
-| HL7 Java Validator | ~400–600 MB | Reflective loading |
-
-> rh uses **~7× less memory** than the Java validator for the same workload.
-> Critical in container/serverless environments with tight memory limits.
-
-<p class="note">rh memory from `/usr/bin/time -l`. HAPI memory from HAPI FHIR documentation and issue reports.</p>
-
----
-
-## Summary: where rh wins
-
-| Scenario | rh advantage |
-|---|---|
-| CI/CD pipeline | **~400× faster** first result vs JVM (7 ms vs 3–8 s) |
-| Container image | **~20× smaller** than Java validator Docker image |
-| Batch processing | **~1 600–3 600 resources/sec** validated |
-| CQL evaluation | **~300× faster** than Java CQL Engine (11 ms vs 3–8 s) |
-| Memory budget | **~7× less** RAM than Java at equivalent load |
-| Edge / WASM | **Native WASM target** — runs in browsers, Cloudflare Workers |
-| Install | **Zero runtime deps** — single binary, curl and done |
-
-### Where Java/JVM tools still win
-- Full IG Publisher pipeline (decades of build tooling)
-- Terminology server integration depth
-- FHIR specification coverage breadth
-- Community support and documentation
+**Transparent claim:** Rust gives `rh` a major advantage for cold-start CLIs, CI loops, edge/browser deployment, and agent workflows. The reference implementations still lead in specification breadth, IG Publisher integration, terminology-server depth, and community validation history.
 
 ---
 
@@ -849,8 +646,6 @@ vs. Java-based CI: ~30–60 s JVM startup alone
 
 ## Thank You
 
-<br>
-
 ### ![Rust Health](rust-health-logo.svg) `github.com/reason-healthcare/rh`
 
 ```bash
@@ -858,13 +653,9 @@ cargo install rh-cli
 rh --help
 ```
 
-<br>
-
 **Brian Kaney**
 Reason Healthcare
 `@bkaney`
-
-<br>
 
 *Questions?*
 
