@@ -4,6 +4,8 @@ use crate::error::*;
 use crate::evaluator::operations::temporal::parse_temporal;
 use crate::evaluator::types::FhirPathValue;
 use regex::Regex;
+use rust_decimal::prelude::*;
+use rust_decimal::Decimal;
 use std::collections::HashMap;
 
 use super::FhirPathFunction;
@@ -127,7 +129,7 @@ pub fn register_conversion_functions(functions: &mut HashMap<String, FhirPathFun
 fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_decimal(&items[0])
             } else {
@@ -135,12 +137,18 @@ fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             }
         }
         FhirPathValue::Number(n) => Ok(FhirPathValue::Number(*n)),
-        FhirPathValue::Integer(i) | FhirPathValue::Long(i) => Ok(FhirPathValue::Number(*i as f64)),
-        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Number(if *b { 1.0 } else { 0.0 })),
+        FhirPathValue::Integer(i) | FhirPathValue::Long(i) => {
+            Ok(FhirPathValue::Number(Decimal::from(*i)))
+        }
+        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Number(if *b {
+            Decimal::ONE
+        } else {
+            Decimal::ZERO
+        })),
         FhirPathValue::String(s) => {
             let decimal_re = Regex::new(r"^[+-]?\d+(\.\d+)?$").expect("static regex");
             if decimal_re.is_match(s.trim()) {
-                match s.trim().parse::<f64>() {
+                match Decimal::from_str_exact(s.trim()) {
                     Ok(n) => Ok(FhirPathValue::Number(n)),
                     Err(_) => Ok(FhirPathValue::Empty),
                 }
@@ -155,8 +163,12 @@ fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check whether a value is convertible to Decimal.
 fn converts_to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-        FhirPathValue::Collection(items) if items.len() != 1 => Ok(FhirPathValue::Empty),
+        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+            if items.len() != 1 =>
+        {
+            Ok(FhirPathValue::Empty)
+        }
         other => match to_decimal(other)? {
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
             _ => Ok(FhirPathValue::Boolean(true)),
@@ -171,16 +183,14 @@ fn to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_boolean(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
 
-        // Single item conversions
         FhirPathValue::Boolean(b) => Ok(FhirPathValue::Boolean(*b)),
 
         FhirPathValue::Integer(i) => match *i {
@@ -190,12 +200,12 @@ fn to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         },
 
         FhirPathValue::Number(n) => {
-            if (*n - 1.0).abs() < f64::EPSILON {
+            if *n == Decimal::ONE {
                 Ok(FhirPathValue::Boolean(true))
-            } else if (*n - 0.0).abs() < f64::EPSILON {
+            } else if *n == Decimal::ZERO {
                 Ok(FhirPathValue::Boolean(false))
             } else {
-                Ok(FhirPathValue::Empty) // Not convertible
+                Ok(FhirPathValue::Empty)
             }
         }
 
@@ -213,30 +223,26 @@ fn to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Boolean according to FHIRPath specification
 fn converts_to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_boolean(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
 
-        // Single item checks
         FhirPathValue::Boolean(_) => Ok(FhirPathValue::Boolean(true)),
 
         FhirPathValue::Integer(1 | 0) => Ok(FhirPathValue::Boolean(true)),
         FhirPathValue::Integer(_) => Ok(FhirPathValue::Boolean(false)), // Not convertible
 
         FhirPathValue::Number(n) => {
-            if (*n - 1.0).abs() < f64::EPSILON || (*n - 0.0).abs() < f64::EPSILON {
+            if *n == Decimal::ONE || *n == Decimal::ZERO {
                 Ok(FhirPathValue::Boolean(true))
             } else {
-                Ok(FhirPathValue::Boolean(false)) // Not convertible
+                Ok(FhirPathValue::Boolean(false))
             }
         }
 
@@ -255,15 +261,12 @@ fn converts_to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Convert a value to Integer according to FHIRPath specification
 fn to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_integer(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -281,15 +284,15 @@ fn to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 
         FhirPathValue::Number(n) => {
             // Check if it's a whole number
-            if n.fract() == 0.0 && n.is_finite() {
+            if n.fract() == Decimal::ZERO {
                 // Check if within integer range
-                if *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
-                    Ok(FhirPathValue::Integer(*n as i64))
+                if let Some(i) = n.to_i64() {
+                    Ok(FhirPathValue::Integer(i))
                 } else {
-                    Ok(FhirPathValue::Empty) // Out of range
+                    Ok(FhirPathValue::Empty)
                 }
             } else {
-                Ok(FhirPathValue::Empty) // Not a whole number
+                Ok(FhirPathValue::Empty)
             }
         }
 
@@ -306,15 +309,12 @@ fn to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Integer according to FHIRPath specification
 fn converts_to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_integer(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -326,10 +326,10 @@ fn converts_to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 
         FhirPathValue::Number(n) => {
             // Check if it's a whole number within integer range
-            if n.fract() == 0.0 && n.is_finite() && *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
+            if n.fract() == Decimal::ZERO && n.to_i64().is_some() {
                 Ok(FhirPathValue::Boolean(true))
             } else {
-                Ok(FhirPathValue::Boolean(false)) // Not convertible
+                Ok(FhirPathValue::Boolean(false))
             }
         }
 
@@ -346,15 +346,12 @@ fn converts_to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Convert a value to Long according to FHIRPath specification
 fn to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_long(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -374,15 +371,14 @@ fn to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 
         FhirPathValue::Number(n) => {
             // Check if it's a whole number
-            if n.fract() == 0.0 && n.is_finite() {
-                // Check if within i64 range
-                if *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
-                    Ok(FhirPathValue::Long(*n as i64))
+            if n.fract() == Decimal::ZERO {
+                if let Some(l) = n.to_i64() {
+                    Ok(FhirPathValue::Long(l))
                 } else {
-                    Ok(FhirPathValue::Empty) // Out of range
+                    Ok(FhirPathValue::Empty)
                 }
             } else {
-                Ok(FhirPathValue::Empty) // Not a whole number
+                Ok(FhirPathValue::Empty)
             }
         }
 
@@ -399,15 +395,12 @@ fn to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Long according to FHIRPath specification
 fn converts_to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_long(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -421,10 +414,10 @@ fn converts_to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 
         FhirPathValue::Number(n) => {
             // Check if it's a whole number within i64 range
-            if n.fract() == 0.0 && n.is_finite() && *n >= i64::MIN as f64 && *n <= i64::MAX as f64 {
+            if n.fract() == Decimal::ZERO && n.to_i64().is_some() {
                 Ok(FhirPathValue::Boolean(true))
             } else {
-                Ok(FhirPathValue::Boolean(false)) // Not convertible
+                Ok(FhirPathValue::Boolean(false))
             }
         }
 
@@ -441,15 +434,12 @@ fn converts_to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Convert a value to Date according to FHIRPath specification
 fn to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_date(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -492,15 +482,12 @@ fn to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Date according to FHIRPath specification
 fn converts_to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_date(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -536,15 +523,12 @@ fn converts_to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Convert a value to DateTime according to FHIRPath specification
 fn to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_datetime(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -577,15 +561,12 @@ fn to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to DateTime according to FHIRPath specification
 fn converts_to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_datetime(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -610,15 +591,12 @@ fn converts_to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> 
 /// Convert a value to String according to FHIRPath specification
 fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_string(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -637,19 +615,15 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         FhirPathValue::Long(l) => Ok(FhirPathValue::String(l.to_string())),
 
         FhirPathValue::Number(n) => {
-            // FHIRPath Decimal.toString() preserves the decimal point so that
-            // 1.0 → "1.0" — required to distinguish Decimal from Integer in
-            // string form. Trailing zeros past the first are still trimmed.
-            let mut s = format!("{n}");
-            if !s.contains('.') {
-                s.push_str(".0");
+            // Decimal preserves trailing zeros, so format!("{n}") gives
+            // e.g. "1.58700" — which is exactly what FHIRPath expects for
+            // toString.  Just ensure we always have a decimal point.
+            let s = format!("{n}");
+            if s.contains('.') {
+                Ok(FhirPathValue::String(s))
             } else {
-                s = s.trim_end_matches('0').to_string();
-                if s.ends_with('.') {
-                    s.push('0');
-                }
+                Ok(FhirPathValue::String(format!("{s}.0")))
             }
-            Ok(FhirPathValue::String(s))
         }
 
         FhirPathValue::Date(d) => Ok(FhirPathValue::String(d.clone())),
@@ -685,15 +659,12 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to String according to FHIRPath specification
 fn converts_to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_string(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -717,15 +688,12 @@ fn converts_to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Convert a value to Time according to FHIRPath specification
 fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_time(&items[0])
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -765,15 +733,12 @@ fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Time according to FHIRPath specification
 fn converts_to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_time(&items[0])
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -798,15 +763,12 @@ fn to_quantity(
     unit_param: Option<&FhirPathValue>,
 ) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 to_quantity(&items[0], unit_param)
             } else {
-                // Multiple items - return empty per spec
                 Ok(FhirPathValue::Empty)
             }
         }
@@ -832,7 +794,7 @@ fn to_quantity(
         // Numeric and Boolean conversions get the default UCUM unit "1"
         // when no explicit unit is supplied — per FHIRPath §6.3 toQuantity().
         FhirPathValue::Integer(i) => Ok(FhirPathValue::Quantity {
-            value: *i as f64,
+            value: Decimal::from(*i),
             unit: Some(quantity_unit_or_default(unit_param)),
         }),
 
@@ -842,12 +804,12 @@ fn to_quantity(
         }),
 
         FhirPathValue::Long(l) => Ok(FhirPathValue::Quantity {
-            value: *l as f64,
+            value: Decimal::from(*l),
             unit: Some(quantity_unit_or_default(unit_param)),
         }),
 
         FhirPathValue::Boolean(b) => Ok(FhirPathValue::Quantity {
-            value: if *b { 1.0 } else { 0.0 },
+            value: if *b { Decimal::ONE } else { Decimal::ZERO },
             unit: Some(quantity_unit_or_default(unit_param)),
         }),
 
@@ -868,7 +830,7 @@ fn to_quantity(
                     value,
                     unit: target_unit,
                 })
-            } else if let Ok(value) = s.parse::<f64>() {
+            } else if let Ok(value) = Decimal::from_str_exact(s.trim()) {
                 // Plain numeric string — defaults to UCUM unit "1" like the
                 // direct numeric-input path does.
                 Ok(FhirPathValue::Quantity {
@@ -892,15 +854,12 @@ fn converts_to_quantity(
     _unit_param: Option<&FhirPathValue>,
 ) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return false
         FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
 
-        // If the collection contains more than one item, return false
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_quantity(&items[0], _unit_param)
             } else {
-                // Multiple items - cannot convert
                 Ok(FhirPathValue::Boolean(false))
             }
         }
@@ -922,7 +881,7 @@ fn converts_to_quantity(
         FhirPathValue::String(s) => {
             // Check if string can be parsed as quantity or number
             let is_quantity = parse_quantity_string(s).is_some();
-            let is_number = s.parse::<f64>().is_ok();
+            let is_number = Decimal::from_str_exact(s.trim()).is_ok();
             Ok(FhirPathValue::Boolean(is_quantity || is_number))
         }
 
@@ -1054,7 +1013,7 @@ fn extract_time_from_datetime(dt: &str) -> Option<String> {
 
 /// Parse a string that might represent a quantity (e.g., "5 'mg'", "10.5'kg'")
 /// Returns (value, unit) if successful
-fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
+fn parse_quantity_string(s: &str) -> Option<(Decimal, Option<String>)> {
     let s = s.trim();
 
     // Quoted UCUM unit form: "value 'unit'" or "value'unit'"
@@ -1063,7 +1022,7 @@ fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
             if quote_start < quote_end {
                 let value_str = s[..quote_start].trim();
                 let unit_str = &s[quote_start + 1..quote_end];
-                if let Ok(value) = value_str.parse::<f64>() {
+                if let Ok(value) = Decimal::from_str_exact(value_str) {
                     let unit = if unit_str.is_empty() {
                         None
                     } else {
@@ -1080,7 +1039,7 @@ fn parse_quantity_string(s: &str) -> Option<(f64, Option<String>)> {
         let value_str = s[..sep].trim();
         let unit_str = s[sep..].trim();
         if !unit_str.is_empty() && is_calendar_duration_unit(unit_str) {
-            if let Ok(value) = value_str.parse::<f64>() {
+            if let Ok(value) = Decimal::from_str_exact(value_str) {
                 return Some((value, Some(unit_str.to_string())));
             }
         }

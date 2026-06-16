@@ -6,6 +6,8 @@
 #[cfg(test)]
 mod tests {
     use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+    use rust_decimal::prelude::ToPrimitive;
+    use rust_decimal::Decimal;
     use serde_json::json;
 
     /// Sample Patient with US Core race and ethnicity extensions
@@ -502,7 +504,10 @@ mod tests {
             .parse("extension('http://example.org/decimal-ext')[0].getValue()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(2.5));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("2.5").unwrap())
+        );
 
         // Test boolean extension
         let parsed = parser
@@ -605,7 +610,11 @@ mod tests {
 
         let parsed = parser.parse("%resource.value").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(98.6));
+        if let FhirPathValue::Number(n) = result {
+            assert!((n.to_f64().unwrap() - 98.6).abs() < 0.001);
+        } else {
+            panic!("Expected Number value, got: {result:?}");
+        }
     }
 
     #[test]
@@ -709,7 +718,7 @@ mod tests {
         // on `.value` and `.unit` all work per the FHIRPath spec.
         match result {
             FhirPathValue::Quantity { value, unit } => {
-                assert_eq!(value, 150.0);
+                assert_eq!(value, Decimal::from_str_exact("150.0").unwrap());
                 assert_eq!(unit.as_deref(), Some("mmHg"));
             }
             other => panic!("Expected Quantity for valueQuantity, got {other:?}"),
@@ -718,7 +727,10 @@ mod tests {
         // Test accessing nested field through choice type
         let parsed = parser.parse("%resource.value.value").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Number(150.0));
+        assert_eq!(
+            result,
+            FhirPathValue::Number(Decimal::from_str_exact("150.0").unwrap())
+        );
     }
 
     #[test]

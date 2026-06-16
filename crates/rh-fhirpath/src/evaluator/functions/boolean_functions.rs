@@ -25,11 +25,9 @@ pub fn register_boolean_functions(functions: &mut HashMap<String, FhirPathFuncti
 /// - If input is not boolean, returns empty
 fn not_function(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        // If the collection is empty, return empty
         FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
-        // If the collection contains more than one item, return empty
-        FhirPathValue::Collection(items) => {
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 not_function(&items[0])
             } else {
@@ -37,11 +35,8 @@ fn not_function(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             }
         }
 
-        // Boolean values: negate them
         FhirPathValue::Boolean(b) => Ok(FhirPathValue::Boolean(!b)),
 
-        // Non-boolean scalars: per FHIRPath any existing (non-empty, non-null)
-        // value is truthy, so not() returns false.
         _ => Ok(FhirPathValue::Boolean(false)),
     }
 }

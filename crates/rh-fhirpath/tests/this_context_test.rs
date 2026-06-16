@@ -1,4 +1,5 @@
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
 use serde_json::json;
 
 fn create_test_data() -> EvaluationContext {
@@ -170,7 +171,7 @@ fn test_this_in_where_function_with_objects() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     // When only one item matches, FHIRPath returns a single object, not a collection
-    if let FhirPathValue::Object(obj) = result {
+    if let FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } = result {
         assert_eq!(obj["system"], "phone");
         assert_eq!(obj["value"], "555-1234");
     } else {
@@ -181,7 +182,7 @@ fn test_this_in_where_function_with_objects() {
     let expr = parser.parse("name.where($this.use = 'official')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
-    if let FhirPathValue::Object(obj) = result {
+    if let FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } = result {
         assert_eq!(obj["use"], "official");
         assert_eq!(obj["family"], "Doe");
     } else {
@@ -282,7 +283,7 @@ fn test_this_context_isolation() {
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
-    if let FhirPathValue::Object(obj) = result {
+    if let FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } = result {
         assert_eq!(obj["use"], "official");
         if let Some(given) = obj.get("given") {
             assert!(given.as_array().unwrap().contains(&json!("John")));
@@ -354,7 +355,9 @@ fn test_this_with_different_data_types() {
     if let FhirPathValue::Collection(items) = result {
         assert_eq!(items.len(), 2); // 1 and 3.15
         assert!(matches!(items[0], FhirPathValue::Integer(1)));
-        assert!(matches!(items[1], FhirPathValue::Number(n) if (n - 3.15).abs() < f64::EPSILON));
+        assert!(
+            matches!(items[1], FhirPathValue::Number(n) if (n.to_f64().unwrap() - 3.15).abs() < 0.001)
+        );
     } else {
         panic!("Expected collection result, got: {result:?}");
     }

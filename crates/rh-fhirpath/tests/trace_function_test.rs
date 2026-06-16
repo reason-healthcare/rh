@@ -29,7 +29,7 @@ fn test_trace_with_name_only() {
         FhirPathValue::Collection(items) => {
             assert_eq!(items.len(), 1);
             match &items[0] {
-                FhirPathValue::Object(obj) => {
+                FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                     assert_eq!(obj.get("family").and_then(|v| v.as_str()), Some("Smith"));
                 }
                 _ => panic!("Expected Object in collection"),
@@ -72,7 +72,7 @@ fn test_trace_with_projection() {
             assert_eq!(items.len(), 2);
             // Verify original objects are returned
             match &items[0] {
-                FhirPathValue::Object(obj) => {
+                FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                     assert_eq!(obj.get("id").and_then(|v| v.as_str()), Some("1"));
                 }
                 _ => panic!("Expected Object"),
@@ -189,7 +189,7 @@ fn test_trace_in_where_clause() {
 
     // Should return only the active patient
     match result {
-        FhirPathValue::Object(obj) => {
+        FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
             assert_eq!(obj.get("id").and_then(|v| v.as_str()), Some("1"));
         }
         _ => panic!("Expected Object, got {result:?}"),

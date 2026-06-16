@@ -3,6 +3,8 @@
 //! Tests the parsing and evaluation of quantity literals and arithmetic operations
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use serde_json::json;
 
 #[cfg(test)]
@@ -15,13 +17,28 @@ mod quantity_tests {
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(json!({}));
 
-        // Test basic quantity evaluation
-        let test_cases = [
-            ("5'mg'", 5.0, Some("mg".to_string())),
-            ("10.5'kg'", 10.5, Some("kg".to_string())),
-            ("37'Cel'", 37.0, Some("Cel".to_string())),
-            ("120'mm[Hg]'", 120.0, Some("mm[Hg]".to_string())),
-            ("42''", 42.0, None), // Empty unit (dimensionless)
+        let test_cases: Vec<(&str, Decimal, Option<String>)> = vec![
+            (
+                "5'mg'",
+                Decimal::from_str_exact("5.0").unwrap(),
+                Some("mg".to_string()),
+            ),
+            (
+                "10.5'kg'",
+                Decimal::from_str_exact("10.5").unwrap(),
+                Some("kg".to_string()),
+            ),
+            (
+                "37'Cel'",
+                Decimal::from_str_exact("37.0").unwrap(),
+                Some("Cel".to_string()),
+            ),
+            (
+                "120'mm[Hg]'",
+                Decimal::from_str_exact("120.0").unwrap(),
+                Some("mm[Hg]".to_string()),
+            ),
+            ("42''", Decimal::from_str_exact("42.0").unwrap(), None),
         ];
 
         for (expr_str, expected_value, expected_unit) in test_cases {
@@ -47,14 +64,37 @@ mod quantity_tests {
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(json!({}));
 
-        // Test quantity literals with spaces between number and unit
-        let test_cases = [
-            ("15 'mm[Hg]'", 15.0, Some("mm[Hg]".to_string())),
-            ("37.2 'Cel'", 37.2, Some("Cel".to_string())),
-            ("5 'mg'", 5.0, Some("mg".to_string())),
-            ("2.5 'kg'", 2.5, Some("kg".to_string())),
-            ("120 'mm[Hg]'", 120.0, Some("mm[Hg]".to_string())),
-            ("98.6 '[degF]'", 98.6, Some("[degF]".to_string())),
+        let test_cases: Vec<(&str, Decimal, Option<String>)> = vec![
+            (
+                "15 'mm[Hg]'",
+                Decimal::from_str_exact("15.0").unwrap(),
+                Some("mm[Hg]".to_string()),
+            ),
+            (
+                "37.2 'Cel'",
+                Decimal::from_str_exact("37.2").unwrap(),
+                Some("Cel".to_string()),
+            ),
+            (
+                "5 'mg'",
+                Decimal::from_str_exact("5.0").unwrap(),
+                Some("mg".to_string()),
+            ),
+            (
+                "2.5 'kg'",
+                Decimal::from_str_exact("2.5").unwrap(),
+                Some("kg".to_string()),
+            ),
+            (
+                "120 'mm[Hg]'",
+                Decimal::from_str_exact("120.0").unwrap(),
+                Some("mm[Hg]".to_string()),
+            ),
+            (
+                "98.6 '[degF]'",
+                Decimal::from_str_exact("98.6").unwrap(),
+                Some("[degF]".to_string()),
+            ),
         ];
 
         for (expr_str, expected_value, expected_unit) in test_cases {
@@ -73,15 +113,22 @@ mod quantity_tests {
             }
         }
 
-        // Test arithmetic with mixed spacing
-        let arithmetic_tests = [
-            ("15'mm[Hg]' + 5 'mm[Hg]'", 20.0, Some("mm[Hg]".to_string())),
+        let arithmetic_tests: Vec<(&str, Decimal, Option<String>)> = vec![
             (
-                "120 'mm[Hg]' - 10'mm[Hg]'",
-                110.0,
+                "15'mm[Hg]' + 5 'mm[Hg]'",
+                Decimal::from_str_exact("20.0").unwrap(),
                 Some("mm[Hg]".to_string()),
             ),
-            ("5 'mg' * 2", 10.0, Some("mg".to_string())),
+            (
+                "120 'mm[Hg]' - 10'mm[Hg]'",
+                Decimal::from_str_exact("110.0").unwrap(),
+                Some("mm[Hg]".to_string()),
+            ),
+            (
+                "5 'mg' * 2",
+                Decimal::from_str_exact("10.0").unwrap(),
+                Some("mg".to_string()),
+            ),
         ];
 
         for (expr_str, expected_value, expected_unit) in arithmetic_tests {
@@ -111,7 +158,7 @@ mod quantity_tests {
         let expr = parser.parse("5'mg' + 3'mg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 8.0);
+            assert_eq!(value, Decimal::from_str_exact("8.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -121,7 +168,7 @@ mod quantity_tests {
         let expr = parser.parse("5'mg' + 3'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 3000005.0); // 5mg + 3,000,000mg = 3,000,005mg
+            assert_eq!(value, Decimal::from_str_exact("3000005.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result with unit conversion, got: {result:?}");
@@ -139,7 +186,7 @@ mod quantity_tests {
         let expr = parser.parse("5'' + 3''").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 8.0);
+            assert_eq!(value, Decimal::from_str_exact("8.0").unwrap());
             assert_eq!(unit, None);
         } else {
             panic!("Expected dimensionless Quantity result, got: {result:?}");
@@ -156,7 +203,7 @@ mod quantity_tests {
         let expr = parser.parse("10'kg' - 3'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 7.0);
+            assert_eq!(value, Decimal::from_str_exact("7.0").unwrap());
             assert_eq!(unit, Some("kg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -166,7 +213,7 @@ mod quantity_tests {
         let expr = parser.parse("10'kg' - 3'mg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value - 9.999997).abs() < 0.000001); // 10kg - 0.000003kg = 9.999997kg
+            assert!((value.to_f64().unwrap() - 9.999997).abs() < 0.000001);
             assert_eq!(unit, Some("kg".to_string()));
         } else {
             panic!("Expected Quantity result with unit conversion, got: {result:?}");
@@ -191,7 +238,7 @@ mod quantity_tests {
         let expr = parser.parse("5'mg' * 2").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 10.0);
+            assert_eq!(value, Decimal::from_str_exact("10.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -201,7 +248,7 @@ mod quantity_tests {
         let expr = parser.parse("3 * 4'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 12.0);
+            assert_eq!(value, Decimal::from_str_exact("12.0").unwrap());
             assert_eq!(unit, Some("kg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -211,7 +258,7 @@ mod quantity_tests {
         let expr = parser.parse("2.5'L' * 1.5").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 3.75);
+            assert_eq!(value, Decimal::from_str_exact("3.75").unwrap());
             assert_eq!(unit, Some("L".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -220,7 +267,7 @@ mod quantity_tests {
         let expr = parser.parse("2.0 'cm' * 2.0 'm'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 0.04);
+            assert!((value.to_f64().unwrap() - 0.04).abs() < 0.001);
             assert_eq!(unit.as_deref(), Some("m2"));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -237,7 +284,7 @@ mod quantity_tests {
         let expr = parser.parse("10'mg' / 2").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 5.0);
+            assert_eq!(value, Decimal::from_str_exact("5.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -248,7 +295,7 @@ mod quantity_tests {
         let expr = parser.parse("10'kg' / 5'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 2.0);
+            assert_eq!(value, Decimal::from_str_exact("2.0").unwrap());
             assert_eq!(unit.as_deref(), Some("1"));
         } else {
             panic!("Expected Quantity{{1.0, '1'}}, got: {result:?}");
@@ -257,7 +304,7 @@ mod quantity_tests {
         let expr = parser.parse("4.0 'g' / 2.0 'm'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 2.0);
+            assert_eq!(value, Decimal::from_str_exact("2.0").unwrap());
             assert_eq!(unit.as_deref(), Some("g/m"));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -279,7 +326,7 @@ mod quantity_tests {
         let expr = parser.parse("5'' + 3").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 8.0);
+            assert_eq!(value, Decimal::from_str_exact("8.0").unwrap());
             assert_eq!(unit, None);
         } else {
             panic!("Expected dimensionless Quantity result, got: {result:?}");
@@ -304,7 +351,7 @@ mod quantity_tests {
         let expr = parser.parse("(10'mg' + 5'mg') * 2").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 30.0);
+            assert_eq!(value, Decimal::from_str_exact("30.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -314,7 +361,7 @@ mod quantity_tests {
         let expr = parser.parse("20'kg' - 5'kg' / 2").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, 17.5); // 20 - (5/2) = 20 - 2.5 = 17.5
+            assert_eq!(value, Decimal::from_str_exact("17.5").unwrap());
             assert_eq!(unit, Some("kg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -331,7 +378,7 @@ mod quantity_tests {
         let expr = parser.parse("-5'mg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, -5.0);
+            assert_eq!(value, Decimal::from_str_exact("-5.0").unwrap());
             assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");
@@ -341,7 +388,7 @@ mod quantity_tests {
         let expr = parser.parse("3'kg' - 8'kg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert_eq!(value, -5.0);
+            assert_eq!(value, Decimal::from_str_exact("-5.0").unwrap());
             assert_eq!(unit, Some("kg".to_string()));
         } else {
             panic!("Expected Quantity result, got: {result:?}");

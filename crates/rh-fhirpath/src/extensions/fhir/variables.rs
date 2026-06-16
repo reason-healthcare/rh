@@ -56,15 +56,26 @@ pub fn register_variables(variables: &mut HashMap<String, VariableResolver>) {
 
     // %vs-{name} → 'http://hl7.org/fhir/ValueSet/{name}'
     // Per FHIRPath spec, %vs- prefixed variables expand to ValueSet URLs.
-    // Note: %ext- variables are deliberately omitted — extension() on FHIR
-    // primitive shadow elements is not yet supported, and resolving the URL
-    // would change the outcome from a tolerated eval_error to a wrong_answer.
     variables.insert(
         "_fhir_vs".to_string(),
         Box::new(|name: &str, _context: &EvaluationContext| {
             if let Some(vs_name) = name.strip_prefix("vs-") {
                 return Ok(Some(FhirPathValue::String(format!(
                     "http://hl7.org/fhir/ValueSet/{vs_name}"
+                ))));
+            }
+            Ok(None)
+        }),
+    );
+
+    // %ext-{name} → 'http://hl7.org/fhir/StructureDefinition/{name}'
+    // Per FHIRPath spec, %ext- prefixed variables expand to extension definition URLs.
+    variables.insert(
+        "_fhir_ext".to_string(),
+        Box::new(|name: &str, _context: &EvaluationContext| {
+            if let Some(ext_name) = name.strip_prefix("ext-") {
+                return Ok(Some(FhirPathValue::String(format!(
+                    "http://hl7.org/fhir/StructureDefinition/{ext_name}"
                 ))));
             }
             Ok(None)

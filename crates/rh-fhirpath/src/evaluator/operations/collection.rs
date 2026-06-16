@@ -2,6 +2,7 @@
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
+use rust_decimal::Decimal;
 
 /// Collection operations handler
 pub struct CollectionEvaluator;
@@ -25,7 +26,7 @@ impl CollectionEvaluator {
 
         // Add items from left operand
         match left {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 for item in items {
                     push_dedup(&mut result, item.clone());
                 }
@@ -36,7 +37,7 @@ impl CollectionEvaluator {
 
         // Add items from right operand, deduplicating against result so far
         match right {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 for item in items {
                     push_dedup(&mut result, item.clone());
                 }
@@ -60,7 +61,10 @@ impl CollectionEvaluator {
         index: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (target, index) {
-            (FhirPathValue::Collection(items), FhirPathValue::Integer(idx)) => {
+            (
+                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items),
+                FhirPathValue::Integer(idx),
+            ) => {
                 let idx = *idx as usize;
                 if idx < items.len() {
                     Ok(items[idx].clone())
@@ -68,20 +72,17 @@ impl CollectionEvaluator {
                     Ok(FhirPathValue::Empty)
                 }
             }
-            (FhirPathValue::Empty, FhirPathValue::Integer(_)) => {
-                // Indexing an empty collection always returns empty
-                Ok(FhirPathValue::Empty)
-            }
+            (FhirPathValue::Empty, FhirPathValue::Integer(_)) => Ok(FhirPathValue::Empty),
             _ => Err(FhirPathError::InvalidOperation {
                 message: "Invalid indexer operation".to_string(),
             }),
         }
     }
 
-    /// Remove duplicates from a collection  
+    /// Remove duplicates from a collection
     pub fn distinct(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut unique_items = Vec::new();
                 for item in items {
                     if !unique_items
@@ -101,14 +102,14 @@ impl CollectionEvaluator {
                 }
             }
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            value => Ok(value.clone()), // Single values are already distinct
+            value => Ok(value.clone()),
         }
     }
 
     /// Check if all items in a collection are distinct
     pub fn is_distinct(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut seen = Vec::new();
                 for item in items {
                     if seen
@@ -121,8 +122,8 @@ impl CollectionEvaluator {
                 }
                 Ok(FhirPathValue::Boolean(true))
             }
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty is distinct
-            _ => Ok(FhirPathValue::Boolean(true)),                    // Single values are distinct
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
+            _ => Ok(FhirPathValue::Boolean(true)),
         }
     }
 
@@ -130,8 +131,10 @@ impl CollectionEvaluator {
     pub fn is_empty(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
-            FhirPathValue::Collection(items) => Ok(FhirPathValue::Boolean(items.is_empty())),
-            _ => Ok(FhirPathValue::Boolean(false)), // Single values are not empty
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                Ok(FhirPathValue::Boolean(items.is_empty()))
+            }
+            _ => Ok(FhirPathValue::Boolean(false)),
         }
     }
 
@@ -139,8 +142,10 @@ impl CollectionEvaluator {
     pub fn exists(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
-            FhirPathValue::Collection(items) => Ok(FhirPathValue::Boolean(!items.is_empty())),
-            _ => Ok(FhirPathValue::Boolean(true)), // Single values exist
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                Ok(FhirPathValue::Boolean(!items.is_empty()))
+            }
+            _ => Ok(FhirPathValue::Boolean(true)),
         }
     }
 
@@ -148,8 +153,10 @@ impl CollectionEvaluator {
     pub fn count(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Integer(0)),
-            FhirPathValue::Collection(items) => Ok(FhirPathValue::Integer(items.len() as i64)),
-            _ => Ok(FhirPathValue::Integer(1)), // Single values have count 1
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                Ok(FhirPathValue::Integer(items.len() as i64))
+            }
+            _ => Ok(FhirPathValue::Integer(1)),
         }
     }
 
@@ -159,7 +166,7 @@ impl CollectionEvaluator {
             FhirPathValue::Empty => Err(FhirPathError::InvalidOperation {
                 message: "single() cannot be called on empty collection".to_string(),
             }),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Ok(items[0].clone())
                 } else {
@@ -171,45 +178,63 @@ impl CollectionEvaluator {
                     })
                 }
             }
-            value => Ok(value.clone()), // Single values return themselves
+            value => Ok(value.clone()),
         }
     }
 
     /// Get first item from collection
-    pub fn first(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    pub fn first(target: &FhirPathValue, check_ordered: bool) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::UnorderedCollection(_) if check_ordered => {
+                Err(FhirPathError::EvaluationError {
+                    message: "Cannot apply order-dependent function to unordered collection"
+                        .to_string(),
+                })
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Empty)
                 } else {
                     Ok(items[0].clone())
                 }
             }
-            value => Ok(value.clone()), // Single values return themselves
+            value => Ok(value.clone()),
         }
     }
 
     /// Get last item from collection
-    pub fn last(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    pub fn last(target: &FhirPathValue, check_ordered: bool) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::UnorderedCollection(_) if check_ordered => {
+                Err(FhirPathError::EvaluationError {
+                    message: "Cannot apply order-dependent function to unordered collection"
+                        .to_string(),
+                })
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Empty)
                 } else {
                     Ok(items[items.len() - 1].clone())
                 }
             }
-            value => Ok(value.clone()), // Single values return themselves
+            value => Ok(value.clone()),
         }
     }
 
     /// Get all items except the first
-    pub fn tail(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+    pub fn tail(target: &FhirPathValue, check_ordered: bool) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::UnorderedCollection(_) if check_ordered => {
+                Err(FhirPathError::EvaluationError {
+                    message: "Cannot apply order-dependent function to unordered collection"
+                        .to_string(),
+                })
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() <= 1 {
                     Ok(FhirPathValue::Empty)
                 } else {
@@ -221,12 +246,16 @@ impl CollectionEvaluator {
                     }
                 }
             }
-            _ => Ok(FhirPathValue::Empty), // Single values have no tail
+            _ => Ok(FhirPathValue::Empty),
         }
     }
 
     /// Skip the first n items from collection
-    pub fn skip(target: &FhirPathValue, count: i64) -> FhirPathResult<FhirPathValue> {
+    pub fn skip(
+        target: &FhirPathValue,
+        count: i64,
+        check_ordered: bool,
+    ) -> FhirPathResult<FhirPathValue> {
         if count < 0 {
             return Err(FhirPathError::InvalidOperation {
                 message: "skip() count cannot be negative".to_string(),
@@ -235,7 +264,13 @@ impl CollectionEvaluator {
 
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::UnorderedCollection(_) if check_ordered => {
+                Err(FhirPathError::EvaluationError {
+                    message: "Cannot apply order-dependent function to unordered collection"
+                        .to_string(),
+                })
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let skip_count = count as usize;
                 if skip_count >= items.len() {
                     Ok(FhirPathValue::Empty)
@@ -274,7 +309,7 @@ impl CollectionEvaluator {
 
         match target {
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let take_count = count as usize;
                 let taken_items = if take_count >= items.len() {
                     items.clone()
@@ -307,13 +342,17 @@ impl CollectionEvaluator {
     ) -> FhirPathResult<FhirPathValue> {
         let target_items = match target {
             FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             value => vec![value.clone()],
         };
 
         let other_items = match other {
             FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             value => vec![value.clone()],
         };
 
@@ -322,14 +361,11 @@ impl CollectionEvaluator {
             if other_items
                 .iter()
                 .any(|other_item| FhirPathValue::equals_static(&item, other_item))
-            {
-                // Only add if not already in intersection (to maintain distinctness)
-                if !intersection
+                && !intersection
                     .iter()
                     .any(|existing| FhirPathValue::equals_static(existing, &item))
-                {
-                    intersection.push(item);
-                }
+            {
+                intersection.push(item);
             }
         }
 
@@ -346,13 +382,17 @@ impl CollectionEvaluator {
     pub fn exclude(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         let target_items = match target {
             FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             value => vec![value.clone()],
         };
 
         let other_items = match other {
             FhirPathValue::Empty => return Ok(target.clone()),
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             value => vec![value.clone()],
         };
 
@@ -382,12 +422,9 @@ impl CollectionEvaluator {
     pub fn combine(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         let mut result = Vec::new();
 
-        // Add items from target collection
         match target {
-            FhirPathValue::Empty => {
-                // Don't add anything from empty target
-            }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => {}
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 result.extend(items.clone());
             }
             value => {
@@ -395,12 +432,9 @@ impl CollectionEvaluator {
             }
         }
 
-        // Add items from other collection
         match other {
-            FhirPathValue::Empty => {
-                // Don't add anything from empty other
-            }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => {}
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 result.extend(items.clone());
             }
             value => {
@@ -408,7 +442,6 @@ impl CollectionEvaluator {
             }
         }
 
-        // Return result based on size
         if result.is_empty() {
             Ok(FhirPathValue::Empty)
         } else if result.len() == 1 {
@@ -424,12 +457,9 @@ impl CollectionEvaluator {
     pub fn union(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         let mut result = Vec::new();
 
-        // Add items from target collection
         match target {
-            FhirPathValue::Empty => {
-                // Don't add anything from empty target
-            }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => {}
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 result.extend(items.clone());
             }
             value => {
@@ -437,12 +467,9 @@ impl CollectionEvaluator {
             }
         }
 
-        // Add items from other collection
         match other {
-            FhirPathValue::Empty => {
-                // Don't add anything from empty other
-            }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => {}
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 result.extend(items.clone());
             }
             value => {
@@ -450,7 +477,6 @@ impl CollectionEvaluator {
             }
         }
 
-        // Remove duplicates - similar to distinct() implementation
         let mut unique_items = Vec::new();
         for item in result {
             if !unique_items
@@ -461,7 +487,6 @@ impl CollectionEvaluator {
             }
         }
 
-        // Return result based on size
         if unique_items.is_empty() {
             Ok(FhirPathValue::Empty)
         } else if unique_items.len() == 1 {
@@ -474,8 +499,8 @@ impl CollectionEvaluator {
     /// Check if all items in collection evaluate to true
     pub fn all(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: all() is true
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Boolean(true))
                 } else {
@@ -487,7 +512,7 @@ impl CollectionEvaluator {
                     Ok(FhirPathValue::Boolean(true))
                 }
             }
-            value => Ok(FhirPathValue::Boolean(value.to_boolean())), // Single value
+            value => Ok(FhirPathValue::Boolean(value.to_boolean())),
         }
     }
 
@@ -495,8 +520,8 @@ impl CollectionEvaluator {
     /// Per spec, evaluation is undefined (returns empty) if any item is not boolean.
     pub fn all_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: allTrue() is true
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Boolean(true))
                 } else {
@@ -506,8 +531,8 @@ impl CollectionEvaluator {
                             FhirPathValue::Boolean(false) => {
                                 return Ok(FhirPathValue::Boolean(false))
                             }
-                            FhirPathValue::Empty => {} // empty item is not true → handled below
-                            _ => return Ok(FhirPathValue::Empty), // Non-boolean → undefined
+                            FhirPathValue::Empty => {}
+                            _ => return Ok(FhirPathValue::Empty),
                         }
                     }
                     Ok(FhirPathValue::Boolean(true))
@@ -516,7 +541,7 @@ impl CollectionEvaluator {
             value => match value {
                 FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
                 FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(false)),
-                _ => Ok(FhirPathValue::Empty), // Non-boolean → undefined
+                _ => Ok(FhirPathValue::Empty),
             },
         }
     }
@@ -524,8 +549,8 @@ impl CollectionEvaluator {
     /// Check if any item in collection evaluates to true
     pub fn any_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)), // Empty collection: anyTrue() is false
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Boolean(false))
                 } else {
@@ -534,7 +559,7 @@ impl CollectionEvaluator {
                             FhirPathValue::Boolean(true) => {
                                 return Ok(FhirPathValue::Boolean(true))
                             }
-                            _ => continue, // Check next item
+                            _ => continue,
                         }
                     }
                     Ok(FhirPathValue::Boolean(false))
@@ -550,8 +575,8 @@ impl CollectionEvaluator {
     /// Check if all items in collection are false (boolean false values only)
     pub fn all_false(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)), // Empty collection: allFalse() is true
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Boolean(true))
                 } else {
@@ -561,7 +586,7 @@ impl CollectionEvaluator {
                             FhirPathValue::Boolean(true) => {
                                 return Ok(FhirPathValue::Boolean(false))
                             }
-                            _ => return Ok(FhirPathValue::Boolean(false)), // Non-boolean is not false
+                            _ => return Ok(FhirPathValue::Boolean(false)),
                         }
                     }
                     Ok(FhirPathValue::Boolean(true))
@@ -577,8 +602,8 @@ impl CollectionEvaluator {
     /// Check if any item in collection is false (boolean false values only)
     pub fn any_false(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)), // Empty collection: anyFalse() is false
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.is_empty() {
                     Ok(FhirPathValue::Boolean(false))
                 } else {
@@ -587,7 +612,7 @@ impl CollectionEvaluator {
                             FhirPathValue::Boolean(false) => {
                                 return Ok(FhirPathValue::Boolean(true))
                             }
-                            _ => continue, // Check next item
+                            _ => continue,
                         }
                     }
                     Ok(FhirPathValue::Boolean(false))
@@ -606,25 +631,26 @@ impl CollectionEvaluator {
         target: &FhirPathValue,
         other: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        // Convert both collections to vectors
         let target_items = match target {
             FhirPathValue::Empty => vec![],
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             value => vec![value.clone()],
         };
 
         let other_items = match other {
             FhirPathValue::Empty => vec![],
-            FhirPathValue::Collection(items) => items.clone(),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.clone()
+            }
             value => vec![value.clone()],
         };
 
-        // Empty set is a subset of any set
         if target_items.is_empty() {
             return Ok(FhirPathValue::Boolean(true));
         }
 
-        // Check if all items in target are contained in other
         for target_item in &target_items {
             let mut found = false;
             for other_item in &other_items {
@@ -655,10 +681,9 @@ impl CollectionEvaluator {
     /// The ordering of children is undefined and may vary between platforms
     pub fn children(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Object(obj) => {
+            FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                 let mut children = Vec::new();
 
-                // Iterate through all properties of the object
                 if let Some(object_map) = obj.as_object() {
                     for value in object_map.values() {
                         children.push(FhirPathValue::from_json(value));
@@ -668,21 +693,21 @@ impl CollectionEvaluator {
                 if children.is_empty() {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Collection(children))
+                    Ok(FhirPathValue::UnorderedCollection(children))
                 }
             }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::FhirPrimitive { inner, .. } => Self::children(inner),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 let mut all_children = Vec::new();
 
                 for item in items {
                     let item_children = Self::children(item)?;
                     match item_children {
-                        FhirPathValue::Collection(mut children) => {
+                        FhirPathValue::Collection(mut children)
+                        | FhirPathValue::UnorderedCollection(mut children) => {
                             all_children.append(&mut children);
                         }
-                        FhirPathValue::Empty => {
-                            // Skip empty results
-                        }
+                        FhirPathValue::Empty => {}
                         value => {
                             all_children.push(value);
                         }
@@ -692,13 +717,10 @@ impl CollectionEvaluator {
                 if all_children.is_empty() {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Collection(all_children))
+                    Ok(FhirPathValue::UnorderedCollection(all_children))
                 }
             }
-            _ => {
-                // Non-object values (primitives, empty) have no children
-                Ok(FhirPathValue::Empty)
-            }
+            _ => Ok(FhirPathValue::Empty),
         }
     }
 
@@ -722,16 +744,13 @@ impl CollectionEvaluator {
         descendants: &mut Vec<FhirPathValue>,
     ) -> FhirPathResult<()> {
         match target {
-            FhirPathValue::Object(obj) => {
-                // Get immediate children first
+            FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                 if let Some(object_map) = obj.as_object() {
                     for value in object_map.values() {
                         let child = FhirPathValue::from_json(value);
-                        // In FHIR's logical model, arrays don't exist as nodes -
-                        // their elements are the direct children. So if a field
-                        // value is an array, add each element as a separate child.
                         match &child {
-                            FhirPathValue::Collection(items) => {
+                            FhirPathValue::Collection(items)
+                            | FhirPathValue::UnorderedCollection(items) => {
                                 for item in items {
                                     descendants.push(item.clone());
                                     Self::collect_descendants(item, descendants)?;
@@ -745,16 +764,15 @@ impl CollectionEvaluator {
                     }
                 }
             }
-            FhirPathValue::Collection(items) => {
-                // For collections passed directly to descendants() (the input collection),
-                // process each item - they're already at the right level.
+            FhirPathValue::FhirPrimitive { inner, .. } => {
+                Self::collect_descendants(inner, descendants)?;
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 for item in items {
                     Self::collect_descendants(item, descendants)?;
                 }
             }
-            _ => {
-                // Non-object/non-collection values (primitives, empty) have no descendants
-            }
+            _ => {}
         }
         Ok(())
     }
@@ -775,9 +793,17 @@ impl CollectionEvaluator {
         // empty, which is treated as false). A non-Boolean singleton is a
         // semantic error; a multi-item collection is an execution error.
         let effective_criterion = match criterion {
-            FhirPathValue::Collection(items) if items.len() == 1 => &items[0],
-            FhirPathValue::Collection(items) if items.is_empty() => &FhirPathValue::Empty,
-            FhirPathValue::Collection(_) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                &items[0]
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                &FhirPathValue::Empty
+            }
+            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => {
                 return Err(FhirPathError::EvaluationError {
                     message:
                         "iif() criterion must be a single Boolean; got a multi-item collection"
@@ -813,7 +839,7 @@ impl CollectionEvaluator {
         match (left, right) {
             (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => a == b,
-            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => (a - b).abs() < f64::EPSILON,
+            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => a == b,
             (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
@@ -827,18 +853,23 @@ impl CollectionEvaluator {
                     value: b_val,
                     unit: b_unit,
                 },
-            ) => (a_val - b_val).abs() < f64::EPSILON && a_unit == b_unit,
+            ) => a_val == b_val && a_unit == b_unit,
             // Mixed numeric types
-            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => {
-                (*a as f64 - b).abs() < f64::EPSILON
-            }
-            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => {
-                (a - *b as f64).abs() < f64::EPSILON
-            }
+            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => Decimal::from(*a) == *b,
+            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => *a == Decimal::from(*b),
             // Objects need deep comparison
             (FhirPathValue::Object(a), FhirPathValue::Object(b)) => a == b,
+            (
+                FhirPathValue::TypedObject { value: a, .. },
+                FhirPathValue::TypedObject { value: b, .. },
+            ) => a == b,
+            (FhirPathValue::TypedObject { value: a, .. }, FhirPathValue::Object(b))
+            | (FhirPathValue::Object(a), FhirPathValue::TypedObject { value: b, .. }) => a == b,
             // Collections need element-wise comparison (order doesn't matter for sets)
-            (FhirPathValue::Collection(a), FhirPathValue::Collection(b)) => {
+            (FhirPathValue::Collection(a), FhirPathValue::Collection(b))
+            | (FhirPathValue::Collection(a), FhirPathValue::UnorderedCollection(b))
+            | (FhirPathValue::UnorderedCollection(a), FhirPathValue::Collection(b))
+            | (FhirPathValue::UnorderedCollection(a), FhirPathValue::UnorderedCollection(b)) => {
                 if a.len() != b.len() {
                     return false;
                 }

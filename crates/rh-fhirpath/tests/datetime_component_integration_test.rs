@@ -1,6 +1,7 @@
 //! Integration tests for date/time component extraction functions
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rust_decimal::Decimal;
 use serde_json::json;
 
 fn extract_single_value(result: FhirPathValue) -> FhirPathValue {
@@ -130,7 +131,7 @@ fn test_timezone_offset_integration() {
 
     let value = extract_single_value(result);
     if let FhirPathValue::Number(offset) = value {
-        assert_eq!(offset, 0.0);
+        assert_eq!(offset, Decimal::from_str_exact("0.0").unwrap());
     } else {
         panic!("Expected Number value, got: {value:?}");
     }
@@ -143,7 +144,7 @@ fn test_timezone_offset_integration() {
 
     let value = extract_single_value(result);
     if let FhirPathValue::Number(offset) = value {
-        assert_eq!(offset, -5.0);
+        assert_eq!(offset, Decimal::from_str_exact("-5.0").unwrap());
     } else {
         panic!("Expected Number value, got: {value:?}");
     }

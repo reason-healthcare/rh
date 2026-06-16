@@ -143,7 +143,10 @@ pub fn evaluate_fhirpath_expression(
 
     // Convert result to a more user-friendly format
     let result_json = match result {
-        crate::FhirPathValue::Collection(ref items) if items.is_empty() => {
+        crate::FhirPathValue::Collection(ref items)
+        | crate::FhirPathValue::UnorderedCollection(ref items)
+            if items.is_empty() =>
+        {
             serde_json::json!({
                 "result": [],
                 "count": 0,
@@ -151,7 +154,8 @@ pub fn evaluate_fhirpath_expression(
                 "trace": trace_output
             })
         }
-        crate::FhirPathValue::Collection(ref items) => {
+        crate::FhirPathValue::Collection(ref items)
+        | crate::FhirPathValue::UnorderedCollection(ref items) => {
             let json_items: Vec<serde_json::Value> =
                 items.iter().map(|item| item.to_json()).collect();
             serde_json::json!({

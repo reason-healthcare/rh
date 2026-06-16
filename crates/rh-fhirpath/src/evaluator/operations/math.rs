@@ -2,13 +2,12 @@
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 
-/// Evaluator for mathematical functions in FHIRPath expressions
 pub struct MathEvaluator;
 
 impl MathEvaluator {
-    /// Absolute value function - abs()
-    /// Returns the absolute value of a number or Quantity.
     pub fn abs(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(n.abs())),
@@ -18,7 +17,7 @@ impl MathEvaluator {
                 unit: unit.clone(),
             }),
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::abs(&items[0])
                 } else if items.is_empty() {
@@ -35,13 +34,13 @@ impl MathEvaluator {
         }
     }
 
-    /// Ceiling function - ceiling()
-    /// Returns the smallest integer greater than or equal to the input
     pub fn ceiling(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(n.ceil() as i64)),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(
+                n.ceil().to_i64().unwrap_or(i64::MAX),
+            )),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::ceiling(&items[0])
                 } else if items.is_empty() {
@@ -59,14 +58,16 @@ impl MathEvaluator {
         }
     }
 
-    /// Exponential function - exp()
-    /// Returns e raised to the power of the input. Propagates empty.
     pub fn exp(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Number((*n as f64).exp())),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Number(n.exp())),
+            FhirPathValue::Integer(n) => Ok(FhirPathValue::Number(
+                Decimal::from_f64_retain((*n as f64).exp()).unwrap_or(Decimal::ZERO),
+            )),
+            FhirPathValue::Number(n) => Ok(FhirPathValue::Number(
+                Decimal::from_f64_retain(n.to_f64().unwrap().exp()).unwrap_or(Decimal::ZERO),
+            )),
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::exp(&items[0])
                 } else if items.is_empty() {
@@ -83,13 +84,13 @@ impl MathEvaluator {
         }
     }
 
-    /// Floor function - floor()
-    /// Returns the largest integer less than or equal to the input
     pub fn floor(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(n.floor() as i64)),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(
+                n.floor().to_i64().unwrap_or(i64::MIN),
+            )),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::floor(&items[0])
                 } else if items.is_empty() {
@@ -107,8 +108,6 @@ impl MathEvaluator {
         }
     }
 
-    /// Natural logarithm function - ln()
-    /// Returns the natural logarithm of the input
     pub fn ln(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => {
@@ -117,19 +116,23 @@ impl MathEvaluator {
                         message: "ln() requires a positive number".to_string(),
                     })
                 } else {
-                    Ok(FhirPathValue::Number((*n as f64).ln()))
+                    Ok(FhirPathValue::Number(
+                        Decimal::from_f64_retain((*n as f64).ln()).unwrap_or(Decimal::ZERO),
+                    ))
                 }
             }
             FhirPathValue::Number(n) => {
-                if *n <= 0.0 {
+                if *n <= Decimal::ZERO {
                     Err(FhirPathError::EvaluationError {
                         message: "ln() requires a positive number".to_string(),
                     })
                 } else {
-                    Ok(FhirPathValue::Number(n.ln()))
+                    Ok(FhirPathValue::Number(
+                        Decimal::from_f64_retain(n.to_f64().unwrap().ln()).unwrap_or(Decimal::ZERO),
+                    ))
                 }
             }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::ln(&items[0])
                 } else if items.is_empty() {
@@ -146,11 +149,9 @@ impl MathEvaluator {
         }
     }
 
-    /// Logarithm function - log(base)
-    /// Returns the logarithm of the target with the specified base
     pub fn log(target: &FhirPathValue, base: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        let target_num = Self::extract_number(target)?;
-        let base_num = Self::extract_number(base)?;
+        let target_num = Self::extract_number_f64(target)?;
+        let base_num = Self::extract_number_f64(base)?;
 
         if target_num <= 0.0 {
             return Err(FhirPathError::EvaluationError {
@@ -164,55 +165,71 @@ impl MathEvaluator {
             });
         }
 
-        Ok(FhirPathValue::Number(target_num.log(base_num)))
+        Ok(FhirPathValue::Number(
+            Decimal::from_f64_retain(target_num.log(base_num)).unwrap_or(Decimal::ZERO),
+        ))
     }
 
-    /// Power function - power(exponent)
-    /// Returns the target raised to the power of the exponent
     pub fn power(
         target: &FhirPathValue,
         exponent: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let base_num = Self::extract_number(target)?;
-        let exp_num = Self::extract_number(exponent)?;
+        let base_num = Self::extract_number_f64(target)?;
+        let exp_num = Self::extract_number_f64(exponent)?;
 
         let result = base_num.powf(exp_num);
 
-        // Invalid result (e.g. sqrt of negative) → empty per spec
         if result.is_nan() {
             return Ok(FhirPathValue::Empty);
         }
 
-        // If the result is a whole number and both inputs were integers, return an integer
         if result.fract() == 0.0
             && Self::is_integer_value(target)
             && Self::is_integer_value(exponent)
         {
             Ok(FhirPathValue::Integer(result as i64))
         } else {
-            Ok(FhirPathValue::Number(result))
+            Ok(FhirPathValue::Number(
+                Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
+            ))
         }
     }
 
-    /// Round function - round([precision])
-    /// Returns the input rounded to the specified number of decimal places (default 0)
     pub fn round(
         target: &FhirPathValue,
         precision: Option<&FhirPathValue>,
     ) -> FhirPathResult<FhirPathValue> {
         let num = Self::extract_number(target)?;
 
-        let precision_val = if let Some(p) = precision {
+        let precision_val: u32 = if let Some(p) = precision {
             match p {
-                FhirPathValue::Integer(i) => *i as i32,
-                FhirPathValue::Collection(items) if items.len() == 1 => match &items[0] {
-                    FhirPathValue::Integer(i) => *i as i32,
-                    _ => {
-                        return Err(FhirPathError::TypeError {
-                            message: "round() precision must be an integer".to_string(),
-                        })
+                FhirPathValue::Integer(i) => {
+                    if *i < 0 {
+                        return Err(FhirPathError::EvaluationError {
+                            message: "round() precision must be non-negative".to_string(),
+                        });
                     }
-                },
+                    *i as u32
+                }
+                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                    if items.len() == 1 =>
+                {
+                    match &items[0] {
+                        FhirPathValue::Integer(i) => {
+                            if *i < 0 {
+                                return Err(FhirPathError::EvaluationError {
+                                    message: "round() precision must be non-negative".to_string(),
+                                });
+                            }
+                            *i as u32
+                        }
+                        _ => {
+                            return Err(FhirPathError::TypeError {
+                                message: "round() precision must be an integer".to_string(),
+                            })
+                        }
+                    }
+                }
                 _ => {
                     return Err(FhirPathError::TypeError {
                         message: "round() precision must be an integer".to_string(),
@@ -223,43 +240,39 @@ impl MathEvaluator {
             0
         };
 
-        if precision_val < 0 {
-            return Err(FhirPathError::EvaluationError {
-                message: "round() precision must be non-negative".to_string(),
-            });
-        }
+        let result = num.round_dp(precision_val);
 
-        let multiplier = 10_f64.powi(precision_val);
-        let result = (num * multiplier).round() / multiplier;
-
-        // If precision is 0 and the original was an integer, return integer
         if precision_val == 0 && Self::is_integer_value(target) {
-            Ok(FhirPathValue::Integer(result as i64))
+            Ok(FhirPathValue::Integer(
+                result.trunc().to_i64().unwrap_or(i64::MAX),
+            ))
         } else {
             Ok(FhirPathValue::Number(result))
         }
     }
 
-    /// Square root function - sqrt()
-    /// Returns the square root of the input. Returns empty for negative inputs
-    /// per the FHIRPath spec (undefined result → propagate empty).
     pub fn sqrt(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => {
                 if *n < 0 {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number((*n as f64).sqrt()))
+                    Ok(FhirPathValue::Number(
+                        Decimal::from_f64_retain((*n as f64).sqrt()).unwrap_or(Decimal::ZERO),
+                    ))
                 }
             }
             FhirPathValue::Number(n) => {
-                if *n < 0.0 {
+                if *n < Decimal::ZERO {
                     Ok(FhirPathValue::Empty)
                 } else {
-                    Ok(FhirPathValue::Number(n.sqrt()))
+                    Ok(FhirPathValue::Number(
+                        Decimal::from_f64_retain(n.to_f64().unwrap().sqrt())
+                            .unwrap_or(Decimal::ZERO),
+                    ))
                 }
             }
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::sqrt(&items[0])
                 } else if items.is_empty() {
@@ -276,13 +289,11 @@ impl MathEvaluator {
         }
     }
 
-    /// Truncate function - truncate()
-    /// Returns the integer part of the input (truncates toward zero)
     pub fn truncate(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(n.trunc() as i64)),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(n.trunc().to_i64().unwrap_or(0))),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::truncate(&items[0])
                 } else if items.is_empty() {
@@ -303,14 +314,11 @@ impl MathEvaluator {
         }
     }
 
-    // Helper functions
-
-    /// Extract a numeric value from a FhirPathValue
-    fn extract_number(value: &FhirPathValue) -> FhirPathResult<f64> {
+    fn extract_number(value: &FhirPathValue) -> FhirPathResult<Decimal> {
         match value {
-            FhirPathValue::Integer(n) => Ok(*n as f64),
+            FhirPathValue::Integer(n) => Ok(Decimal::from(*n)),
             FhirPathValue::Number(n) => Ok(*n),
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::extract_number(&items[0])
                 } else if items.is_empty() {
@@ -329,19 +337,40 @@ impl MathEvaluator {
         }
     }
 
-    /// Check if a value represents an integer (even if stored as Number)
+    fn extract_number_f64(value: &FhirPathValue) -> FhirPathResult<f64> {
+        match value {
+            FhirPathValue::Integer(n) => Ok(*n as f64),
+            FhirPathValue::Number(n) => Ok(n.to_f64().unwrap_or(0.0)),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                if items.len() == 1 {
+                    Self::extract_number_f64(&items[0])
+                } else if items.is_empty() {
+                    Err(FhirPathError::TypeError {
+                        message: "Cannot extract number from empty collection".to_string(),
+                    })
+                } else {
+                    Err(FhirPathError::TypeError {
+                        message: "Cannot extract number from multi-item collection".to_string(),
+                    })
+                }
+            }
+            _ => Err(FhirPathError::TypeError {
+                message: format!("Expected number, got {}", Self::type_name(value)),
+            }),
+        }
+    }
+
     fn is_integer_value(value: &FhirPathValue) -> bool {
         match value {
             FhirPathValue::Integer(_) => true,
-            FhirPathValue::Number(n) => n.fract() == 0.0,
-            FhirPathValue::Collection(items) => {
+            FhirPathValue::Number(n) => n.fract() == Decimal::ZERO,
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 items.len() == 1 && Self::is_integer_value(&items[0])
             }
             _ => false,
         }
     }
 
-    /// Get type name for error messages
     fn type_name(value: &FhirPathValue) -> &'static str {
         match value {
             FhirPathValue::Boolean(_) => "Boolean",
@@ -355,8 +384,10 @@ impl MathEvaluator {
             FhirPathValue::TypedDateTime { .. } => "DateTime",
             FhirPathValue::Time(_) => "Time",
             FhirPathValue::Quantity { .. } => "Quantity",
-            FhirPathValue::Collection(_) => "Collection",
+            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => "Collection",
             FhirPathValue::Object(_) => "Object",
+            FhirPathValue::TypedObject { .. } => "Object",
+            FhirPathValue::FhirPrimitive { inner, .. } => Self::type_name(inner),
             FhirPathValue::DateTimePrecision(_) => "DateTimePrecision",
             FhirPathValue::Empty => "Empty",
         }
@@ -367,6 +398,10 @@ impl MathEvaluator {
 mod tests {
     use super::*;
 
+    fn d(s: &str) -> Decimal {
+        Decimal::from_str_exact(s).unwrap()
+    }
+
     #[test]
     fn test_abs() {
         assert_eq!(
@@ -374,8 +409,8 @@ mod tests {
             FhirPathValue::Integer(5)
         );
         assert_eq!(
-            MathEvaluator::abs(&FhirPathValue::Number(-3.15)).unwrap(),
-            FhirPathValue::Number(3.15)
+            MathEvaluator::abs(&FhirPathValue::Number(d("-3.15"))).unwrap(),
+            FhirPathValue::Number(d("3.15"))
         );
         assert_eq!(
             MathEvaluator::abs(&FhirPathValue::Integer(10)).unwrap(),
@@ -386,11 +421,11 @@ mod tests {
     #[test]
     fn test_ceiling() {
         assert_eq!(
-            MathEvaluator::ceiling(&FhirPathValue::Number(3.15)).unwrap(),
+            MathEvaluator::ceiling(&FhirPathValue::Number(d("3.15"))).unwrap(),
             FhirPathValue::Integer(4)
         );
         assert_eq!(
-            MathEvaluator::ceiling(&FhirPathValue::Number(-2.7)).unwrap(),
+            MathEvaluator::ceiling(&FhirPathValue::Number(d("-2.7"))).unwrap(),
             FhirPathValue::Integer(-2)
         );
         assert_eq!(
@@ -402,11 +437,11 @@ mod tests {
     #[test]
     fn test_floor() {
         assert_eq!(
-            MathEvaluator::floor(&FhirPathValue::Number(3.15)).unwrap(),
+            MathEvaluator::floor(&FhirPathValue::Number(d("3.15"))).unwrap(),
             FhirPathValue::Integer(3)
         );
         assert_eq!(
-            MathEvaluator::floor(&FhirPathValue::Number(-2.7)).unwrap(),
+            MathEvaluator::floor(&FhirPathValue::Number(d("-2.7"))).unwrap(),
             FhirPathValue::Integer(-3)
         );
         assert_eq!(
@@ -419,14 +454,13 @@ mod tests {
     fn test_sqrt() {
         assert_eq!(
             MathEvaluator::sqrt(&FhirPathValue::Integer(16)).unwrap(),
-            FhirPathValue::Number(4.0)
+            FhirPathValue::Number(d("4"))
         );
         assert_eq!(
-            MathEvaluator::sqrt(&FhirPathValue::Number(2.25)).unwrap(),
-            FhirPathValue::Number(1.5)
+            MathEvaluator::sqrt(&FhirPathValue::Number(d("2.25"))).unwrap(),
+            FhirPathValue::Number(d("1.5"))
         );
 
-        // Negative number → empty per spec
         assert_eq!(
             MathEvaluator::sqrt(&FhirPathValue::Integer(-1)).unwrap(),
             FhirPathValue::Empty
@@ -436,11 +470,11 @@ mod tests {
     #[test]
     fn test_truncate() {
         assert_eq!(
-            MathEvaluator::truncate(&FhirPathValue::Number(3.15)).unwrap(),
+            MathEvaluator::truncate(&FhirPathValue::Number(d("3.15"))).unwrap(),
             FhirPathValue::Integer(3)
         );
         assert_eq!(
-            MathEvaluator::truncate(&FhirPathValue::Number(-2.7)).unwrap(),
+            MathEvaluator::truncate(&FhirPathValue::Number(d("-2.7"))).unwrap(),
             FhirPathValue::Integer(-2)
         );
         assert_eq!(
@@ -456,8 +490,12 @@ mod tests {
             FhirPathValue::Integer(8)
         );
         assert_eq!(
-            MathEvaluator::power(&FhirPathValue::Number(2.0), &FhirPathValue::Number(0.5)).unwrap(),
-            FhirPathValue::Number(2.0_f64.sqrt()) // Use computed sqrt(2)
+            MathEvaluator::power(
+                &FhirPathValue::Number(d("2")),
+                &FhirPathValue::Number(d("0.5"))
+            )
+            .unwrap(),
+            FhirPathValue::Number(Decimal::from_f64_retain(2.0_f64.sqrt()).unwrap())
         );
     }
 
@@ -465,17 +503,16 @@ mod tests {
     fn test_round() {
         assert_eq!(
             MathEvaluator::round(
-                &FhirPathValue::Number(3.15159),
+                &FhirPathValue::Number(d("3.15159")),
                 Some(&FhirPathValue::Integer(2))
             )
             .unwrap(),
-            FhirPathValue::Number(3.15)
+            FhirPathValue::Number(d("3.15"))
         );
         assert_eq!(
-            MathEvaluator::round(&FhirPathValue::Number(3.7), None).unwrap(),
-            FhirPathValue::Number(4.0)
+            MathEvaluator::round(&FhirPathValue::Number(d("3.7")), None).unwrap(),
+            FhirPathValue::Number(d("4"))
         );
-        // Test with integer input - should return integer
         assert_eq!(
             MathEvaluator::round(&FhirPathValue::Integer(5), None).unwrap(),
             FhirPathValue::Integer(5)
