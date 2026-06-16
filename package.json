@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.11.0",
+  "workspaces": [
+    "packages/*",
+    "examples/playground"
+  ],
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
