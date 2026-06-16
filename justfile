@@ -168,6 +168,219 @@ bump-workspace-version new-version:
 bump-validator-version new-version:
     python3 scripts/bump-version validator {{new-version}}
 
+# Regenerate R4 crate from hl7.fhir.r4.core@4.0.1
+# Preserves tests/ directory. Requires network for first download; uses cache thereafter.
+regen-r4:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Regenerating R4 crate (hl7.fhir.r4.core 4.0.1)..."
+    OUTPUT="crates/rh-hl7_fhir_r4_core"
+    # Preserve hand-authored test files
+    TEST_BACKUP=$(mktemp -d)
+    if [ -d "$OUTPUT/tests" ]; then
+        cp -r "$OUTPUT/tests"/* "$TEST_BACKUP/" 2>/dev/null || true
+    fi
+    # Remove generated src/ content (Cargo.toml left intact so workspace resolves)
+    rm -rf "$OUTPUT/src"
+    rm -f "$OUTPUT/README.md"
+    # Ensure workspace can resolve: need minimal Cargo.toml + src/lib.rs
+    mkdir -p "$OUTPUT/src"
+    if [ ! -f "$OUTPUT/Cargo.toml" ]; then
+        printf '[package]\nname = "rh-hl7-fhir-r4-core"\nversion = "0.2.0"\nedition = "2021"\n' > "$OUTPUT/Cargo.toml"
+    fi
+    cat > "$OUTPUT/src/lib.rs" <<'EOF'
+    pub mod metadata;
+    EOF
+    cat > "$OUTPUT/src/metadata.rs" <<'EOF'
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum FhirPrimitiveType {
+        Boolean, Integer, String, Date, DateTime, Instant, Time, Decimal, Uri, Url, Canonical,
+        Code, Oid, Id, Markdown, Base64Binary, UnsignedInt, PositiveInt,
+    }
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum FhirFieldType {
+        Primitive(FhirPrimitiveType),
+        Complex(&'static str),
+        Reference,
+        BackboneElement(&'static str),
+    }
+    #[derive(Debug, Clone)]
+    pub struct FieldInfo {
+        pub field_type: FhirFieldType,
+        pub min: u32,
+        pub max: Option<u32>,
+        pub is_choice_type: bool,
+        pub choice_types: &'static [&'static str],
+    }
+    pub fn get_field_info(_type_name: &str, _field_name: &str) -> Option<&'static FieldInfo> {
+        None
+    }
+    EOF
+    # Regenerate
+    cargo run -p rh-cli -- codegen hl7.fhir.r4.core 4.0.1 \
+        --output "$OUTPUT" \
+        --crate-name rh-hl7-fhir-r4-core \
+        --force
+    # Restore tests
+    if [ -d "$TEST_BACKUP" ] && [ "$(ls -A "$TEST_BACKUP" 2>/dev/null)" ]; then
+        mkdir -p "$OUTPUT/tests"
+        cp -r "$TEST_BACKUP"/* "$OUTPUT/tests/"
+    fi
+    rm -rf "$TEST_BACKUP"
+    echo "Building regenerated R4 crate..."
+    cargo build -p rh-hl7-fhir-r4-core
+    echo "Testing regenerated R4 crate..."
+    cargo test -p rh-hl7-fhir-r4-core
+    echo "R4 regeneration complete."
+
+# Regenerate R5 crate from hl7.fhir.r5.core@5.0.0
+# Preserves tests/ directory. Requires network for first download; uses cache thereafter.
+regen-r5:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Regenerating R5 crate (hl7.fhir.r5.core 5.0.0)..."
+    OUTPUT="crates/rh-hl7_fhir_r5_core"
+    # Preserve hand-authored test files
+    TEST_BACKUP=$(mktemp -d)
+    if [ -d "$OUTPUT/tests" ]; then
+        cp -r "$OUTPUT/tests"/* "$TEST_BACKUP/" 2>/dev/null || true
+    fi
+    # Remove generated src/ content (Cargo.toml left intact so workspace resolves)
+    rm -rf "$OUTPUT/src"
+    rm -f "$OUTPUT/README.md"
+    # Ensure workspace can resolve: need minimal Cargo.toml + src/lib.rs
+    mkdir -p "$OUTPUT/src"
+    if [ ! -f "$OUTPUT/Cargo.toml" ]; then
+        printf '[package]\nname = "rh-hl7-fhir-r5-core"\nversion = "0.2.0"\nedition = "2021"\n' > "$OUTPUT/Cargo.toml"
+    fi
+    cat > "$OUTPUT/src/lib.rs" <<'EOF'
+    pub mod metadata;
+    EOF
+    cat > "$OUTPUT/src/metadata.rs" <<'EOF'
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum FhirPrimitiveType {
+        Boolean, Integer, String, Date, DateTime, Instant, Time, Decimal, Uri, Url, Canonical,
+        Code, Oid, Id, Markdown, Base64Binary, UnsignedInt, PositiveInt,
+    }
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum FhirFieldType {
+        Primitive(FhirPrimitiveType),
+        Complex(&'static str),
+        Reference,
+        BackboneElement(&'static str),
+    }
+    #[derive(Debug, Clone)]
+    pub struct FieldInfo {
+        pub field_type: FhirFieldType,
+        pub min: u32,
+        pub max: Option<u32>,
+        pub is_choice_type: bool,
+        pub choice_types: &'static [&'static str],
+    }
+    pub fn get_field_info(_type_name: &str, _field_name: &str) -> Option<&'static FieldInfo> {
+        None
+    }
+    EOF
+    # Regenerate core types
+    cargo run -p rh-cli -- codegen hl7.fhir.r5.core 5.0.0 \
+        --output "$OUTPUT" \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force
+    # Regenerate R5 extensions in isolation, then merge extension modules into the core crate.
+    # Running the extension package in-place with --force would delete the generated core crate.
+    echo "Adding R5 extensions from hl7.fhir.uv.extensions..."
+    EXT_OUTPUT=$(mktemp -d)
+    if cargo run -p rh-cli -- codegen hl7.fhir.uv.extensions 5.1.0-snapshot1 \
+        --output "$EXT_OUTPUT" \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force 2>/dev/null; then
+        mkdir -p "$OUTPUT/src/extensions"
+        find "$EXT_OUTPUT/src/extensions" -maxdepth 1 -type f -name '*.rs' ! -name 'mod.rs' \
+            -exec cp {} "$OUTPUT/src/extensions/" \;
+        {
+            echo "//! FHIR extension types"
+            echo
+            find "$OUTPUT/src/extensions" -maxdepth 1 -type f -name '*.rs' ! -name 'mod.rs' \
+                -exec basename {} .rs \; | sort | sed 's/^/pub mod /; s/$/;/'
+        } > "$OUTPUT/src/extensions/mod.rs"
+    else
+        echo "Warning: R5 extensions package not available, skipping"
+    fi
+    rm -rf "$EXT_OUTPUT"
+    # Restore tests
+    if [ -d "$TEST_BACKUP" ] && [ "$(ls -A "$TEST_BACKUP" 2>/dev/null)" ]; then
+        mkdir -p "$OUTPUT/tests"
+        cp -r "$TEST_BACKUP"/* "$OUTPUT/tests/"
+    fi
+    rm -rf "$TEST_BACKUP"
+    echo "Building regenerated R5 crate..."
+    cargo build -p rh-hl7-fhir-r5-core
+    echo "Testing regenerated R5 crate..."
+    cargo test -p rh-hl7-fhir-r5-core
+    echo "R5 regeneration complete."
+
+# Check that R4/R5 generated crates are up to date (no drift)
+# Run this in CI to detect stale generated code.
+regen-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PKG_DIR=$(mktemp -d)
+    EXT_OUTPUT=""
+    trap 'rm -rf "$PKG_DIR" /tmp/rh-regen-check-r4 /tmp/rh-regen-check-r5 "$EXT_OUTPUT"' EXIT
+    echo "Checking R4 crate for drift..."
+    cargo run -p rh-cli -- codegen hl7.fhir.r4.core 4.0.1 \
+        --package-dir "$PKG_DIR" \
+        --overwrite \
+        --output /tmp/rh-regen-check-r4 \
+        --crate-name rh-hl7-fhir-r4-core \
+        --force 2>/dev/null
+    echo "Checking R5 crate for drift..."
+    cargo run -p rh-cli -- codegen hl7.fhir.r5.core 5.0.0 \
+        --package-dir "$PKG_DIR" \
+        --overwrite \
+        --output /tmp/rh-regen-check-r5 \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force 2>/dev/null
+    echo "Adding R5 extensions for drift check..."
+    EXT_OUTPUT=$(mktemp -d)
+    if cargo run -p rh-cli -- codegen hl7.fhir.uv.extensions 5.1.0-snapshot1 \
+        --package-dir "$PKG_DIR" \
+        --overwrite \
+        --output "$EXT_OUTPUT" \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force 2>/dev/null; then
+        mkdir -p /tmp/rh-regen-check-r5/src/extensions
+        find "$EXT_OUTPUT/src/extensions" -maxdepth 1 -type f -name '*.rs' ! -name 'mod.rs' \
+            -exec cp {} /tmp/rh-regen-check-r5/src/extensions/ \;
+        {
+            echo "//! FHIR extension types"
+            echo
+            find /tmp/rh-regen-check-r5/src/extensions -maxdepth 1 -type f -name '*.rs' ! -name 'mod.rs' \
+                -exec basename {} .rs \; | sort | sed 's/^/pub mod /; s/$/;/'
+        } > /tmp/rh-regen-check-r5/src/extensions/mod.rs
+    else
+        echo "Warning: R5 extensions package not available, skipping"
+    fi
+    # Compare only src/ (generated content), not tests/ (hand-authored)
+    R4_DIFF=0; R5_DIFF=0
+    diff -rq crates/rh-hl7_fhir_r4_core/src /tmp/rh-regen-check-r4/src || R4_DIFF=$?
+    diff -rq crates/rh-hl7_fhir_r5_core/src /tmp/rh-regen-check-r5/src || R5_DIFF=$?
+    if [ "$R4_DIFF" -ne 0 ] || [ "$R5_DIFF" -ne 0 ]; then
+        echo "Drift diff preview:"
+        for checked in crates/rh-hl7_fhir_r4_core/src/metadata/datatypes.rs crates/rh-hl7_fhir_r4_core/src/metadata/primitives.rs crates/rh-hl7_fhir_r5_core/src/metadata/datatypes.rs crates/rh-hl7_fhir_r5_core/src/metadata/primitives.rs; do
+            generated="${checked/crates\/rh-hl7_fhir_r4_core\/src/\/tmp\/rh-regen-check-r4\/src}"
+            generated="${generated/crates\/rh-hl7_fhir_r5_core\/src/\/tmp\/rh-regen-check-r5\/src}"
+            if [ -f "$generated" ] && ! cmp -s "$checked" "$generated"; then
+                echo "--- $checked"
+                diff -u "$checked" "$generated" | sed -n '1,220p' || true
+            fi
+        done
+        echo "ERROR: Generated crates have drifted from codegen output."
+        echo "Run just regen-r4 and just regen-r5 to update, then commit."
+        exit 1
+    fi
+    echo "No drift detected. Generated crates are up to date."
+
 # Build WASM packages for all WASM-capable crates (rh-fhirpath and rh-vcl)
 wasm:
     cd crates/rh-fhirpath && just wasm

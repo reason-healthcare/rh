@@ -34,24 +34,31 @@ pub struct ServiceRequest {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Identifiers assigned to this order
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// What request fulfills
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// What request replaces
-    pub replaces: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replaces: Vec<Reference>,
     /// Composite Request ID
     pub requisition: Option<Identifier>,
     /// draft | active | on-hold | revoked | completed | entered-in-error | unknown
@@ -72,7 +79,8 @@ pub struct ServiceRequest {
     /// - `409063005`: Counselling
     /// - `409073007`: Education
     /// - `387713003`: Surgical procedure
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// routine | urgent | asap | stat
     pub priority: Option<RequestPriority>,
     /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
@@ -91,7 +99,8 @@ pub struct ServiceRequest {
     pub code: Option<CodeableReference>,
     /// Additional order information
     #[serde(rename = "orderDetail")]
-    pub order_detail: Option<Vec<ServiceRequestOrderdetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub order_detail: Vec<ServiceRequestOrderdetail>,
     /// Service amount (Quantity)
     #[serde(rename = "quantityQuantity")]
     pub quantity_quantity: Option<Quantity>,
@@ -104,7 +113,8 @@ pub struct ServiceRequest {
     /// Individual or Entity the service is ordered for
     pub subject: Reference,
     /// What the service request is about, when it is not about the subject of record
-    pub focus: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<Reference>,
     /// Encounter in which the request was created
     pub encounter: Option<Reference>,
     /// When service should occur (dateTime)
@@ -141,26 +151,32 @@ pub struct ServiceRequest {
     #[serde(rename = "performerType")]
     pub performer_type: Option<CodeableConcept>,
     /// Requested performer
-    pub performer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<Reference>,
     /// Requested location
     ///
     /// Binding: example (A location type where services are delivered.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType
-    pub location: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<CodeableReference>,
     /// Explanation/Justification for procedure or service
     ///
     /// Binding: example (SNOMED CT Condition/Problem/Diagnosis Codes)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/procedure-reason
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Associated insurance coverage
-    pub insurance: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<Reference>,
     /// Additional clinical information
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<CodeableReference>,
     /// Procedure Samples
-    pub specimen: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specimen: Vec<Reference>,
     /// Coded location on Body
     ///
     /// Binding: example (SNOMED CT Body site concepts)
@@ -178,18 +194,22 @@ pub struct ServiceRequest {
     /// - `371203008`: Distal interphalangeal joint of fifth toe
     /// - ... and 30 more values
     #[serde(rename = "bodySite")]
-    pub body_site: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_site: Vec<CodeableConcept>,
     /// BodyStructure-based location on the body
     #[serde(rename = "bodyStructure")]
     pub body_structure: Option<Reference>,
     /// Comments
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Patient or consumer-oriented instructions
     #[serde(rename = "patientInstruction")]
-    pub patient_instruction: Option<Vec<ServiceRequestPatientinstruction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patient_instruction: Vec<ServiceRequestPatientinstruction>,
     /// Request provenance
     #[serde(rename = "relevantHistory")]
-    pub relevant_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relevant_history: Vec<Reference>,
 }
 /// ServiceRequest nested structure for the 'orderDetail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -202,19 +222,6 @@ pub struct ServiceRequestOrderdetail {
     /// The context of the order details by reference
     #[serde(rename = "parameterFocus")]
     pub parameter_focus: Option<CodeableReference>,
-}
-/// ServiceRequest nested structure for the 'patientInstruction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceRequestPatientinstruction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Patient or consumer-oriented instructions (markdown)
-    #[serde(rename = "instructionMarkdown")]
-    pub instruction_markdown: Option<StringType>,
-    /// Patient or consumer-oriented instructions (Reference)
-    #[serde(rename = "instructionReference")]
-    pub instruction_reference: Option<Reference>,
 }
 /// ServiceRequestOrderdetail nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -249,6 +256,19 @@ pub struct ServiceRequestOrderdetailParameter {
     /// The value for the order detail (Period)
     #[serde(rename = "valuePeriod")]
     pub value_period: Period,
+}
+/// ServiceRequest nested structure for the 'patientInstruction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceRequestPatientinstruction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Patient or consumer-oriented instructions (markdown)
+    #[serde(rename = "instructionMarkdown")]
+    pub instruction_markdown: Option<StringType>,
+    /// Patient or consumer-oriented instructions (Reference)
+    #[serde(rename = "instructionReference")]
+    pub instruction_reference: Option<Reference>,
 }
 
 impl Default for ServiceRequest {
@@ -314,16 +334,6 @@ impl Default for ServiceRequestOrderdetail {
     }
 }
 
-impl Default for ServiceRequestPatientinstruction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            instruction_markdown: Default::default(),
-            instruction_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for ServiceRequestOrderdetailParameter {
     fn default() -> Self {
         Self {
@@ -336,6 +346,16 @@ impl Default for ServiceRequestOrderdetailParameter {
             value_codeable_concept: Default::default(),
             value_string: Default::default(),
             value_period: Default::default(),
+        }
+    }
+}
+
+impl Default for ServiceRequestPatientinstruction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            instruction_markdown: Default::default(),
+            instruction_reference: Default::default(),
         }
     }
 }
@@ -565,13 +585,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ServiceRequest 
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -586,44 +606,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ServiceRequest {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -633,34 +641,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for ServiceRequest 
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::service_request::ServiceRequestAccessors for ServiceRequest {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn replaces(&self) -> &[Reference] {
-        self.replaces.as_deref().unwrap_or(&[])
+        self.replaces.as_slice()
     }
     fn requisition(&self) -> Option<Identifier> {
         self.requisition.clone()
@@ -672,7 +677,7 @@ impl crate::traits::service_request::ServiceRequestAccessors for ServiceRequest 
         self.intent.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn priority(&self) -> Option<RequestPriority> {
         self.priority.clone()
@@ -684,13 +689,13 @@ impl crate::traits::service_request::ServiceRequestAccessors for ServiceRequest 
         self.code.clone()
     }
     fn order_detail(&self) -> &[ServiceRequestOrderdetail] {
-        self.order_detail.as_deref().unwrap_or(&[])
+        self.order_detail.as_slice()
     }
     fn subject(&self) -> Reference {
         self.subject.clone()
     }
     fn focus(&self) -> &[Reference] {
-        self.focus.as_deref().unwrap_or(&[])
+        self.focus.as_slice()
     }
     fn encounter(&self) -> Option<Reference> {
         self.encounter.clone()
@@ -705,37 +710,37 @@ impl crate::traits::service_request::ServiceRequestAccessors for ServiceRequest 
         self.performer_type.clone()
     }
     fn performer(&self) -> &[Reference] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn location(&self) -> &[CodeableReference] {
-        self.location.as_deref().unwrap_or(&[])
+        self.location.as_slice()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn insurance(&self) -> &[Reference] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn supporting_info(&self) -> &[CodeableReference] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn specimen(&self) -> &[Reference] {
-        self.specimen.as_deref().unwrap_or(&[])
+        self.specimen.as_slice()
     }
     fn body_site(&self) -> &[CodeableConcept] {
-        self.body_site.as_deref().unwrap_or(&[])
+        self.body_site.as_slice()
     }
     fn body_structure(&self) -> Option<Reference> {
         self.body_structure.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn patient_instruction(&self) -> &[ServiceRequestPatientinstruction] {
-        self.patient_instruction.as_deref().unwrap_or(&[])
+        self.patient_instruction.as_slice()
     }
     fn relevant_history(&self) -> &[Reference] {
-        self.relevant_history.as_deref().unwrap_or(&[])
+        self.relevant_history.as_slice()
     }
 }
 
@@ -745,58 +750,52 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_replaces(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.replaces = Some(value);
+        resource.replaces = value;
         resource
     }
     fn add_replaces(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource.replaces.push(item);
         resource
     }
     fn set_requisition(self, value: Identifier) -> Self {
@@ -816,12 +815,12 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_priority(self, value: RequestPriority) -> Self {
@@ -841,15 +840,12 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
     }
     fn set_order_detail(self, value: Vec<ServiceRequestOrderdetail>) -> Self {
         let mut resource = self.clone();
-        resource.order_detail = Some(value);
+        resource.order_detail = value;
         resource
     }
     fn add_order_detail(self, item: ServiceRequestOrderdetail) -> Self {
         let mut resource = self.clone();
-        resource
-            .order_detail
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.order_detail.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -859,12 +855,12 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
     }
     fn set_focus(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.focus = Some(value);
+        resource.focus = value;
         resource
     }
     fn add_focus(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.focus.get_or_insert_with(Vec::new).push(item);
+        resource.focus.push(item);
         resource
     }
     fn set_encounter(self, value: Reference) -> Self {
@@ -889,75 +885,72 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
     }
     fn set_performer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_location(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.location = Some(value);
+        resource.location = value;
         resource
     }
     fn add_location(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.location.get_or_insert_with(Vec::new).push(item);
+        resource.location.push(item);
         resource
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_insurance(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_specimen(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.specimen = Some(value);
+        resource.specimen = value;
         resource
     }
     fn add_specimen(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.specimen.get_or_insert_with(Vec::new).push(item);
+        resource.specimen.push(item);
         resource
     }
     fn set_body_site(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.body_site = Some(value);
+        resource.body_site = value;
         resource
     }
     fn add_body_site(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.body_site.get_or_insert_with(Vec::new).push(item);
+        resource.body_site.push(item);
         resource
     }
     fn set_body_structure(self, value: Reference) -> Self {
@@ -967,74 +960,64 @@ impl crate::traits::service_request::ServiceRequestMutators for ServiceRequest {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_patient_instruction(self, value: Vec<ServiceRequestPatientinstruction>) -> Self {
         let mut resource = self.clone();
-        resource.patient_instruction = Some(value);
+        resource.patient_instruction = value;
         resource
     }
     fn add_patient_instruction(self, item: ServiceRequestPatientinstruction) -> Self {
         let mut resource = self.clone();
-        resource
-            .patient_instruction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.patient_instruction.push(item);
         resource
     }
     fn set_relevant_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.relevant_history = Some(value);
+        resource.relevant_history = value;
         resource
     }
     fn add_relevant_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .relevant_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.relevant_history.push(item);
         resource
     }
 }
 
 impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest {
-    fn has_quantity(&self) -> bool {
-        self.quantity_quantity.is_some()
-            || self.quantity_ratio.is_some()
-            || self.quantity_range.is_some()
+    fn has_as_needed(&self) -> bool {
+        self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
     }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
     }
-    fn has_as_needed(&self) -> bool {
-        self.as_needed_boolean.is_some() || self.as_needed_codeable_concept.is_some()
+    fn has_quantity(&self) -> bool {
+        self.quantity_quantity.is_some()
+            || self.quantity_ratio.is_some()
+            || self.quantity_range.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_replaces(&self) -> bool {
-        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+        !self.replaces.is_empty()
     }
     fn has_requisition(&self) -> bool {
         self.requisition.is_some()
@@ -1046,7 +1029,7 @@ impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest 
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_priority(&self) -> bool {
         self.priority.is_some()
@@ -1058,13 +1041,13 @@ impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest 
         self.code.is_some()
     }
     fn has_order_detail(&self) -> bool {
-        self.order_detail.as_ref().is_some_and(|v| !v.is_empty())
+        !self.order_detail.is_empty()
     }
     fn has_subject(&self) -> bool {
         true
     }
     fn has_focus(&self) -> bool {
-        self.focus.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focus.is_empty()
     }
     fn has_encounter(&self) -> bool {
         self.encounter.is_some()
@@ -1079,41 +1062,37 @@ impl crate::traits::service_request::ServiceRequestExistence for ServiceRequest 
         self.performer_type.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_location(&self) -> bool {
-        self.location.as_ref().is_some_and(|v| !v.is_empty())
+        !self.location.is_empty()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_specimen(&self) -> bool {
-        self.specimen.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specimen.is_empty()
     }
     fn has_body_site(&self) -> bool {
-        self.body_site.as_ref().is_some_and(|v| !v.is_empty())
+        !self.body_site.is_empty()
     }
     fn has_body_structure(&self) -> bool {
         self.body_structure.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_patient_instruction(&self) -> bool {
-        self.patient_instruction
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.patient_instruction.is_empty()
     }
     fn has_relevant_history(&self) -> bool {
-        self.relevant_history
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.relevant_history.is_empty()
     }
 }
 

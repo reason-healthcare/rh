@@ -40,7 +40,8 @@ pub struct Evidence {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the summary
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of this summary
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -94,18 +95,24 @@ pub struct Evidence {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Who authored the content
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the content
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the content
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the content
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Why this Evidence is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -122,7 +129,8 @@ pub struct Evidence {
     pub _copyright_label: Option<Element>,
     /// Link or citation to artifact associated with the summary
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Description of the particular summary
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -132,7 +140,8 @@ pub struct Evidence {
     /// Extension element for the 'assertion' primitive field. Contains metadata and extensions.
     pub _assertion: Option<Element>,
     /// Footnotes and/or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Evidence variable such as population, exposure, or outcome
     #[serde(rename = "variableDefinition")]
     pub variable_definition: Vec<EvidenceVariabledefinition>,
@@ -149,83 +158,14 @@ pub struct Evidence {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/study-design
     #[serde(rename = "studyDesign")]
-    pub study_design: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub study_design: Vec<CodeableConcept>,
     /// Values and parameters for a single statistic
-    pub statistic: Option<Vec<EvidenceStatistic>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub statistic: Vec<EvidenceStatistic>,
     /// Certainty or quality of the evidence
-    pub certainty: Option<Vec<EvidenceCertainty>>,
-}
-/// EvidenceStatisticModelcharacteristic nested structure for the 'variable' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticModelcharacteristicVariable {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Description of the variable
-    #[serde(rename = "variableDefinition")]
-    pub variable_definition: Reference,
-    /// continuous | dichotomous | ordinal | polychotomous
-    pub handling: Option<VariableHandling>,
-    /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
-    pub _handling: Option<Element>,
-    /// Description for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueCategory")]
-    pub value_category: Option<Vec<CodeableConcept>>,
-    /// Discrete value for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Vec<Quantity>>,
-    /// Range of values for grouping of ordinal or polychotomous variables
-    #[serde(rename = "valueRange")]
-    pub value_range: Option<Vec<Range>>,
-}
-/// EvidenceStatistic nested structure for the 'modelCharacteristic' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticModelcharacteristic {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Model specification
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/statistic-model-code
-    pub code: CodeableConcept,
-    /// Numerical value to complete model specification
-    pub value: Option<Quantity>,
-    /// An attribute of the statistic used as a model characteristic
-    #[serde(rename = "attributeEstimate")]
-    pub attribute_estimate: Option<Vec<StringType>>,
-}
-/// EvidenceStatistic nested structure for the 'sampleSize' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticSamplesize {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of sample size for statistic
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Footnote or explanatory note about the sample size
-    pub note: Option<Vec<Annotation>>,
-    /// Number of contributing studies
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<UnsignedIntType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// Cumulative number of participants
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<UnsignedIntType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
-    /// Number of participants with known results for measured variables
-    #[serde(rename = "knownDataCount")]
-    pub known_data_count: Option<UnsignedIntType>,
-    /// Extension element for the 'knownDataCount' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_knownDataCount")]
-    pub _known_data_count: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub certainty: Vec<EvidenceCertainty>,
 }
 /// Evidence nested structure for the 'certainty' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,7 +178,8 @@ pub struct EvidenceCertainty {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Footnotes and/or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Aspect of certainty being rated
     ///
     /// Binding: extensible (The aspect of quality, confidence, or certainty.)
@@ -257,38 +198,8 @@ pub struct EvidenceCertainty {
     /// Extension element for the 'rater' primitive field. Contains metadata and extensions.
     pub _rater: Option<Element>,
     /// A domain or subdomain of certainty
-    pub subcomponent: Option<Vec<StringType>>,
-}
-/// EvidenceStatistic nested structure for the 'attributeEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceStatisticAttributeestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Textual description of the attribute estimate
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Footnote or explanatory note about the estimate
-    pub note: Option<Vec<Annotation>>,
-    /// The type of attribute estimate, e.g., confidence interval or p value
-    ///
-    /// Binding: extensible (No description)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/attribute-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The singular quantity of the attribute estimate, for attribute estimates represented as single values; also used to report unit of measure
-    pub quantity: Option<Quantity>,
-    /// Level of confidence interval, e.g., 0.95 for 95% confidence interval
-    pub level: Option<DecimalType>,
-    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
-    pub _level: Option<Element>,
-    /// Lower and upper bound values of the attribute estimate
-    pub range: Option<Range>,
-    /// A nested attribute estimate; which is the attribute estimate of an attribute estimate
-    #[serde(rename = "attributeEstimate")]
-    pub attribute_estimate: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subcomponent: Vec<StringType>,
 }
 /// Evidence nested structure for the 'statistic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -296,12 +207,14 @@ pub struct EvidenceStatistic {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// An aspect of the statistical model
-    #[serde(rename = "modelCharacteristic")]
-    pub model_characteristic: Option<Vec<EvidenceStatisticModelcharacteristic>>,
     /// An attribute of the Statistic
     #[serde(rename = "attributeEstimate")]
-    pub attribute_estimate: Option<Vec<EvidenceStatisticAttributeestimate>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attribute_estimate: Vec<EvidenceStatisticAttributeestimate>,
+    /// An aspect of the statistical model
+    #[serde(rename = "modelCharacteristic")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub model_characteristic: Vec<EvidenceStatisticModelcharacteristic>,
     /// Number of samples in the statistic
     #[serde(rename = "sampleSize")]
     pub sample_size: Option<EvidenceStatisticSamplesize>,
@@ -310,7 +223,8 @@ pub struct EvidenceStatistic {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Footnotes and/or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Type of statistic, e.g., relative risk
     ///
     /// Binding: extensible (No description)
@@ -335,6 +249,116 @@ pub struct EvidenceStatistic {
     #[serde(rename = "_numberAffected")]
     pub _number_affected: Option<Element>,
 }
+/// EvidenceStatistic nested structure for the 'attributeEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticAttributeestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of the attribute estimate
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Footnote or explanatory note about the estimate
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// The type of attribute estimate, e.g., confidence interval or p value
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/attribute-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The singular quantity of the attribute estimate, for attribute estimates represented as single values; also used to report unit of measure
+    pub quantity: Option<Quantity>,
+    /// Level of confidence interval, e.g., 0.95 for 95% confidence interval
+    pub level: Option<DecimalType>,
+    /// Extension element for the 'level' primitive field. Contains metadata and extensions.
+    pub _level: Option<Element>,
+    /// Lower and upper bound values of the attribute estimate
+    pub range: Option<Range>,
+    /// A nested attribute estimate; which is the attribute estimate of an attribute estimate
+    #[serde(rename = "attributeEstimate")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attribute_estimate: Vec<StringType>,
+}
+/// EvidenceStatistic nested structure for the 'modelCharacteristic' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticModelcharacteristic {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Model specification
+    ///
+    /// Binding: extensible (No description)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/statistic-model-code
+    pub code: CodeableConcept,
+    /// Numerical value to complete model specification
+    pub value: Option<Quantity>,
+    /// An attribute of the statistic used as a model characteristic
+    #[serde(rename = "attributeEstimate")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attribute_estimate: Vec<StringType>,
+}
+/// EvidenceStatisticModelcharacteristic nested structure for the 'variable' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticModelcharacteristicVariable {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Description of the variable
+    #[serde(rename = "variableDefinition")]
+    pub variable_definition: Reference,
+    /// continuous | dichotomous | ordinal | polychotomous
+    pub handling: Option<VariableHandling>,
+    /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
+    pub _handling: Option<Element>,
+    /// Description for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueCategory")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_category: Vec<CodeableConcept>,
+    /// Discrete value for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueQuantity")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_quantity: Vec<Quantity>,
+    /// Range of values for grouping of ordinal or polychotomous variables
+    #[serde(rename = "valueRange")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_range: Vec<Range>,
+}
+/// EvidenceStatistic nested structure for the 'sampleSize' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceStatisticSamplesize {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Textual description of sample size for statistic
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Footnote or explanatory note about the sample size
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// Number of contributing studies
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<UnsignedIntType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// Cumulative number of participants
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<UnsignedIntType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
+    /// Number of participants with known results for measured variables
+    #[serde(rename = "knownDataCount")]
+    pub known_data_count: Option<UnsignedIntType>,
+    /// Extension element for the 'knownDataCount' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_knownDataCount")]
+    pub _known_data_count: Option<Element>,
+}
 /// Evidence nested structure for the 'variableDefinition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceVariabledefinition {
@@ -346,7 +370,8 @@ pub struct EvidenceVariabledefinition {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Footnotes and/or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// population | subpopulation | exposure | referenceExposure | measuredVariable | confounder
     ///
     /// Binding: extensible (The role that the assertion variable plays.)
@@ -423,48 +448,6 @@ impl Default for Evidence {
     }
 }
 
-impl Default for EvidenceStatisticModelcharacteristicVariable {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            variable_definition: Default::default(),
-            handling: Default::default(),
-            _handling: Default::default(),
-            value_category: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceStatisticModelcharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            value: Default::default(),
-            attribute_estimate: Default::default(),
-        }
-    }
-}
-
-impl Default for EvidenceStatisticSamplesize {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            note: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
-            known_data_count: Default::default(),
-            _known_data_count: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceCertainty {
     fn default() -> Self {
         Self {
@@ -477,6 +460,27 @@ impl Default for EvidenceCertainty {
             rater: Default::default(),
             _rater: Default::default(),
             subcomponent: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatistic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            attribute_estimate: Default::default(),
+            model_characteristic: Default::default(),
+            sample_size: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            note: Default::default(),
+            statistic_type: Default::default(),
+            category: Default::default(),
+            quantity: Default::default(),
+            number_of_events: Default::default(),
+            _number_of_events: Default::default(),
+            number_affected: Default::default(),
+            _number_affected: Default::default(),
         }
     }
 }
@@ -498,23 +502,44 @@ impl Default for EvidenceStatisticAttributeestimate {
     }
 }
 
-impl Default for EvidenceStatistic {
+impl Default for EvidenceStatisticModelcharacteristic {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            model_characteristic: Default::default(),
+            code: Default::default(),
+            value: Default::default(),
             attribute_estimate: Default::default(),
-            sample_size: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatisticModelcharacteristicVariable {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            variable_definition: Default::default(),
+            handling: Default::default(),
+            _handling: Default::default(),
+            value_category: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceStatisticSamplesize {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             description: Default::default(),
             _description: Default::default(),
             note: Default::default(),
-            statistic_type: Default::default(),
-            category: Default::default(),
-            quantity: Default::default(),
-            number_of_events: Default::default(),
-            _number_of_events: Default::default(),
-            number_affected: Default::default(),
-            _number_affected: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
+            known_data_count: Default::default(),
+            _known_data_count: Default::default(),
         }
     }
 }
@@ -905,13 +930,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Evidence {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -926,44 +951,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Evidence {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -973,16 +986,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Evidence {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -991,7 +1001,7 @@ impl crate::traits::evidence::EvidenceAccessors for Evidence {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -1021,22 +1031,22 @@ impl crate::traits::evidence::EvidenceAccessors for Evidence {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -1048,7 +1058,7 @@ impl crate::traits::evidence::EvidenceAccessors for Evidence {
         self.copyright_label.clone()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
@@ -1057,7 +1067,7 @@ impl crate::traits::evidence::EvidenceAccessors for Evidence {
         self.assertion.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn variable_definition(&self) -> &[EvidenceVariabledefinition] {
         &self.variable_definition
@@ -1066,13 +1076,13 @@ impl crate::traits::evidence::EvidenceAccessors for Evidence {
         self.synthesis_type.clone()
     }
     fn study_design(&self) -> &[CodeableConcept] {
-        self.study_design.as_deref().unwrap_or(&[])
+        self.study_design.as_slice()
     }
     fn statistic(&self) -> &[EvidenceStatistic] {
-        self.statistic.as_deref().unwrap_or(&[])
+        self.statistic.as_slice()
     }
     fn certainty(&self) -> &[EvidenceCertainty] {
-        self.certainty.as_deref().unwrap_or(&[])
+        self.certainty.as_slice()
     }
 }
 
@@ -1087,12 +1097,12 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1142,62 +1152,62 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1217,15 +1227,12 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1240,12 +1247,12 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_variable_definition(self, value: Vec<EvidenceVariabledefinition>) -> Self {
@@ -1265,35 +1272,32 @@ impl crate::traits::evidence::EvidenceMutators for Evidence {
     }
     fn set_study_design(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.study_design = Some(value);
+        resource.study_design = value;
         resource
     }
     fn add_study_design(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .study_design
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.study_design.push(item);
         resource
     }
     fn set_statistic(self, value: Vec<EvidenceStatistic>) -> Self {
         let mut resource = self.clone();
-        resource.statistic = Some(value);
+        resource.statistic = value;
         resource
     }
     fn add_statistic(self, item: EvidenceStatistic) -> Self {
         let mut resource = self.clone();
-        resource.statistic.get_or_insert_with(Vec::new).push(item);
+        resource.statistic.push(item);
         resource
     }
     fn set_certainty(self, value: Vec<EvidenceCertainty>) -> Self {
         let mut resource = self.clone();
-        resource.certainty = Some(value);
+        resource.certainty = value;
         resource
     }
     fn add_certainty(self, item: EvidenceCertainty) -> Self {
         let mut resource = self.clone();
-        resource.certainty.get_or_insert_with(Vec::new).push(item);
+        resource.certainty.push(item);
         resource
     }
 }
@@ -1309,7 +1313,7 @@ impl crate::traits::evidence::EvidenceExistence for Evidence {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1339,22 +1343,22 @@ impl crate::traits::evidence::EvidenceExistence for Evidence {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1366,9 +1370,7 @@ impl crate::traits::evidence::EvidenceExistence for Evidence {
         self.copyright_label.is_some()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
@@ -1377,7 +1379,7 @@ impl crate::traits::evidence::EvidenceExistence for Evidence {
         self.assertion.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_variable_definition(&self) -> bool {
         !self.variable_definition.is_empty()
@@ -1386,13 +1388,13 @@ impl crate::traits::evidence::EvidenceExistence for Evidence {
         self.synthesis_type.is_some()
     }
     fn has_study_design(&self) -> bool {
-        self.study_design.as_ref().is_some_and(|v| !v.is_empty())
+        !self.study_design.is_empty()
     }
     fn has_statistic(&self) -> bool {
-        self.statistic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.statistic.is_empty()
     }
     fn has_certainty(&self) -> bool {
-        self.certainty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.certainty.is_empty()
     }
 }
 

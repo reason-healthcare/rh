@@ -32,7 +32,8 @@ pub struct MeasureReport {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Additional identifier for the MeasureReport
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// complete | pending | error
     pub status: MeasureReportStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -80,63 +81,16 @@ pub struct MeasureReport {
     #[serde(rename = "improvementNotation")]
     pub improvement_notation: Option<CodeableConcept>,
     /// Measure results for each group
-    pub group: Option<Vec<MeasureReportGroup>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group: Vec<MeasureReportGroup>,
     /// Additional information collected for the report
     #[serde(rename = "supplementalData")]
-    pub supplemental_data: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supplemental_data: Vec<Reference>,
     /// What data was used to calculate the measure score
     #[serde(rename = "evaluatedResource")]
-    pub evaluated_resource: Option<Vec<Reference>>,
-}
-/// MeasureReportGroupStratifierStratum nested structure for the 'population' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifierStratumPopulation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Pointer to specific population from Measure
-    #[serde(rename = "linkId")]
-    pub link_id: Option<StringType>,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
-    ///
-    /// Binding: extensible (The type of population (e.g. initial, numerator, denominator, etc.).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
-    pub code: Option<CodeableConcept>,
-    /// Size of the population
-    pub count: Option<IntegerType>,
-    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
-    pub _count: Option<Element>,
-    /// For subject-list reports, the subject results in this population
-    #[serde(rename = "subjectResults")]
-    pub subject_results: Option<Reference>,
-    /// For subject-list reports, a subject result in this population
-    #[serde(rename = "subjectReport")]
-    pub subject_report: Option<Vec<Reference>>,
-    /// What individual(s) in the population
-    pub subjects: Option<Reference>,
-}
-/// MeasureReportGroup nested structure for the 'stratifier' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifier {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Pointer to specific stratifier from Measure
-    #[serde(rename = "linkId")]
-    pub link_id: Option<StringType>,
-    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_linkId")]
-    pub _link_id: Option<Element>,
-    /// What stratifier of the group
-    ///
-    /// Binding: example (Meaning of the stratifier.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
-    pub code: Option<CodeableConcept>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evaluated_resource: Vec<Reference>,
 }
 /// MeasureReport nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,10 +98,12 @@ pub struct MeasureReportGroup {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Stratification results
-    pub stratifier: Option<Vec<MeasureReportGroupStratifier>>,
     /// The populations in the group
-    pub population: Option<Vec<MeasureReportGroupPopulation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub population: Vec<MeasureReportGroupPopulation>,
+    /// Stratification results
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stratifier: Vec<MeasureReportGroupStratifier>,
     /// Pointer to specific group from Measure
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -208,43 +164,29 @@ pub struct MeasureReportGroupPopulation {
     pub subject_results: Option<Reference>,
     /// For subject-list reports, a subject result in this population
     #[serde(rename = "subjectReport")]
-    pub subject_report: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject_report: Vec<Reference>,
     /// What individual(s) in the population
     pub subjects: Option<Reference>,
 }
-/// MeasureReportGroupStratifierStratum nested structure for the 'component' field
+/// MeasureReportGroup nested structure for the 'stratifier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MeasureReportGroupStratifierStratumComponent {
+pub struct MeasureReportGroupStratifier {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Pointer to specific stratifier component from Measure
+    /// Pointer to specific stratifier from Measure
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
     /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
     #[serde(rename = "_linkId")]
     pub _link_id: Option<Element>,
-    /// What stratifier component of the group
+    /// What stratifier of the group
     ///
     /// Binding: example (Meaning of the stratifier.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
-    pub code: CodeableConcept,
-    /// The stratum component value, e.g. male (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// The stratum component value, e.g. male (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// The stratum component value, e.g. male (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// The stratum component value, e.g. male (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// The stratum component value, e.g. male (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
+    pub code: Option<CodeableConcept>,
 }
 /// MeasureReportGroupStratifier nested structure for the 'stratum' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,6 +228,72 @@ pub struct MeasureReportGroupStratifierStratum {
     #[serde(rename = "measureScoreDuration")]
     pub measure_score_duration: Option<Duration>,
 }
+/// MeasureReportGroupStratifierStratum nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupStratifierStratumComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Pointer to specific stratifier component from Measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// What stratifier component of the group
+    ///
+    /// Binding: example (Meaning of the stratifier.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-stratifier-example
+    pub code: CodeableConcept,
+    /// The stratum component value, e.g. male (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// The stratum component value, e.g. male (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// The stratum component value, e.g. male (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// The stratum component value, e.g. male (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// The stratum component value, e.g. male (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+}
+/// MeasureReportGroupStratifierStratum nested structure for the 'population' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeasureReportGroupStratifierStratumPopulation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Pointer to specific population from Measure
+    #[serde(rename = "linkId")]
+    pub link_id: Option<StringType>,
+    /// Extension element for the 'linkId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_linkId")]
+    pub _link_id: Option<Element>,
+    /// initial-population | numerator | numerator-exclusion | denominator | denominator-exclusion | denominator-exception | measure-population | measure-population-exclusion | measure-observation
+    ///
+    /// Binding: extensible (The type of population (e.g. initial, numerator, denominator, etc.).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/measure-population
+    pub code: Option<CodeableConcept>,
+    /// Size of the population
+    pub count: Option<IntegerType>,
+    /// Extension element for the 'count' primitive field. Contains metadata and extensions.
+    pub _count: Option<Element>,
+    /// For subject-list reports, the subject results in this population
+    #[serde(rename = "subjectResults")]
+    pub subject_results: Option<Reference>,
+    /// For subject-list reports, a subject result in this population
+    #[serde(rename = "subjectReport")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject_report: Vec<Reference>,
+    /// What individual(s) in the population
+    pub subjects: Option<Reference>,
+}
 
 impl Default for MeasureReport {
     fn default() -> Self {
@@ -317,39 +325,12 @@ impl Default for MeasureReport {
     }
 }
 
-impl Default for MeasureReportGroupStratifierStratumPopulation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            link_id: Default::default(),
-            _link_id: Default::default(),
-            code: Default::default(),
-            count: Default::default(),
-            _count: Default::default(),
-            subject_results: Default::default(),
-            subject_report: Default::default(),
-            subjects: Default::default(),
-        }
-    }
-}
-
-impl Default for MeasureReportGroupStratifier {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            link_id: Default::default(),
-            _link_id: Default::default(),
-            code: Default::default(),
-        }
-    }
-}
-
 impl Default for MeasureReportGroup {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            stratifier: Default::default(),
             population: Default::default(),
+            stratifier: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             code: Default::default(),
@@ -380,18 +361,13 @@ impl Default for MeasureReportGroupPopulation {
     }
 }
 
-impl Default for MeasureReportGroupStratifierStratumComponent {
+impl Default for MeasureReportGroupStratifier {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
             code: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_boolean: Default::default(),
-            value_quantity: Default::default(),
-            value_range: Default::default(),
-            value_reference: Default::default(),
         }
     }
 }
@@ -411,6 +387,38 @@ impl Default for MeasureReportGroupStratifierStratum {
             measure_score_period: Default::default(),
             measure_score_range: Default::default(),
             measure_score_duration: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureReportGroupStratifierStratumComponent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_boolean: Default::default(),
+            value_quantity: Default::default(),
+            value_range: Default::default(),
+            value_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for MeasureReportGroupStratifierStratumPopulation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            link_id: Default::default(),
+            _link_id: Default::default(),
+            code: Default::default(),
+            count: Default::default(),
+            _count: Default::default(),
+            subject_results: Default::default(),
+            subject_report: Default::default(),
+            subjects: Default::default(),
         }
     }
 }
@@ -769,13 +777,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MeasureReport {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -790,44 +798,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MeasureReport {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -837,22 +833,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for MeasureReport {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::measure_report::MeasureReportAccessors for MeasureReport {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> MeasureReportStatus {
         self.status.clone()
@@ -894,13 +887,13 @@ impl crate::traits::measure_report::MeasureReportAccessors for MeasureReport {
         self.improvement_notation.clone()
     }
     fn group(&self) -> &[MeasureReportGroup] {
-        self.group.as_deref().unwrap_or(&[])
+        self.group.as_slice()
     }
     fn supplemental_data(&self) -> &[Reference] {
-        self.supplemental_data.as_deref().unwrap_or(&[])
+        self.supplemental_data.as_slice()
     }
     fn evaluated_resource(&self) -> &[Reference] {
-        self.evaluated_resource.as_deref().unwrap_or(&[])
+        self.evaluated_resource.as_slice()
     }
 }
 
@@ -910,12 +903,12 @@ impl crate::traits::measure_report::MeasureReportMutators for MeasureReport {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: MeasureReportStatus) -> Self {
@@ -985,45 +978,39 @@ impl crate::traits::measure_report::MeasureReportMutators for MeasureReport {
     }
     fn set_group(self, value: Vec<MeasureReportGroup>) -> Self {
         let mut resource = self.clone();
-        resource.group = Some(value);
+        resource.group = value;
         resource
     }
     fn add_group(self, item: MeasureReportGroup) -> Self {
         let mut resource = self.clone();
-        resource.group.get_or_insert_with(Vec::new).push(item);
+        resource.group.push(item);
         resource
     }
     fn set_supplemental_data(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supplemental_data = Some(value);
+        resource.supplemental_data = value;
         resource
     }
     fn add_supplemental_data(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supplemental_data
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supplemental_data.push(item);
         resource
     }
     fn set_evaluated_resource(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.evaluated_resource = Some(value);
+        resource.evaluated_resource = value;
         resource
     }
     fn add_evaluated_resource(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .evaluated_resource
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.evaluated_resource.push(item);
         resource
     }
 }
 
 impl crate::traits::measure_report::MeasureReportExistence for MeasureReport {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1065,17 +1052,13 @@ impl crate::traits::measure_report::MeasureReportExistence for MeasureReport {
         self.improvement_notation.is_some()
     }
     fn has_group(&self) -> bool {
-        self.group.as_ref().is_some_and(|v| !v.is_empty())
+        !self.group.is_empty()
     }
     fn has_supplemental_data(&self) -> bool {
-        self.supplemental_data
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.supplemental_data.is_empty()
     }
     fn has_evaluated_resource(&self) -> bool {
-        self.evaluated_resource
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.evaluated_resource.is_empty()
     }
 }
 

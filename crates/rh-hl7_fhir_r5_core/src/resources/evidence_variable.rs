@@ -42,7 +42,8 @@ pub struct EvidenceVariable {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the evidence variable
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the evidence variable
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -84,16 +85,19 @@ pub struct EvidenceVariable {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the evidence variable
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Why this EvidenceVariable is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -124,28 +128,35 @@ pub struct EvidenceVariable {
     #[serde(rename = "effectivePeriod")]
     pub effective_period: Option<Period>,
     /// Who authored the content
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the content
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the content
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the content
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// Additional documentation, citations, etc
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Actual or conceptual
     pub actual: Option<BooleanType>,
     /// Extension element for the 'actual' primitive field. Contains metadata and extensions.
     pub _actual: Option<Element>,
     /// A defining factor of the EvidenceVariable
-    pub characteristic: Option<Vec<EvidenceVariableCharacteristic>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<EvidenceVariableCharacteristic>,
     /// continuous | dichotomous | ordinal | polychotomous
     pub handling: Option<VariableHandling>,
     /// Extension element for the 'handling' primitive field. Contains metadata and extensions.
     pub _handling: Option<Element>,
     /// A grouping for ordinal or polychotomous variables
-    pub category: Option<Vec<EvidenceVariableCategory>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<EvidenceVariableCategory>,
 }
 /// EvidenceVariable nested structure for the 'category' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,51 +178,23 @@ pub struct EvidenceVariableCategory {
     #[serde(rename = "valueRange")]
     pub value_range: Option<Range>,
 }
-/// EvidenceVariableCharacteristic nested structure for the 'timeFromEvent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceVariableCharacteristicTimefromevent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Human readable description
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-    /// The event used as a base point (reference point) in time (CodeableConcept)
-    #[serde(rename = "eventCodeableConcept")]
-    pub event_codeable_concept: Option<CodeableConcept>,
-    /// The event used as a base point (reference point) in time (Reference)
-    #[serde(rename = "eventReference")]
-    pub event_reference: Option<Reference>,
-    /// The event used as a base point (reference point) in time (dateTime)
-    #[serde(rename = "eventDateTime")]
-    pub event_date_time: Option<DateTimeType>,
-    /// The event used as a base point (reference point) in time (id)
-    #[serde(rename = "eventId")]
-    pub event_id: Option<StringType>,
-    /// Used to express the observation at a defined amount of time before or after the event
-    pub quantity: Option<Quantity>,
-    /// Used to express the observation within a period before and/or after the event
-    pub range: Option<Range>,
-}
 /// EvidenceVariable nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceVariableCharacteristic {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// Used to specify how two or more characteristics are combined
+    #[serde(rename = "definitionByCombination")]
+    pub definition_by_combination: Option<EvidenceVariableCharacteristicDefinitionbycombination>,
     /// Defines the characteristic using type and value
     #[serde(rename = "definitionByTypeAndValue")]
     pub definition_by_type_and_value:
         Option<EvidenceVariableCharacteristicDefinitionbytypeandvalue>,
-    /// Used to specify how two or more characteristics are combined
-    #[serde(rename = "definitionByCombination")]
-    pub definition_by_combination: Option<EvidenceVariableCharacteristicDefinitionbycombination>,
     /// Timing in which the characteristic is determined
     #[serde(rename = "timeFromEvent")]
-    pub time_from_event: Option<Vec<EvidenceVariableCharacteristicTimefromevent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub time_from_event: Vec<EvidenceVariableCharacteristicTimefromevent>,
     /// Label for internal linking
     #[serde(rename = "linkId")]
     pub link_id: Option<StringType>,
@@ -223,7 +206,8 @@ pub struct EvidenceVariableCharacteristic {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Whether the characteristic is an inclusion criterion or exclusion criterion
     pub exclude: Option<BooleanType>,
     /// Extension element for the 'exclude' primitive field. Contains metadata and extensions.
@@ -297,7 +281,8 @@ pub struct EvidenceVariableCharacteristicDefinitionbytypeandvalue {
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/definition-method
-    pub method: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub method: Vec<CodeableConcept>,
     /// Device used for determining characteristic
     pub device: Option<Reference>,
     /// Defines the characteristic when coupled with characteristic.type (CodeableConcept)
@@ -324,6 +309,36 @@ pub struct EvidenceVariableCharacteristicDefinitionbytypeandvalue {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/characteristic-offset
     pub offset: Option<CodeableConcept>,
+}
+/// EvidenceVariableCharacteristic nested structure for the 'timeFromEvent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceVariableCharacteristicTimefromevent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Human readable description
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Used for footnotes or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// The event used as a base point (reference point) in time (CodeableConcept)
+    #[serde(rename = "eventCodeableConcept")]
+    pub event_codeable_concept: Option<CodeableConcept>,
+    /// The event used as a base point (reference point) in time (Reference)
+    #[serde(rename = "eventReference")]
+    pub event_reference: Option<Reference>,
+    /// The event used as a base point (reference point) in time (dateTime)
+    #[serde(rename = "eventDateTime")]
+    pub event_date_time: Option<DateTimeType>,
+    /// The event used as a base point (reference point) in time (id)
+    #[serde(rename = "eventId")]
+    pub event_id: Option<StringType>,
+    /// Used to express the observation at a defined amount of time before or after the event
+    pub quantity: Option<Quantity>,
+    /// Used to express the observation within a period before and/or after the event
+    pub range: Option<Range>,
 }
 
 impl Default for EvidenceVariable {
@@ -395,29 +410,12 @@ impl Default for EvidenceVariableCategory {
     }
 }
 
-impl Default for EvidenceVariableCharacteristicTimefromevent {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            note: Default::default(),
-            event_codeable_concept: Default::default(),
-            event_reference: Default::default(),
-            event_date_time: Default::default(),
-            event_id: Default::default(),
-            quantity: Default::default(),
-            range: Default::default(),
-        }
-    }
-}
-
 impl Default for EvidenceVariableCharacteristic {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            definition_by_type_and_value: Default::default(),
             definition_by_combination: Default::default(),
+            definition_by_type_and_value: Default::default(),
             time_from_event: Default::default(),
             link_id: Default::default(),
             _link_id: Default::default(),
@@ -468,6 +466,23 @@ impl Default for EvidenceVariableCharacteristicDefinitionbytypeandvalue {
             value_reference: Default::default(),
             value_id: Default::default(),
             offset: Default::default(),
+        }
+    }
+}
+
+impl Default for EvidenceVariableCharacteristicTimefromevent {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            note: Default::default(),
+            event_codeable_concept: Default::default(),
+            event_reference: Default::default(),
+            event_date_time: Default::default(),
+            event_id: Default::default(),
+            quantity: Default::default(),
+            range: Default::default(),
         }
     }
 }
@@ -836,13 +851,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for EvidenceVariabl
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -857,44 +872,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for EvidenceVariable
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -904,16 +907,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for EvidenceVariabl
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -922,7 +922,7 @@ impl crate::traits::evidence_variable::EvidenceVariableAccessors for EvidenceVar
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -949,16 +949,16 @@ impl crate::traits::evidence_variable::EvidenceVariableAccessors for EvidenceVar
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -979,31 +979,31 @@ impl crate::traits::evidence_variable::EvidenceVariableAccessors for EvidenceVar
         self.effective_period.clone()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn actual(&self) -> Option<BooleanType> {
         self.actual
     }
     fn characteristic(&self) -> &[EvidenceVariableCharacteristic] {
-        self.characteristic.as_deref().unwrap_or(&[])
+        self.characteristic.as_slice()
     }
     fn handling(&self) -> Option<VariableHandling> {
         self.handling.clone()
     }
     fn category(&self) -> &[EvidenceVariableCategory] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
 }
 
@@ -1018,12 +1018,12 @@ impl crate::traits::evidence_variable::EvidenceVariableMutators for EvidenceVari
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1068,12 +1068,12 @@ impl crate::traits::evidence_variable::EvidenceVariableMutators for EvidenceVari
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1083,22 +1083,22 @@ impl crate::traits::evidence_variable::EvidenceVariableMutators for EvidenceVari
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1133,55 +1133,52 @@ impl crate::traits::evidence_variable::EvidenceVariableMutators for EvidenceVari
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_actual(self, value: bool) -> Self {
@@ -1191,15 +1188,12 @@ impl crate::traits::evidence_variable::EvidenceVariableMutators for EvidenceVari
     }
     fn set_characteristic(self, value: Vec<EvidenceVariableCharacteristic>) -> Self {
         let mut resource = self.clone();
-        resource.characteristic = Some(value);
+        resource.characteristic = value;
         resource
     }
     fn add_characteristic(self, item: EvidenceVariableCharacteristic) -> Self {
         let mut resource = self.clone();
-        resource
-            .characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.characteristic.push(item);
         resource
     }
     fn set_handling(self, value: VariableHandling) -> Self {
@@ -1209,12 +1203,12 @@ impl crate::traits::evidence_variable::EvidenceVariableMutators for EvidenceVari
     }
     fn set_category(self, value: Vec<EvidenceVariableCategory>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: EvidenceVariableCategory) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
 }
@@ -1227,7 +1221,7 @@ impl crate::traits::evidence_variable::EvidenceVariableExistence for EvidenceVar
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1254,16 +1248,16 @@ impl crate::traits::evidence_variable::EvidenceVariableExistence for EvidenceVar
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1284,33 +1278,31 @@ impl crate::traits::evidence_variable::EvidenceVariableExistence for EvidenceVar
         self.effective_period.is_some()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_actual(&self) -> bool {
         self.actual.is_some()
     }
     fn has_characteristic(&self) -> bool {
-        self.characteristic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.characteristic.is_empty()
     }
     fn has_handling(&self) -> bool {
         self.handling.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
 }
 

@@ -28,7 +28,8 @@ pub struct GuidanceResponse {
     #[serde(rename = "requestIdentifier")]
     pub request_identifier: Option<Identifier>,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// What guidance was requested (uri)
     #[serde(rename = "moduleUri")]
     pub module_uri: StringType,
@@ -56,15 +57,19 @@ pub struct GuidanceResponse {
     pub performer: Option<Reference>,
     /// Why guidance is needed
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Why guidance is needed
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Additional notes about the response
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Messages resulting from the evaluation of the artifact or artifacts
     #[serde(rename = "evaluationMessage")]
-    pub evaluation_message: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evaluation_message: Vec<Reference>,
     /// The output parameters of the evaluation, if any
     #[serde(rename = "outputParameters")]
     pub output_parameters: Option<Reference>,
@@ -72,7 +77,8 @@ pub struct GuidanceResponse {
     pub result: Option<Reference>,
     /// Additional required data
     #[serde(rename = "dataRequirement")]
-    pub data_requirement: Option<Vec<DataRequirement>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data_requirement: Vec<DataRequirement>,
 }
 
 impl Default for GuidanceResponse {
@@ -235,13 +241,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for GuidanceRespons
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -256,44 +262,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for GuidanceResponse
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -303,16 +297,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for GuidanceRespons
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -321,7 +312,7 @@ impl crate::traits::guidance_response::GuidanceResponseAccessors for GuidanceRes
         self.request_identifier.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> GuidanceResponseStatus {
         self.status.clone()
@@ -339,16 +330,16 @@ impl crate::traits::guidance_response::GuidanceResponseAccessors for GuidanceRes
         self.performer.clone()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn evaluation_message(&self) -> &[Reference] {
-        self.evaluation_message.as_deref().unwrap_or(&[])
+        self.evaluation_message.as_slice()
     }
     fn output_parameters(&self) -> Option<Reference> {
         self.output_parameters.clone()
@@ -357,7 +348,7 @@ impl crate::traits::guidance_response::GuidanceResponseAccessors for GuidanceRes
         self.result.clone()
     }
     fn data_requirement(&self) -> &[DataRequirement] {
-        self.data_requirement.as_deref().unwrap_or(&[])
+        self.data_requirement.as_slice()
     }
 }
 
@@ -372,12 +363,12 @@ impl crate::traits::guidance_response::GuidanceResponseMutators for GuidanceResp
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: GuidanceResponseStatus) -> Self {
@@ -407,48 +398,42 @@ impl crate::traits::guidance_response::GuidanceResponseMutators for GuidanceResp
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_evaluation_message(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.evaluation_message = Some(value);
+        resource.evaluation_message = value;
         resource
     }
     fn add_evaluation_message(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .evaluation_message
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.evaluation_message.push(item);
         resource
     }
     fn set_output_parameters(self, value: Reference) -> Self {
@@ -463,15 +448,12 @@ impl crate::traits::guidance_response::GuidanceResponseMutators for GuidanceResp
     }
     fn set_data_requirement(self, value: Vec<DataRequirement>) -> Self {
         let mut resource = self.clone();
-        resource.data_requirement = Some(value);
+        resource.data_requirement = value;
         resource
     }
     fn add_data_requirement(self, item: DataRequirement) -> Self {
         let mut resource = self.clone();
-        resource
-            .data_requirement
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.data_requirement.push(item);
         resource
     }
 }
@@ -484,7 +466,7 @@ impl crate::traits::guidance_response::GuidanceResponseExistence for GuidanceRes
         self.request_identifier.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -502,20 +484,16 @@ impl crate::traits::guidance_response::GuidanceResponseExistence for GuidanceRes
         self.performer.is_some()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_evaluation_message(&self) -> bool {
-        self.evaluation_message
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.evaluation_message.is_empty()
     }
     fn has_output_parameters(&self) -> bool {
         self.output_parameters.is_some()
@@ -524,9 +502,7 @@ impl crate::traits::guidance_response::GuidanceResponseExistence for GuidanceRes
         self.result.is_some()
     }
     fn has_data_requirement(&self) -> bool {
-        self.data_requirement
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.data_requirement.is_empty()
     }
 }
 

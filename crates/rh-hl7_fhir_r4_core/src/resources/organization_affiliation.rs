@@ -23,7 +23,8 @@ pub struct OrganizationAffiliation {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifiers that are specific to this role
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this organization affiliation record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
@@ -36,13 +37,15 @@ pub struct OrganizationAffiliation {
     #[serde(rename = "participatingOrganization")]
     pub participating_organization: Option<Reference>,
     /// Health insurance provider network in which the participatingOrganization provides the role's services (if defined) at the indicated locations (if defined)
-    pub network: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub network: Vec<Reference>,
     /// Definition of the role the participatingOrganization plays
     ///
     /// Binding: example (The role the participating organization providing services to the primary organization.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/organization-role
-    pub code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
     /// Specific specialty of the participatingOrganization in the context of the role
     ///
     /// Binding: preferred (Specific specialty associated with the participating organization.)
@@ -59,16 +62,21 @@ pub struct OrganizationAffiliation {
     /// - `394803006`: Clinical hematology
     /// - `408480009`: Clinical immunology
     /// - ... and 107 more values
-    pub specialty: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialty: Vec<CodeableConcept>,
     /// The location(s) at which the role occurs
-    pub location: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<Reference>,
     /// Healthcare services provided through the role
     #[serde(rename = "healthcareService")]
-    pub healthcare_service: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub healthcare_service: Vec<Reference>,
     /// Contact details at the participatingOrganization relevant to this Affiliation
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// Technical endpoints providing access to services operated for this role
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
 }
 
 impl Default for OrganizationAffiliation {
@@ -220,13 +228,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for OrganizationAff
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -241,44 +249,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for OrganizationAffi
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -288,16 +284,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for OrganizationAff
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -305,7 +298,7 @@ impl crate::traits::organization_affiliation::OrganizationAffiliationAccessors
     for OrganizationAffiliation
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
@@ -320,25 +313,25 @@ impl crate::traits::organization_affiliation::OrganizationAffiliationAccessors
         self.participating_organization.clone()
     }
     fn network(&self) -> &[Reference] {
-        self.network.as_deref().unwrap_or(&[])
+        self.network.as_slice()
     }
     fn code(&self) -> &[CodeableConcept] {
-        self.code.as_deref().unwrap_or(&[])
+        self.code.as_slice()
     }
     fn specialty(&self) -> &[CodeableConcept] {
-        self.specialty.as_deref().unwrap_or(&[])
+        self.specialty.as_slice()
     }
     fn location(&self) -> &[Reference] {
-        self.location.as_deref().unwrap_or(&[])
+        self.location.as_slice()
     }
     fn healthcare_service(&self) -> &[Reference] {
-        self.healthcare_service.as_deref().unwrap_or(&[])
+        self.healthcare_service.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
 }
 
@@ -350,12 +343,12 @@ impl crate::traits::organization_affiliation::OrganizationAffiliationMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -380,75 +373,72 @@ impl crate::traits::organization_affiliation::OrganizationAffiliationMutators
     }
     fn set_network(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.network = Some(value);
+        resource.network = value;
         resource
     }
     fn add_network(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.network.get_or_insert_with(Vec::new).push(item);
+        resource.network.push(item);
         resource
     }
     fn set_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.code = Some(value);
+        resource.code = value;
         resource
     }
     fn add_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.code.get_or_insert_with(Vec::new).push(item);
+        resource.code.push(item);
         resource
     }
     fn set_specialty(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.specialty = Some(value);
+        resource.specialty = value;
         resource
     }
     fn add_specialty(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.specialty.get_or_insert_with(Vec::new).push(item);
+        resource.specialty.push(item);
         resource
     }
     fn set_location(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.location = Some(value);
+        resource.location = value;
         resource
     }
     fn add_location(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.location.get_or_insert_with(Vec::new).push(item);
+        resource.location.push(item);
         resource
     }
     fn set_healthcare_service(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.healthcare_service = Some(value);
+        resource.healthcare_service = value;
         resource
     }
     fn add_healthcare_service(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .healthcare_service
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.healthcare_service.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
 }
@@ -457,7 +447,7 @@ impl crate::traits::organization_affiliation::OrganizationAffiliationExistence
     for OrganizationAffiliation
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
@@ -472,27 +462,25 @@ impl crate::traits::organization_affiliation::OrganizationAffiliationExistence
         self.participating_organization.is_some()
     }
     fn has_network(&self) -> bool {
-        self.network.as_ref().is_some_and(|v| !v.is_empty())
+        !self.network.is_empty()
     }
     fn has_code(&self) -> bool {
-        self.code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.code.is_empty()
     }
     fn has_specialty(&self) -> bool {
-        self.specialty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specialty.is_empty()
     }
     fn has_location(&self) -> bool {
-        self.location.as_ref().is_some_and(|v| !v.is_empty())
+        !self.location.is_empty()
     }
     fn has_healthcare_service(&self) -> bool {
-        self.healthcare_service
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.healthcare_service.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
 }
 

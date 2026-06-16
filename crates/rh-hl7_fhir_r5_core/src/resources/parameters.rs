@@ -64,7 +64,8 @@ pub struct Parameters {
     #[serde(flatten)]
     pub base: Resource,
     /// Operation Parameter
-    pub parameter: Option<Vec<ParametersParameter>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<ParametersParameter>,
 }
 /// Parameters nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -241,7 +242,8 @@ pub struct ParametersParameter {
     /// If parameter is a whole resource
     pub resource: Option<Resource>,
     /// Named part of a multi-part parameter
-    pub part: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part: Vec<StringType>,
 }
 
 impl Default for Parameters {
@@ -430,7 +432,7 @@ impl crate::traits::resource::ResourceExistence for Parameters {
 
 impl crate::traits::parameters::ParametersAccessors for Parameters {
     fn parameter(&self) -> &[ParametersParameter] {
-        self.parameter.as_deref().unwrap_or(&[])
+        self.parameter.as_slice()
     }
 }
 
@@ -440,19 +442,19 @@ impl crate::traits::parameters::ParametersMutators for Parameters {
     }
     fn set_parameter(self, value: Vec<ParametersParameter>) -> Self {
         let mut resource = self.clone();
-        resource.parameter = Some(value);
+        resource.parameter = value;
         resource
     }
     fn add_parameter(self, item: ParametersParameter) -> Self {
         let mut resource = self.clone();
-        resource.parameter.get_or_insert_with(Vec::new).push(item);
+        resource.parameter.push(item);
         resource
     }
 }
 
 impl crate::traits::parameters::ParametersExistence for Parameters {
     fn has_parameter(&self) -> bool {
-        self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parameter.is_empty()
     }
 }
 

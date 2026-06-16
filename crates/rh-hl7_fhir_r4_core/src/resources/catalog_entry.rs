@@ -26,7 +26,8 @@ pub struct CatalogEntry {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique identifier of the catalog item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The type of item - medication, device, service, protocol or other
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
@@ -39,9 +40,11 @@ pub struct CatalogEntry {
     pub referenced_item: Reference,
     /// Any additional identifier(s) for the catalog item, in the same granularity or concept
     #[serde(rename = "additionalIdentifier")]
-    pub additional_identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_identifier: Vec<Identifier>,
     /// Classification (category or class) of the item entry
-    pub classification: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classification: Vec<CodeableConcept>,
     /// draft | active | retired | unknown
     pub status: Option<PublicationStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -63,13 +66,16 @@ pub struct CatalogEntry {
     pub _last_updated: Option<Element>,
     /// Additional characteristics of the catalog entry
     #[serde(rename = "additionalCharacteristic")]
-    pub additional_characteristic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_characteristic: Vec<CodeableConcept>,
     /// Additional classification of the catalog entry
     #[serde(rename = "additionalClassification")]
-    pub additional_classification: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_classification: Vec<CodeableConcept>,
     /// An item that this catalog entry is related to
     #[serde(rename = "relatedEntry")]
-    pub related_entry: Option<Vec<CatalogEntryRelatedentry>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_entry: Vec<CatalogEntryRelatedentry>,
 }
 /// CatalogEntry nested structure for the 'relatedEntry' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -273,13 +279,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CatalogEntry {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -294,44 +300,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CatalogEntry {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -341,22 +335,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for CatalogEntry {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::catalog_entry::CatalogEntryAccessors for CatalogEntry {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
@@ -368,10 +359,10 @@ impl crate::traits::catalog_entry::CatalogEntryAccessors for CatalogEntry {
         self.referenced_item.clone()
     }
     fn additional_identifier(&self) -> &[Identifier] {
-        self.additional_identifier.as_deref().unwrap_or(&[])
+        self.additional_identifier.as_slice()
     }
     fn classification(&self) -> &[CodeableConcept] {
-        self.classification.as_deref().unwrap_or(&[])
+        self.classification.as_slice()
     }
     fn status(&self) -> Option<PublicationStatus> {
         self.status.clone()
@@ -386,13 +377,13 @@ impl crate::traits::catalog_entry::CatalogEntryAccessors for CatalogEntry {
         self.last_updated.clone()
     }
     fn additional_characteristic(&self) -> &[CodeableConcept] {
-        self.additional_characteristic.as_deref().unwrap_or(&[])
+        self.additional_characteristic.as_slice()
     }
     fn additional_classification(&self) -> &[CodeableConcept] {
-        self.additional_classification.as_deref().unwrap_or(&[])
+        self.additional_classification.as_slice()
     }
     fn related_entry(&self) -> &[CatalogEntryRelatedentry] {
-        self.related_entry.as_deref().unwrap_or(&[])
+        self.related_entry.as_slice()
     }
 }
 
@@ -402,12 +393,12 @@ impl crate::traits::catalog_entry::CatalogEntryMutators for CatalogEntry {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -427,28 +418,22 @@ impl crate::traits::catalog_entry::CatalogEntryMutators for CatalogEntry {
     }
     fn set_additional_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.additional_identifier = Some(value);
+        resource.additional_identifier = value;
         resource
     }
     fn add_additional_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource
-            .additional_identifier
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.additional_identifier.push(item);
         resource
     }
     fn set_classification(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.classification = Some(value);
+        resource.classification = value;
         resource
     }
     fn add_classification(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .classification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.classification.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -473,48 +458,39 @@ impl crate::traits::catalog_entry::CatalogEntryMutators for CatalogEntry {
     }
     fn set_additional_characteristic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.additional_characteristic = Some(value);
+        resource.additional_characteristic = value;
         resource
     }
     fn add_additional_characteristic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .additional_characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.additional_characteristic.push(item);
         resource
     }
     fn set_additional_classification(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.additional_classification = Some(value);
+        resource.additional_classification = value;
         resource
     }
     fn add_additional_classification(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .additional_classification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.additional_classification.push(item);
         resource
     }
     fn set_related_entry(self, value: Vec<CatalogEntryRelatedentry>) -> Self {
         let mut resource = self.clone();
-        resource.related_entry = Some(value);
+        resource.related_entry = value;
         resource
     }
     fn add_related_entry(self, item: CatalogEntryRelatedentry) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_entry
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_entry.push(item);
         resource
     }
 }
 
 impl crate::traits::catalog_entry::CatalogEntryExistence for CatalogEntry {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
@@ -526,12 +502,10 @@ impl crate::traits::catalog_entry::CatalogEntryExistence for CatalogEntry {
         true
     }
     fn has_additional_identifier(&self) -> bool {
-        self.additional_identifier
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.additional_identifier.is_empty()
     }
     fn has_classification(&self) -> bool {
-        self.classification.as_ref().is_some_and(|v| !v.is_empty())
+        !self.classification.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -546,17 +520,13 @@ impl crate::traits::catalog_entry::CatalogEntryExistence for CatalogEntry {
         self.last_updated.is_some()
     }
     fn has_additional_characteristic(&self) -> bool {
-        self.additional_characteristic
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.additional_characteristic.is_empty()
     }
     fn has_additional_classification(&self) -> bool {
-        self.additional_classification
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.additional_classification.is_empty()
     }
     fn has_related_entry(&self) -> bool {
-        self.related_entry.as_ref().is_some_and(|v| !v.is_empty())
+        !self.related_entry.is_empty()
     }
 }
 

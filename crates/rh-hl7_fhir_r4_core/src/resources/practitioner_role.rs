@@ -27,7 +27,8 @@ pub struct PractitionerRole {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifiers that are specific to a role/location
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this practitioner role record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
@@ -43,7 +44,8 @@ pub struct PractitionerRole {
     /// Binding: example (The role a person plays representing an organization.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/practitioner-role
-    pub code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
     /// Specific specialty of the practitioner
     ///
     /// Binding: preferred (Specific specialty associated with the agency.)
@@ -60,20 +62,26 @@ pub struct PractitionerRole {
     /// - `394803006`: Clinical hematology
     /// - `408480009`: Clinical immunology
     /// - ... and 107 more values
-    pub specialty: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialty: Vec<CodeableConcept>,
     /// The location(s) at which this practitioner provides care
-    pub location: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<Reference>,
     /// The list of healthcare services that this worker provides for this role's Organization/Location(s)
     #[serde(rename = "healthcareService")]
-    pub healthcare_service: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub healthcare_service: Vec<Reference>,
     /// Contact details that are specific to the role/location/service
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// Times the Service Site is available
     #[serde(rename = "availableTime")]
-    pub available_time: Option<Vec<PractitionerRoleAvailabletime>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available_time: Vec<PractitionerRoleAvailabletime>,
     /// Not available during this time due to provided reason
     #[serde(rename = "notAvailable")]
-    pub not_available: Option<Vec<PractitionerRoleNotavailable>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub not_available: Vec<PractitionerRoleNotavailable>,
     /// Description of availability exceptions
     #[serde(rename = "availabilityExceptions")]
     pub availability_exceptions: Option<StringType>,
@@ -81,7 +89,8 @@ pub struct PractitionerRole {
     #[serde(rename = "_availabilityExceptions")]
     pub _availability_exceptions: Option<Element>,
     /// Technical endpoints providing access to services operated for the practitioner with this role
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
 }
 /// PractitionerRole nested structure for the 'availableTime' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,10 +100,12 @@ pub struct PractitionerRoleAvailabletime {
     pub base: BackboneElement,
     /// mon | tue | wed | thu | fri | sat | sun
     #[serde(rename = "daysOfWeek")]
-    pub days_of_week: Option<Vec<DaysOfWeek>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub days_of_week: Vec<DaysOfWeek>,
     /// Extension element for the 'daysOfWeek' primitive field. Contains metadata and extensions.
     #[serde(rename = "_daysOfWeek")]
-    pub _days_of_week: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _days_of_week: Vec<Element>,
     /// Always available? e.g. 24 hour service
     #[serde(rename = "allDay")]
     pub all_day: Option<BooleanType>,
@@ -359,13 +370,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for PractitionerRol
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -380,44 +391,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for PractitionerRole
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -427,22 +426,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for PractitionerRol
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::practitioner_role::PractitionerRoleAccessors for PractitionerRole {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
@@ -457,31 +453,31 @@ impl crate::traits::practitioner_role::PractitionerRoleAccessors for Practitione
         self.organization.clone()
     }
     fn code(&self) -> &[CodeableConcept] {
-        self.code.as_deref().unwrap_or(&[])
+        self.code.as_slice()
     }
     fn specialty(&self) -> &[CodeableConcept] {
-        self.specialty.as_deref().unwrap_or(&[])
+        self.specialty.as_slice()
     }
     fn location(&self) -> &[Reference] {
-        self.location.as_deref().unwrap_or(&[])
+        self.location.as_slice()
     }
     fn healthcare_service(&self) -> &[Reference] {
-        self.healthcare_service.as_deref().unwrap_or(&[])
+        self.healthcare_service.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn available_time(&self) -> &[PractitionerRoleAvailabletime] {
-        self.available_time.as_deref().unwrap_or(&[])
+        self.available_time.as_slice()
     }
     fn not_available(&self) -> &[PractitionerRoleNotavailable] {
-        self.not_available.as_deref().unwrap_or(&[])
+        self.not_available.as_slice()
     }
     fn availability_exceptions(&self) -> Option<StringType> {
         self.availability_exceptions.clone()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
 }
 
@@ -491,12 +487,12 @@ impl crate::traits::practitioner_role::PractitionerRoleMutators for Practitioner
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -521,81 +517,72 @@ impl crate::traits::practitioner_role::PractitionerRoleMutators for Practitioner
     }
     fn set_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.code = Some(value);
+        resource.code = value;
         resource
     }
     fn add_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.code.get_or_insert_with(Vec::new).push(item);
+        resource.code.push(item);
         resource
     }
     fn set_specialty(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.specialty = Some(value);
+        resource.specialty = value;
         resource
     }
     fn add_specialty(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.specialty.get_or_insert_with(Vec::new).push(item);
+        resource.specialty.push(item);
         resource
     }
     fn set_location(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.location = Some(value);
+        resource.location = value;
         resource
     }
     fn add_location(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.location.get_or_insert_with(Vec::new).push(item);
+        resource.location.push(item);
         resource
     }
     fn set_healthcare_service(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.healthcare_service = Some(value);
+        resource.healthcare_service = value;
         resource
     }
     fn add_healthcare_service(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .healthcare_service
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.healthcare_service.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_available_time(self, value: Vec<PractitionerRoleAvailabletime>) -> Self {
         let mut resource = self.clone();
-        resource.available_time = Some(value);
+        resource.available_time = value;
         resource
     }
     fn add_available_time(self, item: PractitionerRoleAvailabletime) -> Self {
         let mut resource = self.clone();
-        resource
-            .available_time
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.available_time.push(item);
         resource
     }
     fn set_not_available(self, value: Vec<PractitionerRoleNotavailable>) -> Self {
         let mut resource = self.clone();
-        resource.not_available = Some(value);
+        resource.not_available = value;
         resource
     }
     fn add_not_available(self, item: PractitionerRoleNotavailable) -> Self {
         let mut resource = self.clone();
-        resource
-            .not_available
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.not_available.push(item);
         resource
     }
     fn set_availability_exceptions(self, value: String) -> Self {
@@ -605,19 +592,19 @@ impl crate::traits::practitioner_role::PractitionerRoleMutators for Practitioner
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
 }
 
 impl crate::traits::practitioner_role::PractitionerRoleExistence for PractitionerRole {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
@@ -632,33 +619,31 @@ impl crate::traits::practitioner_role::PractitionerRoleExistence for Practitione
         self.organization.is_some()
     }
     fn has_code(&self) -> bool {
-        self.code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.code.is_empty()
     }
     fn has_specialty(&self) -> bool {
-        self.specialty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specialty.is_empty()
     }
     fn has_location(&self) -> bool {
-        self.location.as_ref().is_some_and(|v| !v.is_empty())
+        !self.location.is_empty()
     }
     fn has_healthcare_service(&self) -> bool {
-        self.healthcare_service
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.healthcare_service.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_available_time(&self) -> bool {
-        self.available_time.as_ref().is_some_and(|v| !v.is_empty())
+        !self.available_time.is_empty()
     }
     fn has_not_available(&self) -> bool {
-        self.not_available.as_ref().is_some_and(|v| !v.is_empty())
+        !self.not_available.is_empty()
     }
     fn has_availability_exceptions(&self) -> bool {
         self.availability_exceptions.is_some()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
 }
 

@@ -53,6 +53,19 @@ impl AccessorTraitGenerator {
 
         self.add_choice_type_accessor_methods(rust_trait, structure_def)?;
 
+        // Add extension_by_url default helper for DomainResource and Element
+        if structure_def.name == "DomainResource" || structure_def.name == "Element" {
+            rust_trait.add_method(
+                RustTraitMethod::new("extension_by_url".to_string())
+                    .with_return_type(RustType::Custom("Option<&crate::datatypes::extension::Extension>".to_string()))
+                    .with_parameter("url".to_string(), RustType::Custom("&str".to_string()))
+                    .with_default_implementation(
+                        "self.extension().iter().find(|e| e.url == url)".to_string(),
+                    )
+                    .with_doc("Find an extension by its URL. Returns the first matching extension, or None if not found.".to_string()),
+            );
+        }
+
         Ok(())
     }
 
@@ -92,7 +105,12 @@ impl AccessorTraitGenerator {
         type_mapper: &mut TypeMapper,
     ) -> CodegenResult<Option<RustTraitMethod>> {
         let path_parts: Vec<&str> = element.path.split('.').collect();
-        let field_name = path_parts.last().unwrap().to_string();
+        let field_name = path_parts
+            .last()
+            .ok_or_else(|| crate::CodegenError::MissingField {
+                field: format!("element path has no field segment: {}", element.path),
+            })?
+            .to_string();
         let rust_field_name = crate::naming::Naming::field_name(&field_name);
 
         let is_optional = element.min.unwrap_or(0) == 0;

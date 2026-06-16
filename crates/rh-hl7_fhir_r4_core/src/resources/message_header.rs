@@ -30,7 +30,8 @@ pub struct MessageHeader {
     #[serde(rename = "eventUri")]
     pub event_uri: StringType,
     /// Message destination application(s)
-    pub destination: Option<Vec<MessageHeaderDestination>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub destination: Vec<MessageHeaderDestination>,
     /// Real world sender of the message
     pub sender: Option<Reference>,
     /// The source of the data entry
@@ -50,28 +51,12 @@ pub struct MessageHeader {
     /// If this is a reply to prior message
     pub response: Option<MessageHeaderResponse>,
     /// The actual content of the message
-    pub focus: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<Reference>,
     /// Link to the definition for this message
     pub definition: Option<StringType>,
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
     pub _definition: Option<Element>,
-}
-/// MessageHeader nested structure for the 'response' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageHeaderResponse {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Id of original message
-    pub identifier: StringType,
-    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
-    pub _identifier: Option<Element>,
-    /// ok | transient-error | fatal-error
-    pub code: ResponseCode,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Specific list of hints/warnings/errors
-    pub details: Option<Reference>,
 }
 /// MessageHeader nested structure for the 'destination' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,6 +76,23 @@ pub struct MessageHeaderDestination {
     pub _endpoint: Option<Element>,
     /// Intended "real-world" recipient for the data
     pub receiver: Option<Reference>,
+}
+/// MessageHeader nested structure for the 'response' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageHeaderResponse {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Id of original message
+    pub identifier: StringType,
+    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
+    pub _identifier: Option<Element>,
+    /// ok | transient-error | fatal-error
+    pub code: ResponseCode,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Specific list of hints/warnings/errors
+    pub details: Option<Reference>,
 }
 /// MessageHeader nested structure for the 'source' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,19 +141,6 @@ impl Default for MessageHeader {
     }
 }
 
-impl Default for MessageHeaderResponse {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            identifier: StringType::default(),
-            _identifier: Default::default(),
-            code: ResponseCode::default(),
-            _code: Default::default(),
-            details: Default::default(),
-        }
-    }
-}
-
 impl Default for MessageHeaderDestination {
     fn default() -> Self {
         Self {
@@ -162,6 +151,19 @@ impl Default for MessageHeaderDestination {
             endpoint: StringType::default(),
             _endpoint: Default::default(),
             receiver: Default::default(),
+        }
+    }
+}
+
+impl Default for MessageHeaderResponse {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            identifier: StringType::default(),
+            _identifier: Default::default(),
+            code: ResponseCode::default(),
+            _code: Default::default(),
+            details: Default::default(),
         }
     }
 }
@@ -345,13 +347,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MessageHeader {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -366,44 +368,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MessageHeader {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -413,22 +403,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for MessageHeader {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::message_header::MessageHeaderAccessors for MessageHeader {
     fn destination(&self) -> &[MessageHeaderDestination] {
-        self.destination.as_deref().unwrap_or(&[])
+        self.destination.as_slice()
     }
     fn sender(&self) -> Option<Reference> {
         self.sender.clone()
@@ -452,7 +439,7 @@ impl crate::traits::message_header::MessageHeaderAccessors for MessageHeader {
         self.response.clone()
     }
     fn focus(&self) -> &[Reference] {
-        self.focus.as_deref().unwrap_or(&[])
+        self.focus.as_slice()
     }
     fn definition(&self) -> Option<StringType> {
         self.definition.clone()
@@ -465,12 +452,12 @@ impl crate::traits::message_header::MessageHeaderMutators for MessageHeader {
     }
     fn set_destination(self, value: Vec<MessageHeaderDestination>) -> Self {
         let mut resource = self.clone();
-        resource.destination = Some(value);
+        resource.destination = value;
         resource
     }
     fn add_destination(self, item: MessageHeaderDestination) -> Self {
         let mut resource = self.clone();
-        resource.destination.get_or_insert_with(Vec::new).push(item);
+        resource.destination.push(item);
         resource
     }
     fn set_sender(self, value: Reference) -> Self {
@@ -510,12 +497,12 @@ impl crate::traits::message_header::MessageHeaderMutators for MessageHeader {
     }
     fn set_focus(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.focus = Some(value);
+        resource.focus = value;
         resource
     }
     fn add_focus(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.focus.get_or_insert_with(Vec::new).push(item);
+        resource.focus.push(item);
         resource
     }
     fn set_definition(self, value: String) -> Self {
@@ -530,7 +517,7 @@ impl crate::traits::message_header::MessageHeaderExistence for MessageHeader {
         true
     }
     fn has_destination(&self) -> bool {
-        self.destination.as_ref().is_some_and(|v| !v.is_empty())
+        !self.destination.is_empty()
     }
     fn has_sender(&self) -> bool {
         self.sender.is_some()
@@ -554,7 +541,7 @@ impl crate::traits::message_header::MessageHeaderExistence for MessageHeader {
         self.response.is_some()
     }
     fn has_focus(&self) -> bool {
-        self.focus.as_ref().is_some_and(|v| !v.is_empty())
+        !self.focus.is_empty()
     }
     fn has_definition(&self) -> bool {
         self.definition.is_some()

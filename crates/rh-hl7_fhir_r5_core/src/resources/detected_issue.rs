@@ -27,7 +27,8 @@ pub struct DetectedIssue {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique id for the detected issue
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// preliminary | final | entered-in-error | mitigated
     pub status: DetectedissueStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -37,7 +38,8 @@ pub struct DetectedIssue {
     /// Binding: preferred (Codes for high level detected issue categories.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/detectedissue-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Specific type of detected issue, e.g. drug-drug, duplicate therapy, etc
     ///
     /// Binding: preferred (Codes identifying the type of detected issue; e.g. Drug-drug interaction, Timing issue, Duplicate therapy, etc.)
@@ -61,9 +63,11 @@ pub struct DetectedIssue {
     /// The provider or device that identified the issue
     pub author: Option<Reference>,
     /// Problem resource
-    pub implicated: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub implicated: Vec<Reference>,
     /// Supporting evidence
-    pub evidence: Option<Vec<DetectedIssueEvidence>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<DetectedIssueEvidence>,
     /// Description and context
     pub detail: Option<StringType>,
     /// Extension element for the 'detail' primitive field. Contains metadata and extensions.
@@ -73,7 +77,8 @@ pub struct DetectedIssue {
     /// Extension element for the 'reference' primitive field. Contains metadata and extensions.
     pub _reference: Option<Element>,
     /// Step taken to address
-    pub mitigation: Option<Vec<DetectedIssueMitigation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mitigation: Vec<DetectedIssueMitigation>,
 }
 /// DetectedIssue nested structure for the 'evidence' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,9 +91,11 @@ pub struct DetectedIssueEvidence {
     /// Binding: example (Codes that describes the types of evidence for a detected issue.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/manifestation-or-symptom
-    pub code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodeableConcept>,
     /// Supporting information
-    pub detail: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
 }
 /// DetectedIssue nested structure for the 'mitigation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,7 +116,8 @@ pub struct DetectedIssueMitigation {
     /// Who is committing?
     pub author: Option<Reference>,
     /// Additional notes about the mitigation
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 
 impl Default for DetectedIssue {
@@ -322,13 +330,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DetectedIssue {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -343,44 +351,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DetectedIssue {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -390,28 +386,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for DetectedIssue {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::detected_issue::DetectedIssueAccessors for DetectedIssue {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> DetectedissueStatus {
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> Option<CodeableConcept> {
         self.code.clone()
@@ -429,10 +422,10 @@ impl crate::traits::detected_issue::DetectedIssueAccessors for DetectedIssue {
         self.author.clone()
     }
     fn implicated(&self) -> &[Reference] {
-        self.implicated.as_deref().unwrap_or(&[])
+        self.implicated.as_slice()
     }
     fn evidence(&self) -> &[DetectedIssueEvidence] {
-        self.evidence.as_deref().unwrap_or(&[])
+        self.evidence.as_slice()
     }
     fn detail(&self) -> Option<StringType> {
         self.detail.clone()
@@ -441,7 +434,7 @@ impl crate::traits::detected_issue::DetectedIssueAccessors for DetectedIssue {
         self.reference.clone()
     }
     fn mitigation(&self) -> &[DetectedIssueMitigation] {
-        self.mitigation.as_deref().unwrap_or(&[])
+        self.mitigation.as_slice()
     }
 }
 
@@ -451,12 +444,12 @@ impl crate::traits::detected_issue::DetectedIssueMutators for DetectedIssue {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: DetectedissueStatus) -> Self {
@@ -466,12 +459,12 @@ impl crate::traits::detected_issue::DetectedIssueMutators for DetectedIssue {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -501,22 +494,22 @@ impl crate::traits::detected_issue::DetectedIssueMutators for DetectedIssue {
     }
     fn set_implicated(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.implicated = Some(value);
+        resource.implicated = value;
         resource
     }
     fn add_implicated(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.implicated.get_or_insert_with(Vec::new).push(item);
+        resource.implicated.push(item);
         resource
     }
     fn set_evidence(self, value: Vec<DetectedIssueEvidence>) -> Self {
         let mut resource = self.clone();
-        resource.evidence = Some(value);
+        resource.evidence = value;
         resource
     }
     fn add_evidence(self, item: DetectedIssueEvidence) -> Self {
         let mut resource = self.clone();
-        resource.evidence.get_or_insert_with(Vec::new).push(item);
+        resource.evidence.push(item);
         resource
     }
     fn set_detail(self, value: String) -> Self {
@@ -531,12 +524,12 @@ impl crate::traits::detected_issue::DetectedIssueMutators for DetectedIssue {
     }
     fn set_mitigation(self, value: Vec<DetectedIssueMitigation>) -> Self {
         let mut resource = self.clone();
-        resource.mitigation = Some(value);
+        resource.mitigation = value;
         resource
     }
     fn add_mitigation(self, item: DetectedIssueMitigation) -> Self {
         let mut resource = self.clone();
-        resource.mitigation.get_or_insert_with(Vec::new).push(item);
+        resource.mitigation.push(item);
         resource
     }
 }
@@ -546,13 +539,13 @@ impl crate::traits::detected_issue::DetectedIssueExistence for DetectedIssue {
         self.identified_date_time.is_some() || self.identified_period.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         self.code.is_some()
@@ -570,10 +563,10 @@ impl crate::traits::detected_issue::DetectedIssueExistence for DetectedIssue {
         self.author.is_some()
     }
     fn has_implicated(&self) -> bool {
-        self.implicated.as_ref().is_some_and(|v| !v.is_empty())
+        !self.implicated.is_empty()
     }
     fn has_evidence(&self) -> bool {
-        self.evidence.as_ref().is_some_and(|v| !v.is_empty())
+        !self.evidence.is_empty()
     }
     fn has_detail(&self) -> bool {
         self.detail.is_some()
@@ -582,7 +575,7 @@ impl crate::traits::detected_issue::DetectedIssueExistence for DetectedIssue {
         self.reference.is_some()
     }
     fn has_mitigation(&self) -> bool {
-        self.mitigation.as_ref().is_some_and(|v| !v.is_empty())
+        !self.mitigation.is_empty()
     }
 }
 

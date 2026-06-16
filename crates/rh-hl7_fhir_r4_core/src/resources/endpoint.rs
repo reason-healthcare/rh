@@ -26,7 +26,8 @@ pub struct Endpoint {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Identifies this endpoint across multiple systems
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | suspended | error | off | entered-in-error | test
     pub status: EndpointStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -46,7 +47,8 @@ pub struct Endpoint {
     #[serde(rename = "managingOrganization")]
     pub managing_organization: Option<Reference>,
     /// Contact details for source (e.g. troubleshooting)
-    pub contact: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactPoint>,
     /// Interval the endpoint is expected to be operational
     pub period: Option<Period>,
     /// The type of content that may be used at this endpoint (e.g. XDS Discharge summaries)
@@ -69,18 +71,22 @@ pub struct Endpoint {
     pub payload_type: Vec<CodeableConcept>,
     /// Mimetype to send. If not specified, the content could be anything (including no payload, if the connectionType defined this)
     #[serde(rename = "payloadMimeType")]
-    pub payload_mime_type: Option<Vec<Mimetypes>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub payload_mime_type: Vec<Mimetypes>,
     /// Extension element for the 'payloadMimeType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_payloadMimeType")]
-    pub _payload_mime_type: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _payload_mime_type: Vec<Element>,
     /// The technical base address for connecting to this endpoint
     pub address: StringType,
     /// Extension element for the 'address' primitive field. Contains metadata and extensions.
     pub _address: Option<Element>,
     /// Usage depends on the channel type
-    pub header: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub header: Vec<StringType>,
     /// Extension element for the 'header' primitive field. Contains metadata and extensions.
-    pub _header: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _header: Vec<Element>,
 }
 
 impl Default for Endpoint {
@@ -236,13 +242,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Endpoint {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -257,44 +263,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Endpoint {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -304,22 +298,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Endpoint {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::endpoint::EndpointAccessors for Endpoint {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> EndpointStatus {
         self.status.clone()
@@ -334,7 +325,7 @@ impl crate::traits::endpoint::EndpointAccessors for Endpoint {
         self.managing_organization.clone()
     }
     fn contact(&self) -> &[ContactPoint] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn period(&self) -> Option<Period> {
         self.period.clone()
@@ -343,13 +334,13 @@ impl crate::traits::endpoint::EndpointAccessors for Endpoint {
         &self.payload_type
     }
     fn payload_mime_type(&self) -> &[Mimetypes] {
-        self.payload_mime_type.as_deref().unwrap_or(&[])
+        self.payload_mime_type.as_slice()
     }
     fn address(&self) -> StringType {
         self.address.clone()
     }
     fn header(&self) -> &[StringType] {
-        self.header.as_deref().unwrap_or(&[])
+        self.header.as_slice()
     }
 }
 
@@ -359,12 +350,12 @@ impl crate::traits::endpoint::EndpointMutators for Endpoint {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: EndpointStatus) -> Self {
@@ -389,12 +380,12 @@ impl crate::traits::endpoint::EndpointMutators for Endpoint {
     }
     fn set_contact(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_period(self, value: Period) -> Self {
@@ -414,15 +405,12 @@ impl crate::traits::endpoint::EndpointMutators for Endpoint {
     }
     fn set_payload_mime_type(self, value: Vec<Mimetypes>) -> Self {
         let mut resource = self.clone();
-        resource.payload_mime_type = Some(value);
+        resource.payload_mime_type = value;
         resource
     }
     fn add_payload_mime_type(self, item: Mimetypes) -> Self {
         let mut resource = self.clone();
-        resource
-            .payload_mime_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.payload_mime_type.push(item);
         resource
     }
     fn set_address(self, value: String) -> Self {
@@ -432,19 +420,19 @@ impl crate::traits::endpoint::EndpointMutators for Endpoint {
     }
     fn set_header(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.header = Some(value);
+        resource.header = value;
         resource
     }
     fn add_header(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.header.get_or_insert_with(Vec::new).push(item);
+        resource.header.push(item);
         resource
     }
 }
 
 impl crate::traits::endpoint::EndpointExistence for Endpoint {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -459,7 +447,7 @@ impl crate::traits::endpoint::EndpointExistence for Endpoint {
         self.managing_organization.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_period(&self) -> bool {
         self.period.is_some()
@@ -468,15 +456,13 @@ impl crate::traits::endpoint::EndpointExistence for Endpoint {
         !self.payload_type.is_empty()
     }
     fn has_payload_mime_type(&self) -> bool {
-        self.payload_mime_type
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.payload_mime_type.is_empty()
     }
     fn has_address(&self) -> bool {
         true
     }
     fn has_header(&self) -> bool {
-        self.header.as_ref().is_some_and(|v| !v.is_empty())
+        !self.header.is_empty()
     }
 }
 

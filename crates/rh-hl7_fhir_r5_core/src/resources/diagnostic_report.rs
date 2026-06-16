@@ -28,10 +28,12 @@ pub struct DiagnosticReport {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for report
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// What was requested
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// registered | partial | preliminary | modified | final | amended | corrected | appended | cancelled | entered-in-error | unknown
     pub status: DiagnosticReportStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -41,7 +43,8 @@ pub struct DiagnosticReport {
     /// Binding: example (HL7 V2 table 0074)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/diagnostic-service-sections
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Name/Code for this diagnostic report
     ///
     /// Binding: preferred (LOINC Codes for Diagnostic Reports)
@@ -63,23 +66,31 @@ pub struct DiagnosticReport {
     /// Extension element for the 'issued' primitive field. Contains metadata and extensions.
     pub _issued: Option<Element>,
     /// Responsible Diagnostic Service
-    pub performer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<Reference>,
     /// Primary result interpreter
     #[serde(rename = "resultsInterpreter")]
-    pub results_interpreter: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub results_interpreter: Vec<Reference>,
     /// Specimens this report is based on
-    pub specimen: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specimen: Vec<Reference>,
     /// Observations
-    pub result: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub result: Vec<Reference>,
     /// Comments about the diagnostic report
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Reference to full details of an analysis associated with the diagnostic report
-    pub study: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub study: Vec<Reference>,
     /// Additional information supporting the diagnostic report
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<DiagnosticReportSupportinginfo>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<DiagnosticReportSupportinginfo>,
     /// Key images or data associated with this report
-    pub media: Option<Vec<DiagnosticReportMedia>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub media: Vec<DiagnosticReportMedia>,
     /// Reference to a Composition resource for the DiagnosticReport structure
     pub composition: Option<Reference>,
     /// Clinical conclusion (interpretation) of test results
@@ -92,10 +103,12 @@ pub struct DiagnosticReport {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
     #[serde(rename = "conclusionCode")]
-    pub conclusion_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conclusion_code: Vec<CodeableConcept>,
     /// Entire report as issued
     #[serde(rename = "presentedForm")]
-    pub presented_form: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presented_form: Vec<Attachment>,
 }
 /// DiagnosticReport nested structure for the 'media' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -355,13 +368,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DiagnosticRepor
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -376,44 +389,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DiagnosticReport
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -423,31 +424,28 @@ impl crate::traits::domain_resource::DomainResourceExistence for DiagnosticRepor
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::diagnostic_report::DiagnosticReportAccessors for DiagnosticReport {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn status(&self) -> DiagnosticReportStatus {
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
@@ -462,28 +460,28 @@ impl crate::traits::diagnostic_report::DiagnosticReportAccessors for DiagnosticR
         self.issued.clone()
     }
     fn performer(&self) -> &[Reference] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn results_interpreter(&self) -> &[Reference] {
-        self.results_interpreter.as_deref().unwrap_or(&[])
+        self.results_interpreter.as_slice()
     }
     fn specimen(&self) -> &[Reference] {
-        self.specimen.as_deref().unwrap_or(&[])
+        self.specimen.as_slice()
     }
     fn result(&self) -> &[Reference] {
-        self.result.as_deref().unwrap_or(&[])
+        self.result.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn study(&self) -> &[Reference] {
-        self.study.as_deref().unwrap_or(&[])
+        self.study.as_slice()
     }
     fn supporting_info(&self) -> &[DiagnosticReportSupportinginfo] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn media(&self) -> &[DiagnosticReportMedia] {
-        self.media.as_deref().unwrap_or(&[])
+        self.media.as_slice()
     }
     fn composition(&self) -> Option<Reference> {
         self.composition.clone()
@@ -492,10 +490,10 @@ impl crate::traits::diagnostic_report::DiagnosticReportAccessors for DiagnosticR
         self.conclusion.clone()
     }
     fn conclusion_code(&self) -> &[CodeableConcept] {
-        self.conclusion_code.as_deref().unwrap_or(&[])
+        self.conclusion_code.as_slice()
     }
     fn presented_form(&self) -> &[Attachment] {
-        self.presented_form.as_deref().unwrap_or(&[])
+        self.presented_form.as_slice()
     }
 }
 
@@ -505,22 +503,22 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_status(self, value: DiagnosticReportStatus) -> Self {
@@ -530,12 +528,12 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -560,88 +558,82 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_performer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_results_interpreter(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.results_interpreter = Some(value);
+        resource.results_interpreter = value;
         resource
     }
     fn add_results_interpreter(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .results_interpreter
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.results_interpreter.push(item);
         resource
     }
     fn set_specimen(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.specimen = Some(value);
+        resource.specimen = value;
         resource
     }
     fn add_specimen(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.specimen.get_or_insert_with(Vec::new).push(item);
+        resource.specimen.push(item);
         resource
     }
     fn set_result(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.result = Some(value);
+        resource.result = value;
         resource
     }
     fn add_result(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.result.get_or_insert_with(Vec::new).push(item);
+        resource.result.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_study(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.study = Some(value);
+        resource.study = value;
         resource
     }
     fn add_study(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.study.get_or_insert_with(Vec::new).push(item);
+        resource.study.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<DiagnosticReportSupportinginfo>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: DiagnosticReportSupportinginfo) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_media(self, value: Vec<DiagnosticReportMedia>) -> Self {
         let mut resource = self.clone();
-        resource.media = Some(value);
+        resource.media = value;
         resource
     }
     fn add_media(self, item: DiagnosticReportMedia) -> Self {
         let mut resource = self.clone();
-        resource.media.get_or_insert_with(Vec::new).push(item);
+        resource.media.push(item);
         resource
     }
     fn set_composition(self, value: Reference) -> Self {
@@ -656,28 +648,22 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_conclusion_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.conclusion_code = Some(value);
+        resource.conclusion_code = value;
         resource
     }
     fn add_conclusion_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .conclusion_code
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.conclusion_code.push(item);
         resource
     }
     fn set_presented_form(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.presented_form = Some(value);
+        resource.presented_form = value;
         resource
     }
     fn add_presented_form(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource
-            .presented_form
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.presented_form.push(item);
         resource
     }
 }
@@ -687,16 +673,16 @@ impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticR
         self.effective_date_time.is_some() || self.effective_period.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         true
@@ -711,30 +697,28 @@ impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticR
         self.issued.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_results_interpreter(&self) -> bool {
-        self.results_interpreter
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.results_interpreter.is_empty()
     }
     fn has_specimen(&self) -> bool {
-        self.specimen.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specimen.is_empty()
     }
     fn has_result(&self) -> bool {
-        self.result.as_ref().is_some_and(|v| !v.is_empty())
+        !self.result.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_study(&self) -> bool {
-        self.study.as_ref().is_some_and(|v| !v.is_empty())
+        !self.study.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_media(&self) -> bool {
-        self.media.as_ref().is_some_and(|v| !v.is_empty())
+        !self.media.is_empty()
     }
     fn has_composition(&self) -> bool {
         self.composition.is_some()
@@ -743,10 +727,10 @@ impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticR
         self.conclusion.is_some()
     }
     fn has_conclusion_code(&self) -> bool {
-        self.conclusion_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.conclusion_code.is_empty()
     }
     fn has_presented_form(&self) -> bool {
-        self.presented_form.as_ref().is_some_and(|v| !v.is_empty())
+        !self.presented_form.is_empty()
     }
 }
 

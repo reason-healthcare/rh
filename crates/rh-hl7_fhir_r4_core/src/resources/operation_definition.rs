@@ -68,20 +68,23 @@ pub struct OperationDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the operation definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for operation definition (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this operation definition is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -106,9 +109,11 @@ pub struct OperationDefinition {
     /// Extension element for the 'base' primitive field. Contains metadata and extensions.
     pub _base: Option<Element>,
     /// Types this operation applies to
-    pub resource: Option<Vec<ResourceTypes>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resource: Vec<ResourceTypes>,
     /// Extension element for the 'resource' primitive field. Contains metadata and extensions.
-    pub _resource: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _resource: Vec<Element>,
     /// Invoke at the system level?
     pub system: BooleanType,
     /// Extension element for the 'system' primitive field. Contains metadata and extensions.
@@ -135,9 +140,11 @@ pub struct OperationDefinition {
     #[serde(rename = "_outputProfile")]
     pub _output_profile: Option<Element>,
     /// Parameters for the operation/query
-    pub parameter: Option<Vec<OperationDefinitionParameter>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<OperationDefinitionParameter>,
     /// Define overloaded variants for when  generating code
-    pub overload: Option<Vec<OperationDefinitionOverload>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub overload: Vec<OperationDefinitionOverload>,
 }
 /// OperationDefinition nested structure for the 'overload' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -147,10 +154,12 @@ pub struct OperationDefinitionOverload {
     pub base: BackboneElement,
     /// Name of parameter to include in overload
     #[serde(rename = "parameterName")]
-    pub parameter_name: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter_name: Vec<StringType>,
     /// Extension element for the 'parameterName' primitive field. Contains metadata and extensions.
     #[serde(rename = "_parameterName")]
-    pub _parameter_name: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _parameter_name: Vec<Element>,
     /// Comments to go on overload
     pub comment: Option<StringType>,
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
@@ -162,11 +171,12 @@ pub struct OperationDefinitionParameter {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// References to this parameter
-    #[serde(rename = "referencedFrom")]
-    pub referenced_from: Option<Vec<OperationDefinitionParameterReferencedfrom>>,
     /// ValueSet details if this is coded
     pub binding: Option<OperationDefinitionParameterBinding>,
+    /// References to this parameter
+    #[serde(rename = "referencedFrom")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub referenced_from: Vec<OperationDefinitionParameterReferencedfrom>,
     /// Name in Parameters.parameter.name or in URL
     pub name: StringType,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -195,10 +205,12 @@ pub struct OperationDefinitionParameter {
     pub _type: Option<Element>,
     /// If type is Reference | canonical, allowed targets
     #[serde(rename = "targetProfile")]
-    pub target_profile: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_profile: Vec<StringType>,
     /// Extension element for the 'targetProfile' primitive field. Contains metadata and extensions.
     #[serde(rename = "_targetProfile")]
-    pub _target_profile: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _target_profile: Vec<Element>,
     /// number | date | string | token | reference | composite | quantity | uri | special
     #[serde(rename = "searchType")]
     pub search_type: Option<SearchParamType>,
@@ -206,7 +218,8 @@ pub struct OperationDefinitionParameter {
     #[serde(rename = "_searchType")]
     pub _search_type: Option<Element>,
     /// Parts of a nested Parameter
-    pub part: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part: Vec<StringType>,
 }
 /// OperationDefinitionParameter nested structure for the 'binding' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -314,8 +327,8 @@ impl Default for OperationDefinitionParameter {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            referenced_from: Default::default(),
             binding: Default::default(),
+            referenced_from: Default::default(),
             name: StringType::default(),
             _name: Default::default(),
             use_: Default::default(),
@@ -629,13 +642,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for OperationDefini
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -650,44 +663,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for OperationDefinit
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -697,16 +698,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for OperationDefini
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -739,16 +737,16 @@ impl crate::traits::operation_definition::OperationDefinitionAccessors for Opera
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -766,7 +764,7 @@ impl crate::traits::operation_definition::OperationDefinitionAccessors for Opera
         self.base_definition.clone()
     }
     fn resource(&self) -> &[ResourceTypes] {
-        self.resource.as_deref().unwrap_or(&[])
+        self.resource.as_slice()
     }
     fn system(&self) -> BooleanType {
         self.system
@@ -784,10 +782,10 @@ impl crate::traits::operation_definition::OperationDefinitionAccessors for Opera
         self.output_profile.clone()
     }
     fn parameter(&self) -> &[OperationDefinitionParameter] {
-        self.parameter.as_deref().unwrap_or(&[])
+        self.parameter.as_slice()
     }
     fn overload(&self) -> &[OperationDefinitionOverload] {
-        self.overload.as_deref().unwrap_or(&[])
+        self.overload.as_slice()
     }
 }
 
@@ -842,12 +840,12 @@ impl crate::traits::operation_definition::OperationDefinitionMutators for Operat
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -857,25 +855,22 @@ impl crate::traits::operation_definition::OperationDefinitionMutators for Operat
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -905,12 +900,12 @@ impl crate::traits::operation_definition::OperationDefinitionMutators for Operat
     }
     fn set_resource(self, value: Vec<ResourceTypes>) -> Self {
         let mut resource = self.clone();
-        resource.resource = Some(value);
+        resource.resource = value;
         resource
     }
     fn add_resource(self, item: ResourceTypes) -> Self {
         let mut resource = self.clone();
-        resource.resource.get_or_insert_with(Vec::new).push(item);
+        resource.resource.push(item);
         resource
     }
     fn set_system(self, value: bool) -> Self {
@@ -940,22 +935,22 @@ impl crate::traits::operation_definition::OperationDefinitionMutators for Operat
     }
     fn set_parameter(self, value: Vec<OperationDefinitionParameter>) -> Self {
         let mut resource = self.clone();
-        resource.parameter = Some(value);
+        resource.parameter = value;
         resource
     }
     fn add_parameter(self, item: OperationDefinitionParameter) -> Self {
         let mut resource = self.clone();
-        resource.parameter.get_or_insert_with(Vec::new).push(item);
+        resource.parameter.push(item);
         resource
     }
     fn set_overload(self, value: Vec<OperationDefinitionOverload>) -> Self {
         let mut resource = self.clone();
-        resource.overload = Some(value);
+        resource.overload = value;
         resource
     }
     fn add_overload(self, item: OperationDefinitionOverload) -> Self {
         let mut resource = self.clone();
-        resource.overload.get_or_insert_with(Vec::new).push(item);
+        resource.overload.push(item);
         resource
     }
 }
@@ -989,16 +984,16 @@ impl crate::traits::operation_definition::OperationDefinitionExistence for Opera
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1016,7 +1011,7 @@ impl crate::traits::operation_definition::OperationDefinitionExistence for Opera
         self.base_definition.is_some()
     }
     fn has_resource(&self) -> bool {
-        self.resource.as_ref().is_some_and(|v| !v.is_empty())
+        !self.resource.is_empty()
     }
     fn has_system(&self) -> bool {
         true
@@ -1034,10 +1029,10 @@ impl crate::traits::operation_definition::OperationDefinitionExistence for Opera
         self.output_profile.is_some()
     }
     fn has_parameter(&self) -> bool {
-        self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parameter.is_empty()
     }
     fn has_overload(&self) -> bool {
-        self.overload.as_ref().is_some_and(|v| !v.is_empty())
+        !self.overload.is_empty()
     }
 }
 

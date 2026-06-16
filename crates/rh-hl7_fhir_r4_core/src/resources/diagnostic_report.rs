@@ -28,10 +28,12 @@ pub struct DiagnosticReport {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for report
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// What was requested
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// registered | partial | preliminary | final +
     pub status: DiagnosticReportStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -41,7 +43,8 @@ pub struct DiagnosticReport {
     /// Binding: example (Codes for diagnostic service sections.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/diagnostic-service-sections
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Name/Code for this diagnostic report
     ///
     /// Binding: preferred (Codes that describe Diagnostic Reports.)
@@ -63,19 +66,25 @@ pub struct DiagnosticReport {
     /// Extension element for the 'issued' primitive field. Contains metadata and extensions.
     pub _issued: Option<Element>,
     /// Responsible Diagnostic Service
-    pub performer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<Reference>,
     /// Primary result interpreter
     #[serde(rename = "resultsInterpreter")]
-    pub results_interpreter: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub results_interpreter: Vec<Reference>,
     /// Specimens this report is based on
-    pub specimen: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specimen: Vec<Reference>,
     /// Observations
-    pub result: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub result: Vec<Reference>,
     /// Reference to full details of imaging associated with the diagnostic report
     #[serde(rename = "imagingStudy")]
-    pub imaging_study: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub imaging_study: Vec<Reference>,
     /// Key images associated with this report
-    pub media: Option<Vec<DiagnosticReportMedia>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub media: Vec<DiagnosticReportMedia>,
     /// Clinical conclusion (interpretation) of test results
     pub conclusion: Option<StringType>,
     /// Extension element for the 'conclusion' primitive field. Contains metadata and extensions.
@@ -86,39 +95,12 @@ pub struct DiagnosticReport {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
     #[serde(rename = "conclusionCode")]
-    pub conclusion_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conclusion_code: Vec<CodeableConcept>,
     /// Entire report as issued
     #[serde(rename = "presentedForm")]
-    pub presented_form: Option<Vec<Attachment>>,
-}
-/// Summary Of
-///
-/// A summary report that points to subordinate target reports.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportSummaryOf {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
-/// DiagnosticReport nested structure for the 'media' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiagnosticReportMedia {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Comment about the image (e.g. explanation)
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Reference to the image source
-    pub link: Reference,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presented_form: Vec<Attachment>,
 }
 /// Addendum Of
 ///
@@ -132,6 +114,54 @@ pub struct DiagnosticReportMedia {
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagnosticReportAddendumOf {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Extends
+///
+/// The report references related ("sibling") reports.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-extends
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportExtends {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Analysis
+///
+/// Knowledge-based comments on the effect of the sequence on patient's condition/medication reaction.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsAnalysis
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsAnalysis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// AssessedCondition
+///
+/// Used to denote condition context for genetic testing, which may influence reported variants and interpretation for large genomic testing panels e.g. lung cancer or familial breast cancer.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsAssessedCondition
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportGeneticsAssessedCondition {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -168,6 +198,83 @@ pub struct DiagnosticReportGeneticsReferences {
     #[serde(flatten)]
     pub base: Extension,
 }
+/// locationPerformed
+///
+/// Facility location where this report was prepared.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-locationPerformed
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportLocationPerformed {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// DiagnosticReport nested structure for the 'media' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportMedia {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Comment about the image (e.g. explanation)
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Reference to the image source
+    pub link: Reference,
+}
+/// Replaces
+///
+/// The report replaces the target resource.  For example, when a final anatomic pathology report replaces a preliminary anatomic pathology report replaces  where the subsequent observation of case and report  may be on more or different material (specimen).  Note that  this is not same concept as` DiagnosticReport.status`  = preliminary of final, but industry definition of preliminary and final.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-replaces
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportReplaces {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Risk
+///
+/// Provides a link to an assessment of prognosis or risk as informed by the diagnostic results (For example, genetic results and possibly by patient genetic family history information).  This extension is used when need RiskAssessment as an alternate choice  for `Observation.hasMember` or `DiagnosticReport.result`.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-risk
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportRisk {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Summary Of
+///
+/// A summary report that points to subordinate target reports.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/diagnosticReport-summaryOf
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagnosticReportSummaryOf {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
 
 impl Default for DiagnosticReport {
     fn default() -> Self {
@@ -199,7 +306,55 @@ impl Default for DiagnosticReport {
     }
 }
 
-impl Default for DiagnosticReportSummaryOf {
+impl Default for DiagnosticReportAddendumOf {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportExtends {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsAnalysis {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsAssessedCondition {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportGeneticsReferences {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
+        }
+    }
+}
+
+impl Default for DiagnosticReportLocationPerformed {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -218,7 +373,7 @@ impl Default for DiagnosticReportMedia {
     }
 }
 
-impl Default for DiagnosticReportAddendumOf {
+impl Default for DiagnosticReportReplaces {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -226,7 +381,7 @@ impl Default for DiagnosticReportAddendumOf {
     }
 }
 
-impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
+impl Default for DiagnosticReportRisk {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -234,7 +389,7 @@ impl Default for DiagnosticReportGeneticsFamilyMemberHistory {
     }
 }
 
-impl Default for DiagnosticReportGeneticsReferences {
+impl Default for DiagnosticReportSummaryOf {
     fn default() -> Self {
         Self {
             base: Extension::default(),
@@ -379,13 +534,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DiagnosticRepor
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -400,44 +555,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DiagnosticReport
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -447,31 +590,28 @@ impl crate::traits::domain_resource::DomainResourceExistence for DiagnosticRepor
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::diagnostic_report::DiagnosticReportAccessors for DiagnosticReport {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn status(&self) -> DiagnosticReportStatus {
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
@@ -486,31 +626,31 @@ impl crate::traits::diagnostic_report::DiagnosticReportAccessors for DiagnosticR
         self.issued.clone()
     }
     fn performer(&self) -> &[Reference] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn results_interpreter(&self) -> &[Reference] {
-        self.results_interpreter.as_deref().unwrap_or(&[])
+        self.results_interpreter.as_slice()
     }
     fn specimen(&self) -> &[Reference] {
-        self.specimen.as_deref().unwrap_or(&[])
+        self.specimen.as_slice()
     }
     fn result(&self) -> &[Reference] {
-        self.result.as_deref().unwrap_or(&[])
+        self.result.as_slice()
     }
     fn imaging_study(&self) -> &[Reference] {
-        self.imaging_study.as_deref().unwrap_or(&[])
+        self.imaging_study.as_slice()
     }
     fn media(&self) -> &[DiagnosticReportMedia] {
-        self.media.as_deref().unwrap_or(&[])
+        self.media.as_slice()
     }
     fn conclusion(&self) -> Option<StringType> {
         self.conclusion.clone()
     }
     fn conclusion_code(&self) -> &[CodeableConcept] {
-        self.conclusion_code.as_deref().unwrap_or(&[])
+        self.conclusion_code.as_slice()
     }
     fn presented_form(&self) -> &[Attachment] {
-        self.presented_form.as_deref().unwrap_or(&[])
+        self.presented_form.as_slice()
     }
 }
 
@@ -520,22 +660,22 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_status(self, value: DiagnosticReportStatus) -> Self {
@@ -545,12 +685,12 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -575,68 +715,62 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_performer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_results_interpreter(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.results_interpreter = Some(value);
+        resource.results_interpreter = value;
         resource
     }
     fn add_results_interpreter(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .results_interpreter
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.results_interpreter.push(item);
         resource
     }
     fn set_specimen(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.specimen = Some(value);
+        resource.specimen = value;
         resource
     }
     fn add_specimen(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.specimen.get_or_insert_with(Vec::new).push(item);
+        resource.specimen.push(item);
         resource
     }
     fn set_result(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.result = Some(value);
+        resource.result = value;
         resource
     }
     fn add_result(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.result.get_or_insert_with(Vec::new).push(item);
+        resource.result.push(item);
         resource
     }
     fn set_imaging_study(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.imaging_study = Some(value);
+        resource.imaging_study = value;
         resource
     }
     fn add_imaging_study(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .imaging_study
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.imaging_study.push(item);
         resource
     }
     fn set_media(self, value: Vec<DiagnosticReportMedia>) -> Self {
         let mut resource = self.clone();
-        resource.media = Some(value);
+        resource.media = value;
         resource
     }
     fn add_media(self, item: DiagnosticReportMedia) -> Self {
         let mut resource = self.clone();
-        resource.media.get_or_insert_with(Vec::new).push(item);
+        resource.media.push(item);
         resource
     }
     fn set_conclusion(self, value: String) -> Self {
@@ -646,28 +780,22 @@ impl crate::traits::diagnostic_report::DiagnosticReportMutators for DiagnosticRe
     }
     fn set_conclusion_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.conclusion_code = Some(value);
+        resource.conclusion_code = value;
         resource
     }
     fn add_conclusion_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .conclusion_code
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.conclusion_code.push(item);
         resource
     }
     fn set_presented_form(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.presented_form = Some(value);
+        resource.presented_form = value;
         resource
     }
     fn add_presented_form(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource
-            .presented_form
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.presented_form.push(item);
         resource
     }
 }
@@ -677,16 +805,16 @@ impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticR
         self.effective_date_time.is_some() || self.effective_period.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         true
@@ -701,33 +829,31 @@ impl crate::traits::diagnostic_report::DiagnosticReportExistence for DiagnosticR
         self.issued.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_results_interpreter(&self) -> bool {
-        self.results_interpreter
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.results_interpreter.is_empty()
     }
     fn has_specimen(&self) -> bool {
-        self.specimen.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specimen.is_empty()
     }
     fn has_result(&self) -> bool {
-        self.result.as_ref().is_some_and(|v| !v.is_empty())
+        !self.result.is_empty()
     }
     fn has_imaging_study(&self) -> bool {
-        self.imaging_study.as_ref().is_some_and(|v| !v.is_empty())
+        !self.imaging_study.is_empty()
     }
     fn has_media(&self) -> bool {
-        self.media.as_ref().is_some_and(|v| !v.is_empty())
+        !self.media.is_empty()
     }
     fn has_conclusion(&self) -> bool {
         self.conclusion.is_some()
     }
     fn has_conclusion_code(&self) -> bool {
-        self.conclusion_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.conclusion_code.is_empty()
     }
     fn has_presented_form(&self) -> bool {
-        self.presented_form.as_ref().is_some_and(|v| !v.is_empty())
+        !self.presented_form.is_empty()
     }
 }
 

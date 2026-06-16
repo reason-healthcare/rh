@@ -26,7 +26,8 @@ pub struct ClinicalUseDefinition {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for this issue
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// indication | contraindication | interaction | undesirable-effect | warning
     #[serde(rename = "type")]
     pub type_: ClinicalUseDefinitionType,
@@ -37,9 +38,11 @@ pub struct ClinicalUseDefinition {
     /// Binding: preferred (A categorisation for a clinical use information item.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-use-definition-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// The medication, product, substance, device, procedure etc. for which this is an indication
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// Whether this is a current issue or one that has been retired etc
     ///
     /// Binding: preferred (The lifecycle status of an artifact.)
@@ -53,16 +56,176 @@ pub struct ClinicalUseDefinition {
     /// Specifics for when this is an interaction
     pub interaction: Option<ClinicalUseDefinitionInteraction>,
     /// The population group to which this applies
-    pub population: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub population: Vec<Reference>,
     /// Logic used by the clinical use definition
-    pub library: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub library: Vec<StringType>,
     /// Extension element for the 'library' primitive field. Contains metadata and extensions.
-    pub _library: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _library: Vec<Element>,
     /// A possible negative outcome from the use of this treatment
     #[serde(rename = "undesirableEffect")]
     pub undesirable_effect: Option<ClinicalUseDefinitionUndesirableeffect>,
     /// Critical environmental, health or physical risks or hazards. For example 'Do not operate heavy machinery', 'May cause drowsiness'
     pub warning: Option<ClinicalUseDefinitionWarning>,
+}
+/// ClinicalUseDefinition nested structure for the 'contraindication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionContraindication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Information about use of the product in relation to other therapies described as part of the contraindication
+    #[serde(rename = "otherTherapy")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub other_therapy: Vec<ClinicalUseDefinitionContraindicationOthertherapy>,
+    /// The situation that is being documented as contraindicating against this item
+    ///
+    /// Binding: example (A symptom, disease or procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
+    #[serde(rename = "diseaseSymptomProcedure")]
+    pub disease_symptom_procedure: Option<CodeableReference>,
+    /// The status of the disease or symptom for the contraindication
+    ///
+    /// Binding: example (The status of a disease or symptom.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-status
+    #[serde(rename = "diseaseStatus")]
+    pub disease_status: Option<CodeableReference>,
+    /// A comorbidity (concurrent condition) or coinfection
+    ///
+    /// Binding: example (A symptom, disease or procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comorbidity: Vec<CodeableReference>,
+    /// The indication which this is a contraidication for
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub indication: Vec<Reference>,
+    /// An expression that returns true or false, indicating whether the indication is applicable or not, after having applied its other elements
+    pub applicability: Option<Expression>,
+}
+/// ClinicalUseDefinitionContraindication nested structure for the 'otherTherapy' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionContraindicationOthertherapy {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of relationship between the product indication/contraindication and another therapy
+    ///
+    /// Binding: preferred (Classification of relationship between a therapy and a contraindication or an indication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy-relationship-type
+    #[serde(rename = "relationshipType")]
+    pub relationship_type: CodeableConcept,
+    /// Reference to a specific medication, substance etc. as part of an indication or contraindication
+    ///
+    /// Binding: example (A therapy.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy
+    pub treatment: CodeableReference,
+}
+/// ClinicalUseDefinition nested structure for the 'indication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionIndication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The situation that is being documented as an indicaton for this item
+    ///
+    /// Binding: example (A symptom, disease or procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
+    #[serde(rename = "diseaseSymptomProcedure")]
+    pub disease_symptom_procedure: Option<CodeableReference>,
+    /// The status of the disease or symptom for the indication
+    ///
+    /// Binding: example (The status of a disease or symptom.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-status
+    #[serde(rename = "diseaseStatus")]
+    pub disease_status: Option<CodeableReference>,
+    /// A comorbidity or coinfection as part of the indication
+    ///
+    /// Binding: example (A symptom, disease or procedure.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comorbidity: Vec<CodeableReference>,
+    /// The intended effect, aim or strategy to be achieved
+    ///
+    /// Binding: preferred (The overall intended use of a product.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/product-intended-use
+    #[serde(rename = "intendedEffect")]
+    pub intended_effect: Option<CodeableReference>,
+    /// Timing or duration information (Range)
+    #[serde(rename = "durationRange")]
+    pub duration_range: Option<Range>,
+    /// Timing or duration information (string)
+    #[serde(rename = "durationString")]
+    pub duration_string: Option<StringType>,
+    /// An unwanted side effect or negative outcome of the subject of this resource when being used for this indication
+    #[serde(rename = "undesirableEffect")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub undesirable_effect: Vec<Reference>,
+    /// An expression that returns true or false, indicating whether the indication is applicable or not, after having applied its other elements
+    pub applicability: Option<Expression>,
+    /// The use of the medicinal product in relation to other therapies described as part of the indication
+    #[serde(rename = "otherTherapy")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub other_therapy: Vec<StringType>,
+}
+/// ClinicalUseDefinition nested structure for the 'interaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionInteraction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific medication, product, food etc. or laboratory test that interacts
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interactant: Vec<ClinicalUseDefinitionInteractionInteractant>,
+    /// The type of the interaction e.g. drug-drug interaction, drug-lab test interaction
+    ///
+    /// Binding: example (A categorisation for an interaction between two substances.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The effect of the interaction, for example "reduced gastric absorption of primary medication"
+    ///
+    /// Binding: example (A interaction effect of clinical use of a medication or other substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-effect
+    pub effect: Option<CodeableReference>,
+    /// The incidence of the interaction, e.g. theoretical, observed
+    ///
+    /// Binding: example (A categorisation for incidence of occurence of an interaction.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-incidence
+    pub incidence: Option<CodeableConcept>,
+    /// Actions for managing the interaction
+    ///
+    /// Binding: example (A type of management for an interaction of a medication or other substance.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-management
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub management: Vec<CodeableConcept>,
+}
+/// ClinicalUseDefinitionInteraction nested structure for the 'interactant' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalUseDefinitionInteractionInteractant {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The specific medication, product, food etc. or laboratory test that interacts (Reference)
+    #[serde(rename = "itemReference")]
+    pub item_reference: Reference,
+    /// The specific medication, product, food etc. or laboratory test that interacts (CodeableConcept)
+    #[serde(rename = "itemCodeableConcept")]
+    pub item_codeable_concept: CodeableConcept,
 }
 /// ClinicalUseDefinition nested structure for the 'undesirableEffect' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,155 +271,6 @@ pub struct ClinicalUseDefinitionWarning {
     /// ValueSet: http://hl7.org/fhir/ValueSet/warning-type
     pub code: Option<CodeableConcept>,
 }
-/// ClinicalUseDefinition nested structure for the 'interaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionInteraction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The specific medication, product, food etc. or laboratory test that interacts
-    pub interactant: Option<Vec<ClinicalUseDefinitionInteractionInteractant>>,
-    /// The type of the interaction e.g. drug-drug interaction, drug-lab test interaction
-    ///
-    /// Binding: example (A categorisation for an interaction between two substances.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The effect of the interaction, for example "reduced gastric absorption of primary medication"
-    ///
-    /// Binding: example (A interaction effect of clinical use of a medication or other substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-effect
-    pub effect: Option<CodeableReference>,
-    /// The incidence of the interaction, e.g. theoretical, observed
-    ///
-    /// Binding: example (A categorisation for incidence of occurence of an interaction.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-incidence
-    pub incidence: Option<CodeableConcept>,
-    /// Actions for managing the interaction
-    ///
-    /// Binding: example (A type of management for an interaction of a medication or other substance.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/interaction-management
-    pub management: Option<Vec<CodeableConcept>>,
-}
-/// ClinicalUseDefinition nested structure for the 'indication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionIndication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The situation that is being documented as an indicaton for this item
-    ///
-    /// Binding: example (A symptom, disease or procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
-    #[serde(rename = "diseaseSymptomProcedure")]
-    pub disease_symptom_procedure: Option<CodeableReference>,
-    /// The status of the disease or symptom for the indication
-    ///
-    /// Binding: example (The status of a disease or symptom.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-status
-    #[serde(rename = "diseaseStatus")]
-    pub disease_status: Option<CodeableReference>,
-    /// A comorbidity or coinfection as part of the indication
-    ///
-    /// Binding: example (A symptom, disease or procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
-    pub comorbidity: Option<Vec<CodeableReference>>,
-    /// The intended effect, aim or strategy to be achieved
-    ///
-    /// Binding: preferred (The overall intended use of a product.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/product-intended-use
-    #[serde(rename = "intendedEffect")]
-    pub intended_effect: Option<CodeableReference>,
-    /// Timing or duration information (Range)
-    #[serde(rename = "durationRange")]
-    pub duration_range: Option<Range>,
-    /// Timing or duration information (string)
-    #[serde(rename = "durationString")]
-    pub duration_string: Option<StringType>,
-    /// An unwanted side effect or negative outcome of the subject of this resource when being used for this indication
-    #[serde(rename = "undesirableEffect")]
-    pub undesirable_effect: Option<Vec<Reference>>,
-    /// An expression that returns true or false, indicating whether the indication is applicable or not, after having applied its other elements
-    pub applicability: Option<Expression>,
-    /// The use of the medicinal product in relation to other therapies described as part of the indication
-    #[serde(rename = "otherTherapy")]
-    pub other_therapy: Option<Vec<StringType>>,
-}
-/// ClinicalUseDefinitionContraindication nested structure for the 'otherTherapy' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionContraindicationOthertherapy {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of relationship between the product indication/contraindication and another therapy
-    ///
-    /// Binding: preferred (Classification of relationship between a therapy and a contraindication or an indication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy-relationship-type
-    #[serde(rename = "relationshipType")]
-    pub relationship_type: CodeableConcept,
-    /// Reference to a specific medication, substance etc. as part of an indication or contraindication
-    ///
-    /// Binding: example (A therapy.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/therapy
-    pub treatment: CodeableReference,
-}
-/// ClinicalUseDefinition nested structure for the 'contraindication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionContraindication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Information about use of the product in relation to other therapies described as part of the contraindication
-    #[serde(rename = "otherTherapy")]
-    pub other_therapy: Option<Vec<ClinicalUseDefinitionContraindicationOthertherapy>>,
-    /// The situation that is being documented as contraindicating against this item
-    ///
-    /// Binding: example (A symptom, disease or procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
-    #[serde(rename = "diseaseSymptomProcedure")]
-    pub disease_symptom_procedure: Option<CodeableReference>,
-    /// The status of the disease or symptom for the contraindication
-    ///
-    /// Binding: example (The status of a disease or symptom.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-status
-    #[serde(rename = "diseaseStatus")]
-    pub disease_status: Option<CodeableReference>,
-    /// A comorbidity (concurrent condition) or coinfection
-    ///
-    /// Binding: example (A symptom, disease or procedure.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/disease-symptom-procedure
-    pub comorbidity: Option<Vec<CodeableReference>>,
-    /// The indication which this is a contraidication for
-    pub indication: Option<Vec<Reference>>,
-    /// An expression that returns true or false, indicating whether the indication is applicable or not, after having applied its other elements
-    pub applicability: Option<Expression>,
-}
-/// ClinicalUseDefinitionInteraction nested structure for the 'interactant' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalUseDefinitionInteractionInteractant {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The specific medication, product, food etc. or laboratory test that interacts (Reference)
-    #[serde(rename = "itemReference")]
-    pub item_reference: Reference,
-    /// The specific medication, product, food etc. or laboratory test that interacts (CodeableConcept)
-    #[serde(rename = "itemCodeableConcept")]
-    pub item_codeable_concept: CodeableConcept,
-}
 
 impl Default for ClinicalUseDefinition {
     fn default() -> Self {
@@ -280,37 +294,26 @@ impl Default for ClinicalUseDefinition {
     }
 }
 
-impl Default for ClinicalUseDefinitionUndesirableeffect {
+impl Default for ClinicalUseDefinitionContraindication {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            symptom_condition_effect: Default::default(),
-            classification: Default::default(),
-            frequency_of_occurrence: Default::default(),
+            other_therapy: Default::default(),
+            disease_symptom_procedure: Default::default(),
+            disease_status: Default::default(),
+            comorbidity: Default::default(),
+            indication: Default::default(),
+            applicability: Default::default(),
         }
     }
 }
 
-impl Default for ClinicalUseDefinitionWarning {
+impl Default for ClinicalUseDefinitionContraindicationOthertherapy {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            code: Default::default(),
-        }
-    }
-}
-
-impl Default for ClinicalUseDefinitionInteraction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            interactant: Default::default(),
-            type_: Default::default(),
-            effect: Default::default(),
-            incidence: Default::default(),
-            management: Default::default(),
+            relationship_type: Default::default(),
+            treatment: Default::default(),
         }
     }
 }
@@ -332,26 +335,15 @@ impl Default for ClinicalUseDefinitionIndication {
     }
 }
 
-impl Default for ClinicalUseDefinitionContraindicationOthertherapy {
+impl Default for ClinicalUseDefinitionInteraction {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            relationship_type: Default::default(),
-            treatment: Default::default(),
-        }
-    }
-}
-
-impl Default for ClinicalUseDefinitionContraindication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            other_therapy: Default::default(),
-            disease_symptom_procedure: Default::default(),
-            disease_status: Default::default(),
-            comorbidity: Default::default(),
-            indication: Default::default(),
-            applicability: Default::default(),
+            interactant: Default::default(),
+            type_: Default::default(),
+            effect: Default::default(),
+            incidence: Default::default(),
+            management: Default::default(),
         }
     }
 }
@@ -362,6 +354,28 @@ impl Default for ClinicalUseDefinitionInteractionInteractant {
             base: BackboneElement::default(),
             item_reference: Default::default(),
             item_codeable_concept: Default::default(),
+        }
+    }
+}
+
+impl Default for ClinicalUseDefinitionUndesirableeffect {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            symptom_condition_effect: Default::default(),
+            classification: Default::default(),
+            frequency_of_occurrence: Default::default(),
+        }
+    }
+}
+
+impl Default for ClinicalUseDefinitionWarning {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            code: Default::default(),
         }
     }
 }
@@ -749,13 +763,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ClinicalUseDefi
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -770,44 +784,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ClinicalUseDefin
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -817,16 +819,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ClinicalUseDefi
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -834,16 +833,16 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionAccessors
     for ClinicalUseDefinition
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn type_(&self) -> ClinicalUseDefinitionType {
         self.type_.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn status(&self) -> Option<CodeableConcept> {
         self.status.clone()
@@ -858,10 +857,10 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionAccessors
         self.interaction.clone()
     }
     fn population(&self) -> &[Reference] {
-        self.population.as_deref().unwrap_or(&[])
+        self.population.as_slice()
     }
     fn library(&self) -> &[StringType] {
-        self.library.as_deref().unwrap_or(&[])
+        self.library.as_slice()
     }
     fn undesirable_effect(&self) -> Option<ClinicalUseDefinitionUndesirableeffect> {
         self.undesirable_effect.clone()
@@ -879,12 +878,12 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_type_(self, value: ClinicalUseDefinitionType) -> Self {
@@ -894,22 +893,22 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionMutators
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_status(self, value: CodeableConcept) -> Self {
@@ -934,22 +933,22 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionMutators
     }
     fn set_population(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.population = Some(value);
+        resource.population = value;
         resource
     }
     fn add_population(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.population.get_or_insert_with(Vec::new).push(item);
+        resource.population.push(item);
         resource
     }
     fn set_library(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.library = Some(value);
+        resource.library = value;
         resource
     }
     fn add_library(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.library.get_or_insert_with(Vec::new).push(item);
+        resource.library.push(item);
         resource
     }
     fn set_undesirable_effect(self, value: ClinicalUseDefinitionUndesirableeffect) -> Self {
@@ -968,16 +967,16 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionExistence
     for ClinicalUseDefinition
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -992,10 +991,10 @@ impl crate::traits::clinical_use_definition::ClinicalUseDefinitionExistence
         self.interaction.is_some()
     }
     fn has_population(&self) -> bool {
-        self.population.as_ref().is_some_and(|v| !v.is_empty())
+        !self.population.is_empty()
     }
     fn has_library(&self) -> bool {
-        self.library.as_ref().is_some_and(|v| !v.is_empty())
+        !self.library.is_empty()
     }
     fn has_undesirable_effect(&self) -> bool {
         self.undesirable_effect.is_some()

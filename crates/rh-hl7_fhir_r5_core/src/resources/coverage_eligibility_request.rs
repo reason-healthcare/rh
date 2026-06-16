@@ -31,7 +31,8 @@ pub struct CoverageEligibilityRequest {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for coverage eligiblity request
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | cancelled | draft | entered-in-error
     pub status: FmStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -45,11 +46,13 @@ pub struct CoverageEligibilityRequest {
     /// auth-requirements | benefits | discovery | validation
     pub purpose: Vec<EligibilityrequestPurpose>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
-    pub _purpose: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _purpose: Vec<Element>,
     /// Intended recipient of products and services
     pub patient: Reference,
     /// Event information
-    pub event: Option<Vec<CoverageEligibilityRequestEvent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event: Vec<CoverageEligibilityRequestEvent>,
     /// Estimated date or dates of service (date)
     #[serde(rename = "servicedDate")]
     pub serviced_date: Option<DateType>,
@@ -70,11 +73,14 @@ pub struct CoverageEligibilityRequest {
     pub facility: Option<Reference>,
     /// Supporting information
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<CoverageEligibilityRequestSupportinginfo>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<CoverageEligibilityRequestSupportinginfo>,
     /// Patient insurance information
-    pub insurance: Option<Vec<CoverageEligibilityRequestInsurance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<CoverageEligibilityRequestInsurance>,
     /// Item to be evaluated for eligibiity
-    pub item: Option<Vec<CoverageEligibilityRequestItem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<CoverageEligibilityRequestItem>,
 }
 /// CoverageEligibilityRequest nested structure for the 'event' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,64 +102,6 @@ pub struct CoverageEligibilityRequestEvent {
     #[serde(rename = "whenPeriod")]
     pub when_period: Period,
 }
-/// CoverageEligibilityRequest nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Applicable diagnosis
-    pub diagnosis: Option<Vec<CoverageEligibilityRequestItemDiagnosis>>,
-    /// Applicable exception or supporting information
-    #[serde(rename = "supportingInfoSequence")]
-    pub supporting_info_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'supportingInfoSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_supportingInfoSequence")]
-    pub _supporting_info_sequence: Option<Element>,
-    /// Benefit classification
-    ///
-    /// Binding: example (Benefit categories such as: oral, medical, vision etc.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
-    pub category: Option<CodeableConcept>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: Option<CodeableConcept>,
-    /// Product or service billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Perfoming practitioner
-    pub provider: Option<Reference>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Servicing facility
-    pub facility: Option<Reference>,
-    /// Product or service details
-    pub detail: Option<Vec<Reference>>,
-}
-/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageEligibilityRequestItemDiagnosis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Nature of illness or problem (CodeableConcept)
-    #[serde(rename = "diagnosisCodeableConcept")]
-    pub diagnosis_codeable_concept: Option<CodeableConcept>,
-    /// Nature of illness or problem (Reference)
-    #[serde(rename = "diagnosisReference")]
-    pub diagnosis_reference: Option<Reference>,
-}
 /// CoverageEligibilityRequest nested structure for the 'insurance' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageEligibilityRequestInsurance {
@@ -172,6 +120,69 @@ pub struct CoverageEligibilityRequestInsurance {
     /// Extension element for the 'businessArrangement' primitive field. Contains metadata and extensions.
     #[serde(rename = "_businessArrangement")]
     pub _business_arrangement: Option<Element>,
+}
+/// CoverageEligibilityRequest nested structure for the 'item' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestItem {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Applicable diagnosis
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnosis: Vec<CoverageEligibilityRequestItemDiagnosis>,
+    /// Applicable exception or supporting information
+    #[serde(rename = "supportingInfoSequence")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info_sequence: Vec<PositiveIntType>,
+    /// Extension element for the 'supportingInfoSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_supportingInfoSequence")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _supporting_info_sequence: Vec<Element>,
+    /// Benefit classification
+    ///
+    /// Binding: example (Benefit categories such as: oral, medical, vision etc.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-benefitcategory
+    pub category: Option<CodeableConcept>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: Option<CodeableConcept>,
+    /// Product or service billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<CodeableConcept>,
+    /// Perfoming practitioner
+    pub provider: Option<Reference>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Servicing facility
+    pub facility: Option<Reference>,
+    /// Product or service details
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<Reference>,
+}
+/// CoverageEligibilityRequestItem nested structure for the 'diagnosis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageEligibilityRequestItemDiagnosis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Nature of illness or problem (CodeableConcept)
+    #[serde(rename = "diagnosisCodeableConcept")]
+    pub diagnosis_codeable_concept: Option<CodeableConcept>,
+    /// Nature of illness or problem (Reference)
+    #[serde(rename = "diagnosisReference")]
+    pub diagnosis_reference: Option<Reference>,
 }
 /// CoverageEligibilityRequest nested structure for the 'supportingInfo' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -231,6 +242,19 @@ impl Default for CoverageEligibilityRequestEvent {
     }
 }
 
+impl Default for CoverageEligibilityRequestInsurance {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            focal: Default::default(),
+            _focal: Default::default(),
+            coverage: Reference::default(),
+            business_arrangement: Default::default(),
+            _business_arrangement: Default::default(),
+        }
+    }
+}
+
 impl Default for CoverageEligibilityRequestItem {
     fn default() -> Self {
         Self {
@@ -256,19 +280,6 @@ impl Default for CoverageEligibilityRequestItemDiagnosis {
             base: BackboneElement::default(),
             diagnosis_codeable_concept: Default::default(),
             diagnosis_reference: Default::default(),
-        }
-    }
-}
-
-impl Default for CoverageEligibilityRequestInsurance {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            focal: Default::default(),
-            _focal: Default::default(),
-            coverage: Reference::default(),
-            business_arrangement: Default::default(),
-            _business_arrangement: Default::default(),
         }
     }
 }
@@ -647,13 +658,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CoverageEligibi
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -668,44 +679,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CoverageEligibil
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -715,16 +714,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for CoverageEligibi
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -732,7 +728,7 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestAcce
     for CoverageEligibilityRequest
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> FmStatus {
         self.status.clone()
@@ -747,7 +743,7 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestAcce
         self.patient.clone()
     }
     fn event(&self) -> &[CoverageEligibilityRequestEvent] {
-        self.event.as_deref().unwrap_or(&[])
+        self.event.as_slice()
     }
     fn created(&self) -> DateTimeType {
         self.created.clone()
@@ -765,13 +761,13 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestAcce
         self.facility.clone()
     }
     fn supporting_info(&self) -> &[CoverageEligibilityRequestSupportinginfo] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn insurance(&self) -> &[CoverageEligibilityRequestInsurance] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn item(&self) -> &[CoverageEligibilityRequestItem] {
-        self.item.as_deref().unwrap_or(&[])
+        self.item.as_slice()
     }
 }
 
@@ -783,12 +779,12 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestMuta
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: FmStatus) -> Self {
@@ -818,12 +814,12 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestMuta
     }
     fn set_event(self, value: Vec<CoverageEligibilityRequestEvent>) -> Self {
         let mut resource = self.clone();
-        resource.event = Some(value);
+        resource.event = value;
         resource
     }
     fn add_event(self, item: CoverageEligibilityRequestEvent) -> Self {
         let mut resource = self.clone();
-        resource.event.get_or_insert_with(Vec::new).push(item);
+        resource.event.push(item);
         resource
     }
     fn set_created(self, value: String) -> Self {
@@ -853,35 +849,32 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestMuta
     }
     fn set_supporting_info(self, value: Vec<CoverageEligibilityRequestSupportinginfo>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: CoverageEligibilityRequestSupportinginfo) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_insurance(self, value: Vec<CoverageEligibilityRequestInsurance>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: CoverageEligibilityRequestInsurance) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_item(self, value: Vec<CoverageEligibilityRequestItem>) -> Self {
         let mut resource = self.clone();
-        resource.item = Some(value);
+        resource.item = value;
         resource
     }
     fn add_item(self, item: CoverageEligibilityRequestItem) -> Self {
         let mut resource = self.clone();
-        resource.item.get_or_insert_with(Vec::new).push(item);
+        resource.item.push(item);
         resource
     }
 }
@@ -893,7 +886,7 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestExis
         self.serviced_date.is_some() || self.serviced_period.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -908,7 +901,7 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestExis
         true
     }
     fn has_event(&self) -> bool {
-        self.event.as_ref().is_some_and(|v| !v.is_empty())
+        !self.event.is_empty()
     }
     fn has_created(&self) -> bool {
         true
@@ -926,13 +919,13 @@ impl crate::traits::coverage_eligibility_request::CoverageEligibilityRequestExis
         self.facility.is_some()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_item(&self) -> bool {
-        self.item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.item.is_empty()
     }
 }
 

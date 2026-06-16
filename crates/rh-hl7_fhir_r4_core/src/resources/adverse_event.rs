@@ -34,7 +34,8 @@ pub struct AdverseEvent {
     /// Binding: extensible (Overall categorization of the event, e.g. product-related or situational.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/adverse-event-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Type of the event itself in relation to the subject
     ///
     /// Binding: example (Detailed type of event.)
@@ -61,7 +62,8 @@ pub struct AdverseEvent {
     pub _recorded_date: Option<Element>,
     /// Effect on the subject due to this event
     #[serde(rename = "resultingCondition")]
-    pub resulting_condition: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resulting_condition: Vec<Reference>,
     /// Location where adverse event occurred
     pub location: Option<Reference>,
     /// Seriousness of the event
@@ -77,18 +79,23 @@ pub struct AdverseEvent {
     /// Who recorded the adverse event
     pub recorder: Option<Reference>,
     /// Who  was involved in the adverse event or the potential adverse event
-    pub contributor: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contributor: Vec<Reference>,
     /// The suspected agent causing the adverse event
     #[serde(rename = "suspectEntity")]
-    pub suspect_entity: Option<Vec<AdverseEventSuspectentity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suspect_entity: Vec<AdverseEventSuspectentity>,
     /// AdverseEvent.subjectMedicalHistory
     #[serde(rename = "subjectMedicalHistory")]
-    pub subject_medical_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject_medical_history: Vec<Reference>,
     /// AdverseEvent.referenceDocument
     #[serde(rename = "referenceDocument")]
-    pub reference_document: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reference_document: Vec<Reference>,
     /// AdverseEvent.study
-    pub study: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub study: Vec<Reference>,
 }
 /// AdverseEvent nested structure for the 'suspectEntity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,7 +104,8 @@ pub struct AdverseEventSuspectentity {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Information on the possible cause of the event
-    pub causality: Option<Vec<AdverseEventSuspectentityCausality>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub causality: Vec<AdverseEventSuspectentityCausality>,
     /// Refers to the specific entity that caused the adverse event
     pub instance: Reference,
 }
@@ -378,13 +386,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for AdverseEvent {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -399,44 +407,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for AdverseEvent {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -446,16 +442,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for AdverseEvent {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -467,7 +460,7 @@ impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
         self.actuality.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn event(&self) -> Option<CodeableConcept> {
         self.event.clone()
@@ -488,7 +481,7 @@ impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
         self.recorded_date.clone()
     }
     fn resulting_condition(&self) -> &[Reference] {
-        self.resulting_condition.as_deref().unwrap_or(&[])
+        self.resulting_condition.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
@@ -506,19 +499,19 @@ impl crate::traits::adverse_event::AdverseEventAccessors for AdverseEvent {
         self.recorder.clone()
     }
     fn contributor(&self) -> &[Reference] {
-        self.contributor.as_deref().unwrap_or(&[])
+        self.contributor.as_slice()
     }
     fn suspect_entity(&self) -> &[AdverseEventSuspectentity] {
-        self.suspect_entity.as_deref().unwrap_or(&[])
+        self.suspect_entity.as_slice()
     }
     fn subject_medical_history(&self) -> &[Reference] {
-        self.subject_medical_history.as_deref().unwrap_or(&[])
+        self.subject_medical_history.as_slice()
     }
     fn reference_document(&self) -> &[Reference] {
-        self.reference_document.as_deref().unwrap_or(&[])
+        self.reference_document.as_slice()
     }
     fn study(&self) -> &[Reference] {
-        self.study.as_deref().unwrap_or(&[])
+        self.study.as_slice()
     }
 }
 
@@ -538,12 +531,12 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_event(self, value: CodeableConcept) -> Self {
@@ -578,15 +571,12 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_resulting_condition(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.resulting_condition = Some(value);
+        resource.resulting_condition = value;
         resource
     }
     fn add_resulting_condition(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .resulting_condition
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.resulting_condition.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -616,61 +606,52 @@ impl crate::traits::adverse_event::AdverseEventMutators for AdverseEvent {
     }
     fn set_contributor(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.contributor = Some(value);
+        resource.contributor = value;
         resource
     }
     fn add_contributor(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.contributor.get_or_insert_with(Vec::new).push(item);
+        resource.contributor.push(item);
         resource
     }
     fn set_suspect_entity(self, value: Vec<AdverseEventSuspectentity>) -> Self {
         let mut resource = self.clone();
-        resource.suspect_entity = Some(value);
+        resource.suspect_entity = value;
         resource
     }
     fn add_suspect_entity(self, item: AdverseEventSuspectentity) -> Self {
         let mut resource = self.clone();
-        resource
-            .suspect_entity
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.suspect_entity.push(item);
         resource
     }
     fn set_subject_medical_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject_medical_history = Some(value);
+        resource.subject_medical_history = value;
         resource
     }
     fn add_subject_medical_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .subject_medical_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.subject_medical_history.push(item);
         resource
     }
     fn set_reference_document(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reference_document = Some(value);
+        resource.reference_document = value;
         resource
     }
     fn add_reference_document(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reference_document
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reference_document.push(item);
         resource
     }
     fn set_study(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.study = Some(value);
+        resource.study = value;
         resource
     }
     fn add_study(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.study.get_or_insert_with(Vec::new).push(item);
+        resource.study.push(item);
         resource
     }
 }
@@ -683,7 +664,7 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_event(&self) -> bool {
         self.event.is_some()
@@ -704,9 +685,7 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
         self.recorded_date.is_some()
     }
     fn has_resulting_condition(&self) -> bool {
-        self.resulting_condition
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.resulting_condition.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
@@ -724,23 +703,19 @@ impl crate::traits::adverse_event::AdverseEventExistence for AdverseEvent {
         self.recorder.is_some()
     }
     fn has_contributor(&self) -> bool {
-        self.contributor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contributor.is_empty()
     }
     fn has_suspect_entity(&self) -> bool {
-        self.suspect_entity.as_ref().is_some_and(|v| !v.is_empty())
+        !self.suspect_entity.is_empty()
     }
     fn has_subject_medical_history(&self) -> bool {
-        self.subject_medical_history
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.subject_medical_history.is_empty()
     }
     fn has_reference_document(&self) -> bool {
-        self.reference_document
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reference_document.is_empty()
     }
     fn has_study(&self) -> bool {
-        self.study.as_ref().is_some_and(|v| !v.is_empty())
+        !self.study.is_empty()
     }
 }
 

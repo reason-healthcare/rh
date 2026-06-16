@@ -35,7 +35,8 @@ pub struct ConditionDefinition {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the condition definition
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the condition definition
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -75,20 +76,23 @@ pub struct ConditionDefinition {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the condition definition
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for condition definition (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Identification of the condition, problem or diagnosis
     ///
     /// Binding: example (Identification of the condition or diagnosis.)
@@ -150,21 +154,78 @@ pub struct ConditionDefinition {
     #[serde(rename = "_hasStage")]
     pub _has_stage: Option<Element>,
     /// Formal Definition for the condition
-    pub definition: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub definition: Vec<StringType>,
     /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _definition: Vec<Element>,
     /// Observations particularly relevant to this condition
-    pub observation: Option<Vec<ConditionDefinitionObservation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub observation: Vec<ConditionDefinitionObservation>,
     /// Medications particularly relevant for this condition
-    pub medication: Option<Vec<ConditionDefinitionMedication>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub medication: Vec<ConditionDefinitionMedication>,
     /// Observation that suggets this condition
-    pub precondition: Option<Vec<ConditionDefinitionPrecondition>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub precondition: Vec<ConditionDefinitionPrecondition>,
     /// Appropriate team for this condition
-    pub team: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub team: Vec<Reference>,
     /// Questionnaire for this condition
-    pub questionnaire: Option<Vec<ConditionDefinitionQuestionnaire>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub questionnaire: Vec<ConditionDefinitionQuestionnaire>,
     /// Plan that is appropriate
-    pub plan: Option<Vec<ConditionDefinitionPlan>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub plan: Vec<ConditionDefinitionPlan>,
+}
+/// ConditionDefinition nested structure for the 'medication' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDefinitionMedication {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category that is relevant
+    ///
+    /// Binding: example (A coded concept identifying the category of medication request.  For example, where the medication is to be consumed or administered, or the type of medication treatment.)
+    ///
+    /// ValueSet: http://terminology.hl7.org/ValueSet/medicationrequest-category
+    pub category: Option<CodeableConcept>,
+    /// Code for relevant Medication
+    ///
+    /// Binding: example (A coded concept identifying substance or product that can be ordered.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medication-codes
+    pub code: Option<CodeableConcept>,
+}
+/// ConditionDefinition nested structure for the 'observation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDefinitionObservation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category that is relevant
+    ///
+    /// Binding: preferred (Codes for high level observation categories.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-category
+    pub category: Option<CodeableConcept>,
+    /// Code for relevant Observation
+    ///
+    /// Binding: example (Codes identifying names of simple observations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
+    pub code: Option<CodeableConcept>,
+}
+/// ConditionDefinition nested structure for the 'plan' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConditionDefinitionPlan {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Use for the plan
+    pub role: Option<CodeableConcept>,
+    /// The actual plan
+    pub reference: Reference,
 }
 /// ConditionDefinition nested structure for the 'precondition' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,25 +251,6 @@ pub struct ConditionDefinitionPrecondition {
     #[serde(rename = "valueQuantity")]
     pub value_quantity: Option<Quantity>,
 }
-/// ConditionDefinition nested structure for the 'observation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionObservation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category that is relevant
-    ///
-    /// Binding: preferred (Codes for high level observation categories.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-category
-    pub category: Option<CodeableConcept>,
-    /// Code for relevant Observation
-    ///
-    /// Binding: example (Codes identifying names of simple observations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
-    pub code: Option<CodeableConcept>,
-}
 /// ConditionDefinition nested structure for the 'questionnaire' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionDefinitionQuestionnaire {
@@ -221,36 +263,6 @@ pub struct ConditionDefinitionQuestionnaire {
     pub _purpose: Option<Element>,
     /// Specific Questionnaire
     pub reference: Reference,
-}
-/// ConditionDefinition nested structure for the 'plan' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionPlan {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Use for the plan
-    pub role: Option<CodeableConcept>,
-    /// The actual plan
-    pub reference: Reference,
-}
-/// ConditionDefinition nested structure for the 'medication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConditionDefinitionMedication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category that is relevant
-    ///
-    /// Binding: example (A coded concept identifying the category of medication request.  For example, where the medication is to be consumed or administered, or the type of medication treatment.)
-    ///
-    /// ValueSet: http://terminology.hl7.org/ValueSet/medicationrequest-category
-    pub category: Option<CodeableConcept>,
-    /// Code for relevant Medication
-    ///
-    /// Binding: example (A coded concept identifying substance or product that can be ordered.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medication-codes
-    pub code: Option<CodeableConcept>,
 }
 
 impl Default for ConditionDefinition {
@@ -305,15 +317,12 @@ impl Default for ConditionDefinition {
     }
 }
 
-impl Default for ConditionDefinitionPrecondition {
+impl Default for ConditionDefinitionMedication {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            code: CodeableConcept::default(),
-            value_codeable_concept: Default::default(),
-            value_quantity: Default::default(),
+            category: Default::default(),
+            code: Default::default(),
         }
     }
 }
@@ -328,17 +337,6 @@ impl Default for ConditionDefinitionObservation {
     }
 }
 
-impl Default for ConditionDefinitionQuestionnaire {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            purpose: ConditionQuestionnairePurpose::default(),
-            _purpose: Default::default(),
-            reference: Reference::default(),
-        }
-    }
-}
-
 impl Default for ConditionDefinitionPlan {
     fn default() -> Self {
         Self {
@@ -349,12 +347,26 @@ impl Default for ConditionDefinitionPlan {
     }
 }
 
-impl Default for ConditionDefinitionMedication {
+impl Default for ConditionDefinitionPrecondition {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: Default::default(),
-            code: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            code: CodeableConcept::default(),
+            value_codeable_concept: Default::default(),
+            value_quantity: Default::default(),
+        }
+    }
+}
+
+impl Default for ConditionDefinitionQuestionnaire {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            purpose: ConditionQuestionnairePurpose::default(),
+            _purpose: Default::default(),
+            reference: Reference::default(),
         }
     }
 }
@@ -637,13 +649,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ConditionDefini
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -658,44 +670,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ConditionDefinit
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -705,16 +705,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ConditionDefini
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -723,7 +720,7 @@ impl crate::traits::condition_definition::ConditionDefinitionAccessors for Condi
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -750,16 +747,16 @@ impl crate::traits::condition_definition::ConditionDefinitionAccessors for Condi
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
@@ -783,25 +780,25 @@ impl crate::traits::condition_definition::ConditionDefinitionAccessors for Condi
         self.has_stage
     }
     fn definition(&self) -> &[StringType] {
-        self.definition.as_deref().unwrap_or(&[])
+        self.definition.as_slice()
     }
     fn observation(&self) -> &[ConditionDefinitionObservation] {
-        self.observation.as_deref().unwrap_or(&[])
+        self.observation.as_slice()
     }
     fn medication(&self) -> &[ConditionDefinitionMedication] {
-        self.medication.as_deref().unwrap_or(&[])
+        self.medication.as_slice()
     }
     fn precondition(&self) -> &[ConditionDefinitionPrecondition] {
-        self.precondition.as_deref().unwrap_or(&[])
+        self.precondition.as_slice()
     }
     fn team(&self) -> &[Reference] {
-        self.team.as_deref().unwrap_or(&[])
+        self.team.as_slice()
     }
     fn questionnaire(&self) -> &[ConditionDefinitionQuestionnaire] {
-        self.questionnaire.as_deref().unwrap_or(&[])
+        self.questionnaire.as_slice()
     }
     fn plan(&self) -> &[ConditionDefinitionPlan] {
-        self.plan.as_deref().unwrap_or(&[])
+        self.plan.as_slice()
     }
 }
 
@@ -816,12 +813,12 @@ impl crate::traits::condition_definition::ConditionDefinitionMutators for Condit
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -866,12 +863,12 @@ impl crate::traits::condition_definition::ConditionDefinitionMutators for Condit
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -881,25 +878,22 @@ impl crate::traits::condition_definition::ConditionDefinitionMutators for Condit
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -939,78 +933,72 @@ impl crate::traits::condition_definition::ConditionDefinitionMutators for Condit
     }
     fn set_definition(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.definition = Some(value);
+        resource.definition = value;
         resource
     }
     fn add_definition(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.definition.get_or_insert_with(Vec::new).push(item);
+        resource.definition.push(item);
         resource
     }
     fn set_observation(self, value: Vec<ConditionDefinitionObservation>) -> Self {
         let mut resource = self.clone();
-        resource.observation = Some(value);
+        resource.observation = value;
         resource
     }
     fn add_observation(self, item: ConditionDefinitionObservation) -> Self {
         let mut resource = self.clone();
-        resource.observation.get_or_insert_with(Vec::new).push(item);
+        resource.observation.push(item);
         resource
     }
     fn set_medication(self, value: Vec<ConditionDefinitionMedication>) -> Self {
         let mut resource = self.clone();
-        resource.medication = Some(value);
+        resource.medication = value;
         resource
     }
     fn add_medication(self, item: ConditionDefinitionMedication) -> Self {
         let mut resource = self.clone();
-        resource.medication.get_or_insert_with(Vec::new).push(item);
+        resource.medication.push(item);
         resource
     }
     fn set_precondition(self, value: Vec<ConditionDefinitionPrecondition>) -> Self {
         let mut resource = self.clone();
-        resource.precondition = Some(value);
+        resource.precondition = value;
         resource
     }
     fn add_precondition(self, item: ConditionDefinitionPrecondition) -> Self {
         let mut resource = self.clone();
-        resource
-            .precondition
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.precondition.push(item);
         resource
     }
     fn set_team(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.team = Some(value);
+        resource.team = value;
         resource
     }
     fn add_team(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.team.get_or_insert_with(Vec::new).push(item);
+        resource.team.push(item);
         resource
     }
     fn set_questionnaire(self, value: Vec<ConditionDefinitionQuestionnaire>) -> Self {
         let mut resource = self.clone();
-        resource.questionnaire = Some(value);
+        resource.questionnaire = value;
         resource
     }
     fn add_questionnaire(self, item: ConditionDefinitionQuestionnaire) -> Self {
         let mut resource = self.clone();
-        resource
-            .questionnaire
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.questionnaire.push(item);
         resource
     }
     fn set_plan(self, value: Vec<ConditionDefinitionPlan>) -> Self {
         let mut resource = self.clone();
-        resource.plan = Some(value);
+        resource.plan = value;
         resource
     }
     fn add_plan(self, item: ConditionDefinitionPlan) -> Self {
         let mut resource = self.clone();
-        resource.plan.get_or_insert_with(Vec::new).push(item);
+        resource.plan.push(item);
         resource
     }
 }
@@ -1023,7 +1011,7 @@ impl crate::traits::condition_definition::ConditionDefinitionExistence for Condi
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1050,16 +1038,16 @@ impl crate::traits::condition_definition::ConditionDefinitionExistence for Condi
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_code(&self) -> bool {
         true
@@ -1083,25 +1071,25 @@ impl crate::traits::condition_definition::ConditionDefinitionExistence for Condi
         self.has_stage.is_some()
     }
     fn has_definition(&self) -> bool {
-        self.definition.as_ref().is_some_and(|v| !v.is_empty())
+        !self.definition.is_empty()
     }
     fn has_observation(&self) -> bool {
-        self.observation.as_ref().is_some_and(|v| !v.is_empty())
+        !self.observation.is_empty()
     }
     fn has_medication(&self) -> bool {
-        self.medication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.medication.is_empty()
     }
     fn has_precondition(&self) -> bool {
-        self.precondition.as_ref().is_some_and(|v| !v.is_empty())
+        !self.precondition.is_empty()
     }
     fn has_team(&self) -> bool {
-        self.team.as_ref().is_some_and(|v| !v.is_empty())
+        !self.team.is_empty()
     }
     fn has_questionnaire(&self) -> bool {
-        self.questionnaire.as_ref().is_some_and(|v| !v.is_empty())
+        !self.questionnaire.is_empty()
     }
     fn has_plan(&self) -> bool {
-        self.plan.as_ref().is_some_and(|v| !v.is_empty())
+        !self.plan.is_empty()
     }
 }
 

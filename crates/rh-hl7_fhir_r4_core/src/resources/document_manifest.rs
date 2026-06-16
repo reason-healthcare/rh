@@ -27,7 +27,8 @@ pub struct DocumentManifest {
     #[serde(rename = "masterIdentifier")]
     pub master_identifier: Option<Identifier>,
     /// Other identifiers for the manifest
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// current | superseded | entered-in-error
     pub status: DocumentReferenceStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -46,9 +47,11 @@ pub struct DocumentManifest {
     /// Extension element for the 'created' primitive field. Contains metadata and extensions.
     pub _created: Option<Element>,
     /// Who and/or what authored the DocumentManifest
-    pub author: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<Reference>,
     /// Intended to get notified about this set of documents
-    pub recipient: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipient: Vec<Reference>,
     /// The source system/application/software
     pub source: Option<StringType>,
     /// Extension element for the 'source' primitive field. Contains metadata and extensions.
@@ -60,7 +63,8 @@ pub struct DocumentManifest {
     /// Items in manifest
     pub content: Vec<Reference>,
     /// Related things
-    pub related: Option<Vec<DocumentManifestRelated>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related: Vec<DocumentManifestRelated>,
 }
 /// DocumentManifest nested structure for the 'related' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -244,13 +248,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DocumentManifes
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -265,44 +269,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DocumentManifest
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -312,16 +304,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for DocumentManifes
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -330,7 +319,7 @@ impl crate::traits::document_manifest::DocumentManifestAccessors for DocumentMan
         self.master_identifier.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> DocumentReferenceStatus {
         self.status.clone()
@@ -345,10 +334,10 @@ impl crate::traits::document_manifest::DocumentManifestAccessors for DocumentMan
         self.created.clone()
     }
     fn author(&self) -> &[Reference] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn recipient(&self) -> &[Reference] {
-        self.recipient.as_deref().unwrap_or(&[])
+        self.recipient.as_slice()
     }
     fn source(&self) -> Option<StringType> {
         self.source.clone()
@@ -360,7 +349,7 @@ impl crate::traits::document_manifest::DocumentManifestAccessors for DocumentMan
         &self.content
     }
     fn related(&self) -> &[DocumentManifestRelated] {
-        self.related.as_deref().unwrap_or(&[])
+        self.related.as_slice()
     }
 }
 
@@ -375,12 +364,12 @@ impl crate::traits::document_manifest::DocumentManifestMutators for DocumentMani
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: DocumentReferenceStatus) -> Self {
@@ -405,22 +394,22 @@ impl crate::traits::document_manifest::DocumentManifestMutators for DocumentMani
     }
     fn set_author(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_recipient(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.recipient = Some(value);
+        resource.recipient = value;
         resource
     }
     fn add_recipient(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.recipient.get_or_insert_with(Vec::new).push(item);
+        resource.recipient.push(item);
         resource
     }
     fn set_source(self, value: String) -> Self {
@@ -445,12 +434,12 @@ impl crate::traits::document_manifest::DocumentManifestMutators for DocumentMani
     }
     fn set_related(self, value: Vec<DocumentManifestRelated>) -> Self {
         let mut resource = self.clone();
-        resource.related = Some(value);
+        resource.related = value;
         resource
     }
     fn add_related(self, item: DocumentManifestRelated) -> Self {
         let mut resource = self.clone();
-        resource.related.get_or_insert_with(Vec::new).push(item);
+        resource.related.push(item);
         resource
     }
 }
@@ -460,7 +449,7 @@ impl crate::traits::document_manifest::DocumentManifestExistence for DocumentMan
         self.master_identifier.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -475,10 +464,10 @@ impl crate::traits::document_manifest::DocumentManifestExistence for DocumentMan
         self.created.is_some()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_recipient(&self) -> bool {
-        self.recipient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.recipient.is_empty()
     }
     fn has_source(&self) -> bool {
         self.source.is_some()
@@ -490,7 +479,7 @@ impl crate::traits::document_manifest::DocumentManifestExistence for DocumentMan
         !self.content.is_empty()
     }
     fn has_related(&self) -> bool {
-        self.related.as_ref().is_some_and(|v| !v.is_empty())
+        !self.related.is_empty()
     }
 }
 

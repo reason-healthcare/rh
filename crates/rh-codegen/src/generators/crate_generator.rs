@@ -316,13 +316,12 @@ pub fn generate_module_files(
         generate_mod_rs_for_directory(primitives_dir, "FHIR primitive types")?;
     fs::write(primitives_dir.join("mod.rs"), primitives_mod_content)?;
 
-    // Generate traits/mod.rs (placeholder for now, but don't overwrite existing content)
-    let traits_mod_path = traits_dir.join("mod.rs");
-    if !traits_mod_path.exists() || fs::read_to_string(&traits_mod_path)?.len() < 500 {
-        // If file is small, it's likely just placeholder
-        let traits_mod_content = generate_traits_mod_rs()?;
-        fs::write(traits_mod_path, traits_mod_content)?;
-    }
+    // Generate traits/mod.rs
+    let traits_mod_content = generate_mod_rs_for_directory(
+        traits_dir,
+        "FHIR trait definitions for resources and profiles",
+    )?;
+    fs::write(traits_dir.join("mod.rs"), traits_mod_content)?;
 
     // Generate bindings/mod.rs for ValueSet enums
     let bindings_mod_content =
@@ -370,42 +369,6 @@ fn generate_mod_rs_for_directory(dir: &Path, description: &str) -> Result<String
     // Individual types can be imported explicitly when needed
 
     Ok(content)
-}
-
-/// Generate traits/mod.rs with placeholder content
-fn generate_traits_mod_rs() -> Result<String> {
-    let content = r#"//! FHIR traits for common functionality
-//!
-//! This module contains traits that define common interfaces for FHIR types.
-
-// Placeholder traits - these would be generated based on FHIR structure definitions
-
-/// Trait for types that have extensions
-pub trait HasExtensions {
-    /// Get the extensions for this type
-    fn extensions(&self) -> &[crate::datatypes::extension::Extension];
-}
-
-/// Trait for FHIR resources
-pub trait Resource {
-    /// Get the resource type name
-    fn resource_type(&self) -> &'static str;
-    
-    /// Get the logical id of this resource
-    fn id(&self) -> Option<&str>;
-    
-    /// Get the metadata about this resource
-    fn meta(&self) -> Option<&crate::datatypes::meta::Meta>;
-}
-
-/// Trait for domain resources (resources that can have narrative)
-pub trait DomainResource: Resource + HasExtensions {
-    /// Get the narrative text for this domain resource
-    fn narrative(&self) -> Option<&crate::datatypes::narrative::Narrative>;
-}
-"#;
-
-    Ok(content.to_string())
 }
 
 /// Generate statistics from organized directories
@@ -645,7 +608,7 @@ fn generate_readme_md(
     content.push_str(
         "- **prelude.rs** - Commonly used traits (ValidatableResource, ResourceMutators, etc.)\n",
     );
-    content.push_str("- **metadata.rs** - Type metadata and path resolution functions\n\n");
+    content.push_str("- **metadata/** - Type metadata split by category (resources, datatypes, primitives) for faster incremental compilation\n\n");
 
     content.push_str("## Regenerating This Crate\n\n");
     content.push_str("To regenerate this crate with updated FHIR definitions:\n\n");
@@ -727,6 +690,69 @@ pub fn parse_package_metadata(package_json_path: &Path) -> Result<(String, Strin
         .to_string();
 
     Ok((canonical, author, description))
+}
+
+impl<'a> crate::generators::file_generator::FileGenerator<'a> {
+    pub fn generate_complete_crate<P: AsRef<Path>>(
+        &self,
+        output_dir: P,
+        crate_name: &str,
+        _structures: &[crate::fhir_types::StructureDefinition],
+    ) -> crate::CodegenResult<()> {
+        let output_dir = output_dir.as_ref();
+
+        let src_dir = output_dir.join("src");
+        fs::create_dir_all(&src_dir)?;
+
+        let primitives_dir = src_dir.join("primitives");
+        let datatypes_dir = src_dir.join("datatypes");
+        let extensions_dir = src_dir.join("extensions");
+        let resource_dir = src_dir.join("resource");
+        let traits_dir = src_dir.join("traits");
+
+        fs::create_dir_all(&primitives_dir)?;
+        fs::create_dir_all(&datatypes_dir)?;
+        fs::create_dir_all(&extensions_dir)?;
+        fs::create_dir_all(&resource_dir)?;
+        fs::create_dir_all(&traits_dir)?;
+
+        self.generate_lib_file(src_dir.join("lib.rs"))?;
+        self.generate_macros_file(src_dir.join("macros.rs"))?;
+        self.generate_combined_primitives_file(&[], primitives_dir.join("mod.rs"))?;
+
+        let cargo_toml_path = output_dir.join("Cargo.toml");
+        if !cargo_toml_path.exists() {
+            self.generate_cargo_toml(&cargo_toml_path, crate_name)?;
+        }
+
+        self.generate_module_file(&datatypes_dir, &[])?;
+        self.generate_module_file(&extensions_dir, &[])?;
+        self.generate_module_file(&resource_dir, &[])?;
+        self.generate_module_file(&traits_dir, &[])?;
+
+        Ok(())
+    }
+
+    pub(crate) fn generate_cargo_toml<P: AsRef<Path>>(
+        &self,
+        cargo_path: P,
+        crate_name: &str,
+    ) -> crate::CodegenResult<()> {
+        let cargo_content = format!(
+            r#"[package]
+name = "{crate_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = {{ version = "1.0", features = ["derive"] }}
+serde_json = "1.0"
+"#
+        );
+
+        fs::write(cargo_path, cargo_content)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

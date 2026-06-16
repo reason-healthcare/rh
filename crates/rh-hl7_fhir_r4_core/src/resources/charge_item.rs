@@ -30,26 +30,32 @@ pub struct ChargeItem {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Defining information about the code of this charge item
     #[serde(rename = "definitionUri")]
-    pub definition_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub definition_uri: Vec<StringType>,
     /// Extension element for the 'definitionUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_definitionUri")]
-    pub _definition_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _definition_uri: Vec<Element>,
     /// Resource defining the code of this ChargeItem
     #[serde(rename = "definitionCanonical")]
-    pub definition_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub definition_canonical: Vec<StringType>,
     /// Extension element for the 'definitionCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_definitionCanonical")]
-    pub _definition_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _definition_canonical: Vec<Element>,
     /// planned | billable | not-billable | aborted | billed | entered-in-error | unknown
     pub status: ChargeitemStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// Part of referenced ChargeItem
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// A code that identifies the charge, like a billing code
     ///
     /// Binding: example (Example set of codes that can be used for billing purposes.)
@@ -70,7 +76,8 @@ pub struct ChargeItem {
     #[serde(rename = "occurrenceTiming")]
     pub occurrence_timing: Option<Timing>,
     /// Who performed charged service
-    pub performer: Option<Vec<ChargeItemPerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<ChargeItemPerformer>,
     /// Organization providing the charged service
     #[serde(rename = "performingOrganization")]
     pub performing_organization: Option<Reference>,
@@ -87,7 +94,8 @@ pub struct ChargeItem {
     /// Binding: example (Codes describing anatomical locations. May include laterality.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/body-site
-    pub bodysite: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bodysite: Vec<CodeableConcept>,
     /// Factor overriding the associated rules
     #[serde(rename = "factorOverride")]
     pub factor_override: Option<DecimalType>,
@@ -123,9 +131,11 @@ pub struct ChargeItem {
     /// - `112233`: DIAG-4
     /// - `997755`: DIAG-5
     /// - `321789`: DIAG-6
-    pub reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableConcept>,
     /// Which rendered service is being charged?
-    pub service: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service: Vec<Reference>,
     /// Product charged (Reference)
     #[serde(rename = "productReference")]
     pub product_reference: Option<Reference>,
@@ -133,12 +143,15 @@ pub struct ChargeItem {
     #[serde(rename = "productCodeableConcept")]
     pub product_codeable_concept: Option<CodeableConcept>,
     /// Account to place this charge
-    pub account: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub account: Vec<Reference>,
     /// Comments made about the ChargeItem
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Further information supporting this charge
     #[serde(rename = "supportingInformation")]
-    pub supporting_information: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_information: Vec<Reference>,
 }
 /// ChargeItem nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -354,13 +367,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ChargeItem {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -375,44 +388,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ChargeItem {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -422,34 +423,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for ChargeItem {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::charge_item::ChargeItemAccessors for ChargeItem {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn definition_uri(&self) -> &[StringType] {
-        self.definition_uri.as_deref().unwrap_or(&[])
+        self.definition_uri.as_slice()
     }
     fn definition_canonical(&self) -> &[StringType] {
-        self.definition_canonical.as_deref().unwrap_or(&[])
+        self.definition_canonical.as_slice()
     }
     fn status(&self) -> ChargeitemStatus {
         self.status.clone()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
@@ -461,7 +459,7 @@ impl crate::traits::charge_item::ChargeItemAccessors for ChargeItem {
         self.context.clone()
     }
     fn performer(&self) -> &[ChargeItemPerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn performing_organization(&self) -> Option<Reference> {
         self.performing_organization.clone()
@@ -476,7 +474,7 @@ impl crate::traits::charge_item::ChargeItemAccessors for ChargeItem {
         self.quantity.clone()
     }
     fn bodysite(&self) -> &[CodeableConcept] {
-        self.bodysite.as_deref().unwrap_or(&[])
+        self.bodysite.as_slice()
     }
     fn factor_override(&self) -> Option<DecimalType> {
         self.factor_override
@@ -494,19 +492,19 @@ impl crate::traits::charge_item::ChargeItemAccessors for ChargeItem {
         self.entered_date.clone()
     }
     fn reason(&self) -> &[CodeableConcept] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn service(&self) -> &[Reference] {
-        self.service.as_deref().unwrap_or(&[])
+        self.service.as_slice()
     }
     fn account(&self) -> &[Reference] {
-        self.account.as_deref().unwrap_or(&[])
+        self.account.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn supporting_information(&self) -> &[Reference] {
-        self.supporting_information.as_deref().unwrap_or(&[])
+        self.supporting_information.as_slice()
     }
 }
 
@@ -516,38 +514,32 @@ impl crate::traits::charge_item::ChargeItemMutators for ChargeItem {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_definition_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.definition_uri = Some(value);
+        resource.definition_uri = value;
         resource
     }
     fn add_definition_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .definition_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.definition_uri.push(item);
         resource
     }
     fn set_definition_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.definition_canonical = Some(value);
+        resource.definition_canonical = value;
         resource
     }
     fn add_definition_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .definition_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.definition_canonical.push(item);
         resource
     }
     fn set_status(self, value: ChargeitemStatus) -> Self {
@@ -557,12 +549,12 @@ impl crate::traits::charge_item::ChargeItemMutators for ChargeItem {
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -582,12 +574,12 @@ impl crate::traits::charge_item::ChargeItemMutators for ChargeItem {
     }
     fn set_performer(self, value: Vec<ChargeItemPerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: ChargeItemPerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_performing_organization(self, value: Reference) -> Self {
@@ -612,12 +604,12 @@ impl crate::traits::charge_item::ChargeItemMutators for ChargeItem {
     }
     fn set_bodysite(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.bodysite = Some(value);
+        resource.bodysite = value;
         resource
     }
     fn add_bodysite(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.bodysite.get_or_insert_with(Vec::new).push(item);
+        resource.bodysite.push(item);
         resource
     }
     fn set_factor_override(self, value: f64) -> Self {
@@ -647,84 +639,79 @@ impl crate::traits::charge_item::ChargeItemMutators for ChargeItem {
     }
     fn set_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_service(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.service = Some(value);
+        resource.service = value;
         resource
     }
     fn add_service(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.service.get_or_insert_with(Vec::new).push(item);
+        resource.service.push(item);
         resource
     }
     fn set_account(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.account = Some(value);
+        resource.account = value;
         resource
     }
     fn add_account(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.account.get_or_insert_with(Vec::new).push(item);
+        resource.account.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_supporting_information(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_information = Some(value);
+        resource.supporting_information = value;
         resource
     }
     fn add_supporting_information(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_information
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_information.push(item);
         resource
     }
 }
 
 impl crate::traits::charge_item::ChargeItemExistence for ChargeItem {
-    fn has_product(&self) -> bool {
-        self.product_reference.is_some() || self.product_codeable_concept.is_some()
-    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
     }
+    fn has_product(&self) -> bool {
+        self.product_reference.is_some() || self.product_codeable_concept.is_some()
+    }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_definition_uri(&self) -> bool {
-        self.definition_uri.as_ref().is_some_and(|v| !v.is_empty())
+        !self.definition_uri.is_empty()
     }
     fn has_definition_canonical(&self) -> bool {
-        self.definition_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.definition_canonical.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_code(&self) -> bool {
         true
@@ -736,7 +723,7 @@ impl crate::traits::charge_item::ChargeItemExistence for ChargeItem {
         self.context.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_performing_organization(&self) -> bool {
         self.performing_organization.is_some()
@@ -751,7 +738,7 @@ impl crate::traits::charge_item::ChargeItemExistence for ChargeItem {
         self.quantity.is_some()
     }
     fn has_bodysite(&self) -> bool {
-        self.bodysite.as_ref().is_some_and(|v| !v.is_empty())
+        !self.bodysite.is_empty()
     }
     fn has_factor_override(&self) -> bool {
         self.factor_override.is_some()
@@ -769,21 +756,19 @@ impl crate::traits::charge_item::ChargeItemExistence for ChargeItem {
         self.entered_date.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_service(&self) -> bool {
-        self.service.as_ref().is_some_and(|v| !v.is_empty())
+        !self.service.is_empty()
     }
     fn has_account(&self) -> bool {
-        self.account.as_ref().is_some_and(|v| !v.is_empty())
+        !self.account.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_supporting_information(&self) -> bool {
-        self.supporting_information
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.supporting_information.is_empty()
     }
 }
 

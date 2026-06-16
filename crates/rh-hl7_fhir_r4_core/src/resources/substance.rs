@@ -26,7 +26,8 @@ pub struct Substance {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | inactive | entered-in-error
     pub status: Option<SubstanceStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -36,7 +37,8 @@ pub struct Substance {
     /// Binding: extensible (Category or classification of substance.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/substance-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// What substance this is
     ///
     /// Binding: example (Substance codes.)
@@ -48,9 +50,11 @@ pub struct Substance {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// If this describes a specific package/container of the substance
-    pub instance: Option<Vec<SubstanceInstance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instance: Vec<SubstanceInstance>,
     /// Composition information about the substance
-    pub ingredient: Option<Vec<SubstanceIngredient>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<SubstanceIngredient>,
 }
 /// Substance nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -255,13 +259,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Substance {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -276,44 +280,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Substance {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -323,28 +315,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for Substance {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::substance::SubstanceAccessors for Substance {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Option<SubstanceStatus> {
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
@@ -353,10 +342,10 @@ impl crate::traits::substance::SubstanceAccessors for Substance {
         self.description.clone()
     }
     fn instance(&self) -> &[SubstanceInstance] {
-        self.instance.as_deref().unwrap_or(&[])
+        self.instance.as_slice()
     }
     fn ingredient(&self) -> &[SubstanceIngredient] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
 }
 
@@ -366,12 +355,12 @@ impl crate::traits::substance::SubstanceMutators for Substance {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: SubstanceStatus) -> Self {
@@ -381,12 +370,12 @@ impl crate::traits::substance::SubstanceMutators for Substance {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -401,35 +390,35 @@ impl crate::traits::substance::SubstanceMutators for Substance {
     }
     fn set_instance(self, value: Vec<SubstanceInstance>) -> Self {
         let mut resource = self.clone();
-        resource.instance = Some(value);
+        resource.instance = value;
         resource
     }
     fn add_instance(self, item: SubstanceInstance) -> Self {
         let mut resource = self.clone();
-        resource.instance.get_or_insert_with(Vec::new).push(item);
+        resource.instance.push(item);
         resource
     }
     fn set_ingredient(self, value: Vec<SubstanceIngredient>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: SubstanceIngredient) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
 }
 
 impl crate::traits::substance::SubstanceExistence for Substance {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         true
@@ -438,10 +427,10 @@ impl crate::traits::substance::SubstanceExistence for Substance {
         self.description.is_some()
     }
     fn has_instance(&self) -> bool {
-        self.instance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.instance.is_empty()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
 }
 

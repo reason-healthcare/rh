@@ -27,10 +27,12 @@ pub struct MedicationDispense {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Event that dispense is part of
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// preparation | in-progress | cancelled | on-hold | completed | entered-in-error | stopped | declined | unknown
     pub status: MedicationdispenseStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -59,14 +61,17 @@ pub struct MedicationDispense {
     pub context: Option<Reference>,
     /// Information that supports the dispensing of the medication
     #[serde(rename = "supportingInformation")]
-    pub supporting_information: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_information: Vec<Reference>,
     /// Who performed event
-    pub performer: Option<Vec<MedicationDispensePerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<MedicationDispensePerformer>,
     /// Where the dispense occurred
     pub location: Option<Reference>,
     /// Medication order that authorizes the dispense
     #[serde(rename = "authorizingPrescription")]
-    pub authorizing_prescription: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub authorizing_prescription: Vec<Reference>,
     /// Trial fill, partial fill, emergency fill, etc.
     ///
     /// Binding: example (Indicates the type of dispensing event that is performed. For example, Trial Fill, Completion of Trial, Partial Fill, Emergency Fill, Samples, etc.)
@@ -94,20 +99,40 @@ pub struct MedicationDispense {
     /// Where the medication was sent
     pub destination: Option<Reference>,
     /// Who collected the medication
-    pub receiver: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub receiver: Vec<Reference>,
     /// Information about the dispense
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// How the medication is to be used by the patient or administered by the caregiver
     #[serde(rename = "dosageInstruction")]
-    pub dosage_instruction: Option<Vec<Dosage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dosage_instruction: Vec<Dosage>,
     /// Whether a substitution was performed on the dispense
     pub substitution: Option<MedicationDispenseSubstitution>,
     /// Clinical issue with action
     #[serde(rename = "detectedIssue")]
-    pub detected_issue: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detected_issue: Vec<Reference>,
     /// A list of relevant lifecycle events
     #[serde(rename = "eventHistory")]
-    pub event_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event_history: Vec<Reference>,
+}
+/// MedicationDispense nested structure for the 'performer' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationDispensePerformer {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Who performed the dispense and what they did
+    ///
+    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
+    pub function: Option<CodeableConcept>,
+    /// Individual who was performing
+    pub actor: Reference,
 }
 /// MedicationDispense nested structure for the 'substitution' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -133,25 +158,12 @@ pub struct MedicationDispenseSubstitution {
     /// Binding: example (A coded concept describing the reason that a different medication should (or should not) be substituted from what was prescribed.)
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-SubstanceAdminSubstitutionReason
-    pub reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableConcept>,
     /// Who is responsible for the substitution
     #[serde(rename = "responsibleParty")]
-    pub responsible_party: Option<Vec<Reference>>,
-}
-/// MedicationDispense nested structure for the 'performer' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationDispensePerformer {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Who performed the dispense and what they did
-    ///
-    /// Binding: example (A code describing the role an individual played in dispensing a medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationdispense-performer-function
-    pub function: Option<CodeableConcept>,
-    /// Individual who was performing
-    pub actor: Reference,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub responsible_party: Vec<Reference>,
 }
 
 impl Default for MedicationDispense {
@@ -191,6 +203,16 @@ impl Default for MedicationDispense {
     }
 }
 
+impl Default for MedicationDispensePerformer {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            function: Default::default(),
+            actor: Reference::default(),
+        }
+    }
+}
+
 impl Default for MedicationDispenseSubstitution {
     fn default() -> Self {
         Self {
@@ -200,16 +222,6 @@ impl Default for MedicationDispenseSubstitution {
             type_: Default::default(),
             reason: Default::default(),
             responsible_party: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationDispensePerformer {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            function: Default::default(),
-            actor: Reference::default(),
         }
     }
 }
@@ -417,13 +429,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicationDispe
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -438,44 +450,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicationDispen
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -485,25 +485,22 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicationDispe
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::medication_dispense::MedicationDispenseAccessors for MedicationDispense {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> MedicationdispenseStatus {
         self.status.clone()
@@ -518,16 +515,16 @@ impl crate::traits::medication_dispense::MedicationDispenseAccessors for Medicat
         self.context.clone()
     }
     fn supporting_information(&self) -> &[Reference] {
-        self.supporting_information.as_deref().unwrap_or(&[])
+        self.supporting_information.as_slice()
     }
     fn performer(&self) -> &[MedicationDispensePerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
     }
     fn authorizing_prescription(&self) -> &[Reference] {
-        self.authorizing_prescription.as_deref().unwrap_or(&[])
+        self.authorizing_prescription.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
@@ -548,22 +545,22 @@ impl crate::traits::medication_dispense::MedicationDispenseAccessors for Medicat
         self.destination.clone()
     }
     fn receiver(&self) -> &[Reference] {
-        self.receiver.as_deref().unwrap_or(&[])
+        self.receiver.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn dosage_instruction(&self) -> &[Dosage] {
-        self.dosage_instruction.as_deref().unwrap_or(&[])
+        self.dosage_instruction.as_slice()
     }
     fn substitution(&self) -> Option<MedicationDispenseSubstitution> {
         self.substitution.clone()
     }
     fn detected_issue(&self) -> &[Reference] {
-        self.detected_issue.as_deref().unwrap_or(&[])
+        self.detected_issue.as_slice()
     }
     fn event_history(&self) -> &[Reference] {
-        self.event_history.as_deref().unwrap_or(&[])
+        self.event_history.as_slice()
     }
 }
 
@@ -573,22 +570,22 @@ impl crate::traits::medication_dispense::MedicationDispenseMutators for Medicati
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: MedicationdispenseStatus) -> Self {
@@ -613,25 +610,22 @@ impl crate::traits::medication_dispense::MedicationDispenseMutators for Medicati
     }
     fn set_supporting_information(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_information = Some(value);
+        resource.supporting_information = value;
         resource
     }
     fn add_supporting_information(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_information
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_information.push(item);
         resource
     }
     fn set_performer(self, value: Vec<MedicationDispensePerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: MedicationDispensePerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -641,15 +635,12 @@ impl crate::traits::medication_dispense::MedicationDispenseMutators for Medicati
     }
     fn set_authorizing_prescription(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.authorizing_prescription = Some(value);
+        resource.authorizing_prescription = value;
         resource
     }
     fn add_authorizing_prescription(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .authorizing_prescription
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.authorizing_prescription.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -684,35 +675,32 @@ impl crate::traits::medication_dispense::MedicationDispenseMutators for Medicati
     }
     fn set_receiver(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.receiver = Some(value);
+        resource.receiver = value;
         resource
     }
     fn add_receiver(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.receiver.get_or_insert_with(Vec::new).push(item);
+        resource.receiver.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_dosage_instruction(self, value: Vec<Dosage>) -> Self {
         let mut resource = self.clone();
-        resource.dosage_instruction = Some(value);
+        resource.dosage_instruction = value;
         resource
     }
     fn add_dosage_instruction(self, item: Dosage) -> Self {
         let mut resource = self.clone();
-        resource
-            .dosage_instruction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.dosage_instruction.push(item);
         resource
     }
     fn set_substitution(self, value: MedicationDispenseSubstitution) -> Self {
@@ -722,28 +710,22 @@ impl crate::traits::medication_dispense::MedicationDispenseMutators for Medicati
     }
     fn set_detected_issue(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.detected_issue = Some(value);
+        resource.detected_issue = value;
         resource
     }
     fn add_detected_issue(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .detected_issue
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.detected_issue.push(item);
         resource
     }
     fn set_event_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.event_history = Some(value);
+        resource.event_history = value;
         resource
     }
     fn add_event_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .event_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.event_history.push(item);
         resource
     }
 }
@@ -756,10 +738,10 @@ impl crate::traits::medication_dispense::MedicationDispenseExistence for Medicat
         self.status_reason_codeable_concept.is_some() || self.status_reason_reference.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -774,20 +756,16 @@ impl crate::traits::medication_dispense::MedicationDispenseExistence for Medicat
         self.context.is_some()
     }
     fn has_supporting_information(&self) -> bool {
-        self.supporting_information
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.supporting_information.is_empty()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
     }
     fn has_authorizing_prescription(&self) -> bool {
-        self.authorizing_prescription
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.authorizing_prescription.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
@@ -808,24 +786,22 @@ impl crate::traits::medication_dispense::MedicationDispenseExistence for Medicat
         self.destination.is_some()
     }
     fn has_receiver(&self) -> bool {
-        self.receiver.as_ref().is_some_and(|v| !v.is_empty())
+        !self.receiver.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_dosage_instruction(&self) -> bool {
-        self.dosage_instruction
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.dosage_instruction.is_empty()
     }
     fn has_substitution(&self) -> bool {
         self.substitution.is_some()
     }
     fn has_detected_issue(&self) -> bool {
-        self.detected_issue.as_ref().is_some_and(|v| !v.is_empty())
+        !self.detected_issue.is_empty()
     }
     fn has_event_history(&self) -> bool {
-        self.event_history.as_ref().is_some_and(|v| !v.is_empty())
+        !self.event_history.is_empty()
     }
 }
 

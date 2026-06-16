@@ -74,6 +74,7 @@ pub mod episode_of_care_status;
 pub mod event_capability_mode;
 pub mod event_status;
 pub mod event_timing;
+pub mod examplescenario_actor_type;
 pub mod explanationofbenefit_status;
 pub mod exposure_state;
 pub mod extension_context_type;

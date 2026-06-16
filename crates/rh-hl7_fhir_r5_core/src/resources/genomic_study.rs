@@ -26,7 +26,8 @@ pub struct GenomicStudy {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Identifiers for this genomic study
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// registered | available | cancelled | entered-in-error | unknown
     pub status: GenomicstudyStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -37,7 +38,8 @@ pub struct GenomicStudy {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// The primary subject of the genomic study
     pub subject: Reference,
     /// The healthcare event with which this genomics study is associated
@@ -50,13 +52,16 @@ pub struct GenomicStudy {
     pub _start_date: Option<Element>,
     /// Event resources that the genomic study is based on
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Healthcare professional who requested or referred the genomic study
     pub referrer: Option<Reference>,
     /// Healthcare professionals who interpreted the genomic study
-    pub interpreter: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interpreter: Vec<Reference>,
     /// Why the genomic study was performed
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// The defined protocol that describes the study
     #[serde(rename = "instantiatesCanonical")]
     pub instantiates_canonical: Option<StringType>,
@@ -70,13 +75,111 @@ pub struct GenomicStudy {
     #[serde(rename = "_instantiatesUri")]
     pub _instantiates_uri: Option<Element>,
     /// Comments related to the genomic study
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Description of the genomic study
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Genomic Analysis Event
-    pub analysis: Option<Vec<GenomicStudyAnalysis>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub analysis: Vec<GenomicStudyAnalysis>,
+}
+/// GenomicStudy nested structure for the 'analysis' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysis {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Devices used for the analysis (e.g., instruments, software), with settings and parameters
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<GenomicStudyAnalysisDevice>,
+    /// Inputs for the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input: Vec<GenomicStudyAnalysisInput>,
+    /// Outputs for the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output: Vec<GenomicStudyAnalysisOutput>,
+    /// Performer for the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<GenomicStudyAnalysisPerformer>,
+    /// Identifiers for the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// Type of the methods used in the analysis (e.g., FISH, Karyotyping, MSI)
+    ///
+    /// Binding: example (The method type of the GenomicStudy analysis.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-methodtype
+    #[serde(rename = "methodType")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub method_type: Vec<CodeableConcept>,
+    /// Type of the genomic changes studied in the analysis (e.g., DNA, RNA, or AA change)
+    ///
+    /// Binding: example (The change type relevant to GenomicStudy analysis.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-changetype
+    #[serde(rename = "changeType")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub change_type: Vec<CodeableConcept>,
+    /// Genome build that is used in this analysis
+    ///
+    /// Binding: extensible (Human reference sequence NCBI build ID)
+    ///
+    /// ValueSet: http://loinc.org/vs/LL1040-6
+    #[serde(rename = "genomeBuild")]
+    pub genome_build: Option<CodeableConcept>,
+    /// The defined protocol that describes the analysis
+    #[serde(rename = "instantiatesCanonical")]
+    pub instantiates_canonical: Option<StringType>,
+    /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_instantiatesCanonical")]
+    pub _instantiates_canonical: Option<Element>,
+    /// The URL pointing to an externally maintained protocol that describes the analysis
+    #[serde(rename = "instantiatesUri")]
+    pub instantiates_uri: Option<StringType>,
+    /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_instantiatesUri")]
+    pub _instantiates_uri: Option<Element>,
+    /// Name of the analysis event (human friendly)
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// What the genomic analysis is about, when it is not about the subject of record
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus: Vec<Reference>,
+    /// The specimen used in the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specimen: Vec<Reference>,
+    /// The date of the analysis event
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Any notes capture with the analysis event
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+    /// The protocol that was performed for the analysis event
+    #[serde(rename = "protocolPerformed")]
+    pub protocol_performed: Option<Reference>,
+    /// The genomic regions to be studied in the analysis (BED file)
+    #[serde(rename = "regionsStudied")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub regions_studied: Vec<Reference>,
+    /// Genomic regions actually called in the analysis event (BED file)
+    #[serde(rename = "regionsCalled")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub regions_called: Vec<Reference>,
+}
+/// GenomicStudyAnalysis nested structure for the 'device' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomicStudyAnalysisDevice {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Device used for the analysis
+    pub device: Option<Reference>,
+    /// Specific function for the device used for the analysis
+    pub function: Option<CodeableConcept>,
 }
 /// GenomicStudyAnalysis nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,90 +230,6 @@ pub struct GenomicStudyAnalysisPerformer {
     /// Role of the actor for this analysis
     pub role: Option<CodeableConcept>,
 }
-/// GenomicStudyAnalysis nested structure for the 'device' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysisDevice {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Device used for the analysis
-    pub device: Option<Reference>,
-    /// Specific function for the device used for the analysis
-    pub function: Option<CodeableConcept>,
-}
-/// GenomicStudy nested structure for the 'analysis' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenomicStudyAnalysis {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Devices used for the analysis (e.g., instruments, software), with settings and parameters
-    pub device: Option<Vec<GenomicStudyAnalysisDevice>>,
-    /// Outputs for the analysis event
-    pub output: Option<Vec<GenomicStudyAnalysisOutput>>,
-    /// Inputs for the analysis event
-    pub input: Option<Vec<GenomicStudyAnalysisInput>>,
-    /// Performer for the analysis event
-    pub performer: Option<Vec<GenomicStudyAnalysisPerformer>>,
-    /// Identifiers for the analysis event
-    pub identifier: Option<Vec<Identifier>>,
-    /// Type of the methods used in the analysis (e.g., FISH, Karyotyping, MSI)
-    ///
-    /// Binding: example (The method type of the GenomicStudy analysis.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-methodtype
-    #[serde(rename = "methodType")]
-    pub method_type: Option<Vec<CodeableConcept>>,
-    /// Type of the genomic changes studied in the analysis (e.g., DNA, RNA, or AA change)
-    ///
-    /// Binding: example (The change type relevant to GenomicStudy analysis.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/genomicstudy-changetype
-    #[serde(rename = "changeType")]
-    pub change_type: Option<Vec<CodeableConcept>>,
-    /// Genome build that is used in this analysis
-    ///
-    /// Binding: extensible (Human reference sequence NCBI build ID)
-    ///
-    /// ValueSet: http://loinc.org/vs/LL1040-6
-    #[serde(rename = "genomeBuild")]
-    pub genome_build: Option<CodeableConcept>,
-    /// The defined protocol that describes the analysis
-    #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<StringType>,
-    /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
-    /// The URL pointing to an externally maintained protocol that describes the analysis
-    #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<StringType>,
-    /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
-    /// Name of the analysis event (human friendly)
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// What the genomic analysis is about, when it is not about the subject of record
-    pub focus: Option<Vec<Reference>>,
-    /// The specimen used in the analysis event
-    pub specimen: Option<Vec<Reference>>,
-    /// The date of the analysis event
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Any notes capture with the analysis event
-    pub note: Option<Vec<Annotation>>,
-    /// The protocol that was performed for the analysis event
-    #[serde(rename = "protocolPerformed")]
-    pub protocol_performed: Option<Reference>,
-    /// The genomic regions to be studied in the analysis (BED file)
-    #[serde(rename = "regionsStudied")]
-    pub regions_studied: Option<Vec<Reference>>,
-    /// Genomic regions actually called in the analysis event (BED file)
-    #[serde(rename = "regionsCalled")]
-    pub regions_called: Option<Vec<Reference>>,
-}
 
 impl Default for GenomicStudy {
     fn default() -> Self {
@@ -236,6 +255,46 @@ impl Default for GenomicStudy {
             description: Default::default(),
             _description: Default::default(),
             analysis: Default::default(),
+        }
+    }
+}
+
+impl Default for GenomicStudyAnalysis {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            device: Default::default(),
+            input: Default::default(),
+            output: Default::default(),
+            performer: Default::default(),
+            identifier: Default::default(),
+            method_type: Default::default(),
+            change_type: Default::default(),
+            genome_build: Default::default(),
+            instantiates_canonical: Default::default(),
+            _instantiates_canonical: Default::default(),
+            instantiates_uri: Default::default(),
+            _instantiates_uri: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            focus: Default::default(),
+            specimen: Default::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            note: Default::default(),
+            protocol_performed: Default::default(),
+            regions_studied: Default::default(),
+            regions_called: Default::default(),
+        }
+    }
+}
+
+impl Default for GenomicStudyAnalysisDevice {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            device: Default::default(),
+            function: Default::default(),
         }
     }
 }
@@ -268,46 +327,6 @@ impl Default for GenomicStudyAnalysisPerformer {
             base: BackboneElement::default(),
             actor: Default::default(),
             role: Default::default(),
-        }
-    }
-}
-
-impl Default for GenomicStudyAnalysisDevice {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            device: Default::default(),
-            function: Default::default(),
-        }
-    }
-}
-
-impl Default for GenomicStudyAnalysis {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            device: Default::default(),
-            output: Default::default(),
-            input: Default::default(),
-            performer: Default::default(),
-            identifier: Default::default(),
-            method_type: Default::default(),
-            change_type: Default::default(),
-            genome_build: Default::default(),
-            instantiates_canonical: Default::default(),
-            _instantiates_canonical: Default::default(),
-            instantiates_uri: Default::default(),
-            _instantiates_uri: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            focus: Default::default(),
-            specimen: Default::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            note: Default::default(),
-            protocol_performed: Default::default(),
-            regions_studied: Default::default(),
-            regions_called: Default::default(),
         }
     }
 }
@@ -563,13 +582,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for GenomicStudy {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -584,44 +603,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for GenomicStudy {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -631,28 +638,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for GenomicStudy {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::genomic_study::GenomicStudyAccessors for GenomicStudy {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> GenomicstudyStatus {
         self.status.clone()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn subject(&self) -> Reference {
         self.subject.clone()
@@ -664,16 +668,16 @@ impl crate::traits::genomic_study::GenomicStudyAccessors for GenomicStudy {
         self.start_date.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn referrer(&self) -> Option<Reference> {
         self.referrer.clone()
     }
     fn interpreter(&self) -> &[Reference] {
-        self.interpreter.as_deref().unwrap_or(&[])
+        self.interpreter.as_slice()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn instantiates_canonical(&self) -> Option<StringType> {
         self.instantiates_canonical.clone()
@@ -682,13 +686,13 @@ impl crate::traits::genomic_study::GenomicStudyAccessors for GenomicStudy {
         self.instantiates_uri.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn analysis(&self) -> &[GenomicStudyAnalysis] {
-        self.analysis.as_deref().unwrap_or(&[])
+        self.analysis.as_slice()
     }
 }
 
@@ -698,12 +702,12 @@ impl crate::traits::genomic_study::GenomicStudyMutators for GenomicStudy {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: GenomicstudyStatus) -> Self {
@@ -713,12 +717,12 @@ impl crate::traits::genomic_study::GenomicStudyMutators for GenomicStudy {
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -738,12 +742,12 @@ impl crate::traits::genomic_study::GenomicStudyMutators for GenomicStudy {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_referrer(self, value: Reference) -> Self {
@@ -753,22 +757,22 @@ impl crate::traits::genomic_study::GenomicStudyMutators for GenomicStudy {
     }
     fn set_interpreter(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.interpreter = Some(value);
+        resource.interpreter = value;
         resource
     }
     fn add_interpreter(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.interpreter.get_or_insert_with(Vec::new).push(item);
+        resource.interpreter.push(item);
         resource
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: String) -> Self {
@@ -783,12 +787,12 @@ impl crate::traits::genomic_study::GenomicStudyMutators for GenomicStudy {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -798,25 +802,25 @@ impl crate::traits::genomic_study::GenomicStudyMutators for GenomicStudy {
     }
     fn set_analysis(self, value: Vec<GenomicStudyAnalysis>) -> Self {
         let mut resource = self.clone();
-        resource.analysis = Some(value);
+        resource.analysis = value;
         resource
     }
     fn add_analysis(self, item: GenomicStudyAnalysis) -> Self {
         let mut resource = self.clone();
-        resource.analysis.get_or_insert_with(Vec::new).push(item);
+        resource.analysis.push(item);
         resource
     }
 }
 
 impl crate::traits::genomic_study::GenomicStudyExistence for GenomicStudy {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_subject(&self) -> bool {
         true
@@ -828,16 +832,16 @@ impl crate::traits::genomic_study::GenomicStudyExistence for GenomicStudy {
         self.start_date.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_referrer(&self) -> bool {
         self.referrer.is_some()
     }
     fn has_interpreter(&self) -> bool {
-        self.interpreter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.interpreter.is_empty()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
         self.instantiates_canonical.is_some()
@@ -846,13 +850,13 @@ impl crate::traits::genomic_study::GenomicStudyExistence for GenomicStudy {
         self.instantiates_uri.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_analysis(&self) -> bool {
-        self.analysis.as_ref().is_some_and(|v| !v.is_empty())
+        !self.analysis.is_empty()
     }
 }
 

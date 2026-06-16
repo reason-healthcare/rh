@@ -30,7 +30,8 @@ pub struct Location {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique code or number identifying the location to its users
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | suspended | inactive
     pub status: Option<LocationStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -47,9 +48,11 @@ pub struct Location {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// A list of alternate names that the location is known as, or was known as, in the past
-    pub alias: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alias: Vec<StringType>,
     /// Extension element for the 'alias' primitive field. Contains metadata and extensions.
-    pub _alias: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _alias: Vec<Element>,
     /// Additional details about the location that could be displayed as further information to identify the location beyond its name
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -64,9 +67,11 @@ pub struct Location {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Official contact details for the location
-    pub contact: Option<Vec<ExtendedContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ExtendedContactDetail>,
     /// Physical location
     pub address: Option<Address>,
     /// Physical form of the location
@@ -88,15 +93,19 @@ pub struct Location {
     /// Binding: example (A custom attribute that could be provided at a service (e.g. Wheelchair accessibiliy).)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/location-characteristic
-    pub characteristic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<CodeableConcept>,
     /// What days/times during a week is this location usually open (including exceptions)
     #[serde(rename = "hoursOfOperation")]
-    pub hours_of_operation: Option<Vec<Availability>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hours_of_operation: Vec<Availability>,
     /// Connection details of a virtual service (e.g. conference call)
     #[serde(rename = "virtualService")]
-    pub virtual_service: Option<Vec<VirtualServiceDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub virtual_service: Vec<VirtualServiceDetail>,
     /// Technical endpoints providing access to services operated for the location
-    pub endpoint: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endpoint: Vec<Reference>,
 }
 /// Location nested structure for the 'position' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -296,13 +305,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Location {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -317,44 +326,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Location {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -364,22 +361,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Location {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::location::LocationAccessors for Location {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Option<LocationStatus> {
         self.status.clone()
@@ -391,7 +385,7 @@ impl crate::traits::location::LocationAccessors for Location {
         self.name.clone()
     }
     fn alias(&self) -> &[StringType] {
-        self.alias.as_deref().unwrap_or(&[])
+        self.alias.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
@@ -400,10 +394,10 @@ impl crate::traits::location::LocationAccessors for Location {
         self.mode.clone()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn contact(&self) -> &[ExtendedContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn address(&self) -> Option<Address> {
         self.address.clone()
@@ -421,16 +415,16 @@ impl crate::traits::location::LocationAccessors for Location {
         self.part_of.clone()
     }
     fn characteristic(&self) -> &[CodeableConcept] {
-        self.characteristic.as_deref().unwrap_or(&[])
+        self.characteristic.as_slice()
     }
     fn hours_of_operation(&self) -> &[Availability] {
-        self.hours_of_operation.as_deref().unwrap_or(&[])
+        self.hours_of_operation.as_slice()
     }
     fn virtual_service(&self) -> &[VirtualServiceDetail] {
-        self.virtual_service.as_deref().unwrap_or(&[])
+        self.virtual_service.as_slice()
     }
     fn endpoint(&self) -> &[Reference] {
-        self.endpoint.as_deref().unwrap_or(&[])
+        self.endpoint.as_slice()
     }
 }
 
@@ -440,12 +434,12 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: LocationStatus) -> Self {
@@ -465,12 +459,12 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_alias(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.alias = Some(value);
+        resource.alias = value;
         resource
     }
     fn add_alias(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.alias.get_or_insert_with(Vec::new).push(item);
+        resource.alias.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -485,22 +479,22 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_contact(self, value: Vec<ExtendedContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ExtendedContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_address(self, value: Address) -> Self {
@@ -530,58 +524,49 @@ impl crate::traits::location::LocationMutators for Location {
     }
     fn set_characteristic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.characteristic = Some(value);
+        resource.characteristic = value;
         resource
     }
     fn add_characteristic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.characteristic.push(item);
         resource
     }
     fn set_hours_of_operation(self, value: Vec<Availability>) -> Self {
         let mut resource = self.clone();
-        resource.hours_of_operation = Some(value);
+        resource.hours_of_operation = value;
         resource
     }
     fn add_hours_of_operation(self, item: Availability) -> Self {
         let mut resource = self.clone();
-        resource
-            .hours_of_operation
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.hours_of_operation.push(item);
         resource
     }
     fn set_virtual_service(self, value: Vec<VirtualServiceDetail>) -> Self {
         let mut resource = self.clone();
-        resource.virtual_service = Some(value);
+        resource.virtual_service = value;
         resource
     }
     fn add_virtual_service(self, item: VirtualServiceDetail) -> Self {
         let mut resource = self.clone();
-        resource
-            .virtual_service
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.virtual_service.push(item);
         resource
     }
     fn set_endpoint(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.endpoint = Some(value);
+        resource.endpoint = value;
         resource
     }
     fn add_endpoint(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.endpoint.get_or_insert_with(Vec::new).push(item);
+        resource.endpoint.push(item);
         resource
     }
 }
 
 impl crate::traits::location::LocationExistence for Location {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
@@ -593,7 +578,7 @@ impl crate::traits::location::LocationExistence for Location {
         self.name.is_some()
     }
     fn has_alias(&self) -> bool {
-        self.alias.as_ref().is_some_and(|v| !v.is_empty())
+        !self.alias.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
@@ -602,10 +587,10 @@ impl crate::traits::location::LocationExistence for Location {
         self.mode.is_some()
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_address(&self) -> bool {
         self.address.is_some()
@@ -623,18 +608,16 @@ impl crate::traits::location::LocationExistence for Location {
         self.part_of.is_some()
     }
     fn has_characteristic(&self) -> bool {
-        self.characteristic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.characteristic.is_empty()
     }
     fn has_hours_of_operation(&self) -> bool {
-        self.hours_of_operation
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.hours_of_operation.is_empty()
     }
     fn has_virtual_service(&self) -> bool {
-        self.virtual_service.as_ref().is_some_and(|v| !v.is_empty())
+        !self.virtual_service.is_empty()
     }
     fn has_endpoint(&self) -> bool {
-        self.endpoint.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endpoint.is_empty()
     }
 }
 

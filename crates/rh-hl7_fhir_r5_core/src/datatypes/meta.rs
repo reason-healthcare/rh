@@ -36,22 +36,26 @@ pub struct Meta {
     /// Extension element for the 'source' primitive field. Contains metadata and extensions.
     pub _source: Option<Element>,
     /// Profiles this resource claims to conform to
-    pub profile: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub profile: Vec<StringType>,
     /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _profile: Vec<Element>,
     /// Security Labels applied to this resource
     ///
     /// Binding: extensible (Security Labels from the Healthcare Privacy and Security Classification System.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/security-labels
-    pub security: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security: Vec<Coding>,
     /// Tags applied to this resource
     ///
     /// Binding: example (Codes that represent various types of tags, commonly workflow-related; e.g. "Needs review by Dr. Jones".)
     ///
     /// Available values:
     /// - `SUBSETTED`: subsetted
-    pub tag: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tag: Vec<Coding>,
 }
 
 impl Default for Meta {

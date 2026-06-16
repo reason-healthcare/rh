@@ -30,7 +30,8 @@ pub struct RelatedPerson {
     #[serde(flatten)]
     pub base: DomainResource,
     /// A human identifier for this person
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this related person's record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
@@ -53,11 +54,14 @@ pub struct RelatedPerson {
     /// - `CAREGIVER`
     /// - `E`
     /// - ... and 8 more values
-    pub relationship: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relationship: Vec<CodeableConcept>,
     /// A name associated with the person
-    pub name: Option<Vec<HumanName>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name: Vec<HumanName>,
     /// A contact detail for the person
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
     /// male | female | other | unknown
     pub gender: Option<AdministrativeGender>,
     /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
@@ -69,13 +73,16 @@ pub struct RelatedPerson {
     #[serde(rename = "_birthDate")]
     pub _birth_date: Option<Element>,
     /// Address where the related person can be contacted or visited
-    pub address: Option<Vec<Address>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub address: Vec<Address>,
     /// Image of the person
-    pub photo: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub photo: Vec<Attachment>,
     /// Period of time that this relationship is considered valid
     pub period: Option<Period>,
     /// A language which may be used to communicate with the related person about the patient's health
-    pub communication: Option<Vec<RelatedPersonCommunication>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication: Vec<RelatedPersonCommunication>,
 }
 /// RelatedPerson nested structure for the 'communication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -282,13 +289,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for RelatedPerson {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -303,44 +310,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for RelatedPerson {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -350,22 +345,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for RelatedPerson {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::related_person::RelatedPersonAccessors for RelatedPerson {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
@@ -374,13 +366,13 @@ impl crate::traits::related_person::RelatedPersonAccessors for RelatedPerson {
         self.patient.clone()
     }
     fn relationship(&self) -> &[CodeableConcept] {
-        self.relationship.as_deref().unwrap_or(&[])
+        self.relationship.as_slice()
     }
     fn name(&self) -> &[HumanName] {
-        self.name.as_deref().unwrap_or(&[])
+        self.name.as_slice()
     }
     fn telecom(&self) -> &[ContactPoint] {
-        self.telecom.as_deref().unwrap_or(&[])
+        self.telecom.as_slice()
     }
     fn gender(&self) -> Option<AdministrativeGender> {
         self.gender.clone()
@@ -389,16 +381,16 @@ impl crate::traits::related_person::RelatedPersonAccessors for RelatedPerson {
         self.birth_date.clone()
     }
     fn address(&self) -> &[Address] {
-        self.address.as_deref().unwrap_or(&[])
+        self.address.as_slice()
     }
     fn photo(&self) -> &[Attachment] {
-        self.photo.as_deref().unwrap_or(&[])
+        self.photo.as_slice()
     }
     fn period(&self) -> Option<Period> {
         self.period.clone()
     }
     fn communication(&self) -> &[RelatedPersonCommunication] {
-        self.communication.as_deref().unwrap_or(&[])
+        self.communication.as_slice()
     }
 }
 
@@ -408,12 +400,12 @@ impl crate::traits::related_person::RelatedPersonMutators for RelatedPerson {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -428,35 +420,32 @@ impl crate::traits::related_person::RelatedPersonMutators for RelatedPerson {
     }
     fn set_relationship(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.relationship = Some(value);
+        resource.relationship = value;
         resource
     }
     fn add_relationship(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .relationship
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.relationship.push(item);
         resource
     }
     fn set_name(self, value: Vec<HumanName>) -> Self {
         let mut resource = self.clone();
-        resource.name = Some(value);
+        resource.name = value;
         resource
     }
     fn add_name(self, item: HumanName) -> Self {
         let mut resource = self.clone();
-        resource.name.get_or_insert_with(Vec::new).push(item);
+        resource.name.push(item);
         resource
     }
     fn set_telecom(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.telecom = Some(value);
+        resource.telecom = value;
         resource
     }
     fn add_telecom(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.telecom.get_or_insert_with(Vec::new).push(item);
+        resource.telecom.push(item);
         resource
     }
     fn set_gender(self, value: AdministrativeGender) -> Self {
@@ -471,22 +460,22 @@ impl crate::traits::related_person::RelatedPersonMutators for RelatedPerson {
     }
     fn set_address(self, value: Vec<Address>) -> Self {
         let mut resource = self.clone();
-        resource.address = Some(value);
+        resource.address = value;
         resource
     }
     fn add_address(self, item: Address) -> Self {
         let mut resource = self.clone();
-        resource.address.get_or_insert_with(Vec::new).push(item);
+        resource.address.push(item);
         resource
     }
     fn set_photo(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.photo = Some(value);
+        resource.photo = value;
         resource
     }
     fn add_photo(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.photo.get_or_insert_with(Vec::new).push(item);
+        resource.photo.push(item);
         resource
     }
     fn set_period(self, value: Period) -> Self {
@@ -496,22 +485,19 @@ impl crate::traits::related_person::RelatedPersonMutators for RelatedPerson {
     }
     fn set_communication(self, value: Vec<RelatedPersonCommunication>) -> Self {
         let mut resource = self.clone();
-        resource.communication = Some(value);
+        resource.communication = value;
         resource
     }
     fn add_communication(self, item: RelatedPersonCommunication) -> Self {
         let mut resource = self.clone();
-        resource
-            .communication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.communication.push(item);
         resource
     }
 }
 
 impl crate::traits::related_person::RelatedPersonExistence for RelatedPerson {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
@@ -520,13 +506,13 @@ impl crate::traits::related_person::RelatedPersonExistence for RelatedPerson {
         true
     }
     fn has_relationship(&self) -> bool {
-        self.relationship.as_ref().is_some_and(|v| !v.is_empty())
+        !self.relationship.is_empty()
     }
     fn has_name(&self) -> bool {
-        self.name.as_ref().is_some_and(|v| !v.is_empty())
+        !self.name.is_empty()
     }
     fn has_telecom(&self) -> bool {
-        self.telecom.as_ref().is_some_and(|v| !v.is_empty())
+        !self.telecom.is_empty()
     }
     fn has_gender(&self) -> bool {
         self.gender.is_some()
@@ -535,16 +521,16 @@ impl crate::traits::related_person::RelatedPersonExistence for RelatedPerson {
         self.birth_date.is_some()
     }
     fn has_address(&self) -> bool {
-        self.address.as_ref().is_some_and(|v| !v.is_empty())
+        !self.address.is_empty()
     }
     fn has_photo(&self) -> bool {
-        self.photo.as_ref().is_some_and(|v| !v.is_empty())
+        !self.photo.is_empty()
     }
     fn has_period(&self) -> bool {
         self.period.is_some()
     }
     fn has_communication(&self) -> bool {
-        self.communication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.communication.is_empty()
     }
 }
 

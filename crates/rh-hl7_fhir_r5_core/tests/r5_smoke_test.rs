@@ -33,7 +33,7 @@ use rh_hl7_fhir_r5_core::{
 fn test_patient_default_construction() {
     let patient = Patient::default();
     assert!(patient.base.base.id.is_none());
-    assert!(patient.name.is_none() || patient.name.as_ref().map(|n| n.is_empty()).unwrap_or(true));
+    assert!(patient.name.is_empty());
     assert!(patient.gender.is_none());
 }
 
@@ -44,18 +44,15 @@ fn test_patient_builder_chaining() {
         .set_active(true)
         .add_name(HumanName {
             family: Some("Smith".to_string()),
-            given: Some(vec!["Alice".to_string()]),
+            given: vec!["Alice".to_string()],
             ..Default::default()
         })
         .set_birth_date("1985-03-22".to_string());
 
     assert_eq!(patient.base.base.id.as_deref(), Some("p-001"));
     assert_eq!(patient.active, Some(true));
-    assert_eq!(patient.name.as_ref().map(|n| n.len()), Some(1));
-    assert_eq!(
-        patient.name.as_ref().and_then(|n| n[0].family.as_deref()),
-        Some("Smith")
-    );
+    assert_eq!(patient.name.len(), 1);
+    assert_eq!(patient.name[0].family.as_deref(), Some("Smith"));
     assert_eq!(patient.birth_date.as_deref(), Some("1985-03-22"));
 }
 
@@ -77,14 +74,8 @@ fn test_patient_identifier() {
         ..Default::default()
     });
 
-    assert_eq!(patient.identifier.as_ref().map(|v| v.len()), Some(1));
-    assert_eq!(
-        patient
-            .identifier
-            .as_ref()
-            .and_then(|v| v[0].value.as_deref()),
-        Some("MRN-123")
-    );
+    assert_eq!(patient.identifier.len(), 1);
+    assert_eq!(patient.identifier[0].value.as_deref(), Some("MRN-123"));
 }
 
 // ── Serde round-trip ──────────────────────────────────────────────────────────
@@ -96,7 +87,7 @@ fn test_patient_serde_roundtrip() {
         .set_active(true)
         .add_name(HumanName {
             family: Some("Jones".to_string()),
-            given: Some(vec!["Bob".to_string()]),
+            given: vec!["Bob".to_string()],
             ..Default::default()
         });
 
@@ -108,13 +99,10 @@ fn test_patient_serde_roundtrip() {
 
     let restored: Patient = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(restored.base.base.id, patient.base.base.id);
+    assert_eq!(restored.name.len(), patient.name.len());
     assert_eq!(
-        restored.name.as_ref().map(|n| n.len()),
-        patient.name.as_ref().map(|n| n.len())
-    );
-    assert_eq!(
-        restored.name.as_ref().and_then(|n| n[0].family.as_deref()),
-        patient.name.as_ref().and_then(|n| n[0].family.as_deref())
+        restored.name[0].family.as_deref(),
+        patient.name[0].family.as_deref()
     );
 }
 

@@ -26,7 +26,8 @@ pub struct Account {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Account number
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | inactive | entered-in-error | on-hold | unknown
     pub status: AccountStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -43,12 +44,14 @@ pub struct Account {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// The entity that caused the expenses
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// Transaction window
     #[serde(rename = "servicePeriod")]
     pub service_period: Option<Period>,
     /// The party(s) that are responsible for covering the payment of this account, and what order should they be applied to the account
-    pub coverage: Option<Vec<AccountCoverage>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coverage: Vec<AccountCoverage>,
     /// Entity managing the Account
     pub owner: Option<Reference>,
     /// Explanation of purpose/use
@@ -56,10 +59,24 @@ pub struct Account {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The parties ultimately responsible for balancing the Account
-    pub guarantor: Option<Vec<AccountGuarantor>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub guarantor: Vec<AccountGuarantor>,
     /// Reference to a parent Account
     #[serde(rename = "partOf")]
     pub part_of: Option<Reference>,
+}
+/// Account nested structure for the 'coverage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountCoverage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The party(s), such as insurances, that may contribute to the payment of this account
+    pub coverage: Reference,
+    /// The priority of the coverage in the context of this account
+    pub priority: Option<PositiveIntType>,
+    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
+    pub _priority: Option<Element>,
 }
 /// Account nested structure for the 'guarantor' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,19 +94,6 @@ pub struct AccountGuarantor {
     pub _on_hold: Option<Element>,
     /// Guarantee account during
     pub period: Option<Period>,
-}
-/// Account nested structure for the 'coverage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountCoverage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The party(s), such as insurances, that may contribute to the payment of this account
-    pub coverage: Reference,
-    /// The priority of the coverage in the context of this account
-    pub priority: Option<PositiveIntType>,
-    /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
-    pub _priority: Option<Element>,
 }
 
 impl Default for Account {
@@ -114,6 +118,17 @@ impl Default for Account {
     }
 }
 
+impl Default for AccountCoverage {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            coverage: Reference::default(),
+            priority: Default::default(),
+            _priority: Default::default(),
+        }
+    }
+}
+
 impl Default for AccountGuarantor {
     fn default() -> Self {
         Self {
@@ -122,17 +137,6 @@ impl Default for AccountGuarantor {
             on_hold: Default::default(),
             _on_hold: Default::default(),
             period: Default::default(),
-        }
-    }
-}
-
-impl Default for AccountCoverage {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            coverage: Reference::default(),
-            priority: Default::default(),
-            _priority: Default::default(),
         }
     }
 }
@@ -269,13 +273,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Account {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -290,44 +294,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Account {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -337,22 +329,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Account {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::account::AccountAccessors for Account {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> AccountStatus {
         self.status.clone()
@@ -364,13 +353,13 @@ impl crate::traits::account::AccountAccessors for Account {
         self.name.clone()
     }
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn service_period(&self) -> Option<Period> {
         self.service_period.clone()
     }
     fn coverage(&self) -> &[AccountCoverage] {
-        self.coverage.as_deref().unwrap_or(&[])
+        self.coverage.as_slice()
     }
     fn owner(&self) -> Option<Reference> {
         self.owner.clone()
@@ -379,7 +368,7 @@ impl crate::traits::account::AccountAccessors for Account {
         self.description.clone()
     }
     fn guarantor(&self) -> &[AccountGuarantor] {
-        self.guarantor.as_deref().unwrap_or(&[])
+        self.guarantor.as_slice()
     }
     fn part_of(&self) -> Option<Reference> {
         self.part_of.clone()
@@ -392,12 +381,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: AccountStatus) -> Self {
@@ -417,12 +406,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_service_period(self, value: Period) -> Self {
@@ -432,12 +421,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_coverage(self, value: Vec<AccountCoverage>) -> Self {
         let mut resource = self.clone();
-        resource.coverage = Some(value);
+        resource.coverage = value;
         resource
     }
     fn add_coverage(self, item: AccountCoverage) -> Self {
         let mut resource = self.clone();
-        resource.coverage.get_or_insert_with(Vec::new).push(item);
+        resource.coverage.push(item);
         resource
     }
     fn set_owner(self, value: Reference) -> Self {
@@ -452,12 +441,12 @@ impl crate::traits::account::AccountMutators for Account {
     }
     fn set_guarantor(self, value: Vec<AccountGuarantor>) -> Self {
         let mut resource = self.clone();
-        resource.guarantor = Some(value);
+        resource.guarantor = value;
         resource
     }
     fn add_guarantor(self, item: AccountGuarantor) -> Self {
         let mut resource = self.clone();
-        resource.guarantor.get_or_insert_with(Vec::new).push(item);
+        resource.guarantor.push(item);
         resource
     }
     fn set_part_of(self, value: Reference) -> Self {
@@ -469,7 +458,7 @@ impl crate::traits::account::AccountMutators for Account {
 
 impl crate::traits::account::AccountExistence for Account {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -481,13 +470,13 @@ impl crate::traits::account::AccountExistence for Account {
         self.name.is_some()
     }
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_service_period(&self) -> bool {
         self.service_period.is_some()
     }
     fn has_coverage(&self) -> bool {
-        self.coverage.as_ref().is_some_and(|v| !v.is_empty())
+        !self.coverage.is_empty()
     }
     fn has_owner(&self) -> bool {
         self.owner.is_some()
@@ -496,7 +485,7 @@ impl crate::traits::account::AccountExistence for Account {
         self.description.is_some()
     }
     fn has_guarantor(&self) -> bool {
-        self.guarantor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.guarantor.is_empty()
     }
     fn has_part_of(&self) -> bool {
         self.part_of.is_some()

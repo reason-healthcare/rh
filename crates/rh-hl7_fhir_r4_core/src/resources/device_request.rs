@@ -32,25 +32,32 @@ pub struct DeviceRequest {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Request identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// What request fulfills
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// What request replaces
     #[serde(rename = "priorRequest")]
-    pub prior_request: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prior_request: Vec<Reference>,
     /// Identifier of composite request
     #[serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
@@ -73,7 +80,8 @@ pub struct DeviceRequest {
     #[serde(rename = "codeCodeableConcept")]
     pub code_codeable_concept: CodeableConcept,
     /// Device details
-    pub parameter: Option<Vec<DeviceRequestParameter>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<DeviceRequestParameter>,
     /// Focus of request
     pub subject: Reference,
     /// Encounter motivating request
@@ -111,20 +119,26 @@ pub struct DeviceRequest {
     /// Available values:
     /// - `160245001`: No current problems or disability
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Linked Reason for request
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Associated insurance coverage
-    pub insurance: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<Reference>,
     /// Additional clinical information
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<Reference>,
     /// Notes or comments
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Request provenance
     #[serde(rename = "relevantHistory")]
-    pub relevant_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relevant_history: Vec<Reference>,
 }
 /// DeviceRequest nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -363,13 +377,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DeviceRequest {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -384,44 +398,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DeviceRequest {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -431,34 +433,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for DeviceRequest {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::device_request::DeviceRequestAccessors for DeviceRequest {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn prior_request(&self) -> &[Reference] {
-        self.prior_request.as_deref().unwrap_or(&[])
+        self.prior_request.as_slice()
     }
     fn group_identifier(&self) -> Option<Identifier> {
         self.group_identifier.clone()
@@ -473,7 +472,7 @@ impl crate::traits::device_request::DeviceRequestAccessors for DeviceRequest {
         self.priority.clone()
     }
     fn parameter(&self) -> &[DeviceRequestParameter] {
-        self.parameter.as_deref().unwrap_or(&[])
+        self.parameter.as_slice()
     }
     fn subject(&self) -> Reference {
         self.subject.clone()
@@ -494,22 +493,22 @@ impl crate::traits::device_request::DeviceRequestAccessors for DeviceRequest {
         self.performer.clone()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn insurance(&self) -> &[Reference] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn supporting_info(&self) -> &[Reference] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn relevant_history(&self) -> &[Reference] {
-        self.relevant_history.as_deref().unwrap_or(&[])
+        self.relevant_history.as_slice()
     }
 }
 
@@ -519,61 +518,52 @@ impl crate::traits::device_request::DeviceRequestMutators for DeviceRequest {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_prior_request(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.prior_request = Some(value);
+        resource.prior_request = value;
         resource
     }
     fn add_prior_request(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .prior_request
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.prior_request.push(item);
         resource
     }
     fn set_group_identifier(self, value: Identifier) -> Self {
@@ -598,12 +588,12 @@ impl crate::traits::device_request::DeviceRequestMutators for DeviceRequest {
     }
     fn set_parameter(self, value: Vec<DeviceRequestParameter>) -> Self {
         let mut resource = self.clone();
-        resource.parameter = Some(value);
+        resource.parameter = value;
         resource
     }
     fn add_parameter(self, item: DeviceRequestParameter) -> Self {
         let mut resource = self.clone();
-        resource.parameter.get_or_insert_with(Vec::new).push(item);
+        resource.parameter.push(item);
         resource
     }
     fn set_subject(self, value: Reference) -> Self {
@@ -638,102 +628,89 @@ impl crate::traits::device_request::DeviceRequestMutators for DeviceRequest {
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_insurance(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_relevant_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.relevant_history = Some(value);
+        resource.relevant_history = value;
         resource
     }
     fn add_relevant_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .relevant_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.relevant_history.push(item);
         resource
     }
 }
 
 impl crate::traits::device_request::DeviceRequestExistence for DeviceRequest {
+    fn has_code(&self) -> bool {
+        true
+    }
     fn has_occurrence(&self) -> bool {
         self.occurrence_date_time.is_some()
             || self.occurrence_period.is_some()
             || self.occurrence_timing.is_some()
     }
-    fn has_code(&self) -> bool {
-        true
-    }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_prior_request(&self) -> bool {
-        self.prior_request.as_ref().is_some_and(|v| !v.is_empty())
+        !self.prior_request.is_empty()
     }
     fn has_group_identifier(&self) -> bool {
         self.group_identifier.is_some()
@@ -748,7 +725,7 @@ impl crate::traits::device_request::DeviceRequestExistence for DeviceRequest {
         self.priority.is_some()
     }
     fn has_parameter(&self) -> bool {
-        self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parameter.is_empty()
     }
     fn has_subject(&self) -> bool {
         true
@@ -769,26 +746,22 @@ impl crate::traits::device_request::DeviceRequestExistence for DeviceRequest {
         self.performer.is_some()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_relevant_history(&self) -> bool {
-        self.relevant_history
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.relevant_history.is_empty()
     }
 }
 

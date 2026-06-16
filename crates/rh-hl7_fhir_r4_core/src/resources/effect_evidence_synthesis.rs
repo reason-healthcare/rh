@@ -37,7 +37,8 @@ pub struct EffectEvidenceSynthesis {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the effect evidence synthesis
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the effect evidence synthesis
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -63,22 +64,26 @@ pub struct EffectEvidenceSynthesis {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the effect evidence synthesis
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for effect evidence synthesis (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Use and/or publishing restrictions
     pub copyright: Option<StringType>,
     /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
@@ -103,18 +108,24 @@ pub struct EffectEvidenceSynthesis {
     /// Binding: example (High-level categorization of the definition, used for searching, sorting, and filtering.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/definition-topic
-    pub topic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub topic: Vec<CodeableConcept>,
     /// Who authored the content
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the content
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the content
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the content
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// Additional documentation, citations, etc.
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Type of synthesis
     ///
     /// Binding: extensible (Types of combining results from a body of evidence (eg. summary data meta-analysis).)
@@ -143,35 +154,36 @@ pub struct EffectEvidenceSynthesis {
     pub sample_size: Option<EffectEvidenceSynthesisSamplesize>,
     /// What was the result per exposure?
     #[serde(rename = "resultsByExposure")]
-    pub results_by_exposure: Option<Vec<EffectEvidenceSynthesisResultsbyexposure>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub results_by_exposure: Vec<EffectEvidenceSynthesisResultsbyexposure>,
     /// What was the estimated effect
     #[serde(rename = "effectEstimate")]
-    pub effect_estimate: Option<Vec<EffectEvidenceSynthesisEffectestimate>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub effect_estimate: Vec<EffectEvidenceSynthesisEffectestimate>,
     /// How certain is the effect
-    pub certainty: Option<Vec<EffectEvidenceSynthesisCertainty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub certainty: Vec<EffectEvidenceSynthesisCertainty>,
 }
-/// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
+/// EffectEvidenceSynthesis nested structure for the 'certainty' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisSamplesize {
+pub struct EffectEvidenceSynthesisCertainty {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Description of sample size
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// How many studies?
-    #[serde(rename = "numberOfStudies")]
-    pub number_of_studies: Option<IntegerType>,
-    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfStudies")]
-    pub _number_of_studies: Option<Element>,
-    /// How many participants?
-    #[serde(rename = "numberOfParticipants")]
-    pub number_of_participants: Option<IntegerType>,
-    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_numberOfParticipants")]
-    pub _number_of_participants: Option<Element>,
+    /// A component that contributes to the overall certainty
+    #[serde(rename = "certaintySubcomponent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub certainty_subcomponent: Vec<EffectEvidenceSynthesisCertaintyCertaintysubcomponent>,
+    /// Certainty rating
+    ///
+    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rating: Vec<CodeableConcept>,
+    /// Used for footnotes or explanatory notes
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// EffectEvidenceSynthesisCertainty nested structure for the 'certaintySubcomponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,9 +203,47 @@ pub struct EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
     /// Binding: extensible (The quality rating of the subcomponent of a quality of evidence rating.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-subcomponent-rating
-    pub rating: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rating: Vec<CodeableConcept>,
     /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// EffectEvidenceSynthesis nested structure for the 'effectEstimate' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectEvidenceSynthesisEffectestimate {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// How precise the estimate is
+    #[serde(rename = "precisionEstimate")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub precision_estimate: Vec<EffectEvidenceSynthesisEffectestimatePrecisionestimate>,
+    /// Description of effect estimate
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Type of efffect estimate
+    ///
+    /// Binding: extensible (Whether the effect estimate is an absolute effect estimate (absolute difference) or a relative effect estimate (relative difference), and the specific type of effect estimate (eg relative risk or median difference).)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/effect-estimate-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Variant exposure states
+    ///
+    /// Binding: extensible (Used for results by exposure in variant states such as low-risk, medium-risk and high-risk states.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-variant-state
+    #[serde(rename = "variantState")]
+    pub variant_state: Option<CodeableConcept>,
+    /// Point estimate
+    pub value: Option<DecimalType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+    /// What unit is the outcome described in?
+    #[serde(rename = "unitOfMeasure")]
+    pub unit_of_measure: Option<CodeableConcept>,
 }
 /// EffectEvidenceSynthesisEffectestimate nested structure for the 'precisionEstimate' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -248,58 +298,28 @@ pub struct EffectEvidenceSynthesisResultsbyexposure {
     #[serde(rename = "riskEvidenceSynthesis")]
     pub risk_evidence_synthesis: Reference,
 }
-/// EffectEvidenceSynthesis nested structure for the 'certainty' field
+/// EffectEvidenceSynthesis nested structure for the 'sampleSize' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisCertainty {
+pub struct EffectEvidenceSynthesisSamplesize {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// A component that contributes to the overall certainty
-    #[serde(rename = "certaintySubcomponent")]
-    pub certainty_subcomponent: Option<Vec<EffectEvidenceSynthesisCertaintyCertaintysubcomponent>>,
-    /// Certainty rating
-    ///
-    /// Binding: extensible (The quality of the evidence described. The code system used specifies the quality scale used to grade this evidence source while the code specifies the actual quality score (represented as a coded value) associated with the evidence.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-quality
-    pub rating: Option<Vec<CodeableConcept>>,
-    /// Used for footnotes or explanatory notes
-    pub note: Option<Vec<Annotation>>,
-}
-/// EffectEvidenceSynthesis nested structure for the 'effectEstimate' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EffectEvidenceSynthesisEffectestimate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// How precise the estimate is
-    #[serde(rename = "precisionEstimate")]
-    pub precision_estimate: Option<Vec<EffectEvidenceSynthesisEffectestimatePrecisionestimate>>,
-    /// Description of effect estimate
+    /// Description of sample size
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-    /// Type of efffect estimate
-    ///
-    /// Binding: extensible (Whether the effect estimate is an absolute effect estimate (absolute difference) or a relative effect estimate (relative difference), and the specific type of effect estimate (eg relative risk or median difference).)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/effect-estimate-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Variant exposure states
-    ///
-    /// Binding: extensible (Used for results by exposure in variant states such as low-risk, medium-risk and high-risk states.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/evidence-variant-state
-    #[serde(rename = "variantState")]
-    pub variant_state: Option<CodeableConcept>,
-    /// Point estimate
-    pub value: Option<DecimalType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-    /// What unit is the outcome described in?
-    #[serde(rename = "unitOfMeasure")]
-    pub unit_of_measure: Option<CodeableConcept>,
+    /// How many studies?
+    #[serde(rename = "numberOfStudies")]
+    pub number_of_studies: Option<IntegerType>,
+    /// Extension element for the 'numberOfStudies' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfStudies")]
+    pub _number_of_studies: Option<Element>,
+    /// How many participants?
+    #[serde(rename = "numberOfParticipants")]
+    pub number_of_participants: Option<IntegerType>,
+    /// Extension element for the 'numberOfParticipants' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_numberOfParticipants")]
+    pub _number_of_participants: Option<Element>,
 }
 
 impl Default for EffectEvidenceSynthesis {
@@ -354,16 +374,13 @@ impl Default for EffectEvidenceSynthesis {
     }
 }
 
-impl Default for EffectEvidenceSynthesisSamplesize {
+impl Default for EffectEvidenceSynthesisCertainty {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            number_of_studies: Default::default(),
-            _number_of_studies: Default::default(),
-            number_of_participants: Default::default(),
-            _number_of_participants: Default::default(),
+            certainty_subcomponent: Default::default(),
+            rating: Default::default(),
+            note: Default::default(),
         }
     }
 }
@@ -375,6 +392,22 @@ impl Default for EffectEvidenceSynthesisCertaintyCertaintysubcomponent {
             type_: Default::default(),
             rating: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for EffectEvidenceSynthesisEffectestimate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            precision_estimate: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            variant_state: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+            unit_of_measure: Default::default(),
         }
     }
 }
@@ -408,29 +441,16 @@ impl Default for EffectEvidenceSynthesisResultsbyexposure {
     }
 }
 
-impl Default for EffectEvidenceSynthesisCertainty {
+impl Default for EffectEvidenceSynthesisSamplesize {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            certainty_subcomponent: Default::default(),
-            rating: Default::default(),
-            note: Default::default(),
-        }
-    }
-}
-
-impl Default for EffectEvidenceSynthesisEffectestimate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            precision_estimate: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-            type_: Default::default(),
-            variant_state: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-            unit_of_measure: Default::default(),
+            number_of_studies: Default::default(),
+            _number_of_studies: Default::default(),
+            number_of_participants: Default::default(),
+            _number_of_participants: Default::default(),
         }
     }
 }
@@ -835,13 +855,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for EffectEvidenceS
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -856,44 +876,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for EffectEvidenceSy
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -903,16 +911,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for EffectEvidenceS
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -923,7 +928,7 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisAccessors
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -944,19 +949,19 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisAccessors
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
@@ -971,22 +976,22 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisAccessors
         self.effective_period.clone()
     }
     fn topic(&self) -> &[CodeableConcept] {
-        self.topic.as_deref().unwrap_or(&[])
+        self.topic.as_slice()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn synthesis_type(&self) -> Option<CodeableConcept> {
         self.synthesis_type.clone()
@@ -1010,13 +1015,13 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisAccessors
         self.sample_size.clone()
     }
     fn results_by_exposure(&self) -> &[EffectEvidenceSynthesisResultsbyexposure] {
-        self.results_by_exposure.as_deref().unwrap_or(&[])
+        self.results_by_exposure.as_slice()
     }
     fn effect_estimate(&self) -> &[EffectEvidenceSynthesisEffectestimate] {
-        self.effect_estimate.as_deref().unwrap_or(&[])
+        self.effect_estimate.as_slice()
     }
     fn certainty(&self) -> &[EffectEvidenceSynthesisCertainty] {
-        self.certainty.as_deref().unwrap_or(&[])
+        self.certainty.as_slice()
     }
 }
 
@@ -1033,12 +1038,12 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1073,12 +1078,12 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1088,35 +1093,32 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_copyright(self, value: String) -> Self {
@@ -1141,65 +1143,62 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators
     }
     fn set_topic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.topic = Some(value);
+        resource.topic = value;
         resource
     }
     fn add_topic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.topic.get_or_insert_with(Vec::new).push(item);
+        resource.topic.push(item);
         resource
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_synthesis_type(self, value: CodeableConcept) -> Self {
@@ -1239,38 +1238,32 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisMutators
     }
     fn set_results_by_exposure(self, value: Vec<EffectEvidenceSynthesisResultsbyexposure>) -> Self {
         let mut resource = self.clone();
-        resource.results_by_exposure = Some(value);
+        resource.results_by_exposure = value;
         resource
     }
     fn add_results_by_exposure(self, item: EffectEvidenceSynthesisResultsbyexposure) -> Self {
         let mut resource = self.clone();
-        resource
-            .results_by_exposure
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.results_by_exposure.push(item);
         resource
     }
     fn set_effect_estimate(self, value: Vec<EffectEvidenceSynthesisEffectestimate>) -> Self {
         let mut resource = self.clone();
-        resource.effect_estimate = Some(value);
+        resource.effect_estimate = value;
         resource
     }
     fn add_effect_estimate(self, item: EffectEvidenceSynthesisEffectestimate) -> Self {
         let mut resource = self.clone();
-        resource
-            .effect_estimate
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.effect_estimate.push(item);
         resource
     }
     fn set_certainty(self, value: Vec<EffectEvidenceSynthesisCertainty>) -> Self {
         let mut resource = self.clone();
-        resource.certainty = Some(value);
+        resource.certainty = value;
         resource
     }
     fn add_certainty(self, item: EffectEvidenceSynthesisCertainty) -> Self {
         let mut resource = self.clone();
-        resource.certainty.get_or_insert_with(Vec::new).push(item);
+        resource.certainty.push(item);
         resource
     }
 }
@@ -1282,7 +1275,7 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisExistence
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1303,19 +1296,19 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisExistence
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_copyright(&self) -> bool {
         self.copyright.is_some()
@@ -1330,24 +1323,22 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisExistence
         self.effective_period.is_some()
     }
     fn has_topic(&self) -> bool {
-        self.topic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.topic.is_empty()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_synthesis_type(&self) -> bool {
         self.synthesis_type.is_some()
@@ -1371,15 +1362,13 @@ impl crate::traits::effect_evidence_synthesis::EffectEvidenceSynthesisExistence
         self.sample_size.is_some()
     }
     fn has_results_by_exposure(&self) -> bool {
-        self.results_by_exposure
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.results_by_exposure.is_empty()
     }
     fn has_effect_estimate(&self) -> bool {
-        self.effect_estimate.as_ref().is_some_and(|v| !v.is_empty())
+        !self.effect_estimate.is_empty()
     }
     fn has_certainty(&self) -> bool {
-        self.certainty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.certainty.is_empty()
     }
 }
 

@@ -42,11 +42,37 @@ pub struct Bundle {
     /// Extension element for the 'total' primitive field. Contains metadata and extensions.
     pub _total: Option<Element>,
     /// Links related to this Bundle
-    pub link: Option<Vec<BundleLink>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link: Vec<BundleLink>,
     /// Entry in the bundle - will have a resource or information
-    pub entry: Option<Vec<BundleEntry>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry: Vec<BundleEntry>,
     /// Digital Signature
     pub signature: Option<Signature>,
+}
+/// Bundle nested structure for the 'entry' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleEntry {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Additional execution information (transaction/batch/history)
+    pub request: Option<BundleEntryRequest>,
+    /// Results of execution (transaction/batch/history)
+    pub response: Option<BundleEntryResponse>,
+    /// Search related information
+    pub search: Option<BundleEntrySearch>,
+    /// Links related to this entry
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub link: Vec<StringType>,
+    /// URI for resource (Absolute URL server address or URI for UUID/OID)
+    #[serde(rename = "fullUrl")]
+    pub full_url: Option<StringType>,
+    /// Extension element for the 'fullUrl' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_fullUrl")]
+    pub _full_url: Option<Element>,
+    /// A resource in the bundle
+    pub resource: Option<Resource>,
 }
 /// BundleEntry nested structure for the 'request' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -87,59 +113,6 @@ pub struct BundleEntryRequest {
     #[serde(rename = "_ifNoneExist")]
     pub _if_none_exist: Option<Element>,
 }
-/// Bundle nested structure for the 'link' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BundleLink {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// See http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1
-    pub relation: StringType,
-    /// Extension element for the 'relation' primitive field. Contains metadata and extensions.
-    pub _relation: Option<Element>,
-    /// Reference details for the link
-    pub url: StringType,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
-}
-/// Bundle nested structure for the 'entry' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BundleEntry {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Search related information
-    pub search: Option<BundleEntrySearch>,
-    /// Results of execution (transaction/batch/history)
-    pub response: Option<BundleEntryResponse>,
-    /// Additional execution information (transaction/batch/history)
-    pub request: Option<BundleEntryRequest>,
-    /// Links related to this entry
-    pub link: Option<Vec<StringType>>,
-    /// URI for resource (Absolute URL server address or URI for UUID/OID)
-    #[serde(rename = "fullUrl")]
-    pub full_url: Option<StringType>,
-    /// Extension element for the 'fullUrl' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_fullUrl")]
-    pub _full_url: Option<Element>,
-    /// A resource in the bundle
-    pub resource: Option<Resource>,
-}
-/// BundleEntry nested structure for the 'search' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BundleEntrySearch {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// match | include | outcome - why this is in the result set
-    pub mode: Option<SearchEntryMode>,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Search ranking (between 0 and 1)
-    pub score: Option<DecimalType>,
-    /// Extension element for the 'score' primitive field. Contains metadata and extensions.
-    pub _score: Option<Element>,
-}
 /// BundleEntry nested structure for the 'response' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BundleEntryResponse {
@@ -167,6 +140,36 @@ pub struct BundleEntryResponse {
     /// OperationOutcome with hints and warnings (for batch/transaction)
     pub outcome: Option<Resource>,
 }
+/// BundleEntry nested structure for the 'search' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleEntrySearch {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// match | include | outcome - why this is in the result set
+    pub mode: Option<SearchEntryMode>,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Search ranking (between 0 and 1)
+    pub score: Option<DecimalType>,
+    /// Extension element for the 'score' primitive field. Contains metadata and extensions.
+    pub _score: Option<Element>,
+}
+/// Bundle nested structure for the 'link' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleLink {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// See http://www.iana.org/assignments/link-relations/link-relations.xhtml#link-relations-1
+    pub relation: StringType,
+    /// Extension element for the 'relation' primitive field. Contains metadata and extensions.
+    pub _relation: Option<Element>,
+    /// Reference details for the link
+    pub url: StringType,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+}
 
 impl Default for Bundle {
     fn default() -> Self {
@@ -182,6 +185,21 @@ impl Default for Bundle {
             link: Default::default(),
             entry: Default::default(),
             signature: Default::default(),
+        }
+    }
+}
+
+impl Default for BundleEntry {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            request: Default::default(),
+            response: Default::default(),
+            search: Default::default(),
+            link: Default::default(),
+            full_url: Default::default(),
+            _full_url: Default::default(),
+            resource: Default::default(),
         }
     }
 }
@@ -206,29 +224,19 @@ impl Default for BundleEntryRequest {
     }
 }
 
-impl Default for BundleLink {
+impl Default for BundleEntryResponse {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            relation: StringType::default(),
-            _relation: Default::default(),
-            url: StringType::default(),
-            _url: Default::default(),
-        }
-    }
-}
-
-impl Default for BundleEntry {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            search: Default::default(),
-            response: Default::default(),
-            request: Default::default(),
-            link: Default::default(),
-            full_url: Default::default(),
-            _full_url: Default::default(),
-            resource: Default::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            location: Default::default(),
+            _location: Default::default(),
+            etag: Default::default(),
+            _etag: Default::default(),
+            last_modified: Default::default(),
+            _last_modified: Default::default(),
+            outcome: Default::default(),
         }
     }
 }
@@ -245,19 +253,14 @@ impl Default for BundleEntrySearch {
     }
 }
 
-impl Default for BundleEntryResponse {
+impl Default for BundleLink {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            location: Default::default(),
-            _location: Default::default(),
-            etag: Default::default(),
-            _etag: Default::default(),
-            last_modified: Default::default(),
-            _last_modified: Default::default(),
-            outcome: Default::default(),
+            relation: StringType::default(),
+            _relation: Default::default(),
+            url: StringType::default(),
+            _url: Default::default(),
         }
     }
 }
@@ -445,10 +448,10 @@ impl crate::traits::bundle::BundleAccessors for Bundle {
         self.total
     }
     fn link(&self) -> &[BundleLink] {
-        self.link.as_deref().unwrap_or(&[])
+        self.link.as_slice()
     }
     fn entry(&self) -> &[BundleEntry] {
-        self.entry.as_deref().unwrap_or(&[])
+        self.entry.as_slice()
     }
     fn signature(&self) -> Option<Signature> {
         self.signature.clone()
@@ -481,22 +484,22 @@ impl crate::traits::bundle::BundleMutators for Bundle {
     }
     fn set_link(self, value: Vec<BundleLink>) -> Self {
         let mut resource = self.clone();
-        resource.link = Some(value);
+        resource.link = value;
         resource
     }
     fn add_link(self, item: BundleLink) -> Self {
         let mut resource = self.clone();
-        resource.link.get_or_insert_with(Vec::new).push(item);
+        resource.link.push(item);
         resource
     }
     fn set_entry(self, value: Vec<BundleEntry>) -> Self {
         let mut resource = self.clone();
-        resource.entry = Some(value);
+        resource.entry = value;
         resource
     }
     fn add_entry(self, item: BundleEntry) -> Self {
         let mut resource = self.clone();
-        resource.entry.get_or_insert_with(Vec::new).push(item);
+        resource.entry.push(item);
         resource
     }
     fn set_signature(self, value: Signature) -> Self {
@@ -520,10 +523,10 @@ impl crate::traits::bundle::BundleExistence for Bundle {
         self.total.is_some()
     }
     fn has_link(&self) -> bool {
-        self.link.as_ref().is_some_and(|v| !v.is_empty())
+        !self.link.is_empty()
     }
     fn has_entry(&self) -> bool {
-        self.entry.as_ref().is_some_and(|v| !v.is_empty())
+        !self.entry.is_empty()
     }
     fn has_signature(&self) -> bool {
         self.signature.is_some()

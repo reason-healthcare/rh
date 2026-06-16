@@ -178,7 +178,7 @@ impl ValueSetManager {
             if let Some(includes) = &compose.include {
                 // Check if there are any filters - if so, we can't generate enum
                 for include in includes {
-                    if include.filter.is_some() && !include.filter.as_ref().unwrap().is_empty() {
+                    if include.filter.as_ref().is_some_and(|f| !f.is_empty()) {
                         eprintln!("Warning: ValueSet '{value_set_url}' has filters, cannot generate enum. Falling back to String.");
                         return Err("ValueSet has filters".to_string());
                     }

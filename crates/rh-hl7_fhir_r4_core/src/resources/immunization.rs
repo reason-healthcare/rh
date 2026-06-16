@@ -29,7 +29,8 @@ pub struct Immunization {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// completed | entered-in-error | not-done
     pub status: ImmunizationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -124,9 +125,11 @@ pub struct Immunization {
     #[serde(rename = "doseQuantity")]
     pub dose_quantity: Option<Quantity>,
     /// Who performed event
-    pub performer: Option<Vec<ImmunizationPerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<ImmunizationPerformer>,
     /// Additional immunization notes
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Why immunization occurred
     ///
     /// Binding: example (The reason why a vaccine was administered.)
@@ -135,10 +138,12 @@ pub struct Immunization {
     /// - `429060002`
     /// - `281657000`
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Why immunization occurred
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Dose potency
     #[serde(rename = "isSubpotent")]
     pub is_subpotent: Option<BooleanType>,
@@ -151,16 +156,19 @@ pub struct Immunization {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-subpotent-reason
     #[serde(rename = "subpotentReason")]
-    pub subpotent_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subpotent_reason: Vec<CodeableConcept>,
     /// Educational material presented to patient
-    pub education: Option<Vec<ImmunizationEducation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub education: Vec<ImmunizationEducation>,
     /// Patient eligibility for a vaccination program
     ///
     /// Binding: example (The patient's eligibility for a vaccation program.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-program-eligibility
     #[serde(rename = "programEligibility")]
-    pub program_eligibility: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub program_eligibility: Vec<CodeableConcept>,
     /// Funding source for the vaccine
     ///
     /// Binding: example (The source of funding used to purchase the vaccine administered.)
@@ -169,27 +177,12 @@ pub struct Immunization {
     #[serde(rename = "fundingSource")]
     pub funding_source: Option<CodeableConcept>,
     /// Details of a reaction that follows immunization
-    pub reaction: Option<Vec<ImmunizationReaction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reaction: Vec<ImmunizationReaction>,
     /// Protocol followed by the provider
     #[serde(rename = "protocolApplied")]
-    pub protocol_applied: Option<Vec<ImmunizationProtocolapplied>>,
-}
-/// Immunization nested structure for the 'reaction' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImmunizationReaction {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// When reaction started
-    pub date: Option<DateTimeType>,
-    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
-    pub _date: Option<Element>,
-    /// Additional information on reaction
-    pub detail: Option<Reference>,
-    /// Indicates self-reported reaction
-    pub reported: Option<BooleanType>,
-    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
-    pub _reported: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub protocol_applied: Vec<ImmunizationProtocolapplied>,
 }
 /// Immunization nested structure for the 'education' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -264,7 +257,8 @@ pub struct ImmunizationProtocolapplied {
     /// - `27836007`
     /// - `398102009`
     #[serde(rename = "targetDisease")]
-    pub target_disease: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_disease: Vec<CodeableConcept>,
     /// Dose number within series (positiveInt)
     #[serde(rename = "doseNumberPositiveInt")]
     pub dose_number_positive_int: PositiveIntType,
@@ -277,6 +271,23 @@ pub struct ImmunizationProtocolapplied {
     /// Recommended number of doses for immunity (string)
     #[serde(rename = "seriesDosesString")]
     pub series_doses_string: Option<StringType>,
+}
+/// Immunization nested structure for the 'reaction' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmunizationReaction {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// When reaction started
+    pub date: Option<DateTimeType>,
+    /// Extension element for the 'date' primitive field. Contains metadata and extensions.
+    pub _date: Option<Element>,
+    /// Additional information on reaction
+    pub detail: Option<Reference>,
+    /// Indicates self-reported reaction
+    pub reported: Option<BooleanType>,
+    /// Extension element for the 'reported' primitive field. Contains metadata and extensions.
+    pub _reported: Option<Element>,
 }
 
 impl Default for Immunization {
@@ -322,19 +333,6 @@ impl Default for Immunization {
     }
 }
 
-impl Default for ImmunizationReaction {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            date: Default::default(),
-            _date: Default::default(),
-            detail: Default::default(),
-            reported: Default::default(),
-            _reported: Default::default(),
-        }
-    }
-}
-
 impl Default for ImmunizationEducation {
     fn default() -> Self {
         Self {
@@ -373,6 +371,19 @@ impl Default for ImmunizationProtocolapplied {
             dose_number_string: Default::default(),
             series_doses_positive_int: Default::default(),
             series_doses_string: Default::default(),
+        }
+    }
+}
+
+impl Default for ImmunizationReaction {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            date: Default::default(),
+            _date: Default::default(),
+            detail: Default::default(),
+            reported: Default::default(),
+            _reported: Default::default(),
         }
     }
 }
@@ -594,13 +605,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Immunization {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -615,44 +626,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Immunization {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -662,22 +661,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Immunization {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::immunization::ImmunizationAccessors for Immunization {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ImmunizationStatus {
         self.status.clone()
@@ -725,37 +721,37 @@ impl crate::traits::immunization::ImmunizationAccessors for Immunization {
         self.dose_quantity.clone()
     }
     fn performer(&self) -> &[ImmunizationPerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn is_subpotent(&self) -> Option<BooleanType> {
         self.is_subpotent
     }
     fn subpotent_reason(&self) -> &[CodeableConcept] {
-        self.subpotent_reason.as_deref().unwrap_or(&[])
+        self.subpotent_reason.as_slice()
     }
     fn education(&self) -> &[ImmunizationEducation] {
-        self.education.as_deref().unwrap_or(&[])
+        self.education.as_slice()
     }
     fn program_eligibility(&self) -> &[CodeableConcept] {
-        self.program_eligibility.as_deref().unwrap_or(&[])
+        self.program_eligibility.as_slice()
     }
     fn funding_source(&self) -> Option<CodeableConcept> {
         self.funding_source.clone()
     }
     fn reaction(&self) -> &[ImmunizationReaction] {
-        self.reaction.as_deref().unwrap_or(&[])
+        self.reaction.as_slice()
     }
     fn protocol_applied(&self) -> &[ImmunizationProtocolapplied] {
-        self.protocol_applied.as_deref().unwrap_or(&[])
+        self.protocol_applied.as_slice()
     }
 }
 
@@ -765,12 +761,12 @@ impl crate::traits::immunization::ImmunizationMutators for Immunization {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ImmunizationStatus) -> Self {
@@ -850,45 +846,42 @@ impl crate::traits::immunization::ImmunizationMutators for Immunization {
     }
     fn set_performer(self, value: Vec<ImmunizationPerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: ImmunizationPerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_is_subpotent(self, value: bool) -> Self {
@@ -898,38 +891,32 @@ impl crate::traits::immunization::ImmunizationMutators for Immunization {
     }
     fn set_subpotent_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.subpotent_reason = Some(value);
+        resource.subpotent_reason = value;
         resource
     }
     fn add_subpotent_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .subpotent_reason
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.subpotent_reason.push(item);
         resource
     }
     fn set_education(self, value: Vec<ImmunizationEducation>) -> Self {
         let mut resource = self.clone();
-        resource.education = Some(value);
+        resource.education = value;
         resource
     }
     fn add_education(self, item: ImmunizationEducation) -> Self {
         let mut resource = self.clone();
-        resource.education.get_or_insert_with(Vec::new).push(item);
+        resource.education.push(item);
         resource
     }
     fn set_program_eligibility(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.program_eligibility = Some(value);
+        resource.program_eligibility = value;
         resource
     }
     fn add_program_eligibility(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .program_eligibility
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.program_eligibility.push(item);
         resource
     }
     fn set_funding_source(self, value: CodeableConcept) -> Self {
@@ -939,25 +926,22 @@ impl crate::traits::immunization::ImmunizationMutators for Immunization {
     }
     fn set_reaction(self, value: Vec<ImmunizationReaction>) -> Self {
         let mut resource = self.clone();
-        resource.reaction = Some(value);
+        resource.reaction = value;
         resource
     }
     fn add_reaction(self, item: ImmunizationReaction) -> Self {
         let mut resource = self.clone();
-        resource.reaction.get_or_insert_with(Vec::new).push(item);
+        resource.reaction.push(item);
         resource
     }
     fn set_protocol_applied(self, value: Vec<ImmunizationProtocolapplied>) -> Self {
         let mut resource = self.clone();
-        resource.protocol_applied = Some(value);
+        resource.protocol_applied = value;
         resource
     }
     fn add_protocol_applied(self, item: ImmunizationProtocolapplied) -> Self {
         let mut resource = self.clone();
-        resource
-            .protocol_applied
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.protocol_applied.push(item);
         resource
     }
 }
@@ -967,7 +951,7 @@ impl crate::traits::immunization::ImmunizationExistence for Immunization {
         true
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1015,45 +999,37 @@ impl crate::traits::immunization::ImmunizationExistence for Immunization {
         self.dose_quantity.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_is_subpotent(&self) -> bool {
         self.is_subpotent.is_some()
     }
     fn has_subpotent_reason(&self) -> bool {
-        self.subpotent_reason
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.subpotent_reason.is_empty()
     }
     fn has_education(&self) -> bool {
-        self.education.as_ref().is_some_and(|v| !v.is_empty())
+        !self.education.is_empty()
     }
     fn has_program_eligibility(&self) -> bool {
-        self.program_eligibility
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.program_eligibility.is_empty()
     }
     fn has_funding_source(&self) -> bool {
         self.funding_source.is_some()
     }
     fn has_reaction(&self) -> bool {
-        self.reaction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reaction.is_empty()
     }
     fn has_protocol_applied(&self) -> bool {
-        self.protocol_applied
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.protocol_applied.is_empty()
     }
 }
 

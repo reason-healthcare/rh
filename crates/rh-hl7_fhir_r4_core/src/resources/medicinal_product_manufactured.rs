@@ -28,15 +28,18 @@ pub struct MedicinalProductManufactured {
     /// The quantity or "count number" of the manufactured item
     pub quantity: Quantity,
     /// Manufacturer of the item (Note that this should be named "manufacturer" but it currently causes technical issues)
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
     /// Ingredient
-    pub ingredient: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<Reference>,
     /// Dimensions, color etc.
     #[serde(rename = "physicalCharacteristics")]
     pub physical_characteristics: Option<ProdCharacteristic>,
     /// Other codeable characteristics
     #[serde(rename = "otherCharacteristics")]
-    pub other_characteristics: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub other_characteristics: Vec<CodeableConcept>,
 }
 
 impl Default for MedicinalProductManufactured {
@@ -205,13 +208,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -226,44 +229,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -273,16 +264,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -299,16 +287,16 @@ impl crate::traits::medicinal_product_manufactured::MedicinalProductManufactured
         self.quantity.clone()
     }
     fn manufacturer(&self) -> &[Reference] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn ingredient(&self) -> &[Reference] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
     fn physical_characteristics(&self) -> Option<ProdCharacteristic> {
         self.physical_characteristics.clone()
     }
     fn other_characteristics(&self) -> &[CodeableConcept] {
-        self.other_characteristics.as_deref().unwrap_or(&[])
+        self.other_characteristics.as_slice()
     }
 }
 
@@ -335,25 +323,22 @@ impl crate::traits::medicinal_product_manufactured::MedicinalProductManufactured
     }
     fn set_manufacturer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_ingredient(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
     fn set_physical_characteristics(self, value: ProdCharacteristic) -> Self {
@@ -363,15 +348,12 @@ impl crate::traits::medicinal_product_manufactured::MedicinalProductManufactured
     }
     fn set_other_characteristics(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.other_characteristics = Some(value);
+        resource.other_characteristics = value;
         resource
     }
     fn add_other_characteristics(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .other_characteristics
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.other_characteristics.push(item);
         resource
     }
 }
@@ -389,18 +371,16 @@ impl crate::traits::medicinal_product_manufactured::MedicinalProductManufactured
         true
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
     fn has_physical_characteristics(&self) -> bool {
         self.physical_characteristics.is_some()
     }
     fn has_other_characteristics(&self) -> bool {
-        self.other_characteristics
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.other_characteristics.is_empty()
     }
 }
 

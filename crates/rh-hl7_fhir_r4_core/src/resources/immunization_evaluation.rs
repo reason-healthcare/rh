@@ -24,7 +24,8 @@ pub struct ImmunizationEvaluation {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// completed | entered-in-error
     pub status: ImmunizationEvaluationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -69,7 +70,8 @@ pub struct ImmunizationEvaluation {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/immunization-evaluation-dose-status-reason
     #[serde(rename = "doseStatusReason")]
-    pub dose_status_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dose_status_reason: Vec<CodeableConcept>,
     /// Evaluation notes
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -274,13 +276,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ImmunizationEva
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -295,44 +297,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImmunizationEval
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -342,16 +332,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ImmunizationEva
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -359,7 +346,7 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationAccessors
     for ImmunizationEvaluation
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ImmunizationEvaluationStatus {
         self.status.clone()
@@ -383,7 +370,7 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationAccessors
         self.dose_status.clone()
     }
     fn dose_status_reason(&self) -> &[CodeableConcept] {
-        self.dose_status_reason.as_deref().unwrap_or(&[])
+        self.dose_status_reason.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
@@ -401,12 +388,12 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ImmunizationEvaluationStatus) -> Self {
@@ -446,15 +433,12 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationMutators
     }
     fn set_dose_status_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.dose_status_reason = Some(value);
+        resource.dose_status_reason = value;
         resource
     }
     fn add_dose_status_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .dose_status_reason
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.dose_status_reason.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -472,14 +456,14 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationMutators
 impl crate::traits::immunization_evaluation::ImmunizationEvaluationExistence
     for ImmunizationEvaluation
 {
-    fn has_series_doses(&self) -> bool {
-        self.series_doses_positive_int.is_some() || self.series_doses_string.is_some()
-    }
     fn has_dose_number(&self) -> bool {
         self.dose_number_positive_int.is_some() || self.dose_number_string.is_some()
     }
+    fn has_series_doses(&self) -> bool {
+        self.series_doses_positive_int.is_some() || self.series_doses_string.is_some()
+    }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -503,9 +487,7 @@ impl crate::traits::immunization_evaluation::ImmunizationEvaluationExistence
         true
     }
     fn has_dose_status_reason(&self) -> bool {
-        self.dose_status_reason
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.dose_status_reason.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()

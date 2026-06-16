@@ -23,7 +23,8 @@ pub struct BodyStructure {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Bodystructure identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
@@ -57,13 +58,15 @@ pub struct BodyStructure {
     /// - `255551008`: Posterior
     /// - ... and 2 more values
     #[serde(rename = "locationQualifier")]
-    pub location_qualifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location_qualifier: Vec<CodeableConcept>,
     /// Text description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Attached images
-    pub image: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image: Vec<Attachment>,
     /// Who this is about
     pub patient: Reference,
 }
@@ -190,13 +193,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for BodyStructure {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -211,44 +214,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for BodyStructure {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -258,22 +249,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for BodyStructure {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::body_structure::BodyStructureAccessors for BodyStructure {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
@@ -285,13 +273,13 @@ impl crate::traits::body_structure::BodyStructureAccessors for BodyStructure {
         self.location.clone()
     }
     fn location_qualifier(&self) -> &[CodeableConcept] {
-        self.location_qualifier.as_deref().unwrap_or(&[])
+        self.location_qualifier.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn image(&self) -> &[Attachment] {
-        self.image.as_deref().unwrap_or(&[])
+        self.image.as_slice()
     }
     fn patient(&self) -> Reference {
         self.patient.clone()
@@ -304,12 +292,12 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -329,15 +317,12 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
     }
     fn set_location_qualifier(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.location_qualifier = Some(value);
+        resource.location_qualifier = value;
         resource
     }
     fn add_location_qualifier(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .location_qualifier
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.location_qualifier.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -347,12 +332,12 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
     }
     fn set_image(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.image = Some(value);
+        resource.image = value;
         resource
     }
     fn add_image(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.image.get_or_insert_with(Vec::new).push(item);
+        resource.image.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -364,7 +349,7 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
 
 impl crate::traits::body_structure::BodyStructureExistence for BodyStructure {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
@@ -376,15 +361,13 @@ impl crate::traits::body_structure::BodyStructureExistence for BodyStructure {
         self.location.is_some()
     }
     fn has_location_qualifier(&self) -> bool {
-        self.location_qualifier
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.location_qualifier.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_image(&self) -> bool {
-        self.image.as_ref().is_some_and(|v| !v.is_empty())
+        !self.image.is_empty()
     }
     fn has_patient(&self) -> bool {
         true

@@ -39,7 +39,8 @@ pub struct Dosage {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/additional-instruction-codes
     #[serde(rename = "additionalInstruction")]
-    pub additional_instruction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_instruction: Vec<CodeableConcept>,
     /// Patient or consumer oriented instructions
     #[serde(rename = "patientInstruction")]
     pub patient_instruction: Option<StringType>,
@@ -60,7 +61,8 @@ pub struct Dosage {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/medication-as-needed-reason
     #[serde(rename = "asNeededFor")]
-    pub as_needed_for: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub as_needed_for: Vec<CodeableConcept>,
     /// Body site to administer to
     ///
     /// Binding: example (A coded concept describing the site location the medicine enters into or onto the body.)
@@ -81,10 +83,12 @@ pub struct Dosage {
     pub method: Option<CodeableConcept>,
     /// Amount of medication administered, to be administered or typical amount to be administered
     #[serde(rename = "doseAndRate")]
-    pub dose_and_rate: Option<Vec<Element>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dose_and_rate: Vec<Element>,
     /// Upper limit on medication per unit of time
     #[serde(rename = "maxDosePerPeriod")]
-    pub max_dose_per_period: Option<Vec<Ratio>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub max_dose_per_period: Vec<Ratio>,
     /// Upper limit on medication per administration
     #[serde(rename = "maxDosePerAdministration")]
     pub max_dose_per_administration: Option<Quantity>,

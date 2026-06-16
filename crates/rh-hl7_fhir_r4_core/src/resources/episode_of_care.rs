@@ -24,23 +24,27 @@ pub struct EpisodeOfCare {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier(s) relevant for this EpisodeOfCare
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
     pub status: EpisodeOfCareStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// Past list of status codes (the current status may be included to cover the start date of the status)
     #[serde(rename = "statusHistory")]
-    pub status_history: Option<Vec<EpisodeOfCareStatushistory>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub status_history: Vec<EpisodeOfCareStatushistory>,
     /// Type/class  - e.g. specialist referral, disease management
     ///
     /// Binding: example (The type of the episode of care.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/episodeofcare-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// The list of diagnosis relevant to this episode of care
-    pub diagnosis: Option<Vec<EpisodeOfCareDiagnosis>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnosis: Vec<EpisodeOfCareDiagnosis>,
     /// The patient who is the focus of this episode of care
     pub patient: Reference,
     /// Organization that assumes care
@@ -50,27 +54,17 @@ pub struct EpisodeOfCare {
     pub period: Option<Period>,
     /// Originating Referral Request(s)
     #[serde(rename = "referralRequest")]
-    pub referral_request: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub referral_request: Vec<Reference>,
     /// Care manager/care coordinator for the patient
     #[serde(rename = "careManager")]
     pub care_manager: Option<Reference>,
     /// Other practitioners facilitating this episode of care
-    pub team: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub team: Vec<Reference>,
     /// The set of accounts that may be used for billing for this EpisodeOfCare
-    pub account: Option<Vec<Reference>>,
-}
-/// EpisodeOfCare nested structure for the 'statusHistory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EpisodeOfCareStatushistory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
-    pub status: EpisodeOfCareStatus,
-    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
-    pub _status: Option<Element>,
-    /// Duration the EpisodeOfCare was in the specified status
-    pub period: Period,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub account: Vec<Reference>,
 }
 /// EpisodeOfCare nested structure for the 'diagnosis' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,6 +84,19 @@ pub struct EpisodeOfCareDiagnosis {
     pub rank: Option<PositiveIntType>,
     /// Extension element for the 'rank' primitive field. Contains metadata and extensions.
     pub _rank: Option<Element>,
+}
+/// EpisodeOfCare nested structure for the 'statusHistory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EpisodeOfCareStatushistory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// planned | waitlist | active | onhold | finished | cancelled | entered-in-error
+    pub status: EpisodeOfCareStatus,
+    /// Extension element for the 'status' primitive field. Contains metadata and extensions.
+    pub _status: Option<Element>,
+    /// Duration the EpisodeOfCare was in the specified status
+    pub period: Period,
 }
 
 impl Default for EpisodeOfCare {
@@ -113,17 +120,6 @@ impl Default for EpisodeOfCare {
     }
 }
 
-impl Default for EpisodeOfCareStatushistory {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            status: Default::default(),
-            _status: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
 impl Default for EpisodeOfCareDiagnosis {
     fn default() -> Self {
         Self {
@@ -132,6 +128,17 @@ impl Default for EpisodeOfCareDiagnosis {
             role: Default::default(),
             rank: Default::default(),
             _rank: Default::default(),
+        }
+    }
+}
+
+impl Default for EpisodeOfCareStatushistory {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            status: Default::default(),
+            _status: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -301,13 +308,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for EpisodeOfCare {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -322,44 +329,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for EpisodeOfCare {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -369,34 +364,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for EpisodeOfCare {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::episode_of_care::EpisodeOfCareAccessors for EpisodeOfCare {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> EpisodeOfCareStatus {
         self.status.clone()
     }
     fn status_history(&self) -> &[EpisodeOfCareStatushistory] {
-        self.status_history.as_deref().unwrap_or(&[])
+        self.status_history.as_slice()
     }
     fn type_(&self) -> &[CodeableConcept] {
-        self.type_.as_deref().unwrap_or(&[])
+        self.type_.as_slice()
     }
     fn diagnosis(&self) -> &[EpisodeOfCareDiagnosis] {
-        self.diagnosis.as_deref().unwrap_or(&[])
+        self.diagnosis.as_slice()
     }
     fn patient(&self) -> Reference {
         self.patient.clone()
@@ -408,16 +400,16 @@ impl crate::traits::episode_of_care::EpisodeOfCareAccessors for EpisodeOfCare {
         self.period.clone()
     }
     fn referral_request(&self) -> &[Reference] {
-        self.referral_request.as_deref().unwrap_or(&[])
+        self.referral_request.as_slice()
     }
     fn care_manager(&self) -> Option<Reference> {
         self.care_manager.clone()
     }
     fn team(&self) -> &[Reference] {
-        self.team.as_deref().unwrap_or(&[])
+        self.team.as_slice()
     }
     fn account(&self) -> &[Reference] {
-        self.account.as_deref().unwrap_or(&[])
+        self.account.as_slice()
     }
 }
 
@@ -427,12 +419,12 @@ impl crate::traits::episode_of_care::EpisodeOfCareMutators for EpisodeOfCare {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: EpisodeOfCareStatus) -> Self {
@@ -442,35 +434,32 @@ impl crate::traits::episode_of_care::EpisodeOfCareMutators for EpisodeOfCare {
     }
     fn set_status_history(self, value: Vec<EpisodeOfCareStatushistory>) -> Self {
         let mut resource = self.clone();
-        resource.status_history = Some(value);
+        resource.status_history = value;
         resource
     }
     fn add_status_history(self, item: EpisodeOfCareStatushistory) -> Self {
         let mut resource = self.clone();
-        resource
-            .status_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.status_history.push(item);
         resource
     }
     fn set_type_(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.type_ = Some(value);
+        resource.type_ = value;
         resource
     }
     fn add_type_(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.type_.get_or_insert_with(Vec::new).push(item);
+        resource.type_.push(item);
         resource
     }
     fn set_diagnosis(self, value: Vec<EpisodeOfCareDiagnosis>) -> Self {
         let mut resource = self.clone();
-        resource.diagnosis = Some(value);
+        resource.diagnosis = value;
         resource
     }
     fn add_diagnosis(self, item: EpisodeOfCareDiagnosis) -> Self {
         let mut resource = self.clone();
-        resource.diagnosis.get_or_insert_with(Vec::new).push(item);
+        resource.diagnosis.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -490,15 +479,12 @@ impl crate::traits::episode_of_care::EpisodeOfCareMutators for EpisodeOfCare {
     }
     fn set_referral_request(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.referral_request = Some(value);
+        resource.referral_request = value;
         resource
     }
     fn add_referral_request(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .referral_request
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.referral_request.push(item);
         resource
     }
     fn set_care_manager(self, value: Reference) -> Self {
@@ -508,41 +494,41 @@ impl crate::traits::episode_of_care::EpisodeOfCareMutators for EpisodeOfCare {
     }
     fn set_team(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.team = Some(value);
+        resource.team = value;
         resource
     }
     fn add_team(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.team.get_or_insert_with(Vec::new).push(item);
+        resource.team.push(item);
         resource
     }
     fn set_account(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.account = Some(value);
+        resource.account = value;
         resource
     }
     fn add_account(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.account.get_or_insert_with(Vec::new).push(item);
+        resource.account.push(item);
         resource
     }
 }
 
 impl crate::traits::episode_of_care::EpisodeOfCareExistence for EpisodeOfCare {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_status_history(&self) -> bool {
-        self.status_history.as_ref().is_some_and(|v| !v.is_empty())
+        !self.status_history.is_empty()
     }
     fn has_type_(&self) -> bool {
-        self.type_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.type_.is_empty()
     }
     fn has_diagnosis(&self) -> bool {
-        self.diagnosis.as_ref().is_some_and(|v| !v.is_empty())
+        !self.diagnosis.is_empty()
     }
     fn has_patient(&self) -> bool {
         true
@@ -554,18 +540,16 @@ impl crate::traits::episode_of_care::EpisodeOfCareExistence for EpisodeOfCare {
         self.period.is_some()
     }
     fn has_referral_request(&self) -> bool {
-        self.referral_request
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.referral_request.is_empty()
     }
     fn has_care_manager(&self) -> bool {
         self.care_manager.is_some()
     }
     fn has_team(&self) -> bool {
-        self.team.as_ref().is_some_and(|v| !v.is_empty())
+        !self.team.is_empty()
     }
     fn has_account(&self) -> bool {
-        self.account.as_ref().is_some_and(|v| !v.is_empty())
+        !self.account.is_empty()
     }
 }
 

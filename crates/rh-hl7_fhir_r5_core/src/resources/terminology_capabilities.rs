@@ -34,7 +34,8 @@ pub struct TerminologyCapabilities {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the terminology capabilities
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the terminology capabilities
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -70,20 +71,23 @@ pub struct TerminologyCapabilities {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the terminology capabilities
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for terminology capabilities (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this terminology capabilities is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -114,7 +118,8 @@ pub struct TerminologyCapabilities {
     pub _locked_date: Option<Element>,
     /// A code system supported by the server
     #[serde(rename = "codeSystem")]
-    pub code_system: Option<Vec<TerminologyCapabilitiesCodesystem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code_system: Vec<TerminologyCapabilitiesCodesystem>,
     /// Information about the [ValueSet/$expand](valueset-operation-expand.html) operation
     pub expansion: Option<TerminologyCapabilitiesExpansion>,
     /// in-compose | in-expansion | in-compose-or-expansion
@@ -131,6 +136,17 @@ pub struct TerminologyCapabilities {
     /// Information about the [ConceptMap/$closure](conceptmap-operation-closure.html) operation
     pub closure: Option<TerminologyCapabilitiesClosure>,
 }
+/// TerminologyCapabilities nested structure for the 'closure' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesClosure {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// If cross-system closure is supported
+    pub translation: Option<BooleanType>,
+    /// Extension element for the 'translation' primitive field. Contains metadata and extensions.
+    pub _translation: Option<Element>,
+}
 /// TerminologyCapabilities nested structure for the 'codeSystem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerminologyCapabilitiesCodesystem {
@@ -138,7 +154,8 @@ pub struct TerminologyCapabilitiesCodesystem {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Version of Code System supported
-    pub version: Option<Vec<TerminologyCapabilitiesCodesystemVersion>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub version: Vec<TerminologyCapabilitiesCodesystemVersion>,
     /// Canonical identifier for the code system, represented as a URI
     pub uri: Option<StringType>,
     /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
@@ -151,100 +168,6 @@ pub struct TerminologyCapabilitiesCodesystem {
     pub subsumption: Option<BooleanType>,
     /// Extension element for the 'subsumption' primitive field. Contains metadata and extensions.
     pub _subsumption: Option<Element>,
-}
-/// TerminologyCapabilitiesCodesystemVersion nested structure for the 'filter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesCodesystemVersionFilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code of the property supported
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Operations supported for the property
-    pub op: Vec<StringType>,
-    /// Extension element for the 'op' primitive field. Contains metadata and extensions.
-    pub _op: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'closure' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesClosure {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// If cross-system closure is supported
-    pub translation: Option<BooleanType>,
-    /// Extension element for the 'translation' primitive field. Contains metadata and extensions.
-    pub _translation: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'software' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesSoftware {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A name the software is known by
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Version covered by this statement
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'expansion' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesExpansion {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Supported expansion parameter
-    pub parameter: Option<Vec<TerminologyCapabilitiesExpansionParameter>>,
-    /// Whether the server can return nested value sets
-    pub hierarchical: Option<BooleanType>,
-    /// Extension element for the 'hierarchical' primitive field. Contains metadata and extensions.
-    pub _hierarchical: Option<Element>,
-    /// Whether the server supports paging on expansion
-    pub paging: Option<BooleanType>,
-    /// Extension element for the 'paging' primitive field. Contains metadata and extensions.
-    pub _paging: Option<Element>,
-    /// Allow request for incomplete expansions?
-    pub incomplete: Option<BooleanType>,
-    /// Extension element for the 'incomplete' primitive field. Contains metadata and extensions.
-    pub _incomplete: Option<Element>,
-    /// Documentation about text searching works
-    #[serde(rename = "textFilter")]
-    pub text_filter: Option<StringType>,
-    /// Extension element for the 'textFilter' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_textFilter")]
-    pub _text_filter: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'validateCode' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesValidatecode {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Whether translations are validated
-    pub translations: BooleanType,
-    /// Extension element for the 'translations' primitive field. Contains metadata and extensions.
-    pub _translations: Option<Element>,
-}
-/// TerminologyCapabilities nested structure for the 'implementation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TerminologyCapabilitiesImplementation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Describes this specific instance
-    pub description: StringType,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Base URL for the implementation
-    pub url: Option<StringType>,
-    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
-    pub _url: Option<Element>,
 }
 /// TerminologyCapabilitiesCodesystem nested structure for the 'version' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -267,13 +190,61 @@ pub struct TerminologyCapabilitiesCodesystemVersion {
     /// Extension element for the 'compositional' primitive field. Contains metadata and extensions.
     pub _compositional: Option<Element>,
     /// Language Displays supported
-    pub language: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub language: Vec<StringType>,
     /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _language: Vec<Element>,
     /// Properties supported for $lookup
-    pub property: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<StringType>,
     /// Extension element for the 'property' primitive field. Contains metadata and extensions.
-    pub _property: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _property: Vec<Element>,
+}
+/// TerminologyCapabilitiesCodesystemVersion nested structure for the 'filter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesCodesystemVersionFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code of the property supported
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Operations supported for the property
+    pub op: Vec<StringType>,
+    /// Extension element for the 'op' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _op: Vec<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'expansion' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesExpansion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Supported expansion parameter
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<TerminologyCapabilitiesExpansionParameter>,
+    /// Whether the server can return nested value sets
+    pub hierarchical: Option<BooleanType>,
+    /// Extension element for the 'hierarchical' primitive field. Contains metadata and extensions.
+    pub _hierarchical: Option<Element>,
+    /// Whether the server supports paging on expansion
+    pub paging: Option<BooleanType>,
+    /// Extension element for the 'paging' primitive field. Contains metadata and extensions.
+    pub _paging: Option<Element>,
+    /// Allow request for incomplete expansions?
+    pub incomplete: Option<BooleanType>,
+    /// Extension element for the 'incomplete' primitive field. Contains metadata and extensions.
+    pub _incomplete: Option<Element>,
+    /// Documentation about text searching works
+    #[serde(rename = "textFilter")]
+    pub text_filter: Option<StringType>,
+    /// Extension element for the 'textFilter' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_textFilter")]
+    pub _text_filter: Option<Element>,
 }
 /// TerminologyCapabilitiesExpansion nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -290,6 +261,36 @@ pub struct TerminologyCapabilitiesExpansionParameter {
     /// Extension element for the 'documentation' primitive field. Contains metadata and extensions.
     pub _documentation: Option<Element>,
 }
+/// TerminologyCapabilities nested structure for the 'implementation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesImplementation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Describes this specific instance
+    pub description: StringType,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Base URL for the implementation
+    pub url: Option<StringType>,
+    /// Extension element for the 'url' primitive field. Contains metadata and extensions.
+    pub _url: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'software' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesSoftware {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A name the software is known by
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Version covered by this statement
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+}
 /// TerminologyCapabilities nested structure for the 'translation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TerminologyCapabilitiesTranslation {
@@ -302,6 +303,17 @@ pub struct TerminologyCapabilitiesTranslation {
     /// Extension element for the 'needsMap' primitive field. Contains metadata and extensions.
     #[serde(rename = "_needsMap")]
     pub _needs_map: Option<Element>,
+}
+/// TerminologyCapabilities nested structure for the 'validateCode' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TerminologyCapabilitiesValidatecode {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Whether translations are validated
+    pub translations: BooleanType,
+    /// Extension element for the 'translations' primitive field. Contains metadata and extensions.
+    pub _translations: Option<Element>,
 }
 
 impl Default for TerminologyCapabilities {
@@ -355,6 +367,16 @@ impl Default for TerminologyCapabilities {
     }
 }
 
+impl Default for TerminologyCapabilitiesClosure {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            translation: Default::default(),
+            _translation: Default::default(),
+        }
+    }
+}
+
 impl Default for TerminologyCapabilitiesCodesystem {
     fn default() -> Self {
         Self {
@@ -366,79 +388,6 @@ impl Default for TerminologyCapabilitiesCodesystem {
             _content: Default::default(),
             subsumption: Default::default(),
             _subsumption: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesCodesystemVersionFilter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            op: Default::default(),
-            _op: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesClosure {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            translation: Default::default(),
-            _translation: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesSoftware {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: StringType::default(),
-            _name: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesExpansion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            parameter: Default::default(),
-            hierarchical: Default::default(),
-            _hierarchical: Default::default(),
-            paging: Default::default(),
-            _paging: Default::default(),
-            incomplete: Default::default(),
-            _incomplete: Default::default(),
-            text_filter: Default::default(),
-            _text_filter: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesValidatecode {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            translations: Default::default(),
-            _translations: Default::default(),
-        }
-    }
-}
-
-impl Default for TerminologyCapabilitiesImplementation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            description: StringType::default(),
-            _description: Default::default(),
-            url: Default::default(),
-            _url: Default::default(),
         }
     }
 }
@@ -461,6 +410,35 @@ impl Default for TerminologyCapabilitiesCodesystemVersion {
     }
 }
 
+impl Default for TerminologyCapabilitiesCodesystemVersionFilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            op: Default::default(),
+            _op: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesExpansion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            parameter: Default::default(),
+            hierarchical: Default::default(),
+            _hierarchical: Default::default(),
+            paging: Default::default(),
+            _paging: Default::default(),
+            incomplete: Default::default(),
+            _incomplete: Default::default(),
+            text_filter: Default::default(),
+            _text_filter: Default::default(),
+        }
+    }
+}
+
 impl Default for TerminologyCapabilitiesExpansionParameter {
     fn default() -> Self {
         Self {
@@ -473,12 +451,46 @@ impl Default for TerminologyCapabilitiesExpansionParameter {
     }
 }
 
+impl Default for TerminologyCapabilitiesImplementation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            description: StringType::default(),
+            _description: Default::default(),
+            url: Default::default(),
+            _url: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesSoftware {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            name: StringType::default(),
+            _name: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+        }
+    }
+}
+
 impl Default for TerminologyCapabilitiesTranslation {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             needs_map: BooleanType::default(),
             _needs_map: Default::default(),
+        }
+    }
+}
+
+impl Default for TerminologyCapabilitiesValidatecode {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            translations: Default::default(),
+            _translations: Default::default(),
         }
     }
 }
@@ -951,13 +963,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for TerminologyCapa
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -972,44 +984,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for TerminologyCapab
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1019,16 +1019,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for TerminologyCapa
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -1039,7 +1036,7 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesAccessors
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -1063,16 +1060,16 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesAccessors
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -1096,7 +1093,7 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesAccessors
         self.locked_date
     }
     fn code_system(&self) -> &[TerminologyCapabilitiesCodesystem] {
-        self.code_system.as_deref().unwrap_or(&[])
+        self.code_system.as_slice()
     }
     fn expansion(&self) -> Option<TerminologyCapabilitiesExpansion> {
         self.expansion.clone()
@@ -1128,12 +1125,12 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1173,12 +1170,12 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesMutators
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1188,25 +1185,22 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesMutators
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1246,12 +1240,12 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesMutators
     }
     fn set_code_system(self, value: Vec<TerminologyCapabilitiesCodesystem>) -> Self {
         let mut resource = self.clone();
-        resource.code_system = Some(value);
+        resource.code_system = value;
         resource
     }
     fn add_code_system(self, item: TerminologyCapabilitiesCodesystem) -> Self {
         let mut resource = self.clone();
-        resource.code_system.get_or_insert_with(Vec::new).push(item);
+        resource.code_system.push(item);
         resource
     }
     fn set_expansion(self, value: TerminologyCapabilitiesExpansion) -> Self {
@@ -1291,7 +1285,7 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesExistence
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1315,16 +1309,16 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesExistence
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1348,7 +1342,7 @@ impl crate::traits::terminology_capabilities::TerminologyCapabilitiesExistence
         self.locked_date.is_some()
     }
     fn has_code_system(&self) -> bool {
-        self.code_system.as_ref().is_some_and(|v| !v.is_empty())
+        !self.code_system.is_empty()
     }
     fn has_expansion(&self) -> bool {
         self.expansion.is_some()

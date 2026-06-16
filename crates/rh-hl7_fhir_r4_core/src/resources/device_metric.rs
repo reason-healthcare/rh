@@ -28,7 +28,8 @@ pub struct DeviceMetric {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Instance identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Identity of metric, for example Heart Rate or PEEP Setting
     ///
     /// Binding: preferred (Describes the metric type.)
@@ -64,7 +65,8 @@ pub struct DeviceMetric {
     #[serde(rename = "measurementPeriod")]
     pub measurement_period: Option<Timing>,
     /// Describes the calibrations that have been performed or that are required to be performed
-    pub calibration: Option<Vec<DeviceMetricCalibration>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub calibration: Vec<DeviceMetricCalibration>,
 }
 /// DeviceMetric nested structure for the 'calibration' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,13 +280,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DeviceMetric {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -299,44 +301,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DeviceMetric {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -346,22 +336,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for DeviceMetric {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::device_metric::DeviceMetricAccessors for DeviceMetric {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn type_(&self) -> CodeableConcept {
         self.type_.clone()
@@ -388,7 +375,7 @@ impl crate::traits::device_metric::DeviceMetricAccessors for DeviceMetric {
         self.measurement_period.clone()
     }
     fn calibration(&self) -> &[DeviceMetricCalibration] {
-        self.calibration.as_deref().unwrap_or(&[])
+        self.calibration.as_slice()
     }
 }
 
@@ -398,12 +385,12 @@ impl crate::traits::device_metric::DeviceMetricMutators for DeviceMetric {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -448,19 +435,19 @@ impl crate::traits::device_metric::DeviceMetricMutators for DeviceMetric {
     }
     fn set_calibration(self, value: Vec<DeviceMetricCalibration>) -> Self {
         let mut resource = self.clone();
-        resource.calibration = Some(value);
+        resource.calibration = value;
         resource
     }
     fn add_calibration(self, item: DeviceMetricCalibration) -> Self {
         let mut resource = self.clone();
-        resource.calibration.get_or_insert_with(Vec::new).push(item);
+        resource.calibration.push(item);
         resource
     }
 }
 
 impl crate::traits::device_metric::DeviceMetricExistence for DeviceMetric {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         true
@@ -487,7 +474,7 @@ impl crate::traits::device_metric::DeviceMetricExistence for DeviceMetric {
         self.measurement_period.is_some()
     }
     fn has_calibration(&self) -> bool {
-        self.calibration.as_ref().is_some_and(|v| !v.is_empty())
+        !self.calibration.is_empty()
     }
 }
 

@@ -61,6 +61,7 @@ pub mod event_definition;
 pub mod evidence;
 pub mod evidence_report;
 pub mod evidence_variable;
+pub mod example_scenario;
 pub mod explanation_of_benefit;
 pub mod family_member_history;
 pub mod flag;

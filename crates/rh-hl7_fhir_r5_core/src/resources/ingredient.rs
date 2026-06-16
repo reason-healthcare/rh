@@ -36,7 +36,8 @@ pub struct Ingredient {
     pub _status: Option<Element>,
     /// The product which this ingredient is a constituent part of
     #[serde(rename = "for")]
-    pub for_: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub for_: Vec<Reference>,
     /// Purpose of the ingredient within the product, e.g. active, inactive
     ///
     /// Binding: example (A classification of the ingredient identifying its purpose within the product, e.g. active, inactive.)
@@ -48,7 +49,8 @@ pub struct Ingredient {
     /// Binding: example (A classification of the ingredient identifying its precise purpose(s) in the drug product (beyond e.g. active/inactive).)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/ingredient-function
-    pub function: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub function: Vec<CodeableConcept>,
     /// A classification of the ingredient according to where in the physical item it tends to be used, such the outer shell of a tablet, inner body or ink
     pub group: Option<CodeableConcept>,
     /// If the ingredient is a known or suspected allergen
@@ -62,7 +64,8 @@ pub struct Ingredient {
     /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
     pub _comment: Option<Element>,
     /// An organization that manufactures this ingredient
-    pub manufacturer: Option<Vec<IngredientManufacturer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<IngredientManufacturer>,
     /// The substance that comprises this ingredient
     pub substance: IngredientSubstance,
 }
@@ -86,7 +89,8 @@ pub struct IngredientSubstance {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// The quantity of substance, per presentation, or per volume or mass, and type of quantity
-    pub strength: Option<Vec<IngredientSubstanceStrength>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub strength: Vec<IngredientSubstanceStrength>,
     /// A code or full resource that represents the ingredient substance
     ///
     /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
@@ -149,7 +153,8 @@ pub struct IngredientSubstanceStrength {
     /// Binding: example (Jurisdiction codes)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/country
-    pub country: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<CodeableConcept>,
 }
 
 impl Default for Ingredient {
@@ -463,13 +468,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Ingredient {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -484,44 +489,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Ingredient {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -531,16 +524,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Ingredient {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -552,13 +542,13 @@ impl crate::traits::ingredient::IngredientAccessors for Ingredient {
         self.status.clone()
     }
     fn for_(&self) -> &[Reference] {
-        self.for_.as_deref().unwrap_or(&[])
+        self.for_.as_slice()
     }
     fn role(&self) -> CodeableConcept {
         self.role.clone()
     }
     fn function(&self) -> &[CodeableConcept] {
-        self.function.as_deref().unwrap_or(&[])
+        self.function.as_slice()
     }
     fn group(&self) -> Option<CodeableConcept> {
         self.group.clone()
@@ -570,7 +560,7 @@ impl crate::traits::ingredient::IngredientAccessors for Ingredient {
         self.comment.clone()
     }
     fn manufacturer(&self) -> &[IngredientManufacturer] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn substance(&self) -> IngredientSubstance {
         self.substance.clone()
@@ -593,12 +583,12 @@ impl crate::traits::ingredient::IngredientMutators for Ingredient {
     }
     fn set_for_(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.for_ = Some(value);
+        resource.for_ = value;
         resource
     }
     fn add_for_(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.for_.get_or_insert_with(Vec::new).push(item);
+        resource.for_.push(item);
         resource
     }
     fn set_role(self, value: CodeableConcept) -> Self {
@@ -608,12 +598,12 @@ impl crate::traits::ingredient::IngredientMutators for Ingredient {
     }
     fn set_function(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.function = Some(value);
+        resource.function = value;
         resource
     }
     fn add_function(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.function.get_or_insert_with(Vec::new).push(item);
+        resource.function.push(item);
         resource
     }
     fn set_group(self, value: CodeableConcept) -> Self {
@@ -633,15 +623,12 @@ impl crate::traits::ingredient::IngredientMutators for Ingredient {
     }
     fn set_manufacturer(self, value: Vec<IngredientManufacturer>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: IngredientManufacturer) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_substance(self, value: IngredientSubstance) -> Self {
@@ -659,13 +646,13 @@ impl crate::traits::ingredient::IngredientExistence for Ingredient {
         true
     }
     fn has_for_(&self) -> bool {
-        self.for_.as_ref().is_some_and(|v| !v.is_empty())
+        !self.for_.is_empty()
     }
     fn has_role(&self) -> bool {
         true
     }
     fn has_function(&self) -> bool {
-        self.function.as_ref().is_some_and(|v| !v.is_empty())
+        !self.function.is_empty()
     }
     fn has_group(&self) -> bool {
         self.group.is_some()
@@ -677,7 +664,7 @@ impl crate::traits::ingredient::IngredientExistence for Ingredient {
         self.comment.is_some()
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_substance(&self) -> bool {
         true

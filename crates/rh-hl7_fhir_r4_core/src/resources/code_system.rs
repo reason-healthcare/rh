@@ -38,7 +38,8 @@ pub struct CodeSystem {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the code system (business identifier)
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the code system (Coding.version)
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -68,20 +69,23 @@ pub struct CodeSystem {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the code system
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for code system (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this code system is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -131,43 +135,42 @@ pub struct CodeSystem {
     /// Extension element for the 'count' primitive field. Contains metadata and extensions.
     pub _count: Option<Element>,
     /// Filter that can be used in a value set
-    pub filter: Option<Vec<CodeSystemFilter>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub filter: Vec<CodeSystemFilter>,
     /// Additional information supplied about each concept
-    pub property: Option<Vec<CodeSystemProperty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<CodeSystemProperty>,
     /// Concepts in the code system
-    pub concept: Option<Vec<CodeSystemConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub concept: Vec<CodeSystemConcept>,
 }
-/// CodeSystemConcept nested structure for the 'property' field
+/// CodeSystem nested structure for the 'concept' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemConceptProperty {
+pub struct CodeSystemConcept {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Reference to CodeSystem.property.code
+    /// Additional representations for the concept
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub designation: Vec<CodeSystemConceptDesignation>,
+    /// Property value for the concept
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<CodeSystemConceptProperty>,
+    /// Code that identifies concept
     pub code: StringType,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
-    /// Value of the property for this concept (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-    /// Value of the property for this concept (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Value of the property for this concept (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Value of the property for this concept (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Value of the property for this concept (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Value of the property for this concept (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Value of the property for this concept (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
+    /// Text to display to the user
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Formal definition
+    pub definition: Option<StringType>,
+    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
+    pub _definition: Option<Element>,
+    /// Child Concepts (is-a/contains/categorizes)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub concept: Vec<StringType>,
 }
 /// CodeSystemConcept nested structure for the 'designation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,6 +211,38 @@ pub struct CodeSystemConceptDesignation {
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
 }
+/// CodeSystemConcept nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemConceptProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to CodeSystem.property.code
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Value of the property for this concept (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+    /// Value of the property for this concept (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Value of the property for this concept (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Value of the property for this concept (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Value of the property for this concept (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Value of the property for this concept (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Value of the property for this concept (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+}
 /// CodeSystem nested structure for the 'filter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeSystemFilter {
@@ -225,36 +260,12 @@ pub struct CodeSystemFilter {
     /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | exists
     pub operator: Vec<FilterOperator>,
     /// Extension element for the 'operator' primitive field. Contains metadata and extensions.
-    pub _operator: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _operator: Vec<Element>,
     /// What to use for the value
     pub value: StringType,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
-}
-/// CodeSystem nested structure for the 'concept' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CodeSystemConcept {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Additional representations for the concept
-    pub designation: Option<Vec<CodeSystemConceptDesignation>>,
-    /// Property value for the concept
-    pub property: Option<Vec<CodeSystemConceptProperty>>,
-    /// Code that identifies concept
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Text to display to the user
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Formal definition
-    pub definition: Option<StringType>,
-    /// Extension element for the 'definition' primitive field. Contains metadata and extensions.
-    pub _definition: Option<Element>,
-    /// Child Concepts (is-a/contains/categorizes)
-    pub concept: Option<Vec<StringType>>,
 }
 /// CodeSystem nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -334,19 +345,19 @@ impl Default for CodeSystem {
     }
 }
 
-impl Default for CodeSystemConceptProperty {
+impl Default for CodeSystemConcept {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            code: Default::default(),
+            designation: Default::default(),
+            property: Default::default(),
+            code: StringType::default(),
             _code: Default::default(),
-            value_code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_integer: Default::default(),
-            value_boolean: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            definition: Default::default(),
+            _definition: Default::default(),
+            concept: Default::default(),
         }
     }
 }
@@ -364,6 +375,23 @@ impl Default for CodeSystemConceptDesignation {
     }
 }
 
+impl Default for CodeSystemConceptProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            value_code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_integer: Default::default(),
+            value_boolean: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
+        }
+    }
+}
+
 impl Default for CodeSystemFilter {
     fn default() -> Self {
         Self {
@@ -376,23 +404,6 @@ impl Default for CodeSystemFilter {
             _operator: Default::default(),
             value: StringType::default(),
             _value: Default::default(),
-        }
-    }
-}
-
-impl Default for CodeSystemConcept {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            designation: Default::default(),
-            property: Default::default(),
-            code: StringType::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-            definition: Default::default(),
-            _definition: Default::default(),
-            concept: Default::default(),
         }
     }
 }
@@ -622,13 +633,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CodeSystem {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -643,44 +654,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CodeSystem {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -690,16 +689,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for CodeSystem {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -708,7 +704,7 @@ impl crate::traits::code_system::CodeSystemAccessors for CodeSystem {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -732,16 +728,16 @@ impl crate::traits::code_system::CodeSystemAccessors for CodeSystem {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -774,13 +770,13 @@ impl crate::traits::code_system::CodeSystemAccessors for CodeSystem {
         self.count
     }
     fn filter(&self) -> &[CodeSystemFilter] {
-        self.filter.as_deref().unwrap_or(&[])
+        self.filter.as_slice()
     }
     fn property(&self) -> &[CodeSystemProperty] {
-        self.property.as_deref().unwrap_or(&[])
+        self.property.as_slice()
     }
     fn concept(&self) -> &[CodeSystemConcept] {
-        self.concept.as_deref().unwrap_or(&[])
+        self.concept.as_slice()
     }
 }
 
@@ -795,12 +791,12 @@ impl crate::traits::code_system::CodeSystemMutators for CodeSystem {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -840,12 +836,12 @@ impl crate::traits::code_system::CodeSystemMutators for CodeSystem {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -855,25 +851,22 @@ impl crate::traits::code_system::CodeSystemMutators for CodeSystem {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -928,32 +921,32 @@ impl crate::traits::code_system::CodeSystemMutators for CodeSystem {
     }
     fn set_filter(self, value: Vec<CodeSystemFilter>) -> Self {
         let mut resource = self.clone();
-        resource.filter = Some(value);
+        resource.filter = value;
         resource
     }
     fn add_filter(self, item: CodeSystemFilter) -> Self {
         let mut resource = self.clone();
-        resource.filter.get_or_insert_with(Vec::new).push(item);
+        resource.filter.push(item);
         resource
     }
     fn set_property(self, value: Vec<CodeSystemProperty>) -> Self {
         let mut resource = self.clone();
-        resource.property = Some(value);
+        resource.property = value;
         resource
     }
     fn add_property(self, item: CodeSystemProperty) -> Self {
         let mut resource = self.clone();
-        resource.property.get_or_insert_with(Vec::new).push(item);
+        resource.property.push(item);
         resource
     }
     fn set_concept(self, value: Vec<CodeSystemConcept>) -> Self {
         let mut resource = self.clone();
-        resource.concept = Some(value);
+        resource.concept = value;
         resource
     }
     fn add_concept(self, item: CodeSystemConcept) -> Self {
         let mut resource = self.clone();
-        resource.concept.get_or_insert_with(Vec::new).push(item);
+        resource.concept.push(item);
         resource
     }
 }
@@ -963,7 +956,7 @@ impl crate::traits::code_system::CodeSystemExistence for CodeSystem {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -987,16 +980,16 @@ impl crate::traits::code_system::CodeSystemExistence for CodeSystem {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1029,13 +1022,13 @@ impl crate::traits::code_system::CodeSystemExistence for CodeSystem {
         self.count.is_some()
     }
     fn has_filter(&self) -> bool {
-        self.filter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.filter.is_empty()
     }
     fn has_property(&self) -> bool {
-        self.property.as_ref().is_some_and(|v| !v.is_empty())
+        !self.property.is_empty()
     }
     fn has_concept(&self) -> bool {
-        self.concept.as_ref().is_some_and(|v| !v.is_empty())
+        !self.concept.is_empty()
     }
 }
 

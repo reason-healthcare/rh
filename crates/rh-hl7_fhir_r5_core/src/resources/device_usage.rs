@@ -27,21 +27,25 @@ pub struct DeviceUsage {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External identifier for this record
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Fulfills plan, proposal or order
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// active | completed | not-done | entered-in-error +
     pub status: DeviceusageStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// The category of the statement - classifying how the statement is made
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Patient using device
     pub patient: Reference,
     /// Supporting information
     #[serde(rename = "derivedFrom")]
-    pub derived_from: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from: Vec<Reference>,
     /// The encounter or episode of care that establishes the context for this device use statement
     pub context: Option<Reference>,
     /// How often  the device was used (Timing)
@@ -64,7 +68,8 @@ pub struct DeviceUsage {
     pub usage_status: Option<CodeableConcept>,
     /// The reason for asserting the usage status - for example forgot, lost, stolen, broken
     #[serde(rename = "usageReason")]
-    pub usage_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub usage_reason: Vec<CodeableConcept>,
     /// How device is being used
     pub adherence: Option<DeviceUsageAdherence>,
     /// Who made the statement
@@ -73,7 +78,8 @@ pub struct DeviceUsage {
     /// Code or Reference to device used
     pub device: CodeableReference,
     /// Why device was used
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Target body site
     ///
     /// Binding: example (SNOMED CT Body site concepts)
@@ -93,7 +99,8 @@ pub struct DeviceUsage {
     #[serde(rename = "bodySite")]
     pub body_site: Option<CodeableReference>,
     /// Addition details (comments, instructions)
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// DeviceUsage nested structure for the 'adherence' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -304,13 +311,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for DeviceUsage {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -325,44 +332,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for DeviceUsage {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -372,37 +367,34 @@ impl crate::traits::domain_resource::DomainResourceExistence for DeviceUsage {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::device_usage::DeviceUsageAccessors for DeviceUsage {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn status(&self) -> DeviceusageStatus {
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn patient(&self) -> Reference {
         self.patient.clone()
     }
     fn derived_from(&self) -> &[Reference] {
-        self.derived_from.as_deref().unwrap_or(&[])
+        self.derived_from.as_slice()
     }
     fn context(&self) -> Option<Reference> {
         self.context.clone()
@@ -414,7 +406,7 @@ impl crate::traits::device_usage::DeviceUsageAccessors for DeviceUsage {
         self.usage_status.clone()
     }
     fn usage_reason(&self) -> &[CodeableConcept] {
-        self.usage_reason.as_deref().unwrap_or(&[])
+        self.usage_reason.as_slice()
     }
     fn adherence(&self) -> Option<DeviceUsageAdherence> {
         self.adherence.clone()
@@ -426,13 +418,13 @@ impl crate::traits::device_usage::DeviceUsageAccessors for DeviceUsage {
         self.device.clone()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn body_site(&self) -> Option<CodeableReference> {
         self.body_site.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -442,22 +434,22 @@ impl crate::traits::device_usage::DeviceUsageMutators for DeviceUsage {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_status(self, value: DeviceusageStatus) -> Self {
@@ -467,12 +459,12 @@ impl crate::traits::device_usage::DeviceUsageMutators for DeviceUsage {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -482,15 +474,12 @@ impl crate::traits::device_usage::DeviceUsageMutators for DeviceUsage {
     }
     fn set_derived_from(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from = Some(value);
+        resource.derived_from = value;
         resource
     }
     fn add_derived_from(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from.push(item);
         resource
     }
     fn set_context(self, value: Reference) -> Self {
@@ -510,15 +499,12 @@ impl crate::traits::device_usage::DeviceUsageMutators for DeviceUsage {
     }
     fn set_usage_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.usage_reason = Some(value);
+        resource.usage_reason = value;
         resource
     }
     fn add_usage_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .usage_reason
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.usage_reason.push(item);
         resource
     }
     fn set_adherence(self, value: DeviceUsageAdherence) -> Self {
@@ -538,12 +524,12 @@ impl crate::traits::device_usage::DeviceUsageMutators for DeviceUsage {
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_body_site(self, value: CodeableReference) -> Self {
@@ -553,12 +539,12 @@ impl crate::traits::device_usage::DeviceUsageMutators for DeviceUsage {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
@@ -570,22 +556,22 @@ impl crate::traits::device_usage::DeviceUsageExistence for DeviceUsage {
             || self.timing_date_time.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_patient(&self) -> bool {
         true
     }
     fn has_derived_from(&self) -> bool {
-        self.derived_from.as_ref().is_some_and(|v| !v.is_empty())
+        !self.derived_from.is_empty()
     }
     fn has_context(&self) -> bool {
         self.context.is_some()
@@ -597,7 +583,7 @@ impl crate::traits::device_usage::DeviceUsageExistence for DeviceUsage {
         self.usage_status.is_some()
     }
     fn has_usage_reason(&self) -> bool {
-        self.usage_reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.usage_reason.is_empty()
     }
     fn has_adherence(&self) -> bool {
         self.adherence.is_some()
@@ -609,13 +595,13 @@ impl crate::traits::device_usage::DeviceUsageExistence for DeviceUsage {
         true
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_body_site(&self) -> bool {
         self.body_site.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

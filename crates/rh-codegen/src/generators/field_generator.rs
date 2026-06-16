@@ -108,6 +108,7 @@ impl<'a> FieldGenerator<'a> {
                     // Create the field
                     let mut field = RustField::new(rust_field_name.clone(), field_type);
                     field.is_optional = is_optional;
+                    field.is_repeating = is_array;
 
                     // Add documentation
                     field.doc_comment =
@@ -205,6 +206,7 @@ impl<'a> FieldGenerator<'a> {
         // Create the field
         let mut field = RustField::new(rust_field_name.clone(), field_type);
         field.is_optional = is_optional;
+        field.is_repeating = is_array;
 
         // Add documentation if available
         field.doc_comment = DocumentationGenerator::generate_field_documentation_with_binding(
@@ -475,6 +477,10 @@ impl<'a> FieldGenerator<'a> {
                         // Companion elements are always optional in FHIR specification
                         // They contain extensions and metadata for primitive fields
                         let is_optional = true;
+                        let is_companion_repeating = element
+                            .max
+                            .as_ref()
+                            .is_some_and(|max| max == "*" || max.parse::<u32>().unwrap_or(1) > 1);
 
                         // Create the companion field
                         let mut companion_field = RustField::new(
@@ -482,6 +488,7 @@ impl<'a> FieldGenerator<'a> {
                             RustType::Custom(companion_element_type),
                         );
                         companion_field.is_optional = is_optional;
+                        companion_field.is_repeating = is_companion_repeating;
 
                         // Add documentation
                         companion_field.doc_comment = Some(format!(

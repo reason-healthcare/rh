@@ -28,7 +28,8 @@ pub struct InventoryReport {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for the report
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | requested | active | entered-in-error
     pub status: InventoryreportStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -58,9 +59,32 @@ pub struct InventoryReport {
     pub reporting_period: Option<Period>,
     /// An inventory listing section (grouped by any of the attributes)
     #[serde(rename = "inventoryListing")]
-    pub inventory_listing: Option<Vec<InventoryReportInventorylisting>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inventory_listing: Vec<InventoryReportInventorylisting>,
     /// A note associated with the InventoryReport
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
+}
+/// InventoryReport nested structure for the 'inventoryListing' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InventoryReportInventorylisting {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The item or items in this listing
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<InventoryReportInventorylistingItem>,
+    /// Location of the inventory items
+    pub location: Option<Reference>,
+    /// The status of the items that are being reported
+    #[serde(rename = "itemStatus")]
+    pub item_status: Option<CodeableConcept>,
+    /// The date and time when the items were counted
+    #[serde(rename = "countingDateTime")]
+    pub counting_date_time: Option<DateTimeType>,
+    /// Extension element for the 'countingDateTime' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_countingDateTime")]
+    pub _counting_date_time: Option<Element>,
 }
 /// InventoryReportInventorylisting nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,26 +98,6 @@ pub struct InventoryReportInventorylistingItem {
     pub quantity: Quantity,
     /// The code or reference to the item type
     pub item: CodeableReference,
-}
-/// InventoryReport nested structure for the 'inventoryListing' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InventoryReportInventorylisting {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The item or items in this listing
-    pub item: Option<Vec<InventoryReportInventorylistingItem>>,
-    /// Location of the inventory items
-    pub location: Option<Reference>,
-    /// The status of the items that are being reported
-    #[serde(rename = "itemStatus")]
-    pub item_status: Option<CodeableConcept>,
-    /// The date and time when the items were counted
-    #[serde(rename = "countingDateTime")]
-    pub counting_date_time: Option<DateTimeType>,
-    /// Extension element for the 'countingDateTime' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_countingDateTime")]
-    pub _counting_date_time: Option<Element>,
 }
 
 impl Default for InventoryReport {
@@ -117,17 +121,6 @@ impl Default for InventoryReport {
     }
 }
 
-impl Default for InventoryReportInventorylistingItem {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            quantity: Default::default(),
-            item: Default::default(),
-        }
-    }
-}
-
 impl Default for InventoryReportInventorylisting {
     fn default() -> Self {
         Self {
@@ -137,6 +130,17 @@ impl Default for InventoryReportInventorylisting {
             item_status: Default::default(),
             counting_date_time: Default::default(),
             _counting_date_time: Default::default(),
+        }
+    }
+}
+
+impl Default for InventoryReportInventorylistingItem {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+            quantity: Default::default(),
+            item: Default::default(),
         }
     }
 }
@@ -344,13 +348,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for InventoryReport
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -365,44 +369,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for InventoryReport 
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -412,22 +404,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for InventoryReport
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::inventory_report::InventoryReportAccessors for InventoryReport {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> InventoryreportStatus {
         self.status.clone()
@@ -451,10 +440,10 @@ impl crate::traits::inventory_report::InventoryReportAccessors for InventoryRepo
         self.reporting_period.clone()
     }
     fn inventory_listing(&self) -> &[InventoryReportInventorylisting] {
-        self.inventory_listing.as_deref().unwrap_or(&[])
+        self.inventory_listing.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -464,12 +453,12 @@ impl crate::traits::inventory_report::InventoryReportMutators for InventoryRepor
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: InventoryreportStatus) -> Self {
@@ -509,32 +498,29 @@ impl crate::traits::inventory_report::InventoryReportMutators for InventoryRepor
     }
     fn set_inventory_listing(self, value: Vec<InventoryReportInventorylisting>) -> Self {
         let mut resource = self.clone();
-        resource.inventory_listing = Some(value);
+        resource.inventory_listing = value;
         resource
     }
     fn add_inventory_listing(self, item: InventoryReportInventorylisting) -> Self {
         let mut resource = self.clone();
-        resource
-            .inventory_listing
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.inventory_listing.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::inventory_report::InventoryReportExistence for InventoryReport {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -558,12 +544,10 @@ impl crate::traits::inventory_report::InventoryReportExistence for InventoryRepo
         self.reporting_period.is_some()
     }
     fn has_inventory_listing(&self) -> bool {
-        self.inventory_listing
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.inventory_listing.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

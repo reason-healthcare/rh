@@ -3,7 +3,8 @@
 //! This module provides functionality to run quality checks on generated Rust crates,
 //! including formatting with rustfmt and compilation checks with cargo check.
 
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result};
@@ -66,33 +67,67 @@ pub fn run_format_check(crate_path: &Path) -> Result<()> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        // If cargo fmt fails due to no targets, try formatting the lib.rs directly
-        if stderr.contains("Failed to find targets") || stderr.contains("no targets") {
-            println!("⚠️  cargo fmt found no targets, trying direct rustfmt...");
-
-            let lib_rs = crate_path.join("src").join("lib.rs");
-            if lib_rs.exists() {
-                let rustfmt_output = Command::new("rustfmt")
-                    .arg("--edition")
-                    .arg("2021")
-                    .arg(&lib_rs)
-                    .output()
-                    .with_context(|| "Failed to execute rustfmt directly")?;
-
-                if !rustfmt_output.status.success() {
-                    let rustfmt_stderr = String::from_utf8_lossy(&rustfmt_output.stderr);
-                    return Err(anyhow::anyhow!("rustfmt failed: {rustfmt_stderr}"));
-                }
-
-                println!("✅ Formatting completed successfully (using rustfmt directly)");
-                return Ok(());
-            }
+        if should_fallback_to_rustfmt(&stderr) {
+            println!(
+                "⚠️  cargo fmt could not format the generated crate, trying direct rustfmt..."
+            );
+            run_rustfmt_direct(crate_path)?;
+            println!("✅ Formatting completed successfully (using rustfmt directly)");
+            return Ok(());
         }
 
         return Err(anyhow::anyhow!("cargo fmt failed: {stderr}"));
     }
 
     println!("✅ Formatting completed successfully");
+    Ok(())
+}
+
+fn should_fallback_to_rustfmt(stderr: &str) -> bool {
+    stderr.contains("Failed to find targets")
+        || stderr.contains("no targets")
+        || stderr.contains("failed to find a workspace root")
+}
+
+fn run_rustfmt_direct(crate_path: &Path) -> Result<()> {
+    let src_dir = crate_path.join("src");
+    let mut rust_files = Vec::new();
+    collect_rust_files(&src_dir, &mut rust_files)?;
+
+    if rust_files.is_empty() {
+        return Err(anyhow::anyhow!(
+            "rustfmt fallback found no Rust files under {}",
+            src_dir.display()
+        ));
+    }
+
+    let rustfmt_output = Command::new("rustfmt")
+        .arg("--edition")
+        .arg("2021")
+        .args(&rust_files)
+        .output()
+        .with_context(|| "Failed to execute rustfmt directly")?;
+
+    if !rustfmt_output.status.success() {
+        let rustfmt_stderr = String::from_utf8_lossy(&rustfmt_output.stderr);
+        return Err(anyhow::anyhow!("rustfmt failed: {rustfmt_stderr}"));
+    }
+
+    Ok(())
+}
+
+fn collect_rust_files(dir: &Path, rust_files: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("Failed to read {}", dir.display()))? {
+        let entry = entry.with_context(|| format!("Failed to read entry in {}", dir.display()))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            collect_rust_files(&path, rust_files)?;
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            rust_files.push(path);
+        }
+    }
+
     Ok(())
 }
 

@@ -62,7 +62,8 @@ pub struct AuditEvent {
     /// - `110128`
     /// - `110129`
     /// - ... and 13 more values
-    pub subtype: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subtype: Vec<Coding>,
     /// Type of action performed during the event
     pub action: Option<AuditEventAction>,
     /// Extension element for the 'action' primitive field. Contains metadata and extensions.
@@ -89,13 +90,15 @@ pub struct AuditEvent {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
     #[serde(rename = "purposeOfEvent")]
-    pub purpose_of_event: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub purpose_of_event: Vec<CodeableConcept>,
     /// Actor involved in the event
     pub agent: Vec<AuditEventAgent>,
     /// Audit Event Reporter
     pub source: AuditEventSource,
     /// Data or objects used
-    pub entity: Option<Vec<AuditEventEntity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entity: Vec<AuditEventEntity>,
 }
 /// AuditEvent nested structure for the 'agent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,7 +142,8 @@ pub struct AuditEventAgent {
     /// - `VALID`
     /// - `VERF`
     /// - ... and 53 more values
-    pub role: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub role: Vec<CodeableConcept>,
     /// Identifier of who
     pub who: Option<Reference>,
     /// Alternative User identity
@@ -159,9 +163,11 @@ pub struct AuditEventAgent {
     /// Where
     pub location: Option<Reference>,
     /// Policy that authorized event
-    pub policy: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub policy: Vec<StringType>,
     /// Extension element for the 'policy' primitive field. Contains metadata and extensions.
-    pub _policy: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _policy: Vec<Element>,
     /// Type of media
     ///
     /// Binding: extensible (Used when the event is about exporting/importing onto media.)
@@ -184,25 +190,8 @@ pub struct AuditEventAgent {
     ///
     /// ValueSet: http://terminology.hl7.org/ValueSet/v3-PurposeOfUse
     #[serde(rename = "purposeOfUse")]
-    pub purpose_of_use: Option<Vec<CodeableConcept>>,
-}
-/// AuditEventEntity nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventEntityDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Name of the property
-    #[serde(rename = "type")]
-    pub type_: StringType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Property value (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Property value (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub purpose_of_use: Vec<CodeableConcept>,
 }
 /// AuditEventAgent nested structure for the 'network' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,26 +209,6 @@ pub struct AuditEventAgentNetwork {
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
 }
-/// AuditEvent nested structure for the 'source' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuditEventSource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Logical source location within the enterprise
-    pub site: Option<StringType>,
-    /// Extension element for the 'site' primitive field. Contains metadata and extensions.
-    pub _site: Option<Element>,
-    /// The identity of source detecting the event
-    pub observer: Reference,
-    /// The type of source where event originated
-    ///
-    /// Binding: extensible (Code specifying the type of system that detected and recorded the event.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-source-type
-    #[serde(rename = "type")]
-    pub type_: Option<Vec<Coding>>,
-}
 /// AuditEvent nested structure for the 'entity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEventEntity {
@@ -247,7 +216,8 @@ pub struct AuditEventEntity {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Additional Information about the entity
-    pub detail: Option<Vec<AuditEventEntityDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<AuditEventEntityDetail>,
     /// Specific instance of resource
     pub what: Option<Reference>,
     /// Type of entity involved
@@ -275,7 +245,8 @@ pub struct AuditEventEntity {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/security-labels
     #[serde(rename = "securityLabel")]
-    pub security_label: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security_label: Vec<Coding>,
     /// Descriptor for entity
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -288,6 +259,45 @@ pub struct AuditEventEntity {
     pub query: Option<Base64BinaryType>,
     /// Extension element for the 'query' primitive field. Contains metadata and extensions.
     pub _query: Option<Element>,
+}
+/// AuditEventEntity nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventEntityDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Name of the property
+    #[serde(rename = "type")]
+    pub type_: StringType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Property value (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Property value (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+}
+/// AuditEvent nested structure for the 'source' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventSource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Logical source location within the enterprise
+    pub site: Option<StringType>,
+    /// Extension element for the 'site' primitive field. Contains metadata and extensions.
+    pub _site: Option<Element>,
+    /// The identity of source detecting the event
+    pub observer: Reference,
+    /// The type of source where event originated
+    ///
+    /// Binding: extensible (Code specifying the type of system that detected and recorded the event.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/audit-source-type
+    #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<Coding>,
 }
 
 impl Default for AuditEvent {
@@ -336,18 +346,6 @@ impl Default for AuditEventAgent {
     }
 }
 
-impl Default for AuditEventEntityDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            value_string: Default::default(),
-            value_base64_binary: Default::default(),
-        }
-    }
-}
-
 impl Default for AuditEventAgentNetwork {
     fn default() -> Self {
         Self {
@@ -356,18 +354,6 @@ impl Default for AuditEventAgentNetwork {
             _address: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
-        }
-    }
-}
-
-impl Default for AuditEventSource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            site: Default::default(),
-            _site: Default::default(),
-            observer: Reference::default(),
-            type_: Default::default(),
         }
     }
 }
@@ -388,6 +374,30 @@ impl Default for AuditEventEntity {
             _description: Default::default(),
             query: Default::default(),
             _query: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventEntityDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            value_string: Default::default(),
+            value_base64_binary: Default::default(),
+        }
+    }
+}
+
+impl Default for AuditEventSource {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            site: Default::default(),
+            _site: Default::default(),
+            observer: Reference::default(),
+            type_: Default::default(),
         }
     }
 }
@@ -580,13 +590,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for AuditEvent {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -601,44 +611,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for AuditEvent {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -648,16 +646,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for AuditEvent {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -666,7 +661,7 @@ impl crate::traits::audit_event::AuditEventAccessors for AuditEvent {
         self.type_.clone()
     }
     fn subtype(&self) -> &[Coding] {
-        self.subtype.as_deref().unwrap_or(&[])
+        self.subtype.as_slice()
     }
     fn action(&self) -> Option<AuditEventAction> {
         self.action.clone()
@@ -684,7 +679,7 @@ impl crate::traits::audit_event::AuditEventAccessors for AuditEvent {
         self.outcome_desc.clone()
     }
     fn purpose_of_event(&self) -> &[CodeableConcept] {
-        self.purpose_of_event.as_deref().unwrap_or(&[])
+        self.purpose_of_event.as_slice()
     }
     fn agent(&self) -> &[AuditEventAgent] {
         &self.agent
@@ -693,7 +688,7 @@ impl crate::traits::audit_event::AuditEventAccessors for AuditEvent {
         self.source.clone()
     }
     fn entity(&self) -> &[AuditEventEntity] {
-        self.entity.as_deref().unwrap_or(&[])
+        self.entity.as_slice()
     }
 }
 
@@ -708,12 +703,12 @@ impl crate::traits::audit_event::AuditEventMutators for AuditEvent {
     }
     fn set_subtype(self, value: Vec<Coding>) -> Self {
         let mut resource = self.clone();
-        resource.subtype = Some(value);
+        resource.subtype = value;
         resource
     }
     fn add_subtype(self, item: Coding) -> Self {
         let mut resource = self.clone();
-        resource.subtype.get_or_insert_with(Vec::new).push(item);
+        resource.subtype.push(item);
         resource
     }
     fn set_action(self, value: AuditEventAction) -> Self {
@@ -743,15 +738,12 @@ impl crate::traits::audit_event::AuditEventMutators for AuditEvent {
     }
     fn set_purpose_of_event(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.purpose_of_event = Some(value);
+        resource.purpose_of_event = value;
         resource
     }
     fn add_purpose_of_event(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .purpose_of_event
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.purpose_of_event.push(item);
         resource
     }
     fn set_agent(self, value: Vec<AuditEventAgent>) -> Self {
@@ -771,12 +763,12 @@ impl crate::traits::audit_event::AuditEventMutators for AuditEvent {
     }
     fn set_entity(self, value: Vec<AuditEventEntity>) -> Self {
         let mut resource = self.clone();
-        resource.entity = Some(value);
+        resource.entity = value;
         resource
     }
     fn add_entity(self, item: AuditEventEntity) -> Self {
         let mut resource = self.clone();
-        resource.entity.get_or_insert_with(Vec::new).push(item);
+        resource.entity.push(item);
         resource
     }
 }
@@ -786,7 +778,7 @@ impl crate::traits::audit_event::AuditEventExistence for AuditEvent {
         true
     }
     fn has_subtype(&self) -> bool {
-        self.subtype.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subtype.is_empty()
     }
     fn has_action(&self) -> bool {
         self.action.is_some()
@@ -804,9 +796,7 @@ impl crate::traits::audit_event::AuditEventExistence for AuditEvent {
         self.outcome_desc.is_some()
     }
     fn has_purpose_of_event(&self) -> bool {
-        self.purpose_of_event
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.purpose_of_event.is_empty()
     }
     fn has_agent(&self) -> bool {
         !self.agent.is_empty()
@@ -815,7 +805,7 @@ impl crate::traits::audit_event::AuditEventExistence for AuditEvent {
         true
     }
     fn has_entity(&self) -> bool {
-        self.entity.as_ref().is_some_and(|v| !v.is_empty())
+        !self.entity.is_empty()
     }
 }
 

@@ -39,15 +39,20 @@ pub struct ProdCharacteristic {
     /// Extension element for the 'shape' primitive field. Contains metadata and extensions.
     pub _shape: Option<Element>,
     /// Where applicable, the color can be specified An appropriate controlled vocabulary shall be used The term and the term identifier shall be used
-    pub color: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub color: Vec<StringType>,
     /// Extension element for the 'color' primitive field. Contains metadata and extensions.
-    pub _color: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _color: Vec<Element>,
     /// Where applicable, the imprint can be specified as text
-    pub imprint: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub imprint: Vec<StringType>,
     /// Extension element for the 'imprint' primitive field. Contains metadata and extensions.
-    pub _imprint: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _imprint: Vec<Element>,
     /// Where applicable, the image can be provided The format of the image attachment shall be specified by regional implementations
-    pub image: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image: Vec<Attachment>,
     /// Where applicable, the scoring can be specified An appropriate controlled vocabulary shall be used The term and the term identifier shall be used
     pub scoring: Option<CodeableConcept>,
 }

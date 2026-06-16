@@ -23,7 +23,8 @@ pub struct ImmunizationRecommendation {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Who this profile is for
     pub patient: Reference,
     /// Date recommendation(s) created
@@ -43,14 +44,16 @@ pub struct ImmunizationRecommendationRecommendation {
     pub base: BackboneElement,
     /// Dates governing proposed immunization
     #[serde(rename = "dateCriterion")]
-    pub date_criterion: Option<Vec<ImmunizationRecommendationRecommendationDatecriterion>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub date_criterion: Vec<ImmunizationRecommendationRecommendationDatecriterion>,
     /// Vaccine  or vaccine group recommendation applies to
     ///
     /// Binding: example (The type of vaccine administered.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/vaccine-code
     #[serde(rename = "vaccineCode")]
-    pub vaccine_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub vaccine_code: Vec<CodeableConcept>,
     /// Disease to be immunized against
     ///
     /// Binding: example (The disease that the recommended vaccination targets.)
@@ -68,14 +71,16 @@ pub struct ImmunizationRecommendationRecommendation {
     /// - `709410003`
     /// - ... and 33 more values
     #[serde(rename = "targetDisease")]
-    pub target_disease: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_disease: Vec<CodeableConcept>,
     /// Vaccine which is contraindicated to fulfill the recommendation
     ///
     /// Binding: example (The type of vaccine administered.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/vaccine-code
     #[serde(rename = "contraindicatedVaccineCode")]
-    pub contraindicated_vaccine_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contraindicated_vaccine_code: Vec<CodeableConcept>,
     /// Vaccine recommendation status
     ///
     /// Binding: example (The patient's status with respect to a vaccination protocol.)
@@ -91,7 +96,8 @@ pub struct ImmunizationRecommendationRecommendation {
     /// - `77176002`
     /// - `77386006`
     #[serde(rename = "forecastReason")]
-    pub forecast_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub forecast_reason: Vec<CodeableConcept>,
     /// Protocol details
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
@@ -114,10 +120,12 @@ pub struct ImmunizationRecommendationRecommendation {
     pub _series_doses: Option<Element>,
     /// Past immunizations supporting recommendation
     #[serde(rename = "supportingImmunization")]
-    pub supporting_immunization: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_immunization: Vec<Reference>,
     /// Patient observations supporting recommendation
     #[serde(rename = "supportingPatientInformation")]
-    pub supporting_patient_information: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_patient_information: Vec<Reference>,
 }
 /// ImmunizationRecommendationRecommendation nested structure for the 'dateCriterion' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -434,13 +442,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ImmunizationRec
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -455,44 +463,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImmunizationReco
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -502,16 +498,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ImmunizationRec
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -519,7 +512,7 @@ impl crate::traits::immunization_recommendation::ImmunizationRecommendationAcces
     for ImmunizationRecommendation
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn patient(&self) -> Reference {
         self.patient.clone()
@@ -543,12 +536,12 @@ impl crate::traits::immunization_recommendation::ImmunizationRecommendationMutat
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -582,7 +575,7 @@ impl crate::traits::immunization_recommendation::ImmunizationRecommendationExist
     for ImmunizationRecommendation
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_patient(&self) -> bool {
         true

@@ -50,22 +50,29 @@ pub struct MedicationKnowledge {
     /// Amount of drug in package
     pub amount: Option<Quantity>,
     /// Additional names for a medication
-    pub synonym: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub synonym: Vec<StringType>,
     /// Extension element for the 'synonym' primitive field. Contains metadata and extensions.
-    pub _synonym: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _synonym: Vec<Element>,
     /// Associated or related medication information
     #[serde(rename = "relatedMedicationKnowledge")]
-    pub related_medication_knowledge: Option<Vec<MedicationKnowledgeRelatedmedicationknowledge>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_medication_knowledge: Vec<MedicationKnowledgeRelatedmedicationknowledge>,
     /// A medication resource that is associated with this medication
     #[serde(rename = "associatedMedication")]
-    pub associated_medication: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub associated_medication: Vec<Reference>,
     /// Category of the medication or product
     #[serde(rename = "productType")]
-    pub product_type: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub product_type: Vec<CodeableConcept>,
     /// Associated documentation about the medication
-    pub monograph: Option<Vec<MedicationKnowledgeMonograph>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub monograph: Vec<MedicationKnowledgeMonograph>,
     /// Active or inactive ingredient
-    pub ingredient: Option<Vec<MedicationKnowledgeIngredient>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<MedicationKnowledgeIngredient>,
     /// The instructions for preparing the medication
     #[serde(rename = "preparationInstruction")]
     pub preparation_instruction: Option<StringType>,
@@ -78,41 +85,71 @@ pub struct MedicationKnowledge {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/route-codes
     #[serde(rename = "intendedRoute")]
-    pub intended_route: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub intended_route: Vec<CodeableConcept>,
     /// The pricing of the medication
-    pub cost: Option<Vec<MedicationKnowledgeCost>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cost: Vec<MedicationKnowledgeCost>,
     /// Program under which a medication is reviewed
     #[serde(rename = "monitoringProgram")]
-    pub monitoring_program: Option<Vec<MedicationKnowledgeMonitoringprogram>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub monitoring_program: Vec<MedicationKnowledgeMonitoringprogram>,
     /// Guidelines for administration of the medication
     #[serde(rename = "administrationGuidelines")]
-    pub administration_guidelines: Option<Vec<MedicationKnowledgeAdministrationguidelines>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub administration_guidelines: Vec<MedicationKnowledgeAdministrationguidelines>,
     /// Categorization of the medication within a formulary or classification system
     #[serde(rename = "medicineClassification")]
-    pub medicine_classification: Option<Vec<MedicationKnowledgeMedicineclassification>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub medicine_classification: Vec<MedicationKnowledgeMedicineclassification>,
     /// Details about packaged medications
     pub packaging: Option<MedicationKnowledgePackaging>,
     /// Specifies descriptive properties of the medicine
     #[serde(rename = "drugCharacteristic")]
-    pub drug_characteristic: Option<Vec<MedicationKnowledgeDrugcharacteristic>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub drug_characteristic: Vec<MedicationKnowledgeDrugcharacteristic>,
     /// Potential clinical issue with or between medication(s)
-    pub contraindication: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contraindication: Vec<Reference>,
     /// Regulatory information about a medication
-    pub regulatory: Option<Vec<MedicationKnowledgeRegulatory>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub regulatory: Vec<MedicationKnowledgeRegulatory>,
     /// The time course of drug absorption, distribution, metabolism and excretion of a medication from the body
-    pub kinetics: Option<Vec<MedicationKnowledgeKinetics>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kinetics: Vec<MedicationKnowledgeKinetics>,
 }
-/// MedicationKnowledge nested structure for the 'medicineClassification' field
+/// MedicationKnowledge nested structure for the 'administrationGuidelines' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMedicineclassification {
+pub struct MedicationKnowledgeAdministrationguidelines {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of category for the medication (for example, therapeutic classification, therapeutic sub-classification)
+    /// Dosage for the medication for the specific guidelines
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dosage: Vec<MedicationKnowledgeAdministrationguidelinesDosage>,
+    /// Characteristics of the patient that are relevant to the administration guidelines
+    #[serde(rename = "patientCharacteristics")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patient_characteristics:
+        Vec<MedicationKnowledgeAdministrationguidelinesPatientcharacteristics>,
+    /// Indication for use that apply to the specific administration guidelines (CodeableConcept)
+    #[serde(rename = "indicationCodeableConcept")]
+    pub indication_codeable_concept: Option<CodeableConcept>,
+    /// Indication for use that apply to the specific administration guidelines (Reference)
+    #[serde(rename = "indicationReference")]
+    pub indication_reference: Option<Reference>,
+}
+/// MedicationKnowledgeAdministrationguidelines nested structure for the 'dosage' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeAdministrationguidelinesDosage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of dosage
     #[serde(rename = "type")]
     pub type_: CodeableConcept,
-    /// Specific category assigned to the medication
-    pub classification: Option<Vec<CodeableConcept>>,
+    /// Dosage for the medication for the specific guidelines
+    pub dosage: Vec<Dosage>,
 }
 /// MedicationKnowledgeAdministrationguidelines nested structure for the 'patientCharacteristics' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,76 +164,11 @@ pub struct MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
     #[serde(rename = "characteristicQuantity")]
     pub characteristic_quantity: Quantity,
     /// The specific characteristic
-    pub value: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value: Vec<StringType>,
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'packaging' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgePackaging {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A code that defines the specific type of packaging that the medication can be found in
-    ///
-    /// Binding: example (A coded concept defining the type of packaging of a medication.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationknowledge-package-type
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// The number of product units the package would contain if fully loaded
-    pub quantity: Option<Quantity>,
-}
-/// MedicationKnowledge nested structure for the 'kinetics' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeKinetics {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The drug concentration measured at certain discrete points in time
-    #[serde(rename = "areaUnderCurve")]
-    pub area_under_curve: Option<Vec<Quantity>>,
-    /// The median lethal dose of a drug
-    #[serde(rename = "lethalDose50")]
-    pub lethal_dose50: Option<Vec<Quantity>>,
-    /// Time required for concentration in the body to decrease by half
-    #[serde(rename = "halfLifePeriod")]
-    pub half_life_period: Option<Duration>,
-}
-/// MedicationKnowledgeAdministrationguidelines nested structure for the 'dosage' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeAdministrationguidelinesDosage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of dosage
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Dosage for the medication for the specific guidelines
-    pub dosage: Vec<Dosage>,
-}
-/// MedicationKnowledgeRegulatory nested structure for the 'maxDispense' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatoryMaxdispense {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The maximum number of units of the medication that can be dispensed
-    pub quantity: Quantity,
-    /// The period that applies to the maximum number of units
-    pub period: Option<Duration>,
-}
-/// MedicationKnowledge nested structure for the 'monograph' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMonograph {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The category of medication document
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Associated documentation about the medication
-    pub source: Option<Reference>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _value: Vec<Element>,
 }
 /// MedicationKnowledge nested structure for the 'cost' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -240,82 +212,6 @@ pub struct MedicationKnowledgeDrugcharacteristic {
     #[serde(rename = "valueBase64Binary")]
     pub value_base64_binary: Option<Base64BinaryType>,
 }
-/// MedicationKnowledge nested structure for the 'administrationGuidelines' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeAdministrationguidelines {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Dosage for the medication for the specific guidelines
-    pub dosage: Option<Vec<MedicationKnowledgeAdministrationguidelinesDosage>>,
-    /// Characteristics of the patient that are relevant to the administration guidelines
-    #[serde(rename = "patientCharacteristics")]
-    pub patient_characteristics:
-        Option<Vec<MedicationKnowledgeAdministrationguidelinesPatientcharacteristics>>,
-    /// Indication for use that apply to the specific administration guidelines (CodeableConcept)
-    #[serde(rename = "indicationCodeableConcept")]
-    pub indication_codeable_concept: Option<CodeableConcept>,
-    /// Indication for use that apply to the specific administration guidelines (Reference)
-    #[serde(rename = "indicationReference")]
-    pub indication_reference: Option<Reference>,
-}
-/// MedicationKnowledge nested structure for the 'relatedMedicationKnowledge' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRelatedmedicationknowledge {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Category of medicationKnowledge
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Associated documentation about the associated medication knowledge
-    pub reference: Vec<Reference>,
-}
-/// MedicationKnowledgeRegulatory nested structure for the 'substitution' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatorySubstitution {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Specifies the type of substitution allowed
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Specifies if regulation allows for changes in the medication when dispensing
-    pub allowed: BooleanType,
-    /// Extension element for the 'allowed' primitive field. Contains metadata and extensions.
-    pub _allowed: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'monitoringProgram' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeMonitoringprogram {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of program under which the medication is monitored
-    #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// Name of the reviewing program
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-}
-/// MedicationKnowledge nested structure for the 'regulatory' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicationKnowledgeRegulatory {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The maximum number of units of the medication that can be dispensed in a period
-    #[serde(rename = "maxDispense")]
-    pub max_dispense: Option<MedicationKnowledgeRegulatoryMaxdispense>,
-    /// Specifies the schedule of a medication in jurisdiction
-    pub schedule: Option<Vec<MedicationKnowledgeRegulatorySchedule>>,
-    /// Specifies if changes are allowed when dispensing a medication from a regulatory perspective
-    pub substitution: Option<Vec<MedicationKnowledgeRegulatorySubstitution>>,
-    /// Specifies the authority of the regulation
-    #[serde(rename = "regulatoryAuthority")]
-    pub regulatory_authority: Reference,
-}
 /// MedicationKnowledge nested structure for the 'ingredient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationKnowledgeIngredient {
@@ -337,6 +233,109 @@ pub struct MedicationKnowledgeIngredient {
     /// Quantity of ingredient present
     pub strength: Option<Ratio>,
 }
+/// MedicationKnowledge nested structure for the 'kinetics' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeKinetics {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The drug concentration measured at certain discrete points in time
+    #[serde(rename = "areaUnderCurve")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub area_under_curve: Vec<Quantity>,
+    /// The median lethal dose of a drug
+    #[serde(rename = "lethalDose50")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lethal_dose50: Vec<Quantity>,
+    /// Time required for concentration in the body to decrease by half
+    #[serde(rename = "halfLifePeriod")]
+    pub half_life_period: Option<Duration>,
+}
+/// MedicationKnowledge nested structure for the 'medicineClassification' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMedicineclassification {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of category for the medication (for example, therapeutic classification, therapeutic sub-classification)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Specific category assigned to the medication
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classification: Vec<CodeableConcept>,
+}
+/// MedicationKnowledge nested structure for the 'monitoringProgram' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMonitoringprogram {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of program under which the medication is monitored
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Name of the reviewing program
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+}
+/// MedicationKnowledge nested structure for the 'monograph' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeMonograph {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The category of medication document
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// Associated documentation about the medication
+    pub source: Option<Reference>,
+}
+/// MedicationKnowledge nested structure for the 'packaging' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgePackaging {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A code that defines the specific type of packaging that the medication can be found in
+    ///
+    /// Binding: example (A coded concept defining the type of packaging of a medication.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/medicationknowledge-package-type
+    #[serde(rename = "type")]
+    pub type_: Option<CodeableConcept>,
+    /// The number of product units the package would contain if fully loaded
+    pub quantity: Option<Quantity>,
+}
+/// MedicationKnowledge nested structure for the 'regulatory' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatory {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The maximum number of units of the medication that can be dispensed in a period
+    #[serde(rename = "maxDispense")]
+    pub max_dispense: Option<MedicationKnowledgeRegulatoryMaxdispense>,
+    /// Specifies the schedule of a medication in jurisdiction
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub schedule: Vec<MedicationKnowledgeRegulatorySchedule>,
+    /// Specifies if changes are allowed when dispensing a medication from a regulatory perspective
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub substitution: Vec<MedicationKnowledgeRegulatorySubstitution>,
+    /// Specifies the authority of the regulation
+    #[serde(rename = "regulatoryAuthority")]
+    pub regulatory_authority: Reference,
+}
+/// MedicationKnowledgeRegulatory nested structure for the 'maxDispense' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatoryMaxdispense {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The maximum number of units of the medication that can be dispensed
+    pub quantity: Quantity,
+    /// The period that applies to the maximum number of units
+    pub period: Option<Duration>,
+}
 /// MedicationKnowledgeRegulatory nested structure for the 'schedule' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicationKnowledgeRegulatorySchedule {
@@ -345,6 +344,32 @@ pub struct MedicationKnowledgeRegulatorySchedule {
     pub base: BackboneElement,
     /// Specifies the specific drug schedule
     pub schedule: CodeableConcept,
+}
+/// MedicationKnowledgeRegulatory nested structure for the 'substitution' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRegulatorySubstitution {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Specifies the type of substitution allowed
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Specifies if regulation allows for changes in the medication when dispensing
+    pub allowed: BooleanType,
+    /// Extension element for the 'allowed' primitive field. Contains metadata and extensions.
+    pub _allowed: Option<Element>,
+}
+/// MedicationKnowledge nested structure for the 'relatedMedicationKnowledge' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicationKnowledgeRelatedmedicationknowledge {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Category of medicationKnowledge
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Associated documentation about the associated medication knowledge
+    pub reference: Vec<Reference>,
 }
 
 impl Default for MedicationKnowledge {
@@ -380,45 +405,14 @@ impl Default for MedicationKnowledge {
     }
 }
 
-impl Default for MedicationKnowledgeMedicineclassification {
+impl Default for MedicationKnowledgeAdministrationguidelines {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            classification: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            characteristic_codeable_concept: Default::default(),
-            characteristic_quantity: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgePackaging {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            quantity: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeKinetics {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            area_under_curve: Default::default(),
-            lethal_dose50: Default::default(),
-            half_life_period: Default::default(),
+            dosage: Default::default(),
+            patient_characteristics: Default::default(),
+            indication_codeable_concept: Default::default(),
+            indication_reference: Default::default(),
         }
     }
 }
@@ -433,22 +427,14 @@ impl Default for MedicationKnowledgeAdministrationguidelinesDosage {
     }
 }
 
-impl Default for MedicationKnowledgeRegulatoryMaxdispense {
+impl Default for MedicationKnowledgeAdministrationguidelinesPatientcharacteristics {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            quantity: Default::default(),
-            period: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicationKnowledgeMonograph {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            source: Default::default(),
+            characteristic_codeable_concept: Default::default(),
+            characteristic_quantity: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
         }
     }
 }
@@ -478,35 +464,36 @@ impl Default for MedicationKnowledgeDrugcharacteristic {
     }
 }
 
-impl Default for MedicationKnowledgeAdministrationguidelines {
+impl Default for MedicationKnowledgeIngredient {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            dosage: Default::default(),
-            patient_characteristics: Default::default(),
-            indication_codeable_concept: Default::default(),
-            indication_reference: Default::default(),
+            item_codeable_concept: Default::default(),
+            item_reference: Default::default(),
+            is_active: Default::default(),
+            _is_active: Default::default(),
+            strength: Default::default(),
         }
     }
 }
 
-impl Default for MedicationKnowledgeRelatedmedicationknowledge {
+impl Default for MedicationKnowledgeKinetics {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            type_: Default::default(),
-            reference: Default::default(),
+            area_under_curve: Default::default(),
+            lethal_dose50: Default::default(),
+            half_life_period: Default::default(),
         }
     }
 }
 
-impl Default for MedicationKnowledgeRegulatorySubstitution {
+impl Default for MedicationKnowledgeMedicineclassification {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             type_: Default::default(),
-            allowed: Default::default(),
-            _allowed: Default::default(),
+            classification: Default::default(),
         }
     }
 }
@@ -518,6 +505,26 @@ impl Default for MedicationKnowledgeMonitoringprogram {
             type_: Default::default(),
             name: Default::default(),
             _name: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeMonograph {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            source: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgePackaging {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            quantity: Default::default(),
         }
     }
 }
@@ -534,15 +541,12 @@ impl Default for MedicationKnowledgeRegulatory {
     }
 }
 
-impl Default for MedicationKnowledgeIngredient {
+impl Default for MedicationKnowledgeRegulatoryMaxdispense {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            item_codeable_concept: Default::default(),
-            item_reference: Default::default(),
-            is_active: Default::default(),
-            _is_active: Default::default(),
-            strength: Default::default(),
+            quantity: Default::default(),
+            period: Default::default(),
         }
     }
 }
@@ -552,6 +556,27 @@ impl Default for MedicationKnowledgeRegulatorySchedule {
         Self {
             base: BackboneElement::default(),
             schedule: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRegulatorySubstitution {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            allowed: Default::default(),
+            _allowed: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicationKnowledgeRelatedmedicationknowledge {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            reference: Default::default(),
         }
     }
 }
@@ -773,13 +798,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicationKnowl
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -794,44 +819,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicationKnowle
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -841,16 +854,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicationKnowl
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -871,55 +881,55 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeAccessors for Medic
         self.amount.clone()
     }
     fn synonym(&self) -> &[StringType] {
-        self.synonym.as_deref().unwrap_or(&[])
+        self.synonym.as_slice()
     }
     fn related_medication_knowledge(&self) -> &[MedicationKnowledgeRelatedmedicationknowledge] {
-        self.related_medication_knowledge.as_deref().unwrap_or(&[])
+        self.related_medication_knowledge.as_slice()
     }
     fn associated_medication(&self) -> &[Reference] {
-        self.associated_medication.as_deref().unwrap_or(&[])
+        self.associated_medication.as_slice()
     }
     fn product_type(&self) -> &[CodeableConcept] {
-        self.product_type.as_deref().unwrap_or(&[])
+        self.product_type.as_slice()
     }
     fn monograph(&self) -> &[MedicationKnowledgeMonograph] {
-        self.monograph.as_deref().unwrap_or(&[])
+        self.monograph.as_slice()
     }
     fn ingredient(&self) -> &[MedicationKnowledgeIngredient] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
     fn preparation_instruction(&self) -> Option<StringType> {
         self.preparation_instruction.clone()
     }
     fn intended_route(&self) -> &[CodeableConcept] {
-        self.intended_route.as_deref().unwrap_or(&[])
+        self.intended_route.as_slice()
     }
     fn cost(&self) -> &[MedicationKnowledgeCost] {
-        self.cost.as_deref().unwrap_or(&[])
+        self.cost.as_slice()
     }
     fn monitoring_program(&self) -> &[MedicationKnowledgeMonitoringprogram] {
-        self.monitoring_program.as_deref().unwrap_or(&[])
+        self.monitoring_program.as_slice()
     }
     fn administration_guidelines(&self) -> &[MedicationKnowledgeAdministrationguidelines] {
-        self.administration_guidelines.as_deref().unwrap_or(&[])
+        self.administration_guidelines.as_slice()
     }
     fn medicine_classification(&self) -> &[MedicationKnowledgeMedicineclassification] {
-        self.medicine_classification.as_deref().unwrap_or(&[])
+        self.medicine_classification.as_slice()
     }
     fn packaging(&self) -> Option<MedicationKnowledgePackaging> {
         self.packaging.clone()
     }
     fn drug_characteristic(&self) -> &[MedicationKnowledgeDrugcharacteristic] {
-        self.drug_characteristic.as_deref().unwrap_or(&[])
+        self.drug_characteristic.as_slice()
     }
     fn contraindication(&self) -> &[Reference] {
-        self.contraindication.as_deref().unwrap_or(&[])
+        self.contraindication.as_slice()
     }
     fn regulatory(&self) -> &[MedicationKnowledgeRegulatory] {
-        self.regulatory.as_deref().unwrap_or(&[])
+        self.regulatory.as_slice()
     }
     fn kinetics(&self) -> &[MedicationKnowledgeKinetics] {
-        self.kinetics.as_deref().unwrap_or(&[])
+        self.kinetics.as_slice()
     }
 }
 
@@ -954,12 +964,12 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
     }
     fn set_synonym(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.synonym = Some(value);
+        resource.synonym = value;
         resource
     }
     fn add_synonym(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.synonym.get_or_insert_with(Vec::new).push(item);
+        resource.synonym.push(item);
         resource
     }
     fn set_related_medication_knowledge(
@@ -967,7 +977,7 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
         value: Vec<MedicationKnowledgeRelatedmedicationknowledge>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.related_medication_knowledge = Some(value);
+        resource.related_medication_knowledge = value;
         resource
     }
     fn add_related_medication_knowledge(
@@ -975,56 +985,47 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
         item: MedicationKnowledgeRelatedmedicationknowledge,
     ) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_medication_knowledge
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_medication_knowledge.push(item);
         resource
     }
     fn set_associated_medication(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.associated_medication = Some(value);
+        resource.associated_medication = value;
         resource
     }
     fn add_associated_medication(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .associated_medication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.associated_medication.push(item);
         resource
     }
     fn set_product_type(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.product_type = Some(value);
+        resource.product_type = value;
         resource
     }
     fn add_product_type(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .product_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.product_type.push(item);
         resource
     }
     fn set_monograph(self, value: Vec<MedicationKnowledgeMonograph>) -> Self {
         let mut resource = self.clone();
-        resource.monograph = Some(value);
+        resource.monograph = value;
         resource
     }
     fn add_monograph(self, item: MedicationKnowledgeMonograph) -> Self {
         let mut resource = self.clone();
-        resource.monograph.get_or_insert_with(Vec::new).push(item);
+        resource.monograph.push(item);
         resource
     }
     fn set_ingredient(self, value: Vec<MedicationKnowledgeIngredient>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: MedicationKnowledgeIngredient) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
     fn set_preparation_instruction(self, value: String) -> Self {
@@ -1034,38 +1035,32 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
     }
     fn set_intended_route(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.intended_route = Some(value);
+        resource.intended_route = value;
         resource
     }
     fn add_intended_route(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .intended_route
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.intended_route.push(item);
         resource
     }
     fn set_cost(self, value: Vec<MedicationKnowledgeCost>) -> Self {
         let mut resource = self.clone();
-        resource.cost = Some(value);
+        resource.cost = value;
         resource
     }
     fn add_cost(self, item: MedicationKnowledgeCost) -> Self {
         let mut resource = self.clone();
-        resource.cost.get_or_insert_with(Vec::new).push(item);
+        resource.cost.push(item);
         resource
     }
     fn set_monitoring_program(self, value: Vec<MedicationKnowledgeMonitoringprogram>) -> Self {
         let mut resource = self.clone();
-        resource.monitoring_program = Some(value);
+        resource.monitoring_program = value;
         resource
     }
     fn add_monitoring_program(self, item: MedicationKnowledgeMonitoringprogram) -> Self {
         let mut resource = self.clone();
-        resource
-            .monitoring_program
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.monitoring_program.push(item);
         resource
     }
     fn set_administration_guidelines(
@@ -1073,7 +1068,7 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
         value: Vec<MedicationKnowledgeAdministrationguidelines>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.administration_guidelines = Some(value);
+        resource.administration_guidelines = value;
         resource
     }
     fn add_administration_guidelines(
@@ -1081,10 +1076,7 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
         item: MedicationKnowledgeAdministrationguidelines,
     ) -> Self {
         let mut resource = self.clone();
-        resource
-            .administration_guidelines
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.administration_guidelines.push(item);
         resource
     }
     fn set_medicine_classification(
@@ -1092,15 +1084,12 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
         value: Vec<MedicationKnowledgeMedicineclassification>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.medicine_classification = Some(value);
+        resource.medicine_classification = value;
         resource
     }
     fn add_medicine_classification(self, item: MedicationKnowledgeMedicineclassification) -> Self {
         let mut resource = self.clone();
-        resource
-            .medicine_classification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.medicine_classification.push(item);
         resource
     }
     fn set_packaging(self, value: MedicationKnowledgePackaging) -> Self {
@@ -1110,48 +1099,42 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeMutators for Medica
     }
     fn set_drug_characteristic(self, value: Vec<MedicationKnowledgeDrugcharacteristic>) -> Self {
         let mut resource = self.clone();
-        resource.drug_characteristic = Some(value);
+        resource.drug_characteristic = value;
         resource
     }
     fn add_drug_characteristic(self, item: MedicationKnowledgeDrugcharacteristic) -> Self {
         let mut resource = self.clone();
-        resource
-            .drug_characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.drug_characteristic.push(item);
         resource
     }
     fn set_contraindication(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.contraindication = Some(value);
+        resource.contraindication = value;
         resource
     }
     fn add_contraindication(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .contraindication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.contraindication.push(item);
         resource
     }
     fn set_regulatory(self, value: Vec<MedicationKnowledgeRegulatory>) -> Self {
         let mut resource = self.clone();
-        resource.regulatory = Some(value);
+        resource.regulatory = value;
         resource
     }
     fn add_regulatory(self, item: MedicationKnowledgeRegulatory) -> Self {
         let mut resource = self.clone();
-        resource.regulatory.get_or_insert_with(Vec::new).push(item);
+        resource.regulatory.push(item);
         resource
     }
     fn set_kinetics(self, value: Vec<MedicationKnowledgeKinetics>) -> Self {
         let mut resource = self.clone();
-        resource.kinetics = Some(value);
+        resource.kinetics = value;
         resource
     }
     fn add_kinetics(self, item: MedicationKnowledgeKinetics) -> Self {
         let mut resource = self.clone();
-        resource.kinetics.get_or_insert_with(Vec::new).push(item);
+        resource.kinetics.push(item);
         resource
     }
 }
@@ -1173,69 +1156,55 @@ impl crate::traits::medication_knowledge::MedicationKnowledgeExistence for Medic
         self.amount.is_some()
     }
     fn has_synonym(&self) -> bool {
-        self.synonym.as_ref().is_some_and(|v| !v.is_empty())
+        !self.synonym.is_empty()
     }
     fn has_related_medication_knowledge(&self) -> bool {
-        self.related_medication_knowledge
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_medication_knowledge.is_empty()
     }
     fn has_associated_medication(&self) -> bool {
-        self.associated_medication
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.associated_medication.is_empty()
     }
     fn has_product_type(&self) -> bool {
-        self.product_type.as_ref().is_some_and(|v| !v.is_empty())
+        !self.product_type.is_empty()
     }
     fn has_monograph(&self) -> bool {
-        self.monograph.as_ref().is_some_and(|v| !v.is_empty())
+        !self.monograph.is_empty()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
     fn has_preparation_instruction(&self) -> bool {
         self.preparation_instruction.is_some()
     }
     fn has_intended_route(&self) -> bool {
-        self.intended_route.as_ref().is_some_and(|v| !v.is_empty())
+        !self.intended_route.is_empty()
     }
     fn has_cost(&self) -> bool {
-        self.cost.as_ref().is_some_and(|v| !v.is_empty())
+        !self.cost.is_empty()
     }
     fn has_monitoring_program(&self) -> bool {
-        self.monitoring_program
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.monitoring_program.is_empty()
     }
     fn has_administration_guidelines(&self) -> bool {
-        self.administration_guidelines
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.administration_guidelines.is_empty()
     }
     fn has_medicine_classification(&self) -> bool {
-        self.medicine_classification
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.medicine_classification.is_empty()
     }
     fn has_packaging(&self) -> bool {
         self.packaging.is_some()
     }
     fn has_drug_characteristic(&self) -> bool {
-        self.drug_characteristic
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.drug_characteristic.is_empty()
     }
     fn has_contraindication(&self) -> bool {
-        self.contraindication
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.contraindication.is_empty()
     }
     fn has_regulatory(&self) -> bool {
-        self.regulatory.as_ref().is_some_and(|v| !v.is_empty())
+        !self.regulatory.is_empty()
     }
     fn has_kinetics(&self) -> bool {
-        self.kinetics.as_ref().is_some_and(|v| !v.is_empty())
+        !self.kinetics.is_empty()
     }
 }
 

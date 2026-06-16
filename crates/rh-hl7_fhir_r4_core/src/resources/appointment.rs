@@ -30,7 +30,8 @@ pub struct Appointment {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// proposed | pending | booked | arrived | fulfilled | cancelled | noshow | entered-in-error | checked-in | waitlist
     pub status: Appointmentstatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -48,14 +49,16 @@ pub struct Appointment {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-category
     #[serde(rename = "serviceCategory")]
-    pub service_category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_category: Vec<CodeableConcept>,
     /// The specific service that is to be performed during this appointment
     ///
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/service-type
     #[serde(rename = "serviceType")]
-    pub service_type: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_type: Vec<CodeableConcept>,
     /// The specialty of a practitioner that would be required to perform the service requested in this appointment
     ///
     /// Binding: preferred (No description)
@@ -72,7 +75,8 @@ pub struct Appointment {
     /// - `394803006`: Clinical hematology
     /// - `408480009`: Clinical immunology
     /// - ... and 107 more values
-    pub specialty: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialty: Vec<CodeableConcept>,
     /// The style of appointment or patient that has been booked in the slot (not service type)
     ///
     /// Binding: preferred (No description)
@@ -86,10 +90,12 @@ pub struct Appointment {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/encounter-reason
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Reason the appointment is to take place (resource)
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Used to make informed decisions if needing to re-prioritize
     pub priority: Option<UnsignedIntType>,
     /// Extension element for the 'priority' primitive field. Contains metadata and extensions.
@@ -100,7 +106,8 @@ pub struct Appointment {
     pub _description: Option<Element>,
     /// Additional information to support the appointment
     #[serde(rename = "supportingInformation")]
-    pub supporting_information: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_information: Vec<Reference>,
     /// When appointment is to take place
     pub start: Option<InstantType>,
     /// Extension element for the 'start' primitive field. Contains metadata and extensions.
@@ -116,7 +123,8 @@ pub struct Appointment {
     #[serde(rename = "_minutesDuration")]
     pub _minutes_duration: Option<Element>,
     /// The slots that this appointment is filling
-    pub slot: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub slot: Vec<Reference>,
     /// The date that this appointment was initially created
     pub created: Option<DateTimeType>,
     /// Extension element for the 'created' primitive field. Contains metadata and extensions.
@@ -133,12 +141,14 @@ pub struct Appointment {
     pub _patient_instruction: Option<Element>,
     /// The service request this appointment is allocated to assess
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Participants involved in appointment
     pub participant: Vec<AppointmentParticipant>,
     /// Potential date/time interval(s) requested to allocate the appointment within
     #[serde(rename = "requestedPeriod")]
-    pub requested_period: Option<Vec<Period>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requested_period: Vec<Period>,
 }
 /// Appointment nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,7 +165,8 @@ pub struct AppointmentParticipant {
     /// - `PPRF`
     /// - `PART`
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Person, Location/HealthcareService or Device
     pub actor: Option<Reference>,
     /// required | optional | information-only
@@ -386,13 +397,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Appointment {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -407,44 +418,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Appointment {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -454,22 +453,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Appointment {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::appointment::AppointmentAccessors for Appointment {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> Appointmentstatus {
         self.status.clone()
@@ -478,22 +474,22 @@ impl crate::traits::appointment::AppointmentAccessors for Appointment {
         self.cancelation_reason.clone()
     }
     fn service_category(&self) -> &[CodeableConcept] {
-        self.service_category.as_deref().unwrap_or(&[])
+        self.service_category.as_slice()
     }
     fn service_type(&self) -> &[CodeableConcept] {
-        self.service_type.as_deref().unwrap_or(&[])
+        self.service_type.as_slice()
     }
     fn specialty(&self) -> &[CodeableConcept] {
-        self.specialty.as_deref().unwrap_or(&[])
+        self.specialty.as_slice()
     }
     fn appointment_type(&self) -> Option<CodeableConcept> {
         self.appointment_type.clone()
     }
     fn reason_code(&self) -> &[CodeableConcept] {
-        self.reason_code.as_deref().unwrap_or(&[])
+        self.reason_code.as_slice()
     }
     fn reason_reference(&self) -> &[Reference] {
-        self.reason_reference.as_deref().unwrap_or(&[])
+        self.reason_reference.as_slice()
     }
     fn priority(&self) -> Option<UnsignedIntType> {
         self.priority
@@ -502,7 +498,7 @@ impl crate::traits::appointment::AppointmentAccessors for Appointment {
         self.description.clone()
     }
     fn supporting_information(&self) -> &[Reference] {
-        self.supporting_information.as_deref().unwrap_or(&[])
+        self.supporting_information.as_slice()
     }
     fn start(&self) -> Option<InstantType> {
         self.start.clone()
@@ -514,7 +510,7 @@ impl crate::traits::appointment::AppointmentAccessors for Appointment {
         self.minutes_duration
     }
     fn slot(&self) -> &[Reference] {
-        self.slot.as_deref().unwrap_or(&[])
+        self.slot.as_slice()
     }
     fn created(&self) -> Option<DateTimeType> {
         self.created.clone()
@@ -526,13 +522,13 @@ impl crate::traits::appointment::AppointmentAccessors for Appointment {
         self.patient_instruction.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn participant(&self) -> &[AppointmentParticipant] {
         &self.participant
     }
     fn requested_period(&self) -> &[Period] {
-        self.requested_period.as_deref().unwrap_or(&[])
+        self.requested_period.as_slice()
     }
 }
 
@@ -542,12 +538,12 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: Appointmentstatus) -> Self {
@@ -562,38 +558,32 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_service_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.service_category = Some(value);
+        resource.service_category = value;
         resource
     }
     fn add_service_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .service_category
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.service_category.push(item);
         resource
     }
     fn set_service_type(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.service_type = Some(value);
+        resource.service_type = value;
         resource
     }
     fn add_service_type(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .service_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.service_type.push(item);
         resource
     }
     fn set_specialty(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.specialty = Some(value);
+        resource.specialty = value;
         resource
     }
     fn add_specialty(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.specialty.get_or_insert_with(Vec::new).push(item);
+        resource.specialty.push(item);
         resource
     }
     fn set_appointment_type(self, value: CodeableConcept) -> Self {
@@ -603,25 +593,22 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_reason_code(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.reason_code = Some(value);
+        resource.reason_code = value;
         resource
     }
     fn add_reason_code(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.reason_code.get_or_insert_with(Vec::new).push(item);
+        resource.reason_code.push(item);
         resource
     }
     fn set_reason_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.reason_reference = Some(value);
+        resource.reason_reference = value;
         resource
     }
     fn add_reason_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .reason_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.reason_reference.push(item);
         resource
     }
     fn set_priority(self, value: i32) -> Self {
@@ -636,15 +623,12 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_supporting_information(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_information = Some(value);
+        resource.supporting_information = value;
         resource
     }
     fn add_supporting_information(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_information
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_information.push(item);
         resource
     }
     fn set_start(self, value: String) -> Self {
@@ -664,12 +648,12 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_slot(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.slot = Some(value);
+        resource.slot = value;
         resource
     }
     fn add_slot(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.slot.get_or_insert_with(Vec::new).push(item);
+        resource.slot.push(item);
         resource
     }
     fn set_created(self, value: String) -> Self {
@@ -689,12 +673,12 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_participant(self, value: Vec<AppointmentParticipant>) -> Self {
@@ -709,22 +693,19 @@ impl crate::traits::appointment::AppointmentMutators for Appointment {
     }
     fn set_requested_period(self, value: Vec<Period>) -> Self {
         let mut resource = self.clone();
-        resource.requested_period = Some(value);
+        resource.requested_period = value;
         resource
     }
     fn add_requested_period(self, item: Period) -> Self {
         let mut resource = self.clone();
-        resource
-            .requested_period
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.requested_period.push(item);
         resource
     }
 }
 
 impl crate::traits::appointment::AppointmentExistence for Appointment {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -733,26 +714,22 @@ impl crate::traits::appointment::AppointmentExistence for Appointment {
         self.cancelation_reason.is_some()
     }
     fn has_service_category(&self) -> bool {
-        self.service_category
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.service_category.is_empty()
     }
     fn has_service_type(&self) -> bool {
-        self.service_type.as_ref().is_some_and(|v| !v.is_empty())
+        !self.service_type.is_empty()
     }
     fn has_specialty(&self) -> bool {
-        self.specialty.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specialty.is_empty()
     }
     fn has_appointment_type(&self) -> bool {
         self.appointment_type.is_some()
     }
     fn has_reason_code(&self) -> bool {
-        self.reason_code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason_code.is_empty()
     }
     fn has_reason_reference(&self) -> bool {
-        self.reason_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.reason_reference.is_empty()
     }
     fn has_priority(&self) -> bool {
         self.priority.is_some()
@@ -761,9 +738,7 @@ impl crate::traits::appointment::AppointmentExistence for Appointment {
         self.description.is_some()
     }
     fn has_supporting_information(&self) -> bool {
-        self.supporting_information
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.supporting_information.is_empty()
     }
     fn has_start(&self) -> bool {
         self.start.is_some()
@@ -775,7 +750,7 @@ impl crate::traits::appointment::AppointmentExistence for Appointment {
         self.minutes_duration.is_some()
     }
     fn has_slot(&self) -> bool {
-        self.slot.as_ref().is_some_and(|v| !v.is_empty())
+        !self.slot.is_empty()
     }
     fn has_created(&self) -> bool {
         self.created.is_some()
@@ -787,15 +762,13 @@ impl crate::traits::appointment::AppointmentExistence for Appointment {
         self.patient_instruction.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_participant(&self) -> bool {
         !self.participant.is_empty()
     }
     fn has_requested_period(&self) -> bool {
-        self.requested_period
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.requested_period.is_empty()
     }
 }
 

@@ -31,12 +31,14 @@ pub struct Device {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Instance identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The reference to the definition for the device
     pub definition: Option<Reference>,
     /// Unique Device Identifier (UDI) Barcode string
     #[serde(rename = "udiCarrier")]
-    pub udi_carrier: Option<Vec<DeviceUdicarrier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub udi_carrier: Vec<DeviceUdicarrier>,
     /// active | inactive | entered-in-error | unknown
     pub status: Option<DeviceStatus>,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -47,7 +49,8 @@ pub struct Device {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/device-status-reason
     #[serde(rename = "statusReason")]
-    pub status_reason: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub status_reason: Vec<CodeableConcept>,
     /// The distinct identification string
     #[serde(rename = "distinctIdentifier")]
     pub distinct_identifier: Option<StringType>,
@@ -84,7 +87,8 @@ pub struct Device {
     pub _serial_number: Option<Element>,
     /// The name of the device as given by the manufacturer
     #[serde(rename = "deviceName")]
-    pub device_name: Option<Vec<DeviceDevicename>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device_name: Vec<DeviceDevicename>,
     /// The model number for the device
     #[serde(rename = "modelNumber")]
     pub model_number: Option<StringType>,
@@ -105,17 +109,21 @@ pub struct Device {
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
     /// The capabilities supported on a  device, the standards to which the device conforms for a particular purpose, and used for the communication
-    pub specialization: Option<Vec<DeviceSpecialization>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub specialization: Vec<DeviceSpecialization>,
     /// The actual design of the device or software version running on the device
-    pub version: Option<Vec<DeviceVersion>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub version: Vec<DeviceVersion>,
     /// The actual configuration settings of a device as it actually operates, e.g., regulation status, time properties
-    pub property: Option<Vec<DeviceProperty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<DeviceProperty>,
     /// Patient to whom Device is affixed
     pub patient: Option<Reference>,
     /// Organization responsible for device
     pub owner: Option<Reference>,
     /// Details for human/organization for support
-    pub contact: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactPoint>,
     /// Where the device is found
     pub location: Option<Reference>,
     /// Network address to contact device
@@ -123,43 +131,29 @@ pub struct Device {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Device notes and comments
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Safety Characteristics of Device
-    pub safety: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub safety: Vec<CodeableConcept>,
     /// The parent device
     pub parent: Option<Reference>,
 }
-/// Device nested structure for the 'version' field
+/// Device nested structure for the 'deviceName' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceVersion {
+pub struct DeviceDevicename {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of the device version
+    /// The name of the device
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
     #[serde(rename = "type")]
-    pub type_: Option<CodeableConcept>,
-    /// A single component of the device version
-    pub component: Option<Identifier>,
-    /// The version text
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// Device nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Property value as a quantity
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Vec<Quantity>>,
-    /// Property value as a code, e.g., NTP4 (synced to NTP)
-    #[serde(rename = "valueCode")]
-    pub value_code: Option<Vec<CodeableConcept>>,
+    pub type_: DeviceNametype,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
 }
 /// Status of Implantable Devices
 ///
@@ -176,6 +170,38 @@ pub struct DeviceImplantStatus {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
+}
+/// Device nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that specifies the property DeviceDefinitionPropetyCode (Extensible)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Property value as a quantity
+    #[serde(rename = "valueQuantity")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_quantity: Vec<Quantity>,
+    /// Property value as a code, e.g., NTP4 (synced to NTP)
+    #[serde(rename = "valueCode")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_code: Vec<CodeableConcept>,
+}
+/// Device nested structure for the 'specialization' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceSpecialization {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The standard that is used to operate and communicate
+    #[serde(rename = "systemType")]
+    pub system_type: CodeableConcept,
+    /// The version of the standard that is used to operate and communicate
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
 }
 /// Device nested structure for the 'udiCarrier' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -216,35 +242,21 @@ pub struct DeviceUdicarrier {
     #[serde(rename = "_entryType")]
     pub _entry_type: Option<Element>,
 }
-/// Device nested structure for the 'deviceName' field
+/// Device nested structure for the 'version' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceDevicename {
+pub struct DeviceVersion {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The name of the device
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// udi-label-name | user-friendly-name | patient-reported-name | manufacturer-name | model-name | other
+    /// The type of the device version
     #[serde(rename = "type")]
-    pub type_: DeviceNametype,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-}
-/// Device nested structure for the 'specialization' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceSpecialization {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The standard that is used to operate and communicate
-    #[serde(rename = "systemType")]
-    pub system_type: CodeableConcept,
-    /// The version of the standard that is used to operate and communicate
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
+    pub type_: Option<CodeableConcept>,
+    /// A single component of the device version
+    pub component: Option<Identifier>,
+    /// The version text
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
 }
 
 impl Default for Device {
@@ -291,14 +303,22 @@ impl Default for Device {
     }
 }
 
-impl Default for DeviceVersion {
+impl Default for DeviceDevicename {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            name: Default::default(),
+            _name: Default::default(),
             type_: Default::default(),
-            component: Default::default(),
-            value: StringType::default(),
-            _value: Default::default(),
+            _type: Default::default(),
+        }
+    }
+}
+
+impl Default for DeviceImplantStatus {
+    fn default() -> Self {
+        Self {
+            base: Extension::default(),
         }
     }
 }
@@ -314,10 +334,13 @@ impl Default for DeviceProperty {
     }
 }
 
-impl Default for DeviceImplantStatus {
+impl Default for DeviceSpecialization {
     fn default() -> Self {
         Self {
-            base: Extension::default(),
+            base: BackboneElement::default(),
+            system_type: CodeableConcept::default(),
+            version: Default::default(),
+            _version: Default::default(),
         }
     }
 }
@@ -342,25 +365,14 @@ impl Default for DeviceUdicarrier {
     }
 }
 
-impl Default for DeviceDevicename {
+impl Default for DeviceVersion {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
             type_: Default::default(),
-            _type: Default::default(),
-        }
-    }
-}
-
-impl Default for DeviceSpecialization {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            system_type: CodeableConcept::default(),
-            version: Default::default(),
-            _version: Default::default(),
+            component: Default::default(),
+            value: StringType::default(),
+            _value: Default::default(),
         }
     }
 }
@@ -554,13 +566,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Device {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -575,44 +587,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Device {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -622,34 +622,31 @@ impl crate::traits::domain_resource::DomainResourceExistence for Device {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::device::DeviceAccessors for Device {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn definition(&self) -> Option<Reference> {
         self.definition.clone()
     }
     fn udi_carrier(&self) -> &[DeviceUdicarrier] {
-        self.udi_carrier.as_deref().unwrap_or(&[])
+        self.udi_carrier.as_slice()
     }
     fn status(&self) -> Option<DeviceStatus> {
         self.status.clone()
     }
     fn status_reason(&self) -> &[CodeableConcept] {
-        self.status_reason.as_deref().unwrap_or(&[])
+        self.status_reason.as_slice()
     }
     fn distinct_identifier(&self) -> Option<StringType> {
         self.distinct_identifier.clone()
@@ -670,7 +667,7 @@ impl crate::traits::device::DeviceAccessors for Device {
         self.serial_number.clone()
     }
     fn device_name(&self) -> &[DeviceDevicename] {
-        self.device_name.as_deref().unwrap_or(&[])
+        self.device_name.as_slice()
     }
     fn model_number(&self) -> Option<StringType> {
         self.model_number.clone()
@@ -682,13 +679,13 @@ impl crate::traits::device::DeviceAccessors for Device {
         self.type_.clone()
     }
     fn specialization(&self) -> &[DeviceSpecialization] {
-        self.specialization.as_deref().unwrap_or(&[])
+        self.specialization.as_slice()
     }
     fn version(&self) -> &[DeviceVersion] {
-        self.version.as_deref().unwrap_or(&[])
+        self.version.as_slice()
     }
     fn property(&self) -> &[DeviceProperty] {
-        self.property.as_deref().unwrap_or(&[])
+        self.property.as_slice()
     }
     fn patient(&self) -> Option<Reference> {
         self.patient.clone()
@@ -697,7 +694,7 @@ impl crate::traits::device::DeviceAccessors for Device {
         self.owner.clone()
     }
     fn contact(&self) -> &[ContactPoint] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
@@ -706,10 +703,10 @@ impl crate::traits::device::DeviceAccessors for Device {
         self.url.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn safety(&self) -> &[CodeableConcept] {
-        self.safety.as_deref().unwrap_or(&[])
+        self.safety.as_slice()
     }
     fn parent(&self) -> Option<Reference> {
         self.parent.clone()
@@ -722,12 +719,12 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_definition(self, value: Reference) -> Self {
@@ -737,12 +734,12 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_udi_carrier(self, value: Vec<DeviceUdicarrier>) -> Self {
         let mut resource = self.clone();
-        resource.udi_carrier = Some(value);
+        resource.udi_carrier = value;
         resource
     }
     fn add_udi_carrier(self, item: DeviceUdicarrier) -> Self {
         let mut resource = self.clone();
-        resource.udi_carrier.get_or_insert_with(Vec::new).push(item);
+        resource.udi_carrier.push(item);
         resource
     }
     fn set_status(self, value: DeviceStatus) -> Self {
@@ -752,15 +749,12 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_status_reason(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.status_reason = Some(value);
+        resource.status_reason = value;
         resource
     }
     fn add_status_reason(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .status_reason
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.status_reason.push(item);
         resource
     }
     fn set_distinct_identifier(self, value: String) -> Self {
@@ -795,12 +789,12 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_device_name(self, value: Vec<DeviceDevicename>) -> Self {
         let mut resource = self.clone();
-        resource.device_name = Some(value);
+        resource.device_name = value;
         resource
     }
     fn add_device_name(self, item: DeviceDevicename) -> Self {
         let mut resource = self.clone();
-        resource.device_name.get_or_insert_with(Vec::new).push(item);
+        resource.device_name.push(item);
         resource
     }
     fn set_model_number(self, value: String) -> Self {
@@ -820,35 +814,32 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_specialization(self, value: Vec<DeviceSpecialization>) -> Self {
         let mut resource = self.clone();
-        resource.specialization = Some(value);
+        resource.specialization = value;
         resource
     }
     fn add_specialization(self, item: DeviceSpecialization) -> Self {
         let mut resource = self.clone();
-        resource
-            .specialization
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.specialization.push(item);
         resource
     }
     fn set_version(self, value: Vec<DeviceVersion>) -> Self {
         let mut resource = self.clone();
-        resource.version = Some(value);
+        resource.version = value;
         resource
     }
     fn add_version(self, item: DeviceVersion) -> Self {
         let mut resource = self.clone();
-        resource.version.get_or_insert_with(Vec::new).push(item);
+        resource.version.push(item);
         resource
     }
     fn set_property(self, value: Vec<DeviceProperty>) -> Self {
         let mut resource = self.clone();
-        resource.property = Some(value);
+        resource.property = value;
         resource
     }
     fn add_property(self, item: DeviceProperty) -> Self {
         let mut resource = self.clone();
-        resource.property.get_or_insert_with(Vec::new).push(item);
+        resource.property.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -863,12 +854,12 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_contact(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -883,22 +874,22 @@ impl crate::traits::device::DeviceMutators for Device {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_safety(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.safety = Some(value);
+        resource.safety = value;
         resource
     }
     fn add_safety(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.safety.get_or_insert_with(Vec::new).push(item);
+        resource.safety.push(item);
         resource
     }
     fn set_parent(self, value: Reference) -> Self {
@@ -910,19 +901,19 @@ impl crate::traits::device::DeviceMutators for Device {
 
 impl crate::traits::device::DeviceExistence for Device {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_definition(&self) -> bool {
         self.definition.is_some()
     }
     fn has_udi_carrier(&self) -> bool {
-        self.udi_carrier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.udi_carrier.is_empty()
     }
     fn has_status(&self) -> bool {
         self.status.is_some()
     }
     fn has_status_reason(&self) -> bool {
-        self.status_reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.status_reason.is_empty()
     }
     fn has_distinct_identifier(&self) -> bool {
         self.distinct_identifier.is_some()
@@ -943,7 +934,7 @@ impl crate::traits::device::DeviceExistence for Device {
         self.serial_number.is_some()
     }
     fn has_device_name(&self) -> bool {
-        self.device_name.as_ref().is_some_and(|v| !v.is_empty())
+        !self.device_name.is_empty()
     }
     fn has_model_number(&self) -> bool {
         self.model_number.is_some()
@@ -955,13 +946,13 @@ impl crate::traits::device::DeviceExistence for Device {
         self.type_.is_some()
     }
     fn has_specialization(&self) -> bool {
-        self.specialization.as_ref().is_some_and(|v| !v.is_empty())
+        !self.specialization.is_empty()
     }
     fn has_version(&self) -> bool {
-        self.version.as_ref().is_some_and(|v| !v.is_empty())
+        !self.version.is_empty()
     }
     fn has_property(&self) -> bool {
-        self.property.as_ref().is_some_and(|v| !v.is_empty())
+        !self.property.is_empty()
     }
     fn has_patient(&self) -> bool {
         self.patient.is_some()
@@ -970,7 +961,7 @@ impl crate::traits::device::DeviceExistence for Device {
         self.owner.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
@@ -979,10 +970,10 @@ impl crate::traits::device::DeviceExistence for Device {
         self.url.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_safety(&self) -> bool {
-        self.safety.as_ref().is_some_and(|v| !v.is_empty())
+        !self.safety.is_empty()
     }
     fn has_parent(&self) -> bool {
         self.parent.is_some()

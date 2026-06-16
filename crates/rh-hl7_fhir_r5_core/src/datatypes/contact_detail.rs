@@ -23,7 +23,8 @@ pub struct ContactDetail {
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
     pub _name: Option<Element>,
     /// Contact details for individual or organization
-    pub telecom: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub telecom: Vec<ContactPoint>,
 }
 
 impl Default for ContactDetail {

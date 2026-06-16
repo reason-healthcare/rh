@@ -63,20 +63,23 @@ pub struct ImplementationGuide {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the implementation guide
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for implementation guide (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Use and/or publishing restrictions
     pub copyright: Option<StringType>,
     /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
@@ -96,16 +99,39 @@ pub struct ImplementationGuide {
     pub fhir_version: Vec<FHIRVersion>,
     /// Extension element for the 'fhirVersion' primitive field. Contains metadata and extensions.
     #[serde(rename = "_fhirVersion")]
-    pub _fhir_version: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _fhir_version: Vec<Element>,
     /// Another Implementation guide this depends on
     #[serde(rename = "dependsOn")]
-    pub depends_on: Option<Vec<ImplementationGuideDependson>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub depends_on: Vec<ImplementationGuideDependson>,
     /// Profiles that apply globally
-    pub global: Option<Vec<ImplementationGuideGlobal>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub global: Vec<ImplementationGuideGlobal>,
     /// Information needed to build the IG
     pub definition: Option<ImplementationGuideDefinition>,
     /// Information about an assembled IG
     pub manifest: Option<ImplementationGuideManifest>,
+}
+/// ImplementationGuide nested structure for the 'definition' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDefinition {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Grouping used to present related resources in the IG
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub grouping: Vec<ImplementationGuideDefinitionGrouping>,
+    /// Page/Section in the Guide
+    pub page: Option<ImplementationGuideDefinitionPage>,
+    /// Defines how IG is built by tools
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<ImplementationGuideDefinitionParameter>,
+    /// Resource in the implementation guide
+    pub resource: Vec<ImplementationGuideDefinitionResource>,
+    /// A template for building resources
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub template: Vec<ImplementationGuideDefinitionTemplate>,
 }
 /// ImplementationGuideDefinition nested structure for the 'grouping' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,83 +147,6 @@ pub struct ImplementationGuideDefinitionGrouping {
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
-}
-/// ImplementationGuideManifest nested structure for the 'resource' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideManifestResource {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Location of the resource
-    pub reference: Reference,
-    /// Is an example/What is this an example of? (boolean)
-    #[serde(rename = "exampleBoolean")]
-    pub example_boolean: Option<BooleanType>,
-    /// Is an example/What is this an example of? (canonical)
-    #[serde(rename = "exampleCanonical")]
-    pub example_canonical: Option<StringType>,
-    /// Relative path for page in IG
-    #[serde(rename = "relativePath")]
-    pub relative_path: Option<StringType>,
-    /// Extension element for the 'relativePath' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_relativePath")]
-    pub _relative_path: Option<Element>,
-}
-/// ImplementationGuideDefinition nested structure for the 'template' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinitionTemplate {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of template specified
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// The source location for the template
-    pub source: StringType,
-    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
-    pub _source: Option<Element>,
-    /// The scope in which the template applies
-    pub scope: Option<StringType>,
-    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
-    pub _scope: Option<Element>,
-}
-/// ImplementationGuide nested structure for the 'global' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideGlobal {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type this profile applies to
-    #[serde(rename = "type")]
-    pub type_: ResourceTypes,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Profile that all resources must conform to
-    pub profile: StringType,
-    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
-    pub _profile: Option<Element>,
-}
-/// ImplementationGuide nested structure for the 'dependsOn' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDependson {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identity of the IG that this depends on
-    pub uri: StringType,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-    /// NPM Package name for IG this depends on
-    #[serde(rename = "packageId")]
-    pub package_id: Option<StringType>,
-    /// Extension element for the 'packageId' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_packageId")]
-    pub _package_id: Option<Element>,
-    /// Version of the IG
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
 }
 /// ImplementationGuideDefinition nested structure for the 'page' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,7 +169,8 @@ pub struct ImplementationGuideDefinitionPage {
     /// Extension element for the 'generation' primitive field. Contains metadata and extensions.
     pub _generation: Option<Element>,
     /// Nested Pages / Sections
-    pub page: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub page: Vec<StringType>,
 }
 /// ImplementationGuideDefinition nested structure for the 'parameter' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,48 +187,6 @@ pub struct ImplementationGuideDefinitionParameter {
     /// Extension element for the 'value' primitive field. Contains metadata and extensions.
     pub _value: Option<Element>,
 }
-/// ImplementationGuideManifest nested structure for the 'page' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideManifestPage {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// HTML page name
-    pub name: StringType,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// Title of the page, for references
-    pub title: Option<StringType>,
-    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
-    pub _title: Option<Element>,
-    /// Anchor available on the page
-    pub anchor: Option<Vec<StringType>>,
-    /// Extension element for the 'anchor' primitive field. Contains metadata and extensions.
-    pub _anchor: Option<Element>,
-}
-/// ImplementationGuide nested structure for the 'manifest' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideManifest {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// HTML page within the parent IG
-    pub page: Option<Vec<ImplementationGuideManifestPage>>,
-    /// Resource in the implementation guide
-    pub resource: Vec<ImplementationGuideManifestResource>,
-    /// Location of rendered implementation guide
-    pub rendering: Option<StringType>,
-    /// Extension element for the 'rendering' primitive field. Contains metadata and extensions.
-    pub _rendering: Option<Element>,
-    /// Image within the IG
-    pub image: Option<Vec<StringType>>,
-    /// Extension element for the 'image' primitive field. Contains metadata and extensions.
-    pub _image: Option<Element>,
-    /// Additional linkable file in IG
-    pub other: Option<Vec<StringType>>,
-    /// Extension element for the 'other' primitive field. Contains metadata and extensions.
-    pub _other: Option<Element>,
-}
 /// ImplementationGuideDefinition nested structure for the 'resource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImplementationGuideDefinitionResource {
@@ -289,10 +197,12 @@ pub struct ImplementationGuideDefinitionResource {
     pub reference: Reference,
     /// Versions this applies to (if different to IG)
     #[serde(rename = "fhirVersion")]
-    pub fhir_version: Option<Vec<FHIRVersion>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fhir_version: Vec<FHIRVersion>,
     /// Extension element for the 'fhirVersion' primitive field. Contains metadata and extensions.
     #[serde(rename = "_fhirVersion")]
-    pub _fhir_version: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _fhir_version: Vec<Element>,
     /// Human Name for the resource
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -314,22 +224,131 @@ pub struct ImplementationGuideDefinitionResource {
     #[serde(rename = "_groupingId")]
     pub _grouping_id: Option<Element>,
 }
-/// ImplementationGuide nested structure for the 'definition' field
+/// ImplementationGuideDefinition nested structure for the 'template' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImplementationGuideDefinition {
+pub struct ImplementationGuideDefinitionTemplate {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// Type of template specified
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// The source location for the template
+    pub source: StringType,
+    /// Extension element for the 'source' primitive field. Contains metadata and extensions.
+    pub _source: Option<Element>,
+    /// The scope in which the template applies
+    pub scope: Option<StringType>,
+    /// Extension element for the 'scope' primitive field. Contains metadata and extensions.
+    pub _scope: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'dependsOn' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideDependson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identity of the IG that this depends on
+    pub uri: StringType,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// NPM Package name for IG this depends on
+    #[serde(rename = "packageId")]
+    pub package_id: Option<StringType>,
+    /// Extension element for the 'packageId' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_packageId")]
+    pub _package_id: Option<Element>,
+    /// Version of the IG
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'global' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideGlobal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type this profile applies to
+    #[serde(rename = "type")]
+    pub type_: ResourceTypes,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Profile that all resources must conform to
+    pub profile: StringType,
+    /// Extension element for the 'profile' primitive field. Contains metadata and extensions.
+    pub _profile: Option<Element>,
+}
+/// ImplementationGuide nested structure for the 'manifest' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifest {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// HTML page within the parent IG
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub page: Vec<ImplementationGuideManifestPage>,
     /// Resource in the implementation guide
-    pub resource: Vec<ImplementationGuideDefinitionResource>,
-    /// Grouping used to present related resources in the IG
-    pub grouping: Option<Vec<ImplementationGuideDefinitionGrouping>>,
-    /// Defines how IG is built by tools
-    pub parameter: Option<Vec<ImplementationGuideDefinitionParameter>>,
-    /// A template for building resources
-    pub template: Option<Vec<ImplementationGuideDefinitionTemplate>>,
-    /// Page/Section in the Guide
-    pub page: Option<ImplementationGuideDefinitionPage>,
+    pub resource: Vec<ImplementationGuideManifestResource>,
+    /// Location of rendered implementation guide
+    pub rendering: Option<StringType>,
+    /// Extension element for the 'rendering' primitive field. Contains metadata and extensions.
+    pub _rendering: Option<Element>,
+    /// Image within the IG
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image: Vec<StringType>,
+    /// Extension element for the 'image' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _image: Vec<Element>,
+    /// Additional linkable file in IG
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub other: Vec<StringType>,
+    /// Extension element for the 'other' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _other: Vec<Element>,
+}
+/// ImplementationGuideManifest nested structure for the 'page' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifestPage {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// HTML page name
+    pub name: StringType,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// Title of the page, for references
+    pub title: Option<StringType>,
+    /// Extension element for the 'title' primitive field. Contains metadata and extensions.
+    pub _title: Option<Element>,
+    /// Anchor available on the page
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub anchor: Vec<StringType>,
+    /// Extension element for the 'anchor' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _anchor: Vec<Element>,
+}
+/// ImplementationGuideManifest nested structure for the 'resource' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImplementationGuideManifestResource {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Location of the resource
+    pub reference: Reference,
+    /// Is an example/What is this an example of? (boolean)
+    #[serde(rename = "exampleBoolean")]
+    pub example_boolean: Option<BooleanType>,
+    /// Is an example/What is this an example of? (canonical)
+    #[serde(rename = "exampleCanonical")]
+    pub example_canonical: Option<StringType>,
+    /// Relative path for page in IG
+    #[serde(rename = "relativePath")]
+    pub relative_path: Option<StringType>,
+    /// Extension element for the 'relativePath' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_relativePath")]
+    pub _relative_path: Option<Element>,
 }
 
 impl Default for ImplementationGuide {
@@ -373,6 +392,19 @@ impl Default for ImplementationGuide {
     }
 }
 
+impl Default for ImplementationGuideDefinition {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            grouping: Default::default(),
+            page: Default::default(),
+            parameter: Default::default(),
+            resource: Vec::new(),
+            template: Default::default(),
+        }
+    }
+}
+
 impl Default for ImplementationGuideDefinitionGrouping {
     fn default() -> Self {
         Self {
@@ -381,59 +413,6 @@ impl Default for ImplementationGuideDefinitionGrouping {
             _name: Default::default(),
             description: Default::default(),
             _description: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideManifestResource {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            reference: Default::default(),
-            example_boolean: Default::default(),
-            example_canonical: Default::default(),
-            relative_path: Default::default(),
-            _relative_path: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideDefinitionTemplate {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            source: Default::default(),
-            _source: Default::default(),
-            scope: Default::default(),
-            _scope: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideGlobal {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            profile: StringType::default(),
-            _profile: Default::default(),
-        }
-    }
-}
-
-impl Default for ImplementationGuideDependson {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            uri: Default::default(),
-            _uri: Default::default(),
-            package_id: Default::default(),
-            _package_id: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
         }
     }
 }
@@ -465,16 +444,61 @@ impl Default for ImplementationGuideDefinitionParameter {
     }
 }
 
-impl Default for ImplementationGuideManifestPage {
+impl Default for ImplementationGuideDefinitionResource {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            reference: Default::default(),
+            fhir_version: Default::default(),
+            _fhir_version: Default::default(),
             name: Default::default(),
             _name: Default::default(),
-            title: Default::default(),
-            _title: Default::default(),
-            anchor: Default::default(),
-            _anchor: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            example_boolean: Default::default(),
+            example_canonical: Default::default(),
+            grouping_id: Default::default(),
+            _grouping_id: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDefinitionTemplate {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            source: Default::default(),
+            _source: Default::default(),
+            scope: Default::default(),
+            _scope: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideDependson {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            uri: Default::default(),
+            _uri: Default::default(),
+            package_id: Default::default(),
+            _package_id: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+        }
+    }
+}
+
+impl Default for ImplementationGuideGlobal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            profile: StringType::default(),
+            _profile: Default::default(),
         }
     }
 }
@@ -495,34 +519,29 @@ impl Default for ImplementationGuideManifest {
     }
 }
 
-impl Default for ImplementationGuideDefinitionResource {
+impl Default for ImplementationGuideManifestPage {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            reference: Default::default(),
-            fhir_version: Default::default(),
-            _fhir_version: Default::default(),
             name: Default::default(),
             _name: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            example_boolean: Default::default(),
-            example_canonical: Default::default(),
-            grouping_id: Default::default(),
-            _grouping_id: Default::default(),
+            title: Default::default(),
+            _title: Default::default(),
+            anchor: Default::default(),
+            _anchor: Default::default(),
         }
     }
 }
 
-impl Default for ImplementationGuideDefinition {
+impl Default for ImplementationGuideManifestResource {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            resource: Vec::new(),
-            grouping: Default::default(),
-            parameter: Default::default(),
-            template: Default::default(),
-            page: Default::default(),
+            reference: Default::default(),
+            example_boolean: Default::default(),
+            example_canonical: Default::default(),
+            relative_path: Default::default(),
+            _relative_path: Default::default(),
         }
     }
 }
@@ -982,13 +1001,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ImplementationG
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -1003,44 +1022,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ImplementationGu
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1050,16 +1057,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ImplementationG
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -1089,16 +1093,16 @@ impl crate::traits::implementation_guide::ImplementationGuideAccessors for Imple
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn copyright(&self) -> Option<StringType> {
         self.copyright.clone()
@@ -1113,10 +1117,10 @@ impl crate::traits::implementation_guide::ImplementationGuideAccessors for Imple
         &self.fhir_version
     }
     fn depends_on(&self) -> &[ImplementationGuideDependson] {
-        self.depends_on.as_deref().unwrap_or(&[])
+        self.depends_on.as_slice()
     }
     fn global(&self) -> &[ImplementationGuideGlobal] {
-        self.global.as_deref().unwrap_or(&[])
+        self.global.as_slice()
     }
     fn definition(&self) -> Option<ImplementationGuideDefinition> {
         self.definition.clone()
@@ -1172,12 +1176,12 @@ impl crate::traits::implementation_guide::ImplementationGuideMutators for Implem
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1187,25 +1191,22 @@ impl crate::traits::implementation_guide::ImplementationGuideMutators for Implem
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_copyright(self, value: String) -> Self {
@@ -1235,22 +1236,22 @@ impl crate::traits::implementation_guide::ImplementationGuideMutators for Implem
     }
     fn set_depends_on(self, value: Vec<ImplementationGuideDependson>) -> Self {
         let mut resource = self.clone();
-        resource.depends_on = Some(value);
+        resource.depends_on = value;
         resource
     }
     fn add_depends_on(self, item: ImplementationGuideDependson) -> Self {
         let mut resource = self.clone();
-        resource.depends_on.get_or_insert_with(Vec::new).push(item);
+        resource.depends_on.push(item);
         resource
     }
     fn set_global(self, value: Vec<ImplementationGuideGlobal>) -> Self {
         let mut resource = self.clone();
-        resource.global = Some(value);
+        resource.global = value;
         resource
     }
     fn add_global(self, item: ImplementationGuideGlobal) -> Self {
         let mut resource = self.clone();
-        resource.global.get_or_insert_with(Vec::new).push(item);
+        resource.global.push(item);
         resource
     }
     fn set_definition(self, value: ImplementationGuideDefinition) -> Self {
@@ -1291,16 +1292,16 @@ impl crate::traits::implementation_guide::ImplementationGuideExistence for Imple
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_copyright(&self) -> bool {
         self.copyright.is_some()
@@ -1315,10 +1316,10 @@ impl crate::traits::implementation_guide::ImplementationGuideExistence for Imple
         !self.fhir_version.is_empty()
     }
     fn has_depends_on(&self) -> bool {
-        self.depends_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.depends_on.is_empty()
     }
     fn has_global(&self) -> bool {
-        self.global.as_ref().is_some_and(|v| !v.is_empty())
+        !self.global.is_empty()
     }
     fn has_definition(&self) -> bool {
         self.definition.is_some()

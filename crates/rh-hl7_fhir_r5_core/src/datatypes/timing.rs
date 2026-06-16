@@ -30,9 +30,11 @@ pub struct Timing {
     #[serde(flatten)]
     pub base: BackboneType,
     /// When the event occurs
-    pub event: Option<Vec<DateTimeType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub event: Vec<DateTimeType>,
     /// Extension element for the 'event' primitive field. Contains metadata and extensions.
-    pub _event: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _event: Vec<Element>,
     /// When the event is to occur
     pub repeat: Option<Element>,
     /// C | BID | TID | QID | AM | PM | QD | QOD | +
@@ -122,20 +124,26 @@ pub struct TimingRepeat {
     pub _period_unit: Option<Element>,
     /// mon | tue | wed | thu | fri | sat | sun
     #[serde(rename = "dayOfWeek")]
-    pub day_of_week: Option<Vec<DaysOfWeek>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub day_of_week: Vec<DaysOfWeek>,
     /// Extension element for the 'dayOfWeek' primitive field. Contains metadata and extensions.
     #[serde(rename = "_dayOfWeek")]
-    pub _day_of_week: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _day_of_week: Vec<Element>,
     /// Time of day for action
     #[serde(rename = "timeOfDay")]
-    pub time_of_day: Option<Vec<TimeType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub time_of_day: Vec<TimeType>,
     /// Extension element for the 'timeOfDay' primitive field. Contains metadata and extensions.
     #[serde(rename = "_timeOfDay")]
-    pub _time_of_day: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _time_of_day: Vec<Element>,
     /// Code for time period of occurrence
-    pub when: Option<Vec<EventTiming>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub when: Vec<EventTiming>,
     /// Extension element for the 'when' primitive field. Contains metadata and extensions.
-    pub _when: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _when: Vec<Element>,
     /// Minutes from event (before or after)
     pub offset: Option<UnsignedIntType>,
     /// Extension element for the 'offset' primitive field. Contains metadata and extensions.

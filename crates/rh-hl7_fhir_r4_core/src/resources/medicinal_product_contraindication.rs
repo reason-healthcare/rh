@@ -20,22 +20,27 @@ pub struct MedicinalProductContraindication {
     #[serde(flatten)]
     pub base: DomainResource,
     /// The medication for which this is an indication
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// The disease, symptom or procedure for the contraindication
     pub disease: Option<CodeableConcept>,
     /// The status of the disease or symptom for the contraindication
     #[serde(rename = "diseaseStatus")]
     pub disease_status: Option<CodeableConcept>,
     /// A comorbidity (concurrent condition) or coinfection
-    pub comorbidity: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comorbidity: Vec<CodeableConcept>,
     /// Information about the use of the medicinal product in relation to other therapies as part of the indication
     #[serde(rename = "therapeuticIndication")]
-    pub therapeutic_indication: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub therapeutic_indication: Vec<Reference>,
     /// Information about the use of the medicinal product in relation to other therapies described as part of the indication
     #[serde(rename = "otherTherapy")]
-    pub other_therapy: Option<Vec<MedicinalProductContraindicationOthertherapy>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub other_therapy: Vec<MedicinalProductContraindicationOthertherapy>,
     /// The population group to which this applies
-    pub population: Option<Vec<Population>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub population: Vec<Population>,
 }
 /// MedicinalProductContraindication nested structure for the 'otherTherapy' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -268,13 +273,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -289,44 +294,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -336,16 +329,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -353,7 +343,7 @@ impl crate::traits::medicinal_product_contraindication::MedicinalProductContrain
     for MedicinalProductContraindication
 {
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn disease(&self) -> Option<CodeableConcept> {
         self.disease.clone()
@@ -362,16 +352,16 @@ impl crate::traits::medicinal_product_contraindication::MedicinalProductContrain
         self.disease_status.clone()
     }
     fn comorbidity(&self) -> &[CodeableConcept] {
-        self.comorbidity.as_deref().unwrap_or(&[])
+        self.comorbidity.as_slice()
     }
     fn therapeutic_indication(&self) -> &[Reference] {
-        self.therapeutic_indication.as_deref().unwrap_or(&[])
+        self.therapeutic_indication.as_slice()
     }
     fn other_therapy(&self) -> &[MedicinalProductContraindicationOthertherapy] {
-        self.other_therapy.as_deref().unwrap_or(&[])
+        self.other_therapy.as_slice()
     }
     fn population(&self) -> &[Population] {
-        self.population.as_deref().unwrap_or(&[])
+        self.population.as_slice()
     }
 }
 
@@ -383,12 +373,12 @@ impl crate::traits::medicinal_product_contraindication::MedicinalProductContrain
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_disease(self, value: CodeableConcept) -> Self {
@@ -403,48 +393,42 @@ impl crate::traits::medicinal_product_contraindication::MedicinalProductContrain
     }
     fn set_comorbidity(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.comorbidity = Some(value);
+        resource.comorbidity = value;
         resource
     }
     fn add_comorbidity(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.comorbidity.get_or_insert_with(Vec::new).push(item);
+        resource.comorbidity.push(item);
         resource
     }
     fn set_therapeutic_indication(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.therapeutic_indication = Some(value);
+        resource.therapeutic_indication = value;
         resource
     }
     fn add_therapeutic_indication(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .therapeutic_indication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.therapeutic_indication.push(item);
         resource
     }
     fn set_other_therapy(self, value: Vec<MedicinalProductContraindicationOthertherapy>) -> Self {
         let mut resource = self.clone();
-        resource.other_therapy = Some(value);
+        resource.other_therapy = value;
         resource
     }
     fn add_other_therapy(self, item: MedicinalProductContraindicationOthertherapy) -> Self {
         let mut resource = self.clone();
-        resource
-            .other_therapy
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.other_therapy.push(item);
         resource
     }
     fn set_population(self, value: Vec<Population>) -> Self {
         let mut resource = self.clone();
-        resource.population = Some(value);
+        resource.population = value;
         resource
     }
     fn add_population(self, item: Population) -> Self {
         let mut resource = self.clone();
-        resource.population.get_or_insert_with(Vec::new).push(item);
+        resource.population.push(item);
         resource
     }
 }
@@ -453,7 +437,7 @@ impl crate::traits::medicinal_product_contraindication::MedicinalProductContrain
     for MedicinalProductContraindication
 {
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_disease(&self) -> bool {
         self.disease.is_some()
@@ -462,18 +446,16 @@ impl crate::traits::medicinal_product_contraindication::MedicinalProductContrain
         self.disease_status.is_some()
     }
     fn has_comorbidity(&self) -> bool {
-        self.comorbidity.as_ref().is_some_and(|v| !v.is_empty())
+        !self.comorbidity.is_empty()
     }
     fn has_therapeutic_indication(&self) -> bool {
-        self.therapeutic_indication
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.therapeutic_indication.is_empty()
     }
     fn has_other_therapy(&self) -> bool {
-        self.other_therapy.as_ref().is_some_and(|v| !v.is_empty())
+        !self.other_therapy.is_empty()
     }
     fn has_population(&self) -> bool {
-        self.population.as_ref().is_some_and(|v| !v.is_empty())
+        !self.population.is_empty()
     }
 }
 

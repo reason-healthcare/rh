@@ -26,7 +26,8 @@ pub struct BodyStructure {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Bodystructure identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Whether this record is in active use
     pub active: Option<BooleanType>,
     /// Extension element for the 'active' primitive field. Contains metadata and extensions.
@@ -42,13 +43,15 @@ pub struct BodyStructure {
     pub included_structure: Vec<BodyStructureIncludedstructure>,
     /// Excluded anatomic locations(s)
     #[serde(rename = "excludedStructure")]
-    pub excluded_structure: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub excluded_structure: Vec<StringType>,
     /// Text description
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Attached images
-    pub image: Option<Vec<Attachment>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image: Vec<Attachment>,
     /// Who this is about
     pub patient: Reference,
 }
@@ -60,8 +63,8 @@ pub struct BodyStructureIncludedstructure {
     pub base: BackboneElement,
     /// Landmark relative location
     #[serde(rename = "bodyLandmarkOrientation")]
-    pub body_landmark_orientation:
-        Option<Vec<BodyStructureIncludedstructureBodylandmarkorientation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub body_landmark_orientation: Vec<BodyStructureIncludedstructureBodylandmarkorientation>,
     /// Code that represents the included structure
     ///
     /// Binding: example (SNOMED CT Body site concepts)
@@ -98,7 +101,8 @@ pub struct BodyStructureIncludedstructure {
     pub laterality: Option<CodeableConcept>,
     /// Cartesian reference for structure
     #[serde(rename = "spatialReference")]
-    pub spatial_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spatial_reference: Vec<Reference>,
     /// Code that represents the included structure qualifier
     ///
     /// Binding: example (Concepts modifying the anatomic location.)
@@ -115,33 +119,8 @@ pub struct BodyStructureIncludedstructure {
     /// - `255561001`: Medial
     /// - `49370004`: Lateral
     /// - ... and 5 more values
-    pub qualifier: Option<Vec<CodeableConcept>>,
-}
-/// BodyStructureIncludedstructureBodylandmarkorientation nested structure for the 'distanceFromLandmark' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BodyStructureIncludedstructureBodylandmarkorientationDistancefromlandmark {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Measurement device
-    ///
-    /// Binding: example (Codes to identify medical devices.)
-    ///
-    /// Available values:
-    /// - `528391`: Blood Pressure Cuff
-    /// - `528404`: Body Composition Analyzer
-    /// - `528425`: Cardiovascular Device
-    /// - `528402`: Coagulation meter
-    /// - `528409`: Continuous Glucose Monitor
-    /// - `528390`: Electro cardiograph
-    /// - `528457`: Generic 20601 Device
-    /// - `528401`: Glucose Monitor
-    /// - `528455`: Independent Activity/Living Hub
-    /// - `528403`: Insulin Pump
-    /// - ... and 18 more values
-    pub device: Option<Vec<CodeableReference>>,
-    /// Measured distance from body landmark
-    pub value: Option<Vec<Quantity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualifier: Vec<CodeableConcept>,
 }
 /// BodyStructureIncludedstructure nested structure for the 'bodyLandmarkOrientation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,7 +145,8 @@ pub struct BodyStructureIncludedstructureBodylandmarkorientation {
     /// - `371203008`: Distal interphalangeal joint of fifth toe
     /// - ... and 30 more values
     #[serde(rename = "landmarkDescription")]
-    pub landmark_description: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub landmark_description: Vec<CodeableConcept>,
     /// Clockface orientation
     ///
     /// Binding: example (Select SNOMED CT codes. A set of codes that describe a things orientation based on a hourly positions of a clock face.)
@@ -184,7 +164,8 @@ pub struct BodyStructureIncludedstructureBodylandmarkorientation {
     /// - `260322009`: 10 o'clock position
     /// - ... and 2 more values
     #[serde(rename = "clockFacePosition")]
-    pub clock_face_position: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub clock_face_position: Vec<CodeableConcept>,
     /// Relative landmark surface orientation
     ///
     /// Binding: preferred (Select SNOMED code system values. The surface area a body location is in relation to a landmark.)
@@ -202,7 +183,36 @@ pub struct BodyStructureIncludedstructureBodylandmarkorientation {
     /// - `49370004`: Lateral
     /// - ... and 5 more values
     #[serde(rename = "surfaceOrientation")]
-    pub surface_orientation: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub surface_orientation: Vec<CodeableConcept>,
+}
+/// BodyStructureIncludedstructureBodylandmarkorientation nested structure for the 'distanceFromLandmark' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BodyStructureIncludedstructureBodylandmarkorientationDistancefromlandmark {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Measurement device
+    ///
+    /// Binding: example (Codes to identify medical devices.)
+    ///
+    /// Available values:
+    /// - `528391`: Blood Pressure Cuff
+    /// - `528404`: Body Composition Analyzer
+    /// - `528425`: Cardiovascular Device
+    /// - `528402`: Coagulation meter
+    /// - `528409`: Continuous Glucose Monitor
+    /// - `528390`: Electro cardiograph
+    /// - `528457`: Generic 20601 Device
+    /// - `528401`: Glucose Monitor
+    /// - `528455`: Independent Activity/Living Hub
+    /// - `528403`: Insulin Pump
+    /// - ... and 18 more values
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub device: Vec<CodeableReference>,
+    /// Measured distance from body landmark
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value: Vec<Quantity>,
 }
 
 impl Default for BodyStructure {
@@ -236,16 +246,6 @@ impl Default for BodyStructureIncludedstructure {
     }
 }
 
-impl Default for BodyStructureIncludedstructureBodylandmarkorientationDistancefromlandmark {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            device: Default::default(),
-            value: Default::default(),
-        }
-    }
-}
-
 impl Default for BodyStructureIncludedstructureBodylandmarkorientation {
     fn default() -> Self {
         Self {
@@ -253,6 +253,16 @@ impl Default for BodyStructureIncludedstructureBodylandmarkorientation {
             landmark_description: Default::default(),
             clock_face_position: Default::default(),
             surface_orientation: Default::default(),
+        }
+    }
+}
+
+impl Default for BodyStructureIncludedstructureBodylandmarkorientationDistancefromlandmark {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            device: Default::default(),
+            value: Default::default(),
         }
     }
 }
@@ -395,13 +405,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for BodyStructure {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -416,44 +426,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for BodyStructure {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -463,22 +461,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for BodyStructure {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::body_structure::BodyStructureAccessors for BodyStructure {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn active(&self) -> Option<BooleanType> {
         self.active
@@ -493,7 +488,7 @@ impl crate::traits::body_structure::BodyStructureAccessors for BodyStructure {
         self.description.clone()
     }
     fn image(&self) -> &[Attachment] {
-        self.image.as_deref().unwrap_or(&[])
+        self.image.as_slice()
     }
     fn patient(&self) -> Reference {
         self.patient.clone()
@@ -506,12 +501,12 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_active(self, value: bool) -> Self {
@@ -536,15 +531,12 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
     }
     fn set_excluded_structure(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.excluded_structure = Some(value);
+        resource.excluded_structure = value;
         resource
     }
     fn add_excluded_structure(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .excluded_structure
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.excluded_structure.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -554,12 +546,12 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
     }
     fn set_image(self, value: Vec<Attachment>) -> Self {
         let mut resource = self.clone();
-        resource.image = Some(value);
+        resource.image = value;
         resource
     }
     fn add_image(self, item: Attachment) -> Self {
         let mut resource = self.clone();
-        resource.image.get_or_insert_with(Vec::new).push(item);
+        resource.image.push(item);
         resource
     }
     fn set_patient(self, value: Reference) -> Self {
@@ -571,7 +563,7 @@ impl crate::traits::body_structure::BodyStructureMutators for BodyStructure {
 
 impl crate::traits::body_structure::BodyStructureExistence for BodyStructure {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_active(&self) -> bool {
         self.active.is_some()
@@ -583,15 +575,13 @@ impl crate::traits::body_structure::BodyStructureExistence for BodyStructure {
         !self.included_structure.is_empty()
     }
     fn has_excluded_structure(&self) -> bool {
-        self.excluded_structure
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.excluded_structure.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_image(&self) -> bool {
-        self.image.as_ref().is_some_and(|v| !v.is_empty())
+        !self.image.is_empty()
     }
     fn has_patient(&self) -> bool {
         true

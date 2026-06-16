@@ -37,7 +37,8 @@ pub struct ValueSet {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the value set (business identifier)
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the value set
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -73,20 +74,23 @@ pub struct ValueSet {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the value set
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for value set (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Indicates whether or not any change to the content logical definition may occur
     pub immutable: Option<BooleanType>,
     /// Extension element for the 'immutable' primitive field. Contains metadata and extensions.
@@ -125,18 +129,24 @@ pub struct ValueSet {
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/definition-topic
-    pub topic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub topic: Vec<CodeableConcept>,
     /// Who authored the ValueSet
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the ValueSet
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the ValueSet
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the ValueSet
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// Additional documentation, citations, etc
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Content logical definition of the value set (CLD)
     pub compose: Option<ValueSetCompose>,
     /// Used when the value set is "expanded"
@@ -163,11 +173,145 @@ pub struct ValueSetCompose {
     /// Extension element for the 'inactive' primitive field. Contains metadata and extensions.
     pub _inactive: Option<Element>,
     /// Explicitly exclude codes from a code system or other value sets
-    pub exclude: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude: Vec<StringType>,
     /// Property to return if client doesn't override
-    pub property: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<StringType>,
+    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _property: Vec<Element>,
+}
+/// ValueSetCompose nested structure for the 'include' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetComposeInclude {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The system the codes come from
+    pub system: Option<StringType>,
+    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
+    pub _system: Option<Element>,
+    /// Specific version of the code system referred to
+    pub version: Option<StringType>,
+    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
+    pub _version: Option<Element>,
+    /// Select the contents included in this value set
+    #[serde(rename = "valueSet")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_set: Vec<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _value_set: Vec<Element>,
+    /// A copyright statement for the specific code system included in the value set
+    pub copyright: Option<StringType>,
+    /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
+    pub _copyright: Option<Element>,
+}
+/// ValueSetComposeInclude nested structure for the 'concept' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetComposeIncludeConcept {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code or expression from system
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Text to display for this code for this value set in this valueset
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+}
+/// ValueSetComposeIncludeConcept nested structure for the 'designation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetComposeIncludeConceptDesignation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Human language of the designation
+    pub language: Option<StringType>,
+    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
+    pub _language: Option<Element>,
+    /// Types of uses of designations
+    ///
+    /// Binding: extensible (Details of how a designation would be used.)
+    ///
+    /// Available values:
+    /// - `900000000000003001`
+    /// - `900000000000013009`
+    #[serde(rename = "use")]
+    pub use_: Option<Coding>,
+    /// Additional ways how this designation would be used
+    ///
+    /// Binding: extensible (Details of how a designation would be used.)
+    ///
+    /// Available values:
+    /// - `900000000000003001`
+    /// - `900000000000013009`
+    #[serde(rename = "additionalUse")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_use: Vec<Coding>,
+    /// The text value for this designation
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ValueSetComposeInclude nested structure for the 'filter' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetComposeIncludeFilter {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A property/filter defined by the code system
+    pub property: StringType,
     /// Extension element for the 'property' primitive field. Contains metadata and extensions.
     pub _property: Option<Element>,
+    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | child-of | descendent-leaf | exists
+    pub op: FilterOperator,
+    /// Extension element for the 'op' primitive field. Contains metadata and extensions.
+    pub _op: Option<Element>,
+    /// Code from the system, or regex criteria, or boolean value for exists
+    pub value: StringType,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ValueSet nested structure for the 'expansion' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetExpansion {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Codes in the value set
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contains: Vec<ValueSetExpansionContains>,
+    /// Parameter that controlled the expansion process
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<ValueSetExpansionParameter>,
+    /// Additional information supplied about each concept
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<ValueSetExpansionProperty>,
+    /// Identifies the value set expansion (business identifier)
+    pub identifier: Option<StringType>,
+    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
+    pub _identifier: Option<Element>,
+    /// Opaque urls for paging through expansion results
+    pub next: Option<StringType>,
+    /// Extension element for the 'next' primitive field. Contains metadata and extensions.
+    pub _next: Option<Element>,
+    /// Time ValueSet expansion happened
+    pub timestamp: DateTimeType,
+    /// Extension element for the 'timestamp' primitive field. Contains metadata and extensions.
+    pub _timestamp: Option<Element>,
+    /// Total number of codes in the expansion
+    pub total: Option<IntegerType>,
+    /// Extension element for the 'total' primitive field. Contains metadata and extensions.
+    pub _total: Option<Element>,
+    /// Offset at which this resource starts
+    pub offset: Option<IntegerType>,
+    /// Extension element for the 'offset' primitive field. Contains metadata and extensions.
+    pub _offset: Option<Element>,
 }
 /// ValueSetExpansion nested structure for the 'contains' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,9 +345,11 @@ pub struct ValueSetExpansionContains {
     /// Extension element for the 'display' primitive field. Contains metadata and extensions.
     pub _display: Option<Element>,
     /// Additional representations for this item
-    pub designation: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub designation: Vec<StringType>,
     /// Codes contained under this entry
-    pub contains: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contains: Vec<StringType>,
 }
 /// ValueSetExpansionContains nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -234,6 +380,38 @@ pub struct ValueSetExpansionContainsProperty {
     #[serde(rename = "valueDateTime")]
     pub value_date_time: DateTimeType,
     /// Value of the property for this concept (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+}
+/// ValueSetExpansionContainsProperty nested structure for the 'subProperty' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetExpansionContainsPropertySubproperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to ValueSet.expansion.property.code
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Value of the subproperty for this concept (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+    /// Value of the subproperty for this concept (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Value of the subproperty for this concept (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Value of the subproperty for this concept (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Value of the subproperty for this concept (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Value of the subproperty for this concept (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Value of the subproperty for this concept (decimal)
     #[serde(rename = "valueDecimal")]
     pub value_decimal: DecimalType,
 }
@@ -269,53 +447,20 @@ pub struct ValueSetExpansionParameter {
     #[serde(rename = "valueDateTime")]
     pub value_date_time: Option<DateTimeType>,
 }
-/// ValueSet nested structure for the 'expansion' field
+/// ValueSetExpansion nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetExpansion {
+pub struct ValueSetExpansionProperty {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Additional information supplied about each concept
-    pub property: Option<Vec<ValueSetExpansionProperty>>,
-    /// Codes in the value set
-    pub contains: Option<Vec<ValueSetExpansionContains>>,
-    /// Parameter that controlled the expansion process
-    pub parameter: Option<Vec<ValueSetExpansionParameter>>,
-    /// Identifies the value set expansion (business identifier)
-    pub identifier: Option<StringType>,
-    /// Extension element for the 'identifier' primitive field. Contains metadata and extensions.
-    pub _identifier: Option<Element>,
-    /// Opaque urls for paging through expansion results
-    pub next: Option<StringType>,
-    /// Extension element for the 'next' primitive field. Contains metadata and extensions.
-    pub _next: Option<Element>,
-    /// Time ValueSet expansion happened
-    pub timestamp: DateTimeType,
-    /// Extension element for the 'timestamp' primitive field. Contains metadata and extensions.
-    pub _timestamp: Option<Element>,
-    /// Total number of codes in the expansion
-    pub total: Option<IntegerType>,
-    /// Extension element for the 'total' primitive field. Contains metadata and extensions.
-    pub _total: Option<Element>,
-    /// Offset at which this resource starts
-    pub offset: Option<IntegerType>,
-    /// Extension element for the 'offset' primitive field. Contains metadata and extensions.
-    pub _offset: Option<Element>,
-}
-/// ValueSetComposeInclude nested structure for the 'concept' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetComposeIncludeConcept {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code or expression from system
+    /// Identifies the property on the concepts, and when referred to in operations
     pub code: StringType,
     /// Extension element for the 'code' primitive field. Contains metadata and extensions.
     pub _code: Option<Element>,
-    /// Text to display for this code for this value set in this valueset
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
+    /// Formal identifier for the property
+    pub uri: Option<StringType>,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
 }
 /// ValueSet nested structure for the 'scope' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -335,130 +480,6 @@ pub struct ValueSetScope {
     /// Extension element for the 'exclusionCriteria' primitive field. Contains metadata and extensions.
     #[serde(rename = "_exclusionCriteria")]
     pub _exclusion_criteria: Option<Element>,
-}
-/// ValueSetCompose nested structure for the 'include' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetComposeInclude {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The system the codes come from
-    pub system: Option<StringType>,
-    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
-    pub _system: Option<Element>,
-    /// Specific version of the code system referred to
-    pub version: Option<StringType>,
-    /// Extension element for the 'version' primitive field. Contains metadata and extensions.
-    pub _version: Option<Element>,
-    /// Select the contents included in this value set
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<Vec<StringType>>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-    /// A copyright statement for the specific code system included in the value set
-    pub copyright: Option<StringType>,
-    /// Extension element for the 'copyright' primitive field. Contains metadata and extensions.
-    pub _copyright: Option<Element>,
-}
-/// ValueSetExpansionContainsProperty nested structure for the 'subProperty' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetExpansionContainsPropertySubproperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to ValueSet.expansion.property.code
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Value of the subproperty for this concept (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-    /// Value of the subproperty for this concept (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Value of the subproperty for this concept (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Value of the subproperty for this concept (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Value of the subproperty for this concept (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Value of the subproperty for this concept (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Value of the subproperty for this concept (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-}
-/// ValueSetComposeInclude nested structure for the 'filter' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetComposeIncludeFilter {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A property/filter defined by the code system
-    pub property: StringType,
-    /// Extension element for the 'property' primitive field. Contains metadata and extensions.
-    pub _property: Option<Element>,
-    /// = | is-a | descendent-of | is-not-a | regex | in | not-in | generalizes | child-of | descendent-leaf | exists
-    pub op: FilterOperator,
-    /// Extension element for the 'op' primitive field. Contains metadata and extensions.
-    pub _op: Option<Element>,
-    /// Code from the system, or regex criteria, or boolean value for exists
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// ValueSetComposeIncludeConcept nested structure for the 'designation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetComposeIncludeConceptDesignation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Human language of the designation
-    pub language: Option<StringType>,
-    /// Extension element for the 'language' primitive field. Contains metadata and extensions.
-    pub _language: Option<Element>,
-    /// Types of uses of designations
-    ///
-    /// Binding: extensible (Details of how a designation would be used.)
-    ///
-    /// Available values:
-    /// - `900000000000003001`
-    /// - `900000000000013009`
-    #[serde(rename = "use")]
-    pub use_: Option<Coding>,
-    /// Additional ways how this designation would be used
-    ///
-    /// Binding: extensible (Details of how a designation would be used.)
-    ///
-    /// Available values:
-    /// - `900000000000003001`
-    /// - `900000000000013009`
-    #[serde(rename = "additionalUse")]
-    pub additional_use: Option<Vec<Coding>>,
-    /// The text value for this designation
-    pub value: StringType,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// ValueSetExpansion nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueSetExpansionProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies the property on the concepts, and when referred to in operations
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Formal identifier for the property
-    pub uri: Option<StringType>,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
 }
 
 impl Default for ValueSet {
@@ -531,6 +552,83 @@ impl Default for ValueSetCompose {
     }
 }
 
+impl Default for ValueSetComposeInclude {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            system: Default::default(),
+            _system: Default::default(),
+            version: Default::default(),
+            _version: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+            copyright: Default::default(),
+            _copyright: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetComposeIncludeConcept {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetComposeIncludeConceptDesignation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            language: Default::default(),
+            _language: Default::default(),
+            use_: Default::default(),
+            additional_use: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetComposeIncludeFilter {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            property: Default::default(),
+            _property: Default::default(),
+            op: Default::default(),
+            _op: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetExpansion {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            contains: Default::default(),
+            parameter: Default::default(),
+            property: Default::default(),
+            identifier: Default::default(),
+            _identifier: Default::default(),
+            next: Default::default(),
+            _next: Default::default(),
+            timestamp: DateTimeType::default(),
+            _timestamp: Default::default(),
+            total: Default::default(),
+            _total: Default::default(),
+            offset: Default::default(),
+            _offset: Default::default(),
+        }
+    }
+}
+
 impl Default for ValueSetExpansionContains {
     fn default() -> Self {
         Self {
@@ -570,84 +668,6 @@ impl Default for ValueSetExpansionContainsProperty {
     }
 }
 
-impl Default for ValueSetExpansionParameter {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            name: Default::default(),
-            _name: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_integer: Default::default(),
-            value_decimal: Default::default(),
-            value_uri: Default::default(),
-            value_code: Default::default(),
-            value_date_time: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetExpansion {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            property: Default::default(),
-            contains: Default::default(),
-            parameter: Default::default(),
-            identifier: Default::default(),
-            _identifier: Default::default(),
-            next: Default::default(),
-            _next: Default::default(),
-            timestamp: DateTimeType::default(),
-            _timestamp: Default::default(),
-            total: Default::default(),
-            _total: Default::default(),
-            offset: Default::default(),
-            _offset: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetComposeIncludeConcept {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetScope {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            inclusion_criteria: Default::default(),
-            _inclusion_criteria: Default::default(),
-            exclusion_criteria: Default::default(),
-            _exclusion_criteria: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetComposeInclude {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            system: Default::default(),
-            _system: Default::default(),
-            version: Default::default(),
-            _version: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-            copyright: Default::default(),
-            _copyright: Default::default(),
-        }
-    }
-}
-
 impl Default for ValueSetExpansionContainsPropertySubproperty {
     fn default() -> Self {
         Self {
@@ -665,30 +685,19 @@ impl Default for ValueSetExpansionContainsPropertySubproperty {
     }
 }
 
-impl Default for ValueSetComposeIncludeFilter {
+impl Default for ValueSetExpansionParameter {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            property: Default::default(),
-            _property: Default::default(),
-            op: Default::default(),
-            _op: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for ValueSetComposeIncludeConceptDesignation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            language: Default::default(),
-            _language: Default::default(),
-            use_: Default::default(),
-            additional_use: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
+            name: Default::default(),
+            _name: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_integer: Default::default(),
+            value_decimal: Default::default(),
+            value_uri: Default::default(),
+            value_code: Default::default(),
+            value_date_time: Default::default(),
         }
     }
 }
@@ -701,6 +710,18 @@ impl Default for ValueSetExpansionProperty {
             _code: Default::default(),
             uri: Default::default(),
             _uri: Default::default(),
+        }
+    }
+}
+
+impl Default for ValueSetScope {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            inclusion_criteria: Default::default(),
+            _inclusion_criteria: Default::default(),
+            exclusion_criteria: Default::default(),
+            _exclusion_criteria: Default::default(),
         }
     }
 }
@@ -1136,13 +1157,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ValueSet {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -1157,44 +1178,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ValueSet {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1204,16 +1213,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ValueSet {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -1222,7 +1228,7 @@ impl crate::traits::value_set::ValueSetAccessors for ValueSet {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -1246,16 +1252,16 @@ impl crate::traits::value_set::ValueSetAccessors for ValueSet {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn immutable(&self) -> Option<BooleanType> {
         self.immutable
@@ -1279,22 +1285,22 @@ impl crate::traits::value_set::ValueSetAccessors for ValueSet {
         self.effective_period.clone()
     }
     fn topic(&self) -> &[CodeableConcept] {
-        self.topic.as_deref().unwrap_or(&[])
+        self.topic.as_slice()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn compose(&self) -> Option<ValueSetCompose> {
         self.compose.clone()
@@ -1318,12 +1324,12 @@ impl crate::traits::value_set::ValueSetMutators for ValueSet {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1363,12 +1369,12 @@ impl crate::traits::value_set::ValueSetMutators for ValueSet {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1378,25 +1384,22 @@ impl crate::traits::value_set::ValueSetMutators for ValueSet {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_immutable(self, value: bool) -> Self {
@@ -1436,65 +1439,62 @@ impl crate::traits::value_set::ValueSetMutators for ValueSet {
     }
     fn set_topic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.topic = Some(value);
+        resource.topic = value;
         resource
     }
     fn add_topic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.topic.get_or_insert_with(Vec::new).push(item);
+        resource.topic.push(item);
         resource
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_compose(self, value: ValueSetCompose) -> Self {
@@ -1522,7 +1522,7 @@ impl crate::traits::value_set::ValueSetExistence for ValueSet {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1546,16 +1546,16 @@ impl crate::traits::value_set::ValueSetExistence for ValueSet {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_immutable(&self) -> bool {
         self.immutable.is_some()
@@ -1579,24 +1579,22 @@ impl crate::traits::value_set::ValueSetExistence for ValueSet {
         self.effective_period.is_some()
     }
     fn has_topic(&self) -> bool {
-        self.topic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.topic.is_empty()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_compose(&self) -> bool {
         self.compose.is_some()

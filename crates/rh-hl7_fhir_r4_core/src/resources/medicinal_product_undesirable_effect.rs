@@ -19,7 +19,8 @@ pub struct MedicinalProductUndesirableEffect {
     #[serde(flatten)]
     pub base: DomainResource,
     /// The medication for which this is an indication
-    pub subject: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject: Vec<Reference>,
     /// The symptom, condition or undesirable effect
     #[serde(rename = "symptomConditionEffect")]
     pub symptom_condition_effect: Option<CodeableConcept>,
@@ -29,7 +30,8 @@ pub struct MedicinalProductUndesirableEffect {
     #[serde(rename = "frequencyOfOccurrence")]
     pub frequency_of_occurrence: Option<CodeableConcept>,
     /// The population group to which this applies
-    pub population: Option<Vec<Population>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub population: Vec<Population>,
 }
 
 impl Default for MedicinalProductUndesirableEffect {
@@ -198,13 +200,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -219,44 +221,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -266,16 +256,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -283,7 +270,7 @@ impl crate::traits::medicinal_product_undesirable_effect::MedicinalProductUndesi
     for MedicinalProductUndesirableEffect
 {
     fn subject(&self) -> &[Reference] {
-        self.subject.as_deref().unwrap_or(&[])
+        self.subject.as_slice()
     }
     fn symptom_condition_effect(&self) -> Option<CodeableConcept> {
         self.symptom_condition_effect.clone()
@@ -295,7 +282,7 @@ impl crate::traits::medicinal_product_undesirable_effect::MedicinalProductUndesi
         self.frequency_of_occurrence.clone()
     }
     fn population(&self) -> &[Population] {
-        self.population.as_deref().unwrap_or(&[])
+        self.population.as_slice()
     }
 }
 
@@ -307,12 +294,12 @@ impl crate::traits::medicinal_product_undesirable_effect::MedicinalProductUndesi
     }
     fn set_subject(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.subject = Some(value);
+        resource.subject = value;
         resource
     }
     fn add_subject(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.subject.get_or_insert_with(Vec::new).push(item);
+        resource.subject.push(item);
         resource
     }
     fn set_symptom_condition_effect(self, value: CodeableConcept) -> Self {
@@ -332,12 +319,12 @@ impl crate::traits::medicinal_product_undesirable_effect::MedicinalProductUndesi
     }
     fn set_population(self, value: Vec<Population>) -> Self {
         let mut resource = self.clone();
-        resource.population = Some(value);
+        resource.population = value;
         resource
     }
     fn add_population(self, item: Population) -> Self {
         let mut resource = self.clone();
-        resource.population.get_or_insert_with(Vec::new).push(item);
+        resource.population.push(item);
         resource
     }
 }
@@ -346,7 +333,7 @@ impl crate::traits::medicinal_product_undesirable_effect::MedicinalProductUndesi
     for MedicinalProductUndesirableEffect
 {
     fn has_subject(&self) -> bool {
-        self.subject.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject.is_empty()
     }
     fn has_symptom_condition_effect(&self) -> bool {
         self.symptom_condition_effect.is_some()
@@ -358,7 +345,7 @@ impl crate::traits::medicinal_product_undesirable_effect::MedicinalProductUndesi
         self.frequency_of_occurrence.is_some()
     }
     fn has_population(&self) -> bool {
-        self.population.as_ref().is_some_and(|v| !v.is_empty())
+        !self.population.is_empty()
     }
 }
 

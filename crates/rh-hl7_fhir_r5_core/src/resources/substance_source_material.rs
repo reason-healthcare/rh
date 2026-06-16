@@ -40,49 +40,55 @@ pub struct SubstanceSourceMaterial {
     pub _organism_name: Option<Element>,
     /// The parent of the herbal drug Ginkgo biloba, Leaf is the substance ID of the substance (fresh) of Ginkgo biloba L. or Ginkgo biloba L. (Whole plant)
     #[serde(rename = "parentSubstanceId")]
-    pub parent_substance_id: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parent_substance_id: Vec<Identifier>,
     /// The parent substance of the Herbal Drug, or Herbal preparation
     #[serde(rename = "parentSubstanceName")]
-    pub parent_substance_name: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parent_substance_name: Vec<StringType>,
     /// Extension element for the 'parentSubstanceName' primitive field. Contains metadata and extensions.
     #[serde(rename = "_parentSubstanceName")]
-    pub _parent_substance_name: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _parent_substance_name: Vec<Element>,
     /// The country where the plant material is harvested or the countries where the plasma is sourced from as laid down in accordance with the Plasma Master File. For “Plasma-derived substances” the attribute country of origin provides information about the countries used for the manufacturing of the Cryopoor plama or Crioprecipitate
     #[serde(rename = "countryOfOrigin")]
-    pub country_of_origin: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country_of_origin: Vec<CodeableConcept>,
     /// The place/region where the plant is harvested or the places/regions where the animal source material has its habitat
     #[serde(rename = "geographicalLocation")]
-    pub geographical_location: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub geographical_location: Vec<StringType>,
     /// Extension element for the 'geographicalLocation' primitive field. Contains metadata and extensions.
     #[serde(rename = "_geographicalLocation")]
-    pub _geographical_location: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _geographical_location: Vec<Element>,
     /// Stage of life for animals, plants, insects and microorganisms. This information shall be provided only when the substance is significantly different in these stages (e.g. foetal bovine serum)
     #[serde(rename = "developmentStage")]
     pub development_stage: Option<CodeableConcept>,
     /// Many complex materials are fractions of parts of plants, animals, or minerals. Fraction elements are often necessary to define both Substances and Specified Group 1 Substances. For substances derived from Plants, fraction information will be captured at the Substance information level ( . Oils, Juices and Exudates). Additional information for Extracts, such as extraction solvent composition, will be captured at the Specified Substance Group 1 information level. For plasma-derived products fraction information will be captured at the Substance and the Specified Substance Group 1 levels
     #[serde(rename = "fractionDescription")]
-    pub fraction_description: Option<Vec<SubstanceSourceMaterialFractiondescription>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fraction_description: Vec<SubstanceSourceMaterialFractiondescription>,
     /// This subclause describes the organism which the substance is derived from. For vaccines, the parent organism shall be specified based on these subclause elements. As an example, full taxonomy will be described for the Substance Name: ., Leaf
     pub organism: Option<SubstanceSourceMaterialOrganism>,
     /// To do
     #[serde(rename = "partDescription")]
-    pub part_description: Option<Vec<SubstanceSourceMaterialPartdescription>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_description: Vec<SubstanceSourceMaterialPartdescription>,
 }
-/// SubstanceSourceMaterialOrganism nested structure for the 'author' field
+/// SubstanceSourceMaterial nested structure for the 'fractionDescription' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialOrganismAuthor {
+pub struct SubstanceSourceMaterialFractiondescription {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The type of author of an organism species shall be specified. The parenthetical author of an organism species refers to the first author who published the plant/animal name (of any rank). The primary author of an organism species refers to the first author(s), who validly published the plant/animal name
-    #[serde(rename = "authorType")]
-    pub author_type: Option<CodeableConcept>,
-    /// The author of an organism species shall be specified. The author year of an organism shall also be specified when applicable; refers to the year in which the first author(s) published the infraspecific plant/animal name (of any rank)
-    #[serde(rename = "authorDescription")]
-    pub author_description: Option<StringType>,
-    /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_authorDescription")]
-    pub _author_description: Option<Element>,
+    /// This element is capturing information about the fraction of a plant part, or human plasma for fractionation
+    pub fraction: Option<StringType>,
+    /// Extension element for the 'fraction' primitive field. Contains metadata and extensions.
+    pub _fraction: Option<Element>,
+    /// The specific type of the material constituting the component. For Herbal preparations the particulars of the extracts (liquid/dry) is described in Specified Substance Group 1
+    #[serde(rename = "materialType")]
+    pub material_type: Option<CodeableConcept>,
 }
 /// SubstanceSourceMaterial nested structure for the 'organism' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,10 +96,11 @@ pub struct SubstanceSourceMaterialOrganism {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
+    /// 4.9.13.6.1 Author type (Conditional)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<SubstanceSourceMaterialOrganismAuthor>,
     /// 4.9.13.8.1 Hybrid species maternal organism ID (Optional)
     pub hybrid: Option<SubstanceSourceMaterialOrganismHybrid>,
-    /// 4.9.13.6.1 Author type (Conditional)
-    pub author: Option<Vec<SubstanceSourceMaterialOrganismAuthor>>,
     /// 4.9.13.7.1 Kingdom (Conditional)
     #[serde(rename = "organismGeneral")]
     pub organism_general: Option<SubstanceSourceMaterialOrganismOrganismgeneral>,
@@ -113,46 +120,21 @@ pub struct SubstanceSourceMaterialOrganism {
     #[serde(rename = "_intraspecificDescription")]
     pub _intraspecific_description: Option<Element>,
 }
-/// SubstanceSourceMaterialOrganism nested structure for the 'organismGeneral' field
+/// SubstanceSourceMaterialOrganism nested structure for the 'author' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialOrganismOrganismgeneral {
+pub struct SubstanceSourceMaterialOrganismAuthor {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// The kingdom of an organism shall be specified
-    pub kingdom: Option<CodeableConcept>,
-    /// The phylum of an organism shall be specified
-    pub phylum: Option<CodeableConcept>,
-    /// The class of an organism shall be specified
-    pub class: Option<CodeableConcept>,
-    /// The order of an organism shall be specified,
-    pub order: Option<CodeableConcept>,
-}
-/// SubstanceSourceMaterial nested structure for the 'partDescription' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialPartdescription {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Entity of anatomical origin of source material within an organism
-    pub part: Option<CodeableConcept>,
-    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
-    #[serde(rename = "partLocation")]
-    pub part_location: Option<CodeableConcept>,
-}
-/// SubstanceSourceMaterial nested structure for the 'fractionDescription' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubstanceSourceMaterialFractiondescription {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// This element is capturing information about the fraction of a plant part, or human plasma for fractionation
-    pub fraction: Option<StringType>,
-    /// Extension element for the 'fraction' primitive field. Contains metadata and extensions.
-    pub _fraction: Option<Element>,
-    /// The specific type of the material constituting the component. For Herbal preparations the particulars of the extracts (liquid/dry) is described in Specified Substance Group 1
-    #[serde(rename = "materialType")]
-    pub material_type: Option<CodeableConcept>,
+    /// The type of author of an organism species shall be specified. The parenthetical author of an organism species refers to the first author who published the plant/animal name (of any rank). The primary author of an organism species refers to the first author(s), who validly published the plant/animal name
+    #[serde(rename = "authorType")]
+    pub author_type: Option<CodeableConcept>,
+    /// The author of an organism species shall be specified. The author year of an organism shall also be specified when applicable; refers to the year in which the first author(s) published the infraspecific plant/animal name (of any rank)
+    #[serde(rename = "authorDescription")]
+    pub author_description: Option<StringType>,
+    /// Extension element for the 'authorDescription' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_authorDescription")]
+    pub _author_description: Option<Element>,
 }
 /// SubstanceSourceMaterialOrganism nested structure for the 'hybrid' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,6 +170,33 @@ pub struct SubstanceSourceMaterialOrganismHybrid {
     #[serde(rename = "hybridType")]
     pub hybrid_type: Option<CodeableConcept>,
 }
+/// SubstanceSourceMaterialOrganism nested structure for the 'organismGeneral' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialOrganismOrganismgeneral {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The kingdom of an organism shall be specified
+    pub kingdom: Option<CodeableConcept>,
+    /// The phylum of an organism shall be specified
+    pub phylum: Option<CodeableConcept>,
+    /// The class of an organism shall be specified
+    pub class: Option<CodeableConcept>,
+    /// The order of an organism shall be specified,
+    pub order: Option<CodeableConcept>,
+}
+/// SubstanceSourceMaterial nested structure for the 'partDescription' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubstanceSourceMaterialPartdescription {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Entity of anatomical origin of source material within an organism
+    pub part: Option<CodeableConcept>,
+    /// The detailed anatomic location when the part can be extracted from different anatomical locations of the organism. Multiple alternative locations may apply
+    #[serde(rename = "partLocation")]
+    pub part_location: Option<CodeableConcept>,
+}
 
 impl Default for SubstanceSourceMaterial {
     fn default() -> Self {
@@ -213,6 +222,34 @@ impl Default for SubstanceSourceMaterial {
     }
 }
 
+impl Default for SubstanceSourceMaterialFractiondescription {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            fraction: Default::default(),
+            _fraction: Default::default(),
+            material_type: Default::default(),
+        }
+    }
+}
+
+impl Default for SubstanceSourceMaterialOrganism {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            author: Default::default(),
+            hybrid: Default::default(),
+            organism_general: Default::default(),
+            family: Default::default(),
+            genus: Default::default(),
+            species: Default::default(),
+            intraspecific_type: Default::default(),
+            intraspecific_description: Default::default(),
+            _intraspecific_description: Default::default(),
+        }
+    }
+}
+
 impl Default for SubstanceSourceMaterialOrganismAuthor {
     fn default() -> Self {
         Self {
@@ -224,19 +261,19 @@ impl Default for SubstanceSourceMaterialOrganismAuthor {
     }
 }
 
-impl Default for SubstanceSourceMaterialOrganism {
+impl Default for SubstanceSourceMaterialOrganismHybrid {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            hybrid: Default::default(),
-            author: Default::default(),
-            organism_general: Default::default(),
-            family: Default::default(),
-            genus: Default::default(),
-            species: Default::default(),
-            intraspecific_type: Default::default(),
-            intraspecific_description: Default::default(),
-            _intraspecific_description: Default::default(),
+            maternal_organism_id: Default::default(),
+            _maternal_organism_id: Default::default(),
+            maternal_organism_name: Default::default(),
+            _maternal_organism_name: Default::default(),
+            paternal_organism_id: Default::default(),
+            _paternal_organism_id: Default::default(),
+            paternal_organism_name: Default::default(),
+            _paternal_organism_name: Default::default(),
+            hybrid_type: Default::default(),
         }
     }
 }
@@ -259,34 +296,6 @@ impl Default for SubstanceSourceMaterialPartdescription {
             base: BackboneElement::default(),
             part: Default::default(),
             part_location: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSourceMaterialFractiondescription {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            fraction: Default::default(),
-            _fraction: Default::default(),
-            material_type: Default::default(),
-        }
-    }
-}
-
-impl Default for SubstanceSourceMaterialOrganismHybrid {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            maternal_organism_id: Default::default(),
-            _maternal_organism_id: Default::default(),
-            maternal_organism_name: Default::default(),
-            _maternal_organism_name: Default::default(),
-            paternal_organism_id: Default::default(),
-            _paternal_organism_id: Default::default(),
-            paternal_organism_name: Default::default(),
-            _paternal_organism_name: Default::default(),
-            hybrid_type: Default::default(),
         }
     }
 }
@@ -675,13 +684,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SubstanceSource
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -696,44 +705,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceSourceM
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -743,16 +740,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SubstanceSource
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -775,28 +769,28 @@ impl crate::traits::substance_source_material::SubstanceSourceMaterialAccessors
         self.organism_name.clone()
     }
     fn parent_substance_id(&self) -> &[Identifier] {
-        self.parent_substance_id.as_deref().unwrap_or(&[])
+        self.parent_substance_id.as_slice()
     }
     fn parent_substance_name(&self) -> &[StringType] {
-        self.parent_substance_name.as_deref().unwrap_or(&[])
+        self.parent_substance_name.as_slice()
     }
     fn country_of_origin(&self) -> &[CodeableConcept] {
-        self.country_of_origin.as_deref().unwrap_or(&[])
+        self.country_of_origin.as_slice()
     }
     fn geographical_location(&self) -> &[StringType] {
-        self.geographical_location.as_deref().unwrap_or(&[])
+        self.geographical_location.as_slice()
     }
     fn development_stage(&self) -> Option<CodeableConcept> {
         self.development_stage.clone()
     }
     fn fraction_description(&self) -> &[SubstanceSourceMaterialFractiondescription] {
-        self.fraction_description.as_deref().unwrap_or(&[])
+        self.fraction_description.as_slice()
     }
     fn organism(&self) -> Option<SubstanceSourceMaterialOrganism> {
         self.organism.clone()
     }
     fn part_description(&self) -> &[SubstanceSourceMaterialPartdescription] {
-        self.part_description.as_deref().unwrap_or(&[])
+        self.part_description.as_slice()
     }
 }
 
@@ -833,54 +827,42 @@ impl crate::traits::substance_source_material::SubstanceSourceMaterialMutators
     }
     fn set_parent_substance_id(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.parent_substance_id = Some(value);
+        resource.parent_substance_id = value;
         resource
     }
     fn add_parent_substance_id(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource
-            .parent_substance_id
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.parent_substance_id.push(item);
         resource
     }
     fn set_parent_substance_name(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.parent_substance_name = Some(value);
+        resource.parent_substance_name = value;
         resource
     }
     fn add_parent_substance_name(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .parent_substance_name
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.parent_substance_name.push(item);
         resource
     }
     fn set_country_of_origin(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.country_of_origin = Some(value);
+        resource.country_of_origin = value;
         resource
     }
     fn add_country_of_origin(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .country_of_origin
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.country_of_origin.push(item);
         resource
     }
     fn set_geographical_location(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.geographical_location = Some(value);
+        resource.geographical_location = value;
         resource
     }
     fn add_geographical_location(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .geographical_location
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.geographical_location.push(item);
         resource
     }
     fn set_development_stage(self, value: CodeableConcept) -> Self {
@@ -893,15 +875,12 @@ impl crate::traits::substance_source_material::SubstanceSourceMaterialMutators
         value: Vec<SubstanceSourceMaterialFractiondescription>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.fraction_description = Some(value);
+        resource.fraction_description = value;
         resource
     }
     fn add_fraction_description(self, item: SubstanceSourceMaterialFractiondescription) -> Self {
         let mut resource = self.clone();
-        resource
-            .fraction_description
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.fraction_description.push(item);
         resource
     }
     fn set_organism(self, value: SubstanceSourceMaterialOrganism) -> Self {
@@ -911,15 +890,12 @@ impl crate::traits::substance_source_material::SubstanceSourceMaterialMutators
     }
     fn set_part_description(self, value: Vec<SubstanceSourceMaterialPartdescription>) -> Self {
         let mut resource = self.clone();
-        resource.part_description = Some(value);
+        resource.part_description = value;
         resource
     }
     fn add_part_description(self, item: SubstanceSourceMaterialPartdescription) -> Self {
         let mut resource = self.clone();
-        resource
-            .part_description
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.part_description.push(item);
         resource
     }
 }
@@ -943,40 +919,28 @@ impl crate::traits::substance_source_material::SubstanceSourceMaterialExistence
         self.organism_name.is_some()
     }
     fn has_parent_substance_id(&self) -> bool {
-        self.parent_substance_id
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.parent_substance_id.is_empty()
     }
     fn has_parent_substance_name(&self) -> bool {
-        self.parent_substance_name
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.parent_substance_name.is_empty()
     }
     fn has_country_of_origin(&self) -> bool {
-        self.country_of_origin
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.country_of_origin.is_empty()
     }
     fn has_geographical_location(&self) -> bool {
-        self.geographical_location
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.geographical_location.is_empty()
     }
     fn has_development_stage(&self) -> bool {
         self.development_stage.is_some()
     }
     fn has_fraction_description(&self) -> bool {
-        self.fraction_description
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.fraction_description.is_empty()
     }
     fn has_organism(&self) -> bool {
         self.organism.is_some()
     }
     fn has_part_description(&self) -> bool {
-        self.part_description
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.part_description.is_empty()
     }
 }
 

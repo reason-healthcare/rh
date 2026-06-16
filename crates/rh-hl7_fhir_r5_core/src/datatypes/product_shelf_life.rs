@@ -29,7 +29,8 @@ pub struct ProductShelfLife {
     pub period_string: Option<StringType>,
     /// Special precautions for storage, if any, can be specified using an appropriate controlled vocabulary The controlled term and the controlled term identifier shall be specified
     #[serde(rename = "specialPrecautionsForStorage")]
-    pub special_precautions_for_storage: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub special_precautions_for_storage: Vec<CodeableConcept>,
 }
 
 impl Default for ProductShelfLife {

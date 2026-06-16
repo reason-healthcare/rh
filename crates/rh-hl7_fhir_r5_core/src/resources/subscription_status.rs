@@ -37,7 +37,8 @@ pub struct SubscriptionStatus {
     pub events_since_subscription_start: Option<Integer64Type>,
     /// Detailed information about any events relevant to this notification
     #[serde(rename = "notificationEvent")]
-    pub notification_event: Option<Vec<SubscriptionStatusNotificationevent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notification_event: Vec<SubscriptionStatusNotificationevent>,
     /// Reference to the Subscription responsible for this notification
     pub subscription: Reference,
     /// Reference to the SubscriptionTopic this notification relates to
@@ -49,7 +50,8 @@ pub struct SubscriptionStatus {
     /// Binding: example (Codes to represent subscription error details.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/subscription-error
-    pub error: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub error: Vec<CodeableConcept>,
 }
 /// SubscriptionStatus nested structure for the 'notificationEvent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,7 +70,8 @@ pub struct SubscriptionStatusNotificationevent {
     pub focus: Option<Reference>,
     /// References related to the focus resource and/or context of this event
     #[serde(rename = "additionalContext")]
-    pub additional_context: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_context: Vec<Reference>,
 }
 
 impl Default for SubscriptionStatus {
@@ -276,13 +279,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SubscriptionSta
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -297,44 +300,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubscriptionStat
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -344,16 +335,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SubscriptionSta
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -368,7 +356,7 @@ impl crate::traits::subscription_status::SubscriptionStatusAccessors for Subscri
         self.events_since_subscription_start.clone()
     }
     fn notification_event(&self) -> &[SubscriptionStatusNotificationevent] {
-        self.notification_event.as_deref().unwrap_or(&[])
+        self.notification_event.as_slice()
     }
     fn subscription(&self) -> Reference {
         self.subscription.clone()
@@ -377,7 +365,7 @@ impl crate::traits::subscription_status::SubscriptionStatusAccessors for Subscri
         self.topic.clone()
     }
     fn error(&self) -> &[CodeableConcept] {
-        self.error.as_deref().unwrap_or(&[])
+        self.error.as_slice()
     }
 }
 
@@ -402,15 +390,12 @@ impl crate::traits::subscription_status::SubscriptionStatusMutators for Subscrip
     }
     fn set_notification_event(self, value: Vec<SubscriptionStatusNotificationevent>) -> Self {
         let mut resource = self.clone();
-        resource.notification_event = Some(value);
+        resource.notification_event = value;
         resource
     }
     fn add_notification_event(self, item: SubscriptionStatusNotificationevent) -> Self {
         let mut resource = self.clone();
-        resource
-            .notification_event
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.notification_event.push(item);
         resource
     }
     fn set_subscription(self, value: Reference) -> Self {
@@ -425,12 +410,12 @@ impl crate::traits::subscription_status::SubscriptionStatusMutators for Subscrip
     }
     fn set_error(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.error = Some(value);
+        resource.error = value;
         resource
     }
     fn add_error(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.error.get_or_insert_with(Vec::new).push(item);
+        resource.error.push(item);
         resource
     }
 }
@@ -446,9 +431,7 @@ impl crate::traits::subscription_status::SubscriptionStatusExistence for Subscri
         self.events_since_subscription_start.is_some()
     }
     fn has_notification_event(&self) -> bool {
-        self.notification_event
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.notification_event.is_empty()
     }
     fn has_subscription(&self) -> bool {
         true
@@ -457,7 +440,7 @@ impl crate::traits::subscription_status::SubscriptionStatusExistence for Subscri
         self.topic.is_some()
     }
     fn has_error(&self) -> bool {
-        self.error.as_ref().is_some_and(|v| !v.is_empty())
+        !self.error.is_empty()
     }
 }
 

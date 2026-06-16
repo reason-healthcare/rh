@@ -25,7 +25,8 @@ pub struct MedicinalProduct {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier for this product. Could be an MPID
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Regulatory type, e.g. Investigational or Authorized
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
@@ -42,48 +43,108 @@ pub struct MedicinalProduct {
     pub additional_monitoring_indicator: Option<CodeableConcept>,
     /// Whether the Medicinal Product is subject to special measures for regulatory reasons
     #[serde(rename = "specialMeasures")]
-    pub special_measures: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub special_measures: Vec<StringType>,
     /// Extension element for the 'specialMeasures' primitive field. Contains metadata and extensions.
     #[serde(rename = "_specialMeasures")]
-    pub _special_measures: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _special_measures: Vec<Element>,
     /// If authorised for use in children
     #[serde(rename = "paediatricUseIndicator")]
     pub paediatric_use_indicator: Option<CodeableConcept>,
     /// Allows the product to be classified by various systems
     #[serde(rename = "productClassification")]
-    pub product_classification: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub product_classification: Vec<CodeableConcept>,
     /// Marketing status of the medicinal product, in contrast to marketing authorizaton
     #[serde(rename = "marketingStatus")]
-    pub marketing_status: Option<Vec<MarketingStatus>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marketing_status: Vec<MarketingStatus>,
     /// Pharmaceutical aspects of product
     #[serde(rename = "pharmaceuticalProduct")]
-    pub pharmaceutical_product: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pharmaceutical_product: Vec<Reference>,
     /// Package representation for the product
     #[serde(rename = "packagedMedicinalProduct")]
-    pub packaged_medicinal_product: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packaged_medicinal_product: Vec<Reference>,
     /// Supporting documentation, typically for regulatory submission
     #[serde(rename = "attachedDocument")]
-    pub attached_document: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attached_document: Vec<Reference>,
     /// A master file for to the medicinal product (e.g. Pharmacovigilance System Master File)
     #[serde(rename = "masterFile")]
-    pub master_file: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub master_file: Vec<Reference>,
     /// A product specific contact, person (in a role), or an organization
-    pub contact: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<Reference>,
     /// Clinical trials or studies that this product is involved in
     #[serde(rename = "clinicalTrial")]
-    pub clinical_trial: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub clinical_trial: Vec<Reference>,
     /// The product's name, including full name and possibly coded parts
     pub name: Vec<MedicinalProductName>,
     /// Reference to another product, e.g. for linking authorised to investigational product
     #[serde(rename = "crossReference")]
-    pub cross_reference: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cross_reference: Vec<Identifier>,
     /// An operation applied to the product, for manufacturing or adminsitrative purpose
     #[serde(rename = "manufacturingBusinessOperation")]
-    pub manufacturing_business_operation:
-        Option<Vec<MedicinalProductManufacturingbusinessoperation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturing_business_operation: Vec<MedicinalProductManufacturingbusinessoperation>,
     /// Indicates if the medicinal product has an orphan designation for the treatment of a rare disease
     #[serde(rename = "specialDesignation")]
-    pub special_designation: Option<Vec<MedicinalProductSpecialdesignation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub special_designation: Vec<MedicinalProductSpecialdesignation>,
+}
+/// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductManufacturingbusinessoperation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The type of manufacturing operation
+    #[serde(rename = "operationType")]
+    pub operation_type: Option<CodeableConcept>,
+    /// Regulatory authorization reference number
+    #[serde(rename = "authorisationReferenceNumber")]
+    pub authorisation_reference_number: Option<Identifier>,
+    /// Regulatory authorization date
+    #[serde(rename = "effectiveDate")]
+    pub effective_date: Option<DateTimeType>,
+    /// Extension element for the 'effectiveDate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_effectiveDate")]
+    pub _effective_date: Option<Element>,
+    /// To indicate if this proces is commercially confidential
+    #[serde(rename = "confidentialityIndicator")]
+    pub confidentiality_indicator: Option<CodeableConcept>,
+    /// The manufacturer or establishment associated with the process
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
+    /// A regulator which oversees the operation
+    pub regulator: Option<Reference>,
+}
+/// MedicinalProduct nested structure for the 'name' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MedicinalProductName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Country where the name applies
+    #[serde(rename = "countryLanguage")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub country_language: Vec<MedicinalProductNameCountrylanguage>,
+    /// Coding words or phrases of the name
+    #[serde(rename = "namePart")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub name_part: Vec<MedicinalProductNameNamepart>,
+    /// The full product name
+    #[serde(rename = "productName")]
+    pub product_name: StringType,
+    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_productName")]
+    pub _product_name: Option<Element>,
 }
 /// MedicinalProductName nested structure for the 'countryLanguage' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,7 +180,8 @@ pub struct MedicinalProductSpecialdesignation {
     #[serde(flatten)]
     pub base: BackboneElement,
     /// Identifier for the designation, or procedure number
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// The type of special designation, e.g. orphan drug, minor use
     #[serde(rename = "type")]
     pub type_: Option<CodeableConcept>,
@@ -140,51 +202,6 @@ pub struct MedicinalProductSpecialdesignation {
     pub _date: Option<Element>,
     /// Animal species for which this applies
     pub species: Option<CodeableConcept>,
-}
-/// MedicinalProduct nested structure for the 'manufacturingBusinessOperation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductManufacturingbusinessoperation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The type of manufacturing operation
-    #[serde(rename = "operationType")]
-    pub operation_type: Option<CodeableConcept>,
-    /// Regulatory authorization reference number
-    #[serde(rename = "authorisationReferenceNumber")]
-    pub authorisation_reference_number: Option<Identifier>,
-    /// Regulatory authorization date
-    #[serde(rename = "effectiveDate")]
-    pub effective_date: Option<DateTimeType>,
-    /// Extension element for the 'effectiveDate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_effectiveDate")]
-    pub _effective_date: Option<Element>,
-    /// To indicate if this proces is commercially confidential
-    #[serde(rename = "confidentialityIndicator")]
-    pub confidentiality_indicator: Option<CodeableConcept>,
-    /// The manufacturer or establishment associated with the process
-    pub manufacturer: Option<Vec<Reference>>,
-    /// A regulator which oversees the operation
-    pub regulator: Option<Reference>,
-}
-/// MedicinalProduct nested structure for the 'name' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MedicinalProductName {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Country where the name applies
-    #[serde(rename = "countryLanguage")]
-    pub country_language: Option<Vec<MedicinalProductNameCountrylanguage>>,
-    /// Coding words or phrases of the name
-    #[serde(rename = "namePart")]
-    pub name_part: Option<Vec<MedicinalProductNameNamepart>>,
-    /// The full product name
-    #[serde(rename = "productName")]
-    pub product_name: StringType,
-    /// Extension element for the 'productName' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_productName")]
-    pub _product_name: Option<Element>,
 }
 
 impl Default for MedicinalProduct {
@@ -212,6 +229,33 @@ impl Default for MedicinalProduct {
             cross_reference: Default::default(),
             manufacturing_business_operation: Default::default(),
             special_designation: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductManufacturingbusinessoperation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            operation_type: Default::default(),
+            authorisation_reference_number: Default::default(),
+            effective_date: Default::default(),
+            _effective_date: Default::default(),
+            confidentiality_indicator: Default::default(),
+            manufacturer: Default::default(),
+            regulator: Default::default(),
+        }
+    }
+}
+
+impl Default for MedicinalProductName {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            country_language: Default::default(),
+            name_part: Default::default(),
+            product_name: StringType::default(),
+            _product_name: Default::default(),
         }
     }
 }
@@ -251,33 +295,6 @@ impl Default for MedicinalProductSpecialdesignation {
             date: Default::default(),
             _date: Default::default(),
             species: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductManufacturingbusinessoperation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            operation_type: Default::default(),
-            authorisation_reference_number: Default::default(),
-            effective_date: Default::default(),
-            _effective_date: Default::default(),
-            confidentiality_indicator: Default::default(),
-            manufacturer: Default::default(),
-            regulator: Default::default(),
-        }
-    }
-}
-
-impl Default for MedicinalProductName {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            country_language: Default::default(),
-            name_part: Default::default(),
-            product_name: StringType::default(),
-            _product_name: Default::default(),
         }
     }
 }
@@ -590,13 +607,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for MedicinalProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -611,44 +628,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for MedicinalProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -658,22 +663,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for MedicinalProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::medicinal_product::MedicinalProductAccessors for MedicinalProduct {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn type_(&self) -> Option<CodeableConcept> {
         self.type_.clone()
@@ -691,50 +693,48 @@ impl crate::traits::medicinal_product::MedicinalProductAccessors for MedicinalPr
         self.additional_monitoring_indicator.clone()
     }
     fn special_measures(&self) -> &[StringType] {
-        self.special_measures.as_deref().unwrap_or(&[])
+        self.special_measures.as_slice()
     }
     fn paediatric_use_indicator(&self) -> Option<CodeableConcept> {
         self.paediatric_use_indicator.clone()
     }
     fn product_classification(&self) -> &[CodeableConcept] {
-        self.product_classification.as_deref().unwrap_or(&[])
+        self.product_classification.as_slice()
     }
     fn marketing_status(&self) -> &[MarketingStatus] {
-        self.marketing_status.as_deref().unwrap_or(&[])
+        self.marketing_status.as_slice()
     }
     fn pharmaceutical_product(&self) -> &[Reference] {
-        self.pharmaceutical_product.as_deref().unwrap_or(&[])
+        self.pharmaceutical_product.as_slice()
     }
     fn packaged_medicinal_product(&self) -> &[Reference] {
-        self.packaged_medicinal_product.as_deref().unwrap_or(&[])
+        self.packaged_medicinal_product.as_slice()
     }
     fn attached_document(&self) -> &[Reference] {
-        self.attached_document.as_deref().unwrap_or(&[])
+        self.attached_document.as_slice()
     }
     fn master_file(&self) -> &[Reference] {
-        self.master_file.as_deref().unwrap_or(&[])
+        self.master_file.as_slice()
     }
     fn contact(&self) -> &[Reference] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn clinical_trial(&self) -> &[Reference] {
-        self.clinical_trial.as_deref().unwrap_or(&[])
+        self.clinical_trial.as_slice()
     }
     fn name(&self) -> &[MedicinalProductName] {
         &self.name
     }
     fn cross_reference(&self) -> &[Identifier] {
-        self.cross_reference.as_deref().unwrap_or(&[])
+        self.cross_reference.as_slice()
     }
     fn manufacturing_business_operation(
         &self,
     ) -> &[MedicinalProductManufacturingbusinessoperation] {
-        self.manufacturing_business_operation
-            .as_deref()
-            .unwrap_or(&[])
+        self.manufacturing_business_operation.as_slice()
     }
     fn special_designation(&self) -> &[MedicinalProductSpecialdesignation] {
-        self.special_designation.as_deref().unwrap_or(&[])
+        self.special_designation.as_slice()
     }
 }
 
@@ -744,12 +744,12 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_type_(self, value: CodeableConcept) -> Self {
@@ -779,15 +779,12 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
     }
     fn set_special_measures(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.special_measures = Some(value);
+        resource.special_measures = value;
         resource
     }
     fn add_special_measures(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .special_measures
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.special_measures.push(item);
         resource
     }
     fn set_paediatric_use_indicator(self, value: CodeableConcept) -> Self {
@@ -797,100 +794,82 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
     }
     fn set_product_classification(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.product_classification = Some(value);
+        resource.product_classification = value;
         resource
     }
     fn add_product_classification(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .product_classification
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.product_classification.push(item);
         resource
     }
     fn set_marketing_status(self, value: Vec<MarketingStatus>) -> Self {
         let mut resource = self.clone();
-        resource.marketing_status = Some(value);
+        resource.marketing_status = value;
         resource
     }
     fn add_marketing_status(self, item: MarketingStatus) -> Self {
         let mut resource = self.clone();
-        resource
-            .marketing_status
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.marketing_status.push(item);
         resource
     }
     fn set_pharmaceutical_product(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.pharmaceutical_product = Some(value);
+        resource.pharmaceutical_product = value;
         resource
     }
     fn add_pharmaceutical_product(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .pharmaceutical_product
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.pharmaceutical_product.push(item);
         resource
     }
     fn set_packaged_medicinal_product(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.packaged_medicinal_product = Some(value);
+        resource.packaged_medicinal_product = value;
         resource
     }
     fn add_packaged_medicinal_product(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .packaged_medicinal_product
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.packaged_medicinal_product.push(item);
         resource
     }
     fn set_attached_document(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.attached_document = Some(value);
+        resource.attached_document = value;
         resource
     }
     fn add_attached_document(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .attached_document
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.attached_document.push(item);
         resource
     }
     fn set_master_file(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.master_file = Some(value);
+        resource.master_file = value;
         resource
     }
     fn add_master_file(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.master_file.get_or_insert_with(Vec::new).push(item);
+        resource.master_file.push(item);
         resource
     }
     fn set_contact(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_clinical_trial(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.clinical_trial = Some(value);
+        resource.clinical_trial = value;
         resource
     }
     fn add_clinical_trial(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .clinical_trial
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.clinical_trial.push(item);
         resource
     }
     fn set_name(self, value: Vec<MedicinalProductName>) -> Self {
@@ -905,15 +884,12 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
     }
     fn set_cross_reference(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.cross_reference = Some(value);
+        resource.cross_reference = value;
         resource
     }
     fn add_cross_reference(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource
-            .cross_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.cross_reference.push(item);
         resource
     }
     fn set_manufacturing_business_operation(
@@ -921,7 +897,7 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
         value: Vec<MedicinalProductManufacturingbusinessoperation>,
     ) -> Self {
         let mut resource = self.clone();
-        resource.manufacturing_business_operation = Some(value);
+        resource.manufacturing_business_operation = value;
         resource
     }
     fn add_manufacturing_business_operation(
@@ -929,30 +905,24 @@ impl crate::traits::medicinal_product::MedicinalProductMutators for MedicinalPro
         item: MedicinalProductManufacturingbusinessoperation,
     ) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturing_business_operation
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturing_business_operation.push(item);
         resource
     }
     fn set_special_designation(self, value: Vec<MedicinalProductSpecialdesignation>) -> Self {
         let mut resource = self.clone();
-        resource.special_designation = Some(value);
+        resource.special_designation = value;
         resource
     }
     fn add_special_designation(self, item: MedicinalProductSpecialdesignation) -> Self {
         let mut resource = self.clone();
-        resource
-            .special_designation
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.special_designation.push(item);
         resource
     }
 }
 
 impl crate::traits::medicinal_product::MedicinalProductExistence for MedicinalProduct {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_type_(&self) -> bool {
         self.type_.is_some()
@@ -970,62 +940,46 @@ impl crate::traits::medicinal_product::MedicinalProductExistence for MedicinalPr
         self.additional_monitoring_indicator.is_some()
     }
     fn has_special_measures(&self) -> bool {
-        self.special_measures
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.special_measures.is_empty()
     }
     fn has_paediatric_use_indicator(&self) -> bool {
         self.paediatric_use_indicator.is_some()
     }
     fn has_product_classification(&self) -> bool {
-        self.product_classification
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.product_classification.is_empty()
     }
     fn has_marketing_status(&self) -> bool {
-        self.marketing_status
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.marketing_status.is_empty()
     }
     fn has_pharmaceutical_product(&self) -> bool {
-        self.pharmaceutical_product
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.pharmaceutical_product.is_empty()
     }
     fn has_packaged_medicinal_product(&self) -> bool {
-        self.packaged_medicinal_product
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.packaged_medicinal_product.is_empty()
     }
     fn has_attached_document(&self) -> bool {
-        self.attached_document
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.attached_document.is_empty()
     }
     fn has_master_file(&self) -> bool {
-        self.master_file.as_ref().is_some_and(|v| !v.is_empty())
+        !self.master_file.is_empty()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_clinical_trial(&self) -> bool {
-        self.clinical_trial.as_ref().is_some_and(|v| !v.is_empty())
+        !self.clinical_trial.is_empty()
     }
     fn has_name(&self) -> bool {
         !self.name.is_empty()
     }
     fn has_cross_reference(&self) -> bool {
-        self.cross_reference.as_ref().is_some_and(|v| !v.is_empty())
+        !self.cross_reference.is_empty()
     }
     fn has_manufacturing_business_operation(&self) -> bool {
-        self.manufacturing_business_operation
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.manufacturing_business_operation.is_empty()
     }
     fn has_special_designation(&self) -> bool {
-        self.special_designation
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.special_designation.is_empty()
     }
 }
 

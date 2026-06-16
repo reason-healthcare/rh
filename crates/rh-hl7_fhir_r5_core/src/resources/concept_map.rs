@@ -41,7 +41,8 @@ pub struct ConceptMap {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Additional identifier for the concept map
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the concept map
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -77,20 +78,23 @@ pub struct ConceptMap {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the concept map
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for concept map (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this concept map is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -125,23 +129,31 @@ pub struct ConceptMap {
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/definition-topic
-    pub topic: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub topic: Vec<CodeableConcept>,
     /// Who authored the ConceptMap
-    pub author: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub author: Vec<ContactDetail>,
     /// Who edited the ConceptMap
-    pub editor: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub editor: Vec<ContactDetail>,
     /// Who reviewed the ConceptMap
-    pub reviewer: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reviewer: Vec<ContactDetail>,
     /// Who endorsed the ConceptMap
-    pub endorser: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub endorser: Vec<ContactDetail>,
     /// Additional documentation, citations, etc
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Additional properties of the mapping
-    pub property: Option<Vec<ConceptMapProperty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<ConceptMapProperty>,
     /// Definition of an additional attribute to act as a data source or target
     #[serde(rename = "additionalAttribute")]
-    pub additional_attribute: Option<Vec<ConceptMapAdditionalattribute>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_attribute: Vec<ConceptMapAdditionalattribute>,
     /// The source value set that contains the concepts that are being mapped (uri)
     #[serde(rename = "sourceScopeUri")]
     pub source_scope_uri: Option<StringType>,
@@ -155,71 +167,8 @@ pub struct ConceptMap {
     #[serde(rename = "targetScopeCanonical")]
     pub target_scope_canonical: Option<StringType>,
     /// Same source and target systems
-    pub group: Option<Vec<ConceptMapGroup>>,
-}
-/// ConceptMapGroupElementTarget nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTargetProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to ConceptMap.property.code
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Value of the property for this concept (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Value of the property for this concept (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Value of the property for this concept (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Value of the property for this concept (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Value of the property for this concept (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Value of the property for this concept (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Value of the property for this concept (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-}
-/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTargetDependson {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A reference to a mapping attribute defined in ConceptMap.additionalAttribute
-    pub attribute: StringType,
-    /// Extension element for the 'attribute' primitive field. Contains metadata and extensions.
-    pub _attribute: Option<Element>,
-    /// Value of the referenced data element (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: Option<StringType>,
-    /// Value of the referenced data element (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Option<Coding>,
-    /// Value of the referenced data element (string)
-    #[serde(rename = "valueString")]
-    pub value_string: Option<StringType>,
-    /// Value of the referenced data element (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: Option<BooleanType>,
-    /// Value of the referenced data element (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Option<Quantity>,
-    /// The mapping depends on a data element with a value from this value set
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<StringType>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group: Vec<ConceptMapGroup>,
 }
 /// ConceptMap nested structure for the 'additionalAttribute' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -244,100 +193,6 @@ pub struct ConceptMapAdditionalattribute {
     pub type_: ConceptmapAttributeType,
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
-}
-/// ConceptMap nested structure for the 'property' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapProperty {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Identifies the property on the mappings, and when referred to in the $translate operation
-    pub code: StringType,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Formal identifier for the property
-    pub uri: Option<StringType>,
-    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
-    pub _uri: Option<Element>,
-    /// Why the property is defined, and/or what it conveys
-    pub description: Option<StringType>,
-    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
-    pub _description: Option<Element>,
-    /// Coding | string | integer | boolean | dateTime | decimal | code
-    #[serde(rename = "type")]
-    pub type_: ConceptmapPropertyType,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// The CodeSystem from which code values come
-    pub system: Option<StringType>,
-    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
-    pub _system: Option<Element>,
-}
-/// ConceptMapGroup nested structure for the 'unmapped' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupUnmapped {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// use-source-code | fixed | other-map
-    pub mode: ConceptmapUnmappedMode,
-    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
-    pub _mode: Option<Element>,
-    /// Fixed code when mode = fixed
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Display for the code
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Fixed code set when mode = fixed
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<StringType>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-    /// related-to | equivalent | source-is-narrower-than-target | source-is-broader-than-target | not-related-to
-    pub relationship: Option<ConceptMapRelationship>,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// canonical reference to an additional ConceptMap to use for mapping if the source concept is unmapped
-    #[serde(rename = "otherMap")]
-    pub other_map: Option<StringType>,
-    /// Extension element for the 'otherMap' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_otherMap")]
-    pub _other_map: Option<Element>,
-}
-/// ConceptMapGroupElement nested structure for the 'target' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConceptMapGroupElementTarget {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Code that identifies the target element
-    pub code: Option<StringType>,
-    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
-    pub _code: Option<Element>,
-    /// Display for the code
-    pub display: Option<StringType>,
-    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
-    pub _display: Option<Element>,
-    /// Identifies the set of target concepts
-    #[serde(rename = "valueSet")]
-    pub value_set: Option<StringType>,
-    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_valueSet")]
-    pub _value_set: Option<Element>,
-    /// related-to | equivalent | source-is-narrower-than-target | source-is-broader-than-target | not-related-to
-    pub relationship: ConceptMapRelationship,
-    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
-    pub _relationship: Option<Element>,
-    /// Description of status/issues in mapping
-    pub comment: Option<StringType>,
-    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
-    pub _comment: Option<Element>,
-    /// Other data elements that this mapping also produces
-    pub product: Option<Vec<StringType>>,
 }
 /// ConceptMap nested structure for the 'group' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -384,6 +239,165 @@ pub struct ConceptMapGroupElement {
     /// Extension element for the 'noMap' primitive field. Contains metadata and extensions.
     #[serde(rename = "_noMap")]
     pub _no_map: Option<Element>,
+}
+/// ConceptMapGroupElement nested structure for the 'target' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTarget {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Code that identifies the target element
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Display for the code
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Identifies the set of target concepts
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+    /// related-to | equivalent | source-is-narrower-than-target | source-is-broader-than-target | not-related-to
+    pub relationship: ConceptMapRelationship,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// Description of status/issues in mapping
+    pub comment: Option<StringType>,
+    /// Extension element for the 'comment' primitive field. Contains metadata and extensions.
+    pub _comment: Option<Element>,
+    /// Other data elements that this mapping also produces
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub product: Vec<StringType>,
+}
+/// ConceptMapGroupElementTarget nested structure for the 'dependsOn' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTargetDependson {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A reference to a mapping attribute defined in ConceptMap.additionalAttribute
+    pub attribute: StringType,
+    /// Extension element for the 'attribute' primitive field. Contains metadata and extensions.
+    pub _attribute: Option<Element>,
+    /// Value of the referenced data element (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: Option<StringType>,
+    /// Value of the referenced data element (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Option<Coding>,
+    /// Value of the referenced data element (string)
+    #[serde(rename = "valueString")]
+    pub value_string: Option<StringType>,
+    /// Value of the referenced data element (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: Option<BooleanType>,
+    /// Value of the referenced data element (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Option<Quantity>,
+    /// The mapping depends on a data element with a value from this value set
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+}
+/// ConceptMapGroupElementTarget nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupElementTargetProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to ConceptMap.property.code
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Value of the property for this concept (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Value of the property for this concept (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Value of the property for this concept (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Value of the property for this concept (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Value of the property for this concept (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Value of the property for this concept (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Value of the property for this concept (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+}
+/// ConceptMapGroup nested structure for the 'unmapped' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapGroupUnmapped {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// use-source-code | fixed | other-map
+    pub mode: ConceptmapUnmappedMode,
+    /// Extension element for the 'mode' primitive field. Contains metadata and extensions.
+    pub _mode: Option<Element>,
+    /// Fixed code when mode = fixed
+    pub code: Option<StringType>,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Display for the code
+    pub display: Option<StringType>,
+    /// Extension element for the 'display' primitive field. Contains metadata and extensions.
+    pub _display: Option<Element>,
+    /// Fixed code set when mode = fixed
+    #[serde(rename = "valueSet")]
+    pub value_set: Option<StringType>,
+    /// Extension element for the 'valueSet' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_valueSet")]
+    pub _value_set: Option<Element>,
+    /// related-to | equivalent | source-is-narrower-than-target | source-is-broader-than-target | not-related-to
+    pub relationship: Option<ConceptMapRelationship>,
+    /// Extension element for the 'relationship' primitive field. Contains metadata and extensions.
+    pub _relationship: Option<Element>,
+    /// canonical reference to an additional ConceptMap to use for mapping if the source concept is unmapped
+    #[serde(rename = "otherMap")]
+    pub other_map: Option<StringType>,
+    /// Extension element for the 'otherMap' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_otherMap")]
+    pub _other_map: Option<Element>,
+}
+/// ConceptMap nested structure for the 'property' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConceptMapProperty {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Identifies the property on the mappings, and when referred to in the $translate operation
+    pub code: StringType,
+    /// Extension element for the 'code' primitive field. Contains metadata and extensions.
+    pub _code: Option<Element>,
+    /// Formal identifier for the property
+    pub uri: Option<StringType>,
+    /// Extension element for the 'uri' primitive field. Contains metadata and extensions.
+    pub _uri: Option<Element>,
+    /// Why the property is defined, and/or what it conveys
+    pub description: Option<StringType>,
+    /// Extension element for the 'description' primitive field. Contains metadata and extensions.
+    pub _description: Option<Element>,
+    /// Coding | string | integer | boolean | dateTime | decimal | code
+    #[serde(rename = "type")]
+    pub type_: ConceptmapPropertyType,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// The CodeSystem from which code values come
+    pub system: Option<StringType>,
+    /// Extension element for the 'system' primitive field. Contains metadata and extensions.
+    pub _system: Option<Element>,
 }
 
 impl Default for ConceptMap {
@@ -442,40 +456,6 @@ impl Default for ConceptMap {
     }
 }
 
-impl Default for ConceptMapGroupElementTargetProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_integer: Default::default(),
-            value_boolean: Default::default(),
-            value_date_time: Default::default(),
-            value_decimal: Default::default(),
-            value_code: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElementTargetDependson {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            attribute: Default::default(),
-            _attribute: Default::default(),
-            value_code: Default::default(),
-            value_coding: Default::default(),
-            value_string: Default::default(),
-            value_boolean: Default::default(),
-            value_quantity: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-        }
-    }
-}
-
 impl Default for ConceptMapAdditionalattribute {
     fn default() -> Self {
         Self {
@@ -488,63 +468,6 @@ impl Default for ConceptMapAdditionalattribute {
             _description: Default::default(),
             type_: Default::default(),
             _type: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: StringType::default(),
-            _code: Default::default(),
-            uri: Default::default(),
-            _uri: Default::default(),
-            description: Default::default(),
-            _description: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            system: Default::default(),
-            _system: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupUnmapped {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            mode: Default::default(),
-            _mode: Default::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            other_map: Default::default(),
-            _other_map: Default::default(),
-        }
-    }
-}
-
-impl Default for ConceptMapGroupElementTarget {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-            _code: Default::default(),
-            display: Default::default(),
-            _display: Default::default(),
-            value_set: Default::default(),
-            _value_set: Default::default(),
-            relationship: Default::default(),
-            _relationship: Default::default(),
-            comment: Default::default(),
-            _comment: Default::default(),
-            product: Default::default(),
         }
     }
 }
@@ -575,6 +498,97 @@ impl Default for ConceptMapGroupElement {
             _value_set: Default::default(),
             no_map: Default::default(),
             _no_map: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElementTarget {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            comment: Default::default(),
+            _comment: Default::default(),
+            product: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElementTargetDependson {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            attribute: Default::default(),
+            _attribute: Default::default(),
+            value_code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_boolean: Default::default(),
+            value_quantity: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupElementTargetProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            value_coding: Default::default(),
+            value_string: Default::default(),
+            value_integer: Default::default(),
+            value_boolean: Default::default(),
+            value_date_time: Default::default(),
+            value_decimal: Default::default(),
+            value_code: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapGroupUnmapped {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            mode: Default::default(),
+            _mode: Default::default(),
+            code: Default::default(),
+            _code: Default::default(),
+            display: Default::default(),
+            _display: Default::default(),
+            value_set: Default::default(),
+            _value_set: Default::default(),
+            relationship: Default::default(),
+            _relationship: Default::default(),
+            other_map: Default::default(),
+            _other_map: Default::default(),
+        }
+    }
+}
+
+impl Default for ConceptMapProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: StringType::default(),
+            _code: Default::default(),
+            uri: Default::default(),
+            _uri: Default::default(),
+            description: Default::default(),
+            _description: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            system: Default::default(),
+            _system: Default::default(),
         }
     }
 }
@@ -928,13 +942,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ConceptMap {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -949,44 +963,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ConceptMap {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -996,16 +998,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ConceptMap {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -1014,7 +1013,7 @@ impl crate::traits::concept_map::ConceptMapAccessors for ConceptMap {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -1038,16 +1037,16 @@ impl crate::traits::concept_map::ConceptMapAccessors for ConceptMap {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -1068,31 +1067,31 @@ impl crate::traits::concept_map::ConceptMapAccessors for ConceptMap {
         self.effective_period.clone()
     }
     fn topic(&self) -> &[CodeableConcept] {
-        self.topic.as_deref().unwrap_or(&[])
+        self.topic.as_slice()
     }
     fn author(&self) -> &[ContactDetail] {
-        self.author.as_deref().unwrap_or(&[])
+        self.author.as_slice()
     }
     fn editor(&self) -> &[ContactDetail] {
-        self.editor.as_deref().unwrap_or(&[])
+        self.editor.as_slice()
     }
     fn reviewer(&self) -> &[ContactDetail] {
-        self.reviewer.as_deref().unwrap_or(&[])
+        self.reviewer.as_slice()
     }
     fn endorser(&self) -> &[ContactDetail] {
-        self.endorser.as_deref().unwrap_or(&[])
+        self.endorser.as_slice()
     }
     fn related_artifact(&self) -> &[RelatedArtifact] {
-        self.related_artifact.as_deref().unwrap_or(&[])
+        self.related_artifact.as_slice()
     }
     fn property(&self) -> &[ConceptMapProperty] {
-        self.property.as_deref().unwrap_or(&[])
+        self.property.as_slice()
     }
     fn additional_attribute(&self) -> &[ConceptMapAdditionalattribute] {
-        self.additional_attribute.as_deref().unwrap_or(&[])
+        self.additional_attribute.as_slice()
     }
     fn group(&self) -> &[ConceptMapGroup] {
-        self.group.as_deref().unwrap_or(&[])
+        self.group.as_slice()
     }
 }
 
@@ -1107,12 +1106,12 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -1152,12 +1151,12 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -1167,25 +1166,22 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1220,117 +1216,111 @@ impl crate::traits::concept_map::ConceptMapMutators for ConceptMap {
     }
     fn set_topic(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.topic = Some(value);
+        resource.topic = value;
         resource
     }
     fn add_topic(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.topic.get_or_insert_with(Vec::new).push(item);
+        resource.topic.push(item);
         resource
     }
     fn set_author(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.author = Some(value);
+        resource.author = value;
         resource
     }
     fn add_author(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.author.get_or_insert_with(Vec::new).push(item);
+        resource.author.push(item);
         resource
     }
     fn set_editor(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.editor = Some(value);
+        resource.editor = value;
         resource
     }
     fn add_editor(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.editor.get_or_insert_with(Vec::new).push(item);
+        resource.editor.push(item);
         resource
     }
     fn set_reviewer(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.reviewer = Some(value);
+        resource.reviewer = value;
         resource
     }
     fn add_reviewer(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.reviewer.get_or_insert_with(Vec::new).push(item);
+        resource.reviewer.push(item);
         resource
     }
     fn set_endorser(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.endorser = Some(value);
+        resource.endorser = value;
         resource
     }
     fn add_endorser(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.endorser.get_or_insert_with(Vec::new).push(item);
+        resource.endorser.push(item);
         resource
     }
     fn set_related_artifact(self, value: Vec<RelatedArtifact>) -> Self {
         let mut resource = self.clone();
-        resource.related_artifact = Some(value);
+        resource.related_artifact = value;
         resource
     }
     fn add_related_artifact(self, item: RelatedArtifact) -> Self {
         let mut resource = self.clone();
-        resource
-            .related_artifact
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.related_artifact.push(item);
         resource
     }
     fn set_property(self, value: Vec<ConceptMapProperty>) -> Self {
         let mut resource = self.clone();
-        resource.property = Some(value);
+        resource.property = value;
         resource
     }
     fn add_property(self, item: ConceptMapProperty) -> Self {
         let mut resource = self.clone();
-        resource.property.get_or_insert_with(Vec::new).push(item);
+        resource.property.push(item);
         resource
     }
     fn set_additional_attribute(self, value: Vec<ConceptMapAdditionalattribute>) -> Self {
         let mut resource = self.clone();
-        resource.additional_attribute = Some(value);
+        resource.additional_attribute = value;
         resource
     }
     fn add_additional_attribute(self, item: ConceptMapAdditionalattribute) -> Self {
         let mut resource = self.clone();
-        resource
-            .additional_attribute
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.additional_attribute.push(item);
         resource
     }
     fn set_group(self, value: Vec<ConceptMapGroup>) -> Self {
         let mut resource = self.clone();
-        resource.group = Some(value);
+        resource.group = value;
         resource
     }
     fn add_group(self, item: ConceptMapGroup) -> Self {
         let mut resource = self.clone();
-        resource.group.get_or_insert_with(Vec::new).push(item);
+        resource.group.push(item);
         resource
     }
 }
 
 impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
+    fn has_source_scope(&self) -> bool {
+        self.source_scope_uri.is_some() || self.source_scope_canonical.is_some()
+    }
     fn has_target_scope(&self) -> bool {
         self.target_scope_uri.is_some() || self.target_scope_canonical.is_some()
     }
     fn has_version_algorithm(&self) -> bool {
         self.version_algorithm_string.is_some() || self.version_algorithm_coding.is_some()
     }
-    fn has_source_scope(&self) -> bool {
-        self.source_scope_uri.is_some() || self.source_scope_canonical.is_some()
-    }
     fn has_url(&self) -> bool {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1354,16 +1344,16 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1384,35 +1374,31 @@ impl crate::traits::concept_map::ConceptMapExistence for ConceptMap {
         self.effective_period.is_some()
     }
     fn has_topic(&self) -> bool {
-        self.topic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.topic.is_empty()
     }
     fn has_author(&self) -> bool {
-        self.author.as_ref().is_some_and(|v| !v.is_empty())
+        !self.author.is_empty()
     }
     fn has_editor(&self) -> bool {
-        self.editor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.editor.is_empty()
     }
     fn has_reviewer(&self) -> bool {
-        self.reviewer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reviewer.is_empty()
     }
     fn has_endorser(&self) -> bool {
-        self.endorser.as_ref().is_some_and(|v| !v.is_empty())
+        !self.endorser.is_empty()
     }
     fn has_related_artifact(&self) -> bool {
-        self.related_artifact
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.related_artifact.is_empty()
     }
     fn has_property(&self) -> bool {
-        self.property.as_ref().is_some_and(|v| !v.is_empty())
+        !self.property.is_empty()
     }
     fn has_additional_attribute(&self) -> bool {
-        self.additional_attribute
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.additional_attribute.is_empty()
     }
     fn has_group(&self) -> bool {
-        self.group.as_ref().is_some_and(|v| !v.is_empty())
+        !self.group.is_empty()
     }
 }
 

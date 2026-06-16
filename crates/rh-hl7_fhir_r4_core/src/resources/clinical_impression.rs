@@ -26,7 +26,8 @@ pub struct ClinicalImpression {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// in-progress | completed | entered-in-error
     pub status: ClinicalimpressionStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -63,51 +64,43 @@ pub struct ClinicalImpression {
     /// Reference to last assessment
     pub previous: Option<Reference>,
     /// Relevant impressions of patient state
-    pub problem: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub problem: Vec<Reference>,
     /// One or more sets of investigations (signs, symptoms, etc.)
-    pub investigation: Option<Vec<ClinicalImpressionInvestigation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub investigation: Vec<ClinicalImpressionInvestigation>,
     /// Clinical Protocol followed
-    pub protocol: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub protocol: Vec<StringType>,
     /// Extension element for the 'protocol' primitive field. Contains metadata and extensions.
-    pub _protocol: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _protocol: Vec<Element>,
     /// Summary of the assessment
     pub summary: Option<StringType>,
     /// Extension element for the 'summary' primitive field. Contains metadata and extensions.
     pub _summary: Option<Element>,
     /// Possible or likely findings and diagnoses
-    pub finding: Option<Vec<ClinicalImpressionFinding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub finding: Vec<ClinicalImpressionFinding>,
     /// Estimate of likely outcome
     ///
     /// Binding: example (Prognosis or outlook findings.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinicalimpression-prognosis
     #[serde(rename = "prognosisCodeableConcept")]
-    pub prognosis_codeable_concept: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prognosis_codeable_concept: Vec<CodeableConcept>,
     /// RiskAssessment expressing likely outcome
     #[serde(rename = "prognosisReference")]
-    pub prognosis_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prognosis_reference: Vec<Reference>,
     /// Information supporting the clinical impression
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<Reference>,
     /// Comments made about the ClinicalImpression
-    pub note: Option<Vec<Annotation>>,
-}
-/// ClinicalImpression nested structure for the 'investigation' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClinicalImpressionInvestigation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A name/code for the set
-    ///
-    /// Binding: example (A name/code for a set of investigations.)
-    ///
-    /// Available values:
-    /// - `271336007`: Examination / signs
-    /// - `160237006`: History/symptoms
-    pub code: CodeableConcept,
-    /// Record of a specific investigation
-    pub item: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// ClinicalImpression nested structure for the 'finding' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,6 +123,24 @@ pub struct ClinicalImpressionFinding {
     pub basis: Option<StringType>,
     /// Extension element for the 'basis' primitive field. Contains metadata and extensions.
     pub _basis: Option<Element>,
+}
+/// ClinicalImpression nested structure for the 'investigation' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClinicalImpressionInvestigation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A name/code for the set
+    ///
+    /// Binding: example (A name/code for a set of investigations.)
+    ///
+    /// Available values:
+    /// - `271336007`: Examination / signs
+    /// - `160237006`: History/symptoms
+    pub code: CodeableConcept,
+    /// Record of a specific investigation
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<Reference>,
 }
 
 impl Default for ClinicalImpression {
@@ -166,16 +177,6 @@ impl Default for ClinicalImpression {
     }
 }
 
-impl Default for ClinicalImpressionInvestigation {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: CodeableConcept::default(),
-            item: Default::default(),
-        }
-    }
-}
-
 impl Default for ClinicalImpressionFinding {
     fn default() -> Self {
         Self {
@@ -184,6 +185,16 @@ impl Default for ClinicalImpressionFinding {
             item_reference: Default::default(),
             basis: Default::default(),
             _basis: Default::default(),
+        }
+    }
+}
+
+impl Default for ClinicalImpressionInvestigation {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: CodeableConcept::default(),
+            item: Default::default(),
         }
     }
 }
@@ -369,13 +380,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ClinicalImpress
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -390,44 +401,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ClinicalImpressi
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -437,22 +436,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for ClinicalImpress
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::clinical_impression::ClinicalImpressionAccessors for ClinicalImpression {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> ClinicalimpressionStatus {
         self.status.clone()
@@ -482,31 +478,31 @@ impl crate::traits::clinical_impression::ClinicalImpressionAccessors for Clinica
         self.previous.clone()
     }
     fn problem(&self) -> &[Reference] {
-        self.problem.as_deref().unwrap_or(&[])
+        self.problem.as_slice()
     }
     fn investigation(&self) -> &[ClinicalImpressionInvestigation] {
-        self.investigation.as_deref().unwrap_or(&[])
+        self.investigation.as_slice()
     }
     fn protocol(&self) -> &[StringType] {
-        self.protocol.as_deref().unwrap_or(&[])
+        self.protocol.as_slice()
     }
     fn summary(&self) -> Option<StringType> {
         self.summary.clone()
     }
     fn finding(&self) -> &[ClinicalImpressionFinding] {
-        self.finding.as_deref().unwrap_or(&[])
+        self.finding.as_slice()
     }
     fn prognosis_codeable_concept(&self) -> &[CodeableConcept] {
-        self.prognosis_codeable_concept.as_deref().unwrap_or(&[])
+        self.prognosis_codeable_concept.as_slice()
     }
     fn prognosis_reference(&self) -> &[Reference] {
-        self.prognosis_reference.as_deref().unwrap_or(&[])
+        self.prognosis_reference.as_slice()
     }
     fn supporting_info(&self) -> &[Reference] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -516,12 +512,12 @@ impl crate::traits::clinical_impression::ClinicalImpressionMutators for Clinical
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: ClinicalimpressionStatus) -> Self {
@@ -571,35 +567,32 @@ impl crate::traits::clinical_impression::ClinicalImpressionMutators for Clinical
     }
     fn set_problem(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.problem = Some(value);
+        resource.problem = value;
         resource
     }
     fn add_problem(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.problem.get_or_insert_with(Vec::new).push(item);
+        resource.problem.push(item);
         resource
     }
     fn set_investigation(self, value: Vec<ClinicalImpressionInvestigation>) -> Self {
         let mut resource = self.clone();
-        resource.investigation = Some(value);
+        resource.investigation = value;
         resource
     }
     fn add_investigation(self, item: ClinicalImpressionInvestigation) -> Self {
         let mut resource = self.clone();
-        resource
-            .investigation
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.investigation.push(item);
         resource
     }
     fn set_protocol(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.protocol = Some(value);
+        resource.protocol = value;
         resource
     }
     fn add_protocol(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.protocol.get_or_insert_with(Vec::new).push(item);
+        resource.protocol.push(item);
         resource
     }
     fn set_summary(self, value: String) -> Self {
@@ -609,61 +602,52 @@ impl crate::traits::clinical_impression::ClinicalImpressionMutators for Clinical
     }
     fn set_finding(self, value: Vec<ClinicalImpressionFinding>) -> Self {
         let mut resource = self.clone();
-        resource.finding = Some(value);
+        resource.finding = value;
         resource
     }
     fn add_finding(self, item: ClinicalImpressionFinding) -> Self {
         let mut resource = self.clone();
-        resource.finding.get_or_insert_with(Vec::new).push(item);
+        resource.finding.push(item);
         resource
     }
     fn set_prognosis_codeable_concept(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.prognosis_codeable_concept = Some(value);
+        resource.prognosis_codeable_concept = value;
         resource
     }
     fn add_prognosis_codeable_concept(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .prognosis_codeable_concept
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.prognosis_codeable_concept.push(item);
         resource
     }
     fn set_prognosis_reference(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.prognosis_reference = Some(value);
+        resource.prognosis_reference = value;
         resource
     }
     fn add_prognosis_reference(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .prognosis_reference
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.prognosis_reference.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
@@ -673,7 +657,7 @@ impl crate::traits::clinical_impression::ClinicalImpressionExistence for Clinica
         self.effective_date_time.is_some() || self.effective_period.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -703,35 +687,31 @@ impl crate::traits::clinical_impression::ClinicalImpressionExistence for Clinica
         self.previous.is_some()
     }
     fn has_problem(&self) -> bool {
-        self.problem.as_ref().is_some_and(|v| !v.is_empty())
+        !self.problem.is_empty()
     }
     fn has_investigation(&self) -> bool {
-        self.investigation.as_ref().is_some_and(|v| !v.is_empty())
+        !self.investigation.is_empty()
     }
     fn has_protocol(&self) -> bool {
-        self.protocol.as_ref().is_some_and(|v| !v.is_empty())
+        !self.protocol.is_empty()
     }
     fn has_summary(&self) -> bool {
         self.summary.is_some()
     }
     fn has_finding(&self) -> bool {
-        self.finding.as_ref().is_some_and(|v| !v.is_empty())
+        !self.finding.is_empty()
     }
     fn has_prognosis_codeable_concept(&self) -> bool {
-        self.prognosis_codeable_concept
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.prognosis_codeable_concept.is_empty()
     }
     fn has_prognosis_reference(&self) -> bool {
-        self.prognosis_reference
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.prognosis_reference.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

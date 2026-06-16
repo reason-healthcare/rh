@@ -25,6 +25,10 @@ pub trait DomainResourceAccessors: ResourceAccessors {
     fn extension(&self) -> &[Extension];
     /// Returns a reference to the modifierExtension field.
     fn modifier_extension(&self) -> &[Extension];
+    /// Find an extension by its URL. Returns the first matching extension, or None if not found.
+    fn extension_by_url(&self, url: &str) -> Option<&crate::datatypes::extension::Extension> {
+        self.extension().iter().find(|e| e.url == url)
+    }
 }
 /// DomainResource Trait
 ///

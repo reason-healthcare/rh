@@ -45,7 +45,8 @@ pub struct TriggerDefinition {
     #[serde(rename = "timingDateTime")]
     pub timing_date_time: Option<DateTimeType>,
     /// Triggering data of the event (multiple = 'and')
-    pub data: Option<Vec<DataRequirement>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<DataRequirement>,
     /// Whether the event triggers (boolean expression)
     pub condition: Option<Expression>,
 }

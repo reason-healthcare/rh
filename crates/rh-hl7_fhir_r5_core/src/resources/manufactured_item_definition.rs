@@ -29,7 +29,8 @@ pub struct ManufacturedItemDefinition {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Unique identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -53,20 +54,70 @@ pub struct ManufacturedItemDefinition {
     #[serde(rename = "unitOfPresentation")]
     pub unit_of_presentation: Option<CodeableConcept>,
     /// Manufacturer of the item, one of several possible
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
     /// Allows specifying that an item is on the market for sale, or that it is not available, and the dates and locations associated
     #[serde(rename = "marketingStatus")]
-    pub marketing_status: Option<Vec<MarketingStatus>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marketing_status: Vec<MarketingStatus>,
     /// The ingredients of this manufactured item. Only needed if these are not specified by incoming references from the Ingredient resource
     ///
     /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
-    pub ingredient: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<CodeableConcept>,
     /// General characteristics of this item
-    pub property: Option<Vec<ManufacturedItemDefinitionProperty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<ManufacturedItemDefinitionProperty>,
     /// Physical parts of the manufactured item, that it is intrisically made from. This is distinct from the ingredients that are part of its chemical makeup
-    pub component: Option<Vec<ManufacturedItemDefinitionComponent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub component: Vec<ManufacturedItemDefinitionComponent>,
+}
+/// ManufacturedItemDefinition nested structure for the 'component' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ManufacturedItemDefinitionComponent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// A reference to a constituent of the manufactured item as a whole, linked here so that its component location within the item can be indicated. This not where the item's ingredient are primarily stated (for which see Ingredient.for or ManufacturedItemDefinition.ingredient)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub constituent: Vec<ManufacturedItemDefinitionComponentConstituent>,
+    /// Defining type of the component e.g. shell, layer, ink
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// The function of this component within the item e.g. delivers active ingredient, masks taste
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub function: Vec<CodeableConcept>,
+    /// The measurable amount of total quantity of all substances in the component, expressable in different ways (e.g. by mass or volume)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amount: Vec<Quantity>,
+    /// General characteristics of this component
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<StringType>,
+    /// A component that this component contains or is made from
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub component: Vec<StringType>,
+}
+/// ManufacturedItemDefinitionComponent nested structure for the 'constituent' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ManufacturedItemDefinitionComponentConstituent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The measurable amount of the substance, expressable in different ways (e.g. by mass or volume)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amount: Vec<Quantity>,
+    /// The physical location of the constituent/ingredient within the component
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub location: Vec<CodeableConcept>,
+    /// The function of this constituent within the component e.g. binder
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub function: Vec<CodeableConcept>,
+    /// The ingredient that is the constituent of the given component
+    #[serde(rename = "hasIngredient")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub has_ingredient: Vec<CodeableReference>,
 }
 /// ManufacturedItemDefinition nested structure for the 'property' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,42 +154,6 @@ pub struct ManufacturedItemDefinitionProperty {
     #[serde(rename = "valueReference")]
     pub value_reference: Option<Reference>,
 }
-/// ManufacturedItemDefinition nested structure for the 'component' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ManufacturedItemDefinitionComponent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// A reference to a constituent of the manufactured item as a whole, linked here so that its component location within the item can be indicated. This not where the item's ingredient are primarily stated (for which see Ingredient.for or ManufacturedItemDefinition.ingredient)
-    pub constituent: Option<Vec<ManufacturedItemDefinitionComponentConstituent>>,
-    /// Defining type of the component e.g. shell, layer, ink
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// The function of this component within the item e.g. delivers active ingredient, masks taste
-    pub function: Option<Vec<CodeableConcept>>,
-    /// The measurable amount of total quantity of all substances in the component, expressable in different ways (e.g. by mass or volume)
-    pub amount: Option<Vec<Quantity>>,
-    /// General characteristics of this component
-    pub property: Option<Vec<StringType>>,
-    /// A component that this component contains or is made from
-    pub component: Option<Vec<StringType>>,
-}
-/// ManufacturedItemDefinitionComponent nested structure for the 'constituent' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ManufacturedItemDefinitionComponentConstituent {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The measurable amount of the substance, expressable in different ways (e.g. by mass or volume)
-    pub amount: Option<Vec<Quantity>>,
-    /// The physical location of the constituent/ingredient within the component
-    pub location: Option<Vec<CodeableConcept>>,
-    /// The function of this constituent within the component e.g. binder
-    pub function: Option<Vec<CodeableConcept>>,
-    /// The ingredient that is the constituent of the given component
-    #[serde(rename = "hasIngredient")]
-    pub has_ingredient: Option<Vec<CodeableReference>>,
-}
 
 impl Default for ManufacturedItemDefinition {
     fn default() -> Self {
@@ -156,22 +171,6 @@ impl Default for ManufacturedItemDefinition {
             ingredient: Default::default(),
             property: Default::default(),
             component: Default::default(),
-        }
-    }
-}
-
-impl Default for ManufacturedItemDefinitionProperty {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_quantity: Default::default(),
-            value_date: Default::default(),
-            value_boolean: Default::default(),
-            value_markdown: Default::default(),
-            value_attachment: Default::default(),
-            value_reference: Default::default(),
         }
     }
 }
@@ -198,6 +197,22 @@ impl Default for ManufacturedItemDefinitionComponentConstituent {
             location: Default::default(),
             function: Default::default(),
             has_ingredient: Default::default(),
+        }
+    }
+}
+
+impl Default for ManufacturedItemDefinitionProperty {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_quantity: Default::default(),
+            value_date: Default::default(),
+            value_boolean: Default::default(),
+            value_markdown: Default::default(),
+            value_attachment: Default::default(),
+            value_reference: Default::default(),
         }
     }
 }
@@ -471,13 +486,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ManufacturedIte
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -492,44 +507,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ManufacturedItem
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -539,16 +542,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ManufacturedIte
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -556,7 +556,7 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionAcce
     for ManufacturedItemDefinition
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
@@ -571,19 +571,19 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionAcce
         self.unit_of_presentation.clone()
     }
     fn manufacturer(&self) -> &[Reference] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn marketing_status(&self) -> &[MarketingStatus] {
-        self.marketing_status.as_deref().unwrap_or(&[])
+        self.marketing_status.as_slice()
     }
     fn ingredient(&self) -> &[CodeableConcept] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
     fn property(&self) -> &[ManufacturedItemDefinitionProperty] {
-        self.property.as_deref().unwrap_or(&[])
+        self.property.as_slice()
     }
     fn component(&self) -> &[ManufacturedItemDefinitionComponent] {
-        self.component.as_deref().unwrap_or(&[])
+        self.component.as_slice()
     }
 }
 
@@ -595,12 +595,12 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionMuta
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -625,58 +625,52 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionMuta
     }
     fn set_manufacturer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_marketing_status(self, value: Vec<MarketingStatus>) -> Self {
         let mut resource = self.clone();
-        resource.marketing_status = Some(value);
+        resource.marketing_status = value;
         resource
     }
     fn add_marketing_status(self, item: MarketingStatus) -> Self {
         let mut resource = self.clone();
-        resource
-            .marketing_status
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.marketing_status.push(item);
         resource
     }
     fn set_ingredient(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
     fn set_property(self, value: Vec<ManufacturedItemDefinitionProperty>) -> Self {
         let mut resource = self.clone();
-        resource.property = Some(value);
+        resource.property = value;
         resource
     }
     fn add_property(self, item: ManufacturedItemDefinitionProperty) -> Self {
         let mut resource = self.clone();
-        resource.property.get_or_insert_with(Vec::new).push(item);
+        resource.property.push(item);
         resource
     }
     fn set_component(self, value: Vec<ManufacturedItemDefinitionComponent>) -> Self {
         let mut resource = self.clone();
-        resource.component = Some(value);
+        resource.component = value;
         resource
     }
     fn add_component(self, item: ManufacturedItemDefinitionComponent) -> Self {
         let mut resource = self.clone();
-        resource.component.get_or_insert_with(Vec::new).push(item);
+        resource.component.push(item);
         resource
     }
 }
@@ -685,7 +679,7 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionExis
     for ManufacturedItemDefinition
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -700,21 +694,19 @@ impl crate::traits::manufactured_item_definition::ManufacturedItemDefinitionExis
         self.unit_of_presentation.is_some()
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_marketing_status(&self) -> bool {
-        self.marketing_status
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.marketing_status.is_empty()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
     fn has_property(&self) -> bool {
-        self.property.as_ref().is_some_and(|v| !v.is_empty())
+        !self.property.is_empty()
     }
     fn has_component(&self) -> bool {
-        self.component.as_ref().is_some_and(|v| !v.is_empty())
+        !self.component.is_empty()
     }
 }
 

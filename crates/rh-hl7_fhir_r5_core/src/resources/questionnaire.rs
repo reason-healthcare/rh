@@ -45,7 +45,8 @@ pub struct Questionnaire {
     /// Extension element for the 'url' primitive field. Contains metadata and extensions.
     pub _url: Option<Element>,
     /// Business identifier for questionnaire
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Business version of the questionnaire
     pub version: Option<StringType>,
     /// Extension element for the 'version' primitive field. Contains metadata and extensions.
@@ -66,10 +67,12 @@ pub struct Questionnaire {
     pub _title: Option<Element>,
     /// Based on Questionnaire
     #[serde(rename = "derivedFrom")]
-    pub derived_from: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_from: Vec<StringType>,
     /// Extension element for the 'derivedFrom' primitive field. Contains metadata and extensions.
     #[serde(rename = "_derivedFrom")]
-    pub _derived_from: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _derived_from: Vec<Element>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -80,10 +83,12 @@ pub struct Questionnaire {
     pub _experimental: Option<Element>,
     /// Resource that can be subject of QuestionnaireResponse
     #[serde(rename = "subjectType")]
-    pub subject_type: Option<Vec<ResourceTypes>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subject_type: Vec<ResourceTypes>,
     /// Extension element for the 'subjectType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_subjectType")]
-    pub _subject_type: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _subject_type: Vec<Element>,
     /// Date last changed
     pub date: Option<DateTimeType>,
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
@@ -93,20 +98,23 @@ pub struct Questionnaire {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the questionnaire
     pub description: Option<StringType>,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for questionnaire (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this questionnaire is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -141,9 +149,11 @@ pub struct Questionnaire {
     /// Binding: example (Codes for questionnaires, groups and individual questions.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/questionnaire-questions
-    pub code: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<Coding>,
     /// Questions and sections within the Questionnaire
-    pub item: Option<Vec<QuestionnaireItem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<QuestionnaireItem>,
 }
 /// Questionnaire nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,12 +163,15 @@ pub struct QuestionnaireItem {
     pub base: BackboneElement,
     /// Permitted answer
     #[serde(rename = "answerOption")]
-    pub answer_option: Option<Vec<QuestionnaireItemAnsweroption>>,
-    /// Initial value(s) when item is first rendered
-    pub initial: Option<Vec<QuestionnaireItemInitial>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub answer_option: Vec<QuestionnaireItemAnsweroption>,
     /// Only allow data when
     #[serde(rename = "enableWhen")]
-    pub enable_when: Option<Vec<QuestionnaireItemEnablewhen>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub enable_when: Vec<QuestionnaireItemEnablewhen>,
+    /// Initial value(s) when item is first rendered
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub initial: Vec<QuestionnaireItemInitial>,
     /// Unique id for item in questionnaire
     #[serde(rename = "linkId")]
     pub link_id: StringType,
@@ -174,7 +187,8 @@ pub struct QuestionnaireItem {
     /// Binding: example (Codes for questionnaires, groups and individual questions.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/questionnaire-questions
-    pub code: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<Coding>,
     /// E.g. "1(a)", "2.5.3"
     pub prefix: Option<StringType>,
     /// Extension element for the 'prefix' primitive field. Contains metadata and extensions.
@@ -233,7 +247,8 @@ pub struct QuestionnaireItem {
     #[serde(rename = "_answerValueSet")]
     pub _answer_value_set: Option<Element>,
     /// Nested questionnaire items
-    pub item: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<StringType>,
 }
 /// QuestionnaireItem nested structure for the 'answerOption' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -265,49 +280,6 @@ pub struct QuestionnaireItemAnsweroption {
     /// Extension element for the 'initialSelected' primitive field. Contains metadata and extensions.
     #[serde(rename = "_initialSelected")]
     pub _initial_selected: Option<Element>,
-}
-/// QuestionnaireItem nested structure for the 'initial' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuestionnaireItemInitial {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Actual value for initializing the question (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Actual value for initializing the question (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Actual value for initializing the question (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Actual value for initializing the question (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Actual value for initializing the question (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Actual value for initializing the question (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Actual value for initializing the question (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Actual value for initializing the question (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Actual value for initializing the question (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Actual value for initializing the question (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Actual value for initializing the question (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Actual value for initializing the question (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
 }
 /// QuestionnaireItem nested structure for the 'enableWhen' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -353,6 +325,49 @@ pub struct QuestionnaireItemEnablewhen {
     /// Value for question comparison based on operator (Reference)
     #[serde(rename = "answerReference")]
     pub answer_reference: Reference,
+}
+/// QuestionnaireItem nested structure for the 'initial' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionnaireItemInitial {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Actual value for initializing the question (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Actual value for initializing the question (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Actual value for initializing the question (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Actual value for initializing the question (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Actual value for initializing the question (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Actual value for initializing the question (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Actual value for initializing the question (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Actual value for initializing the question (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Actual value for initializing the question (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Actual value for initializing the question (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Actual value for initializing the question (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Actual value for initializing the question (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
 }
 
 impl Default for Questionnaire {
@@ -409,8 +424,8 @@ impl Default for QuestionnaireItem {
         Self {
             base: BackboneElement::default(),
             answer_option: Default::default(),
-            initial: Default::default(),
             enable_when: Default::default(),
+            initial: Default::default(),
             link_id: StringType::default(),
             _link_id: Default::default(),
             definition: Default::default(),
@@ -459,26 +474,6 @@ impl Default for QuestionnaireItemAnsweroption {
     }
 }
 
-impl Default for QuestionnaireItemInitial {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            value_boolean: Default::default(),
-            value_decimal: Default::default(),
-            value_integer: Default::default(),
-            value_date: Default::default(),
-            value_date_time: Default::default(),
-            value_time: Default::default(),
-            value_string: Default::default(),
-            value_uri: Default::default(),
-            value_attachment: Default::default(),
-            value_coding: Default::default(),
-            value_quantity: Default::default(),
-            value_reference: Default::default(),
-        }
-    }
-}
-
 impl Default for QuestionnaireItemEnablewhen {
     fn default() -> Self {
         Self {
@@ -497,6 +492,26 @@ impl Default for QuestionnaireItemEnablewhen {
             answer_coding: Default::default(),
             answer_quantity: Default::default(),
             answer_reference: Default::default(),
+        }
+    }
+}
+
+impl Default for QuestionnaireItemInitial {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            value_boolean: Default::default(),
+            value_decimal: Default::default(),
+            value_integer: Default::default(),
+            value_date: Default::default(),
+            value_date_time: Default::default(),
+            value_time: Default::default(),
+            value_string: Default::default(),
+            value_uri: Default::default(),
+            value_attachment: Default::default(),
+            value_coding: Default::default(),
+            value_quantity: Default::default(),
+            value_reference: Default::default(),
         }
     }
 }
@@ -745,13 +760,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Questionnaire {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -766,44 +781,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Questionnaire {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -813,16 +816,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for Questionnaire {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -831,7 +831,7 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.url.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn version(&self) -> Option<StringType> {
         self.version.clone()
@@ -843,7 +843,7 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.title.clone()
     }
     fn derived_from(&self) -> &[StringType] {
-        self.derived_from.as_deref().unwrap_or(&[])
+        self.derived_from.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
@@ -852,7 +852,7 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.experimental
     }
     fn subject_type(&self) -> &[ResourceTypes] {
-        self.subject_type.as_deref().unwrap_or(&[])
+        self.subject_type.as_slice()
     }
     fn date(&self) -> Option<DateTimeType> {
         self.date.clone()
@@ -861,16 +861,16 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> Option<StringType> {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -891,10 +891,10 @@ impl crate::traits::questionnaire::QuestionnaireAccessors for Questionnaire {
         self.effective_period.clone()
     }
     fn code(&self) -> &[Coding] {
-        self.code.as_deref().unwrap_or(&[])
+        self.code.as_slice()
     }
     fn item(&self) -> &[QuestionnaireItem] {
-        self.item.as_deref().unwrap_or(&[])
+        self.item.as_slice()
     }
 }
 
@@ -909,12 +909,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_version(self, value: String) -> Self {
@@ -934,15 +934,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_derived_from(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.derived_from = Some(value);
+        resource.derived_from = value;
         resource
     }
     fn add_derived_from(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .derived_from
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.derived_from.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -957,15 +954,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_subject_type(self, value: Vec<ResourceTypes>) -> Self {
         let mut resource = self.clone();
-        resource.subject_type = Some(value);
+        resource.subject_type = value;
         resource
     }
     fn add_subject_type(self, item: ResourceTypes) -> Self {
         let mut resource = self.clone();
-        resource
-            .subject_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.subject_type.push(item);
         resource
     }
     fn set_date(self, value: String) -> Self {
@@ -980,12 +974,12 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -995,25 +989,22 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -1048,22 +1039,22 @@ impl crate::traits::questionnaire::QuestionnaireMutators for Questionnaire {
     }
     fn set_code(self, value: Vec<Coding>) -> Self {
         let mut resource = self.clone();
-        resource.code = Some(value);
+        resource.code = value;
         resource
     }
     fn add_code(self, item: Coding) -> Self {
         let mut resource = self.clone();
-        resource.code.get_or_insert_with(Vec::new).push(item);
+        resource.code.push(item);
         resource
     }
     fn set_item(self, value: Vec<QuestionnaireItem>) -> Self {
         let mut resource = self.clone();
-        resource.item = Some(value);
+        resource.item = value;
         resource
     }
     fn add_item(self, item: QuestionnaireItem) -> Self {
         let mut resource = self.clone();
-        resource.item.get_or_insert_with(Vec::new).push(item);
+        resource.item.push(item);
         resource
     }
 }
@@ -1076,7 +1067,7 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.url.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_version(&self) -> bool {
         self.version.is_some()
@@ -1088,7 +1079,7 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.title.is_some()
     }
     fn has_derived_from(&self) -> bool {
-        self.derived_from.as_ref().is_some_and(|v| !v.is_empty())
+        !self.derived_from.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1097,7 +1088,7 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.experimental.is_some()
     }
     fn has_subject_type(&self) -> bool {
-        self.subject_type.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subject_type.is_empty()
     }
     fn has_date(&self) -> bool {
         self.date.is_some()
@@ -1106,16 +1097,16 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         self.description.is_some()
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -1136,10 +1127,10 @@ impl crate::traits::questionnaire::QuestionnaireExistence for Questionnaire {
         self.effective_period.is_some()
     }
     fn has_code(&self) -> bool {
-        self.code.as_ref().is_some_and(|v| !v.is_empty())
+        !self.code.is_empty()
     }
     fn has_item(&self) -> bool {
-        self.item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.item.is_empty()
     }
 }
 

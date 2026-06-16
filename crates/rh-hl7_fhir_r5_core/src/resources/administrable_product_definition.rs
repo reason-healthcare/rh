@@ -29,14 +29,16 @@ pub struct AdministrableProductDefinition {
     #[serde(flatten)]
     pub base: DomainResource,
     /// An identifier for the administrable product
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// References a product from which one or more of the constituent parts of that product can be prepared and used as described by this administrable product
     #[serde(rename = "formOf")]
-    pub form_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub form_of: Vec<Reference>,
     /// The dose form of the final product after necessary reconstitution or processing
     ///
     /// Binding: example (Dose form for a medication, in the form suitable for administering to the patient, after mixing, where necessary.)
@@ -53,13 +55,15 @@ pub struct AdministrableProductDefinition {
     pub unit_of_presentation: Option<CodeableConcept>,
     /// Indicates the specific manufactured items that are part of the 'formOf' product that are used in the preparation of this specific administrable form
     #[serde(rename = "producedFrom")]
-    pub produced_from: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub produced_from: Vec<Reference>,
     /// The ingredients of this administrable medicinal product. This is only needed if the ingredients are not specified either using ManufacturedItemDefiniton, or using by incoming references from the Ingredient resource
     ///
     /// Binding: example (This value set includes all substance codes from SNOMED CT - provided as an exemplar value set.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/substance-codes
-    pub ingredient: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<CodeableConcept>,
     /// A device that is integral to the medicinal product, in effect being considered as an "ingredient" of the medicinal product
     pub device: Option<Reference>,
     /// A general description of the product, when in its final form, suitable for administration e.g. effervescent blue liquid, to be swallowed
@@ -67,7 +71,8 @@ pub struct AdministrableProductDefinition {
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// Characteristics e.g. a product's onset of action
-    pub property: Option<Vec<AdministrableProductDefinitionProperty>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub property: Vec<AdministrableProductDefinitionProperty>,
     /// The path by which the product is taken into or makes contact with the body
     #[serde(rename = "routeOfAdministration")]
     pub route_of_administration: Vec<AdministrableProductDefinitionRouteofadministration>,
@@ -109,19 +114,6 @@ pub struct AdministrableProductDefinitionProperty {
     /// The status of characteristic e.g. assigned or pending
     pub status: Option<CodeableConcept>,
 }
-/// AdministrableProductDefinitionRouteofadministration nested structure for the 'targetSpecies' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdministrableProductDefinitionRouteofadministrationTargetspecies {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Coded expression for the species
-    ///
-    /// Binding: example (A tissue type of an animal.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/target-species
-    pub code: CodeableConcept,
-}
 /// AdministrableProductDefinition nested structure for the 'routeOfAdministration' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdministrableProductDefinitionRouteofadministration {
@@ -130,8 +122,8 @@ pub struct AdministrableProductDefinitionRouteofadministration {
     pub base: BackboneElement,
     /// A species for which this route applies
     #[serde(rename = "targetSpecies")]
-    pub target_species:
-        Option<Vec<AdministrableProductDefinitionRouteofadministrationTargetspecies>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_species: Vec<AdministrableProductDefinitionRouteofadministrationTargetspecies>,
     /// Coded expression for the route
     ///
     /// Binding: example (A code specifying the route or physiological path of administration of a therapeutic agent into or onto a patient's body.)
@@ -153,6 +145,19 @@ pub struct AdministrableProductDefinitionRouteofadministration {
     /// The maximum treatment period during which the product can be administered
     #[serde(rename = "maxTreatmentPeriod")]
     pub max_treatment_period: Option<Duration>,
+}
+/// AdministrableProductDefinitionRouteofadministration nested structure for the 'targetSpecies' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdministrableProductDefinitionRouteofadministrationTargetspecies {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Coded expression for the species
+    ///
+    /// Binding: example (A tissue type of an animal.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/target-species
+    pub code: CodeableConcept,
 }
 
 impl Default for AdministrableProductDefinition {
@@ -193,15 +198,6 @@ impl Default for AdministrableProductDefinitionProperty {
     }
 }
 
-impl Default for AdministrableProductDefinitionRouteofadministrationTargetspecies {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            code: Default::default(),
-        }
-    }
-}
-
 impl Default for AdministrableProductDefinitionRouteofadministration {
     fn default() -> Self {
         Self {
@@ -213,6 +209,15 @@ impl Default for AdministrableProductDefinitionRouteofadministration {
             max_dose_per_day: Default::default(),
             max_dose_per_treatment_period: Default::default(),
             max_treatment_period: Default::default(),
+        }
+    }
+}
+
+impl Default for AdministrableProductDefinitionRouteofadministrationTargetspecies {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            code: Default::default(),
         }
     }
 }
@@ -380,13 +385,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for AdministrablePr
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -401,44 +406,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for AdministrablePro
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -448,16 +441,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for AdministrablePr
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -465,13 +455,13 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
     for AdministrableProductDefinition
 {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
     }
     fn form_of(&self) -> &[Reference] {
-        self.form_of.as_deref().unwrap_or(&[])
+        self.form_of.as_slice()
     }
     fn administrable_dose_form(&self) -> Option<CodeableConcept> {
         self.administrable_dose_form.clone()
@@ -480,10 +470,10 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
         self.unit_of_presentation.clone()
     }
     fn produced_from(&self) -> &[Reference] {
-        self.produced_from.as_deref().unwrap_or(&[])
+        self.produced_from.as_slice()
     }
     fn ingredient(&self) -> &[CodeableConcept] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
     fn device(&self) -> Option<Reference> {
         self.device.clone()
@@ -492,7 +482,7 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
         self.description.clone()
     }
     fn property(&self) -> &[AdministrableProductDefinitionProperty] {
-        self.property.as_deref().unwrap_or(&[])
+        self.property.as_slice()
     }
     fn route_of_administration(&self) -> &[AdministrableProductDefinitionRouteofadministration] {
         &self.route_of_administration
@@ -507,12 +497,12 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -522,12 +512,12 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
     }
     fn set_form_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.form_of = Some(value);
+        resource.form_of = value;
         resource
     }
     fn add_form_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.form_of.get_or_insert_with(Vec::new).push(item);
+        resource.form_of.push(item);
         resource
     }
     fn set_administrable_dose_form(self, value: CodeableConcept) -> Self {
@@ -542,25 +532,22 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
     }
     fn set_produced_from(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.produced_from = Some(value);
+        resource.produced_from = value;
         resource
     }
     fn add_produced_from(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .produced_from
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.produced_from.push(item);
         resource
     }
     fn set_ingredient(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
     fn set_device(self, value: Reference) -> Self {
@@ -575,12 +562,12 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
     }
     fn set_property(self, value: Vec<AdministrableProductDefinitionProperty>) -> Self {
         let mut resource = self.clone();
-        resource.property = Some(value);
+        resource.property = value;
         resource
     }
     fn add_property(self, item: AdministrableProductDefinitionProperty) -> Self {
         let mut resource = self.clone();
-        resource.property.get_or_insert_with(Vec::new).push(item);
+        resource.property.push(item);
         resource
     }
     fn set_route_of_administration(
@@ -605,13 +592,13 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
     for AdministrableProductDefinition
 {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_form_of(&self) -> bool {
-        self.form_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.form_of.is_empty()
     }
     fn has_administrable_dose_form(&self) -> bool {
         self.administrable_dose_form.is_some()
@@ -620,10 +607,10 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
         self.unit_of_presentation.is_some()
     }
     fn has_produced_from(&self) -> bool {
-        self.produced_from.as_ref().is_some_and(|v| !v.is_empty())
+        !self.produced_from.is_empty()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
     fn has_device(&self) -> bool {
         self.device.is_some()
@@ -632,7 +619,7 @@ impl crate::traits::administrable_product_definition::AdministrableProductDefini
         self.description.is_some()
     }
     fn has_property(&self) -> bool {
-        self.property.as_ref().is_some_and(|v| !v.is_empty())
+        !self.property.is_empty()
     }
     fn has_route_of_administration(&self) -> bool {
         !self.route_of_administration.is_empty()

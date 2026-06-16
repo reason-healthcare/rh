@@ -25,13 +25,15 @@ pub struct ResearchSubject {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for research subject in a study
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | active | retired | unknown
     pub status: PublicationStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
     pub _status: Option<Element>,
     /// Subject status
-    pub progress: Option<Vec<ResearchSubjectProgress>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub progress: Vec<ResearchSubjectProgress>,
     /// Start and end of participation
     pub period: Option<Period>,
     /// Study subject is part of
@@ -51,7 +53,8 @@ pub struct ResearchSubject {
     #[serde(rename = "_actualComparisonGroup")]
     pub _actual_comparison_group: Option<Element>,
     /// Agreement to participate in study
-    pub consent: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub consent: Vec<Reference>,
 }
 /// ResearchSubject nested structure for the 'progress' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -299,13 +302,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ResearchSubject
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -320,44 +323,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ResearchSubject 
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -367,28 +358,25 @@ impl crate::traits::domain_resource::DomainResourceExistence for ResearchSubject
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::research_subject::ResearchSubjectAccessors for ResearchSubject {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> PublicationStatus {
         self.status.clone()
     }
     fn progress(&self) -> &[ResearchSubjectProgress] {
-        self.progress.as_deref().unwrap_or(&[])
+        self.progress.as_slice()
     }
     fn period(&self) -> Option<Period> {
         self.period.clone()
@@ -406,7 +394,7 @@ impl crate::traits::research_subject::ResearchSubjectAccessors for ResearchSubje
         self.actual_comparison_group.clone()
     }
     fn consent(&self) -> &[Reference] {
-        self.consent.as_deref().unwrap_or(&[])
+        self.consent.as_slice()
     }
 }
 
@@ -416,12 +404,12 @@ impl crate::traits::research_subject::ResearchSubjectMutators for ResearchSubjec
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: PublicationStatus) -> Self {
@@ -431,12 +419,12 @@ impl crate::traits::research_subject::ResearchSubjectMutators for ResearchSubjec
     }
     fn set_progress(self, value: Vec<ResearchSubjectProgress>) -> Self {
         let mut resource = self.clone();
-        resource.progress = Some(value);
+        resource.progress = value;
         resource
     }
     fn add_progress(self, item: ResearchSubjectProgress) -> Self {
         let mut resource = self.clone();
-        resource.progress.get_or_insert_with(Vec::new).push(item);
+        resource.progress.push(item);
         resource
     }
     fn set_period(self, value: Period) -> Self {
@@ -466,25 +454,25 @@ impl crate::traits::research_subject::ResearchSubjectMutators for ResearchSubjec
     }
     fn set_consent(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.consent = Some(value);
+        resource.consent = value;
         resource
     }
     fn add_consent(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.consent.get_or_insert_with(Vec::new).push(item);
+        resource.consent.push(item);
         resource
     }
 }
 
 impl crate::traits::research_subject::ResearchSubjectExistence for ResearchSubject {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
     }
     fn has_progress(&self) -> bool {
-        self.progress.as_ref().is_some_and(|v| !v.is_empty())
+        !self.progress.is_empty()
     }
     fn has_period(&self) -> bool {
         self.period.is_some()
@@ -502,7 +490,7 @@ impl crate::traits::research_subject::ResearchSubjectExistence for ResearchSubje
         self.actual_comparison_group.is_some()
     }
     fn has_consent(&self) -> bool {
-        self.consent.as_ref().is_some_and(|v| !v.is_empty())
+        !self.consent.is_empty()
     }
 }
 

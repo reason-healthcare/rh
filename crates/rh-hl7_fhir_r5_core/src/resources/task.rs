@@ -67,7 +67,8 @@ pub struct Task {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Task Instance Identifier
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Formal definition of task
     #[serde(rename = "instantiatesCanonical")]
     pub instantiates_canonical: Option<StringType>,
@@ -82,13 +83,15 @@ pub struct Task {
     pub _instantiates_uri: Option<Element>,
     /// Request fulfilled by this task
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// Requisition or grouper id
     #[serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
     /// Composite task
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// draft | requested | received | accepted | +
     pub status: TaskStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -162,204 +165,38 @@ pub struct Task {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/performer-role
     #[serde(rename = "requestedPerformer")]
-    pub requested_performer: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requested_performer: Vec<CodeableReference>,
     /// Responsible individual
     pub owner: Option<Reference>,
     /// Who or what performed the task
-    pub performer: Option<Vec<TaskPerformer>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<TaskPerformer>,
     /// Where task occurs
     pub location: Option<Reference>,
     /// Why task is needed
     ///
     /// Binding: example (Indicates why the task is needed.  E.g. Suspended because patient admitted to hospital.)
-    pub reason: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason: Vec<CodeableReference>,
     /// Associated insurance coverage
-    pub insurance: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<Reference>,
     /// Comments made about the task
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Key events in history of the Task
     #[serde(rename = "relevantHistory")]
-    pub relevant_history: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relevant_history: Vec<Reference>,
     /// Constraints on fulfillment tasks
     pub restriction: Option<TaskRestriction>,
     /// Information used to perform task
-    pub input: Option<Vec<TaskInput>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input: Vec<TaskInput>,
     /// Information produced as part of task
-    pub output: Option<Vec<TaskOutput>>,
-}
-/// Task nested structure for the 'output' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskOutput {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Label for output
-    ///
-    /// Binding: example (Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.)
-    #[serde(rename = "type")]
-    pub type_: CodeableConcept,
-    /// Result of output (base64Binary)
-    #[serde(rename = "valueBase64Binary")]
-    pub value_base64_binary: Base64BinaryType,
-    /// Result of output (boolean)
-    #[serde(rename = "valueBoolean")]
-    pub value_boolean: BooleanType,
-    /// Result of output (canonical)
-    #[serde(rename = "valueCanonical")]
-    pub value_canonical: StringType,
-    /// Result of output (code)
-    #[serde(rename = "valueCode")]
-    pub value_code: StringType,
-    /// Result of output (date)
-    #[serde(rename = "valueDate")]
-    pub value_date: DateType,
-    /// Result of output (dateTime)
-    #[serde(rename = "valueDateTime")]
-    pub value_date_time: DateTimeType,
-    /// Result of output (decimal)
-    #[serde(rename = "valueDecimal")]
-    pub value_decimal: DecimalType,
-    /// Result of output (id)
-    #[serde(rename = "valueId")]
-    pub value_id: StringType,
-    /// Result of output (instant)
-    #[serde(rename = "valueInstant")]
-    pub value_instant: InstantType,
-    /// Result of output (integer)
-    #[serde(rename = "valueInteger")]
-    pub value_integer: IntegerType,
-    /// Result of output (integer64)
-    #[serde(rename = "valueInteger64")]
-    pub value_integer64: Integer64Type,
-    /// Result of output (markdown)
-    #[serde(rename = "valueMarkdown")]
-    pub value_markdown: StringType,
-    /// Result of output (oid)
-    #[serde(rename = "valueOid")]
-    pub value_oid: StringType,
-    /// Result of output (positiveInt)
-    #[serde(rename = "valuePositiveInt")]
-    pub value_positive_int: PositiveIntType,
-    /// Result of output (string)
-    #[serde(rename = "valueString")]
-    pub value_string: StringType,
-    /// Result of output (time)
-    #[serde(rename = "valueTime")]
-    pub value_time: TimeType,
-    /// Result of output (unsignedInt)
-    #[serde(rename = "valueUnsignedInt")]
-    pub value_unsigned_int: UnsignedIntType,
-    /// Result of output (uri)
-    #[serde(rename = "valueUri")]
-    pub value_uri: StringType,
-    /// Result of output (url)
-    #[serde(rename = "valueUrl")]
-    pub value_url: StringType,
-    /// Result of output (uuid)
-    #[serde(rename = "valueUuid")]
-    pub value_uuid: StringType,
-    /// Result of output (Address)
-    #[serde(rename = "valueAddress")]
-    pub value_address: Address,
-    /// Result of output (Age)
-    #[serde(rename = "valueAge")]
-    pub value_age: Age,
-    /// Result of output (Annotation)
-    #[serde(rename = "valueAnnotation")]
-    pub value_annotation: Annotation,
-    /// Result of output (Attachment)
-    #[serde(rename = "valueAttachment")]
-    pub value_attachment: Attachment,
-    /// Result of output (CodeableConcept)
-    #[serde(rename = "valueCodeableConcept")]
-    pub value_codeable_concept: CodeableConcept,
-    /// Result of output (CodeableReference)
-    #[serde(rename = "valueCodeableReference")]
-    pub value_codeable_reference: CodeableReference,
-    /// Result of output (Coding)
-    #[serde(rename = "valueCoding")]
-    pub value_coding: Coding,
-    /// Result of output (ContactPoint)
-    #[serde(rename = "valueContactPoint")]
-    pub value_contact_point: ContactPoint,
-    /// Result of output (Count)
-    #[serde(rename = "valueCount")]
-    pub value_count: Count,
-    /// Result of output (Distance)
-    #[serde(rename = "valueDistance")]
-    pub value_distance: Distance,
-    /// Result of output (Duration)
-    #[serde(rename = "valueDuration")]
-    pub value_duration: Duration,
-    /// Result of output (HumanName)
-    #[serde(rename = "valueHumanName")]
-    pub value_human_name: HumanName,
-    /// Result of output (Identifier)
-    #[serde(rename = "valueIdentifier")]
-    pub value_identifier: Identifier,
-    /// Result of output (Money)
-    #[serde(rename = "valueMoney")]
-    pub value_money: Money,
-    /// Result of output (Period)
-    #[serde(rename = "valuePeriod")]
-    pub value_period: Period,
-    /// Result of output (Quantity)
-    #[serde(rename = "valueQuantity")]
-    pub value_quantity: Quantity,
-    /// Result of output (Range)
-    #[serde(rename = "valueRange")]
-    pub value_range: Range,
-    /// Result of output (Ratio)
-    #[serde(rename = "valueRatio")]
-    pub value_ratio: Ratio,
-    /// Result of output (RatioRange)
-    #[serde(rename = "valueRatioRange")]
-    pub value_ratio_range: RatioRange,
-    /// Result of output (Reference)
-    #[serde(rename = "valueReference")]
-    pub value_reference: Reference,
-    /// Result of output (SampledData)
-    #[serde(rename = "valueSampledData")]
-    pub value_sampled_data: SampledData,
-    /// Result of output (Signature)
-    #[serde(rename = "valueSignature")]
-    pub value_signature: Signature,
-    /// Result of output (Timing)
-    #[serde(rename = "valueTiming")]
-    pub value_timing: Timing,
-    /// Result of output (ContactDetail)
-    #[serde(rename = "valueContactDetail")]
-    pub value_contact_detail: ContactDetail,
-    /// Result of output (DataRequirement)
-    #[serde(rename = "valueDataRequirement")]
-    pub value_data_requirement: DataRequirement,
-    /// Result of output (Expression)
-    #[serde(rename = "valueExpression")]
-    pub value_expression: Expression,
-    /// Result of output (ParameterDefinition)
-    #[serde(rename = "valueParameterDefinition")]
-    pub value_parameter_definition: ParameterDefinition,
-    /// Result of output (RelatedArtifact)
-    #[serde(rename = "valueRelatedArtifact")]
-    pub value_related_artifact: RelatedArtifact,
-    /// Result of output (TriggerDefinition)
-    #[serde(rename = "valueTriggerDefinition")]
-    pub value_trigger_definition: TriggerDefinition,
-    /// Result of output (UsageContext)
-    #[serde(rename = "valueUsageContext")]
-    pub value_usage_context: UsageContext,
-    /// Result of output (Availability)
-    #[serde(rename = "valueAvailability")]
-    pub value_availability: Availability,
-    /// Result of output (ExtendedContactDetail)
-    #[serde(rename = "valueExtendedContactDetail")]
-    pub value_extended_contact_detail: ExtendedContactDetail,
-    /// Result of output (Dosage)
-    #[serde(rename = "valueDosage")]
-    pub value_dosage: Dosage,
-    /// Result of output (Meta)
-    #[serde(rename = "valueMeta")]
-    pub value_meta: Meta,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output: Vec<TaskOutput>,
 }
 /// Task nested structure for the 'input' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -535,6 +372,180 @@ pub struct TaskInput {
     #[serde(rename = "valueMeta")]
     pub value_meta: Meta,
 }
+/// Task nested structure for the 'output' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskOutput {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Label for output
+    ///
+    /// Binding: example (Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.)
+    #[serde(rename = "type")]
+    pub type_: CodeableConcept,
+    /// Result of output (base64Binary)
+    #[serde(rename = "valueBase64Binary")]
+    pub value_base64_binary: Base64BinaryType,
+    /// Result of output (boolean)
+    #[serde(rename = "valueBoolean")]
+    pub value_boolean: BooleanType,
+    /// Result of output (canonical)
+    #[serde(rename = "valueCanonical")]
+    pub value_canonical: StringType,
+    /// Result of output (code)
+    #[serde(rename = "valueCode")]
+    pub value_code: StringType,
+    /// Result of output (date)
+    #[serde(rename = "valueDate")]
+    pub value_date: DateType,
+    /// Result of output (dateTime)
+    #[serde(rename = "valueDateTime")]
+    pub value_date_time: DateTimeType,
+    /// Result of output (decimal)
+    #[serde(rename = "valueDecimal")]
+    pub value_decimal: DecimalType,
+    /// Result of output (id)
+    #[serde(rename = "valueId")]
+    pub value_id: StringType,
+    /// Result of output (instant)
+    #[serde(rename = "valueInstant")]
+    pub value_instant: InstantType,
+    /// Result of output (integer)
+    #[serde(rename = "valueInteger")]
+    pub value_integer: IntegerType,
+    /// Result of output (integer64)
+    #[serde(rename = "valueInteger64")]
+    pub value_integer64: Integer64Type,
+    /// Result of output (markdown)
+    #[serde(rename = "valueMarkdown")]
+    pub value_markdown: StringType,
+    /// Result of output (oid)
+    #[serde(rename = "valueOid")]
+    pub value_oid: StringType,
+    /// Result of output (positiveInt)
+    #[serde(rename = "valuePositiveInt")]
+    pub value_positive_int: PositiveIntType,
+    /// Result of output (string)
+    #[serde(rename = "valueString")]
+    pub value_string: StringType,
+    /// Result of output (time)
+    #[serde(rename = "valueTime")]
+    pub value_time: TimeType,
+    /// Result of output (unsignedInt)
+    #[serde(rename = "valueUnsignedInt")]
+    pub value_unsigned_int: UnsignedIntType,
+    /// Result of output (uri)
+    #[serde(rename = "valueUri")]
+    pub value_uri: StringType,
+    /// Result of output (url)
+    #[serde(rename = "valueUrl")]
+    pub value_url: StringType,
+    /// Result of output (uuid)
+    #[serde(rename = "valueUuid")]
+    pub value_uuid: StringType,
+    /// Result of output (Address)
+    #[serde(rename = "valueAddress")]
+    pub value_address: Address,
+    /// Result of output (Age)
+    #[serde(rename = "valueAge")]
+    pub value_age: Age,
+    /// Result of output (Annotation)
+    #[serde(rename = "valueAnnotation")]
+    pub value_annotation: Annotation,
+    /// Result of output (Attachment)
+    #[serde(rename = "valueAttachment")]
+    pub value_attachment: Attachment,
+    /// Result of output (CodeableConcept)
+    #[serde(rename = "valueCodeableConcept")]
+    pub value_codeable_concept: CodeableConcept,
+    /// Result of output (CodeableReference)
+    #[serde(rename = "valueCodeableReference")]
+    pub value_codeable_reference: CodeableReference,
+    /// Result of output (Coding)
+    #[serde(rename = "valueCoding")]
+    pub value_coding: Coding,
+    /// Result of output (ContactPoint)
+    #[serde(rename = "valueContactPoint")]
+    pub value_contact_point: ContactPoint,
+    /// Result of output (Count)
+    #[serde(rename = "valueCount")]
+    pub value_count: Count,
+    /// Result of output (Distance)
+    #[serde(rename = "valueDistance")]
+    pub value_distance: Distance,
+    /// Result of output (Duration)
+    #[serde(rename = "valueDuration")]
+    pub value_duration: Duration,
+    /// Result of output (HumanName)
+    #[serde(rename = "valueHumanName")]
+    pub value_human_name: HumanName,
+    /// Result of output (Identifier)
+    #[serde(rename = "valueIdentifier")]
+    pub value_identifier: Identifier,
+    /// Result of output (Money)
+    #[serde(rename = "valueMoney")]
+    pub value_money: Money,
+    /// Result of output (Period)
+    #[serde(rename = "valuePeriod")]
+    pub value_period: Period,
+    /// Result of output (Quantity)
+    #[serde(rename = "valueQuantity")]
+    pub value_quantity: Quantity,
+    /// Result of output (Range)
+    #[serde(rename = "valueRange")]
+    pub value_range: Range,
+    /// Result of output (Ratio)
+    #[serde(rename = "valueRatio")]
+    pub value_ratio: Ratio,
+    /// Result of output (RatioRange)
+    #[serde(rename = "valueRatioRange")]
+    pub value_ratio_range: RatioRange,
+    /// Result of output (Reference)
+    #[serde(rename = "valueReference")]
+    pub value_reference: Reference,
+    /// Result of output (SampledData)
+    #[serde(rename = "valueSampledData")]
+    pub value_sampled_data: SampledData,
+    /// Result of output (Signature)
+    #[serde(rename = "valueSignature")]
+    pub value_signature: Signature,
+    /// Result of output (Timing)
+    #[serde(rename = "valueTiming")]
+    pub value_timing: Timing,
+    /// Result of output (ContactDetail)
+    #[serde(rename = "valueContactDetail")]
+    pub value_contact_detail: ContactDetail,
+    /// Result of output (DataRequirement)
+    #[serde(rename = "valueDataRequirement")]
+    pub value_data_requirement: DataRequirement,
+    /// Result of output (Expression)
+    #[serde(rename = "valueExpression")]
+    pub value_expression: Expression,
+    /// Result of output (ParameterDefinition)
+    #[serde(rename = "valueParameterDefinition")]
+    pub value_parameter_definition: ParameterDefinition,
+    /// Result of output (RelatedArtifact)
+    #[serde(rename = "valueRelatedArtifact")]
+    pub value_related_artifact: RelatedArtifact,
+    /// Result of output (TriggerDefinition)
+    #[serde(rename = "valueTriggerDefinition")]
+    pub value_trigger_definition: TriggerDefinition,
+    /// Result of output (UsageContext)
+    #[serde(rename = "valueUsageContext")]
+    pub value_usage_context: UsageContext,
+    /// Result of output (Availability)
+    #[serde(rename = "valueAvailability")]
+    pub value_availability: Availability,
+    /// Result of output (ExtendedContactDetail)
+    #[serde(rename = "valueExtendedContactDetail")]
+    pub value_extended_contact_detail: ExtendedContactDetail,
+    /// Result of output (Dosage)
+    #[serde(rename = "valueDosage")]
+    pub value_dosage: Dosage,
+    /// Result of output (Meta)
+    #[serde(rename = "valueMeta")]
+    pub value_meta: Meta,
+}
 /// Task nested structure for the 'performer' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskPerformer {
@@ -561,7 +572,8 @@ pub struct TaskRestriction {
     /// When fulfillment is sought
     pub period: Option<Period>,
     /// For whom is fulfillment sought?
-    pub recipient: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipient: Vec<Reference>,
 }
 
 impl Default for Task {
@@ -614,7 +626,7 @@ impl Default for Task {
     }
 }
 
-impl Default for TaskOutput {
+impl Default for TaskInput {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -677,7 +689,7 @@ impl Default for TaskOutput {
     }
 }
 
-impl Default for TaskInput {
+impl Default for TaskOutput {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
@@ -950,13 +962,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Task {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -971,44 +983,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Task {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1018,22 +1018,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Task {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::task::TaskAccessors for Task {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> Option<StringType> {
         self.instantiates_canonical.clone()
@@ -1042,13 +1039,13 @@ impl crate::traits::task::TaskAccessors for Task {
         self.instantiates_uri.clone()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn group_identifier(&self) -> Option<Identifier> {
         self.group_identifier.clone()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> TaskStatus {
         self.status.clone()
@@ -1099,37 +1096,37 @@ impl crate::traits::task::TaskAccessors for Task {
         self.requester.clone()
     }
     fn requested_performer(&self) -> &[CodeableReference] {
-        self.requested_performer.as_deref().unwrap_or(&[])
+        self.requested_performer.as_slice()
     }
     fn owner(&self) -> Option<Reference> {
         self.owner.clone()
     }
     fn performer(&self) -> &[TaskPerformer] {
-        self.performer.as_deref().unwrap_or(&[])
+        self.performer.as_slice()
     }
     fn location(&self) -> Option<Reference> {
         self.location.clone()
     }
     fn reason(&self) -> &[CodeableReference] {
-        self.reason.as_deref().unwrap_or(&[])
+        self.reason.as_slice()
     }
     fn insurance(&self) -> &[Reference] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn relevant_history(&self) -> &[Reference] {
-        self.relevant_history.as_deref().unwrap_or(&[])
+        self.relevant_history.as_slice()
     }
     fn restriction(&self) -> Option<TaskRestriction> {
         self.restriction.clone()
     }
     fn input(&self) -> &[TaskInput] {
-        self.input.as_deref().unwrap_or(&[])
+        self.input.as_slice()
     }
     fn output(&self) -> &[TaskOutput] {
-        self.output.as_deref().unwrap_or(&[])
+        self.output.as_slice()
     }
 }
 
@@ -1139,12 +1136,12 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: String) -> Self {
@@ -1159,12 +1156,12 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_group_identifier(self, value: Identifier) -> Self {
@@ -1174,12 +1171,12 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: TaskStatus) -> Self {
@@ -1264,15 +1261,12 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_requested_performer(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.requested_performer = Some(value);
+        resource.requested_performer = value;
         resource
     }
     fn add_requested_performer(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource
-            .requested_performer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.requested_performer.push(item);
         resource
     }
     fn set_owner(self, value: Reference) -> Self {
@@ -1282,12 +1276,12 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_performer(self, value: Vec<TaskPerformer>) -> Self {
         let mut resource = self.clone();
-        resource.performer = Some(value);
+        resource.performer = value;
         resource
     }
     fn add_performer(self, item: TaskPerformer) -> Self {
         let mut resource = self.clone();
-        resource.performer.get_or_insert_with(Vec::new).push(item);
+        resource.performer.push(item);
         resource
     }
     fn set_location(self, value: Reference) -> Self {
@@ -1297,45 +1291,42 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_reason(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.reason = Some(value);
+        resource.reason = value;
         resource
     }
     fn add_reason(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource.reason.get_or_insert_with(Vec::new).push(item);
+        resource.reason.push(item);
         resource
     }
     fn set_insurance(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_relevant_history(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.relevant_history = Some(value);
+        resource.relevant_history = value;
         resource
     }
     fn add_relevant_history(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .relevant_history
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.relevant_history.push(item);
         resource
     }
     fn set_restriction(self, value: TaskRestriction) -> Self {
@@ -1345,29 +1336,29 @@ impl crate::traits::task::TaskMutators for Task {
     }
     fn set_input(self, value: Vec<TaskInput>) -> Self {
         let mut resource = self.clone();
-        resource.input = Some(value);
+        resource.input = value;
         resource
     }
     fn add_input(self, item: TaskInput) -> Self {
         let mut resource = self.clone();
-        resource.input.get_or_insert_with(Vec::new).push(item);
+        resource.input.push(item);
         resource
     }
     fn set_output(self, value: Vec<TaskOutput>) -> Self {
         let mut resource = self.clone();
-        resource.output = Some(value);
+        resource.output = value;
         resource
     }
     fn add_output(self, item: TaskOutput) -> Self {
         let mut resource = self.clone();
-        resource.output.get_or_insert_with(Vec::new).push(item);
+        resource.output.push(item);
         resource
     }
 }
 
 impl crate::traits::task::TaskExistence for Task {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
         self.instantiates_canonical.is_some()
@@ -1376,13 +1367,13 @@ impl crate::traits::task::TaskExistence for Task {
         self.instantiates_uri.is_some()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_group_identifier(&self) -> bool {
         self.group_identifier.is_some()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1433,41 +1424,37 @@ impl crate::traits::task::TaskExistence for Task {
         self.requester.is_some()
     }
     fn has_requested_performer(&self) -> bool {
-        self.requested_performer
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.requested_performer.is_empty()
     }
     fn has_owner(&self) -> bool {
         self.owner.is_some()
     }
     fn has_performer(&self) -> bool {
-        self.performer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.performer.is_empty()
     }
     fn has_location(&self) -> bool {
         self.location.is_some()
     }
     fn has_reason(&self) -> bool {
-        self.reason.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reason.is_empty()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_relevant_history(&self) -> bool {
-        self.relevant_history
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.relevant_history.is_empty()
     }
     fn has_restriction(&self) -> bool {
         self.restriction.is_some()
     }
     fn has_input(&self) -> bool {
-        self.input.as_ref().is_some_and(|v| !v.is_empty())
+        !self.input.is_empty()
     }
     fn has_output(&self) -> bool {
-        self.output.as_ref().is_some_and(|v| !v.is_empty())
+        !self.output.is_empty()
     }
 }
 

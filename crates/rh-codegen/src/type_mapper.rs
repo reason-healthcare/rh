@@ -251,11 +251,12 @@ impl<'a> TypeMapper<'a> {
     /// Get the appropriate Rust type for a ValueSet binding
     pub fn get_value_set_type(&mut self, value_set_url: &str) -> RustType {
         if self.value_set_manager.is_cached(value_set_url) {
-            let enum_name = self
-                .value_set_manager
-                .get_enum_name(value_set_url)
-                .expect("Cached ValueSet should have enum name")
-                .clone();
+            let enum_name = match self.value_set_manager.get_enum_name(value_set_url) {
+                Some(name) => name.clone(),
+                None => {
+                    return RustType::Custom("StringType".to_string());
+                }
+            };
             RustType::Custom(enum_name)
         } else {
             let enum_name = self

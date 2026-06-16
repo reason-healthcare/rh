@@ -139,7 +139,7 @@ impl MetadataRegistry {
             let field_info = current_type.fields.get(field_name)?;
 
             // If this is the last part of the path, return this field's type
-            if field_name == *parts.last().unwrap() {
+            if field_name == *parts.last().unwrap_or(&"") {
                 return Some(&field_info.field_type);
             }
 

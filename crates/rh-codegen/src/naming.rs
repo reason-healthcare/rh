@@ -217,7 +217,7 @@ impl Naming {
                 }
             }
 
-            result.push(ch.to_lowercase().next().unwrap());
+            result.push(ch.to_lowercase().next().unwrap_or(ch));
         }
 
         result
@@ -264,7 +264,7 @@ impl Naming {
         for ch in name.chars() {
             if ch.is_alphanumeric() {
                 if capitalize_next {
-                    result.push(ch.to_uppercase().next().unwrap());
+                    result.push(ch.to_uppercase().next().unwrap_or(ch));
                     capitalize_next = false;
                 } else {
                     result.push(ch);
@@ -276,7 +276,7 @@ impl Naming {
         }
 
         // Ensure it starts with a letter or underscore (Rust requirement)
-        if result.is_empty() || result.chars().next().unwrap().is_numeric() {
+        if result.is_empty() || result.chars().next().is_some_and(|c| c.is_numeric()) {
             result = format!("_{result}");
         }
 
@@ -291,7 +291,9 @@ impl Naming {
         }
 
         let mut chars = name.chars();
-        let first_char = chars.next().unwrap();
+        let Some(first_char) = chars.next() else {
+            return false;
+        };
 
         // First character must be a letter or underscore
         if !first_char.is_alphabetic() && first_char != '_' {

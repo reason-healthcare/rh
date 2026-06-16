@@ -31,7 +31,8 @@ pub struct Subscription {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Additional identifiers (business identifier)
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Human readable name for this subscription
     pub name: Option<StringType>,
     /// Extension element for the 'name' primitive field. Contains metadata and extensions.
@@ -45,7 +46,8 @@ pub struct Subscription {
     /// Extension element for the 'topic' primitive field. Contains metadata and extensions.
     pub _topic: Option<Element>,
     /// Contact details for source (e.g. troubleshooting)
-    pub contact: Option<Vec<ContactPoint>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactPoint>,
     /// When to automatically delete the subscription
     pub end: Option<InstantType>,
     /// Extension element for the 'end' primitive field. Contains metadata and extensions.
@@ -59,7 +61,8 @@ pub struct Subscription {
     pub _reason: Option<Element>,
     /// Criteria for narrowing the subscription topic stream
     #[serde(rename = "filterBy")]
-    pub filter_by: Option<Vec<SubscriptionFilterby>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub filter_by: Vec<SubscriptionFilterby>,
     /// Channel type for notifications
     ///
     /// Binding: extensible (The type of method used to execute a subscription.)
@@ -72,7 +75,8 @@ pub struct Subscription {
     /// Extension element for the 'endpoint' primitive field. Contains metadata and extensions.
     pub _endpoint: Option<Element>,
     /// Channel type
-    pub parameter: Option<Vec<SubscriptionParameter>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<SubscriptionParameter>,
     /// Interval in seconds to send 'heartbeat' notification
     #[serde(rename = "heartbeatPeriod")]
     pub heartbeat_period: Option<UnsignedIntType>,
@@ -409,13 +413,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Subscription {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -430,44 +434,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Subscription {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -477,22 +469,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Subscription {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::subscription::SubscriptionAccessors for Subscription {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn name(&self) -> Option<StringType> {
         self.name.clone()
@@ -504,7 +493,7 @@ impl crate::traits::subscription::SubscriptionAccessors for Subscription {
         self.topic.clone()
     }
     fn contact(&self) -> &[ContactPoint] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn end(&self) -> Option<InstantType> {
         self.end.clone()
@@ -516,7 +505,7 @@ impl crate::traits::subscription::SubscriptionAccessors for Subscription {
         self.reason.clone()
     }
     fn filter_by(&self) -> &[SubscriptionFilterby] {
-        self.filter_by.as_deref().unwrap_or(&[])
+        self.filter_by.as_slice()
     }
     fn channel_type(&self) -> Coding {
         self.channel_type.clone()
@@ -525,7 +514,7 @@ impl crate::traits::subscription::SubscriptionAccessors for Subscription {
         self.endpoint.clone()
     }
     fn parameter(&self) -> &[SubscriptionParameter] {
-        self.parameter.as_deref().unwrap_or(&[])
+        self.parameter.as_slice()
     }
     fn heartbeat_period(&self) -> Option<UnsignedIntType> {
         self.heartbeat_period
@@ -550,12 +539,12 @@ impl crate::traits::subscription::SubscriptionMutators for Subscription {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_name(self, value: String) -> Self {
@@ -575,12 +564,12 @@ impl crate::traits::subscription::SubscriptionMutators for Subscription {
     }
     fn set_contact(self, value: Vec<ContactPoint>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactPoint) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_end(self, value: String) -> Self {
@@ -600,12 +589,12 @@ impl crate::traits::subscription::SubscriptionMutators for Subscription {
     }
     fn set_filter_by(self, value: Vec<SubscriptionFilterby>) -> Self {
         let mut resource = self.clone();
-        resource.filter_by = Some(value);
+        resource.filter_by = value;
         resource
     }
     fn add_filter_by(self, item: SubscriptionFilterby) -> Self {
         let mut resource = self.clone();
-        resource.filter_by.get_or_insert_with(Vec::new).push(item);
+        resource.filter_by.push(item);
         resource
     }
     fn set_channel_type(self, value: Coding) -> Self {
@@ -620,12 +609,12 @@ impl crate::traits::subscription::SubscriptionMutators for Subscription {
     }
     fn set_parameter(self, value: Vec<SubscriptionParameter>) -> Self {
         let mut resource = self.clone();
-        resource.parameter = Some(value);
+        resource.parameter = value;
         resource
     }
     fn add_parameter(self, item: SubscriptionParameter) -> Self {
         let mut resource = self.clone();
-        resource.parameter.get_or_insert_with(Vec::new).push(item);
+        resource.parameter.push(item);
         resource
     }
     fn set_heartbeat_period(self, value: i32) -> Self {
@@ -657,7 +646,7 @@ impl crate::traits::subscription::SubscriptionMutators for Subscription {
 
 impl crate::traits::subscription::SubscriptionExistence for Subscription {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_name(&self) -> bool {
         self.name.is_some()
@@ -669,7 +658,7 @@ impl crate::traits::subscription::SubscriptionExistence for Subscription {
         true
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_end(&self) -> bool {
         self.end.is_some()
@@ -681,7 +670,7 @@ impl crate::traits::subscription::SubscriptionExistence for Subscription {
         self.reason.is_some()
     }
     fn has_filter_by(&self) -> bool {
-        self.filter_by.as_ref().is_some_and(|v| !v.is_empty())
+        !self.filter_by.is_empty()
     }
     fn has_channel_type(&self) -> bool {
         true
@@ -690,7 +679,7 @@ impl crate::traits::subscription::SubscriptionExistence for Subscription {
         self.endpoint.is_some()
     }
     fn has_parameter(&self) -> bool {
-        self.parameter.as_ref().is_some_and(|v| !v.is_empty())
+        !self.parameter.is_empty()
     }
     fn has_heartbeat_period(&self) -> bool {
         self.heartbeat_period.is_some()

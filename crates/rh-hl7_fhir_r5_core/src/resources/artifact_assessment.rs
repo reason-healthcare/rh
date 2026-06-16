@@ -30,7 +30,8 @@ pub struct ArtifactAssessment {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Additional identifier for the artifact assessment
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// A short title for the assessment for use in displaying and selecting
     pub title: Option<StringType>,
     /// Extension element for the 'title' primitive field. Contains metadata and extensions.
@@ -71,7 +72,8 @@ pub struct ArtifactAssessment {
     #[serde(rename = "artifactUri")]
     pub artifact_uri: StringType,
     /// Comment, classifier, or rating content
-    pub content: Option<Vec<ArtifactAssessmentContent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub content: Vec<ArtifactAssessmentContent>,
     /// submitted | triaged | waiting-for-input | resolved-no-change | resolved-change-required | deferred | duplicate | applied | published | entered-in-error
     #[serde(rename = "workflowStatus")]
     pub workflow_status: Option<ArtifactassessmentWorkflowStatus>,
@@ -111,18 +113,22 @@ pub struct ArtifactAssessmentContent {
     /// Binding: example (No description)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/certainty-rating
-    pub classifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classifier: Vec<CodeableConcept>,
     /// Quantitative rating
     pub quantity: Option<Quantity>,
     /// Who authored the content
     pub author: Option<Reference>,
     /// What the comment is directed to
-    pub path: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<StringType>,
     /// Extension element for the 'path' primitive field. Contains metadata and extensions.
-    pub _path: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _path: Vec<Element>,
     /// Additional information
     #[serde(rename = "relatedArtifact")]
-    pub related_artifact: Option<Vec<RelatedArtifact>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub related_artifact: Vec<RelatedArtifact>,
     /// Acceptable to publicly share the resource content
     #[serde(rename = "freeToShare")]
     pub free_to_share: Option<BooleanType>,
@@ -130,7 +136,8 @@ pub struct ArtifactAssessmentContent {
     #[serde(rename = "_freeToShare")]
     pub _free_to_share: Option<Element>,
     /// Contained content
-    pub component: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub component: Vec<StringType>,
 }
 
 impl Default for ArtifactAssessment {
@@ -363,13 +370,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ArtifactAssessm
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -384,44 +391,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ArtifactAssessme
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -431,22 +426,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for ArtifactAssessm
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::artifact_assessment::ArtifactAssessmentAccessors for ArtifactAssessment {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn title(&self) -> Option<StringType> {
         self.title.clone()
@@ -464,7 +456,7 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentAccessors for Artifac
         self.last_review_date.clone()
     }
     fn content(&self) -> &[ArtifactAssessmentContent] {
-        self.content.as_deref().unwrap_or(&[])
+        self.content.as_slice()
     }
     fn workflow_status(&self) -> Option<ArtifactassessmentWorkflowStatus> {
         self.workflow_status.clone()
@@ -480,12 +472,12 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentMutators for Artifact
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_title(self, value: String) -> Self {
@@ -515,12 +507,12 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentMutators for Artifact
     }
     fn set_content(self, value: Vec<ArtifactAssessmentContent>) -> Self {
         let mut resource = self.clone();
-        resource.content = Some(value);
+        resource.content = value;
         resource
     }
     fn add_content(self, item: ArtifactAssessmentContent) -> Self {
         let mut resource = self.clone();
-        resource.content.get_or_insert_with(Vec::new).push(item);
+        resource.content.push(item);
         resource
     }
     fn set_workflow_status(self, value: ArtifactassessmentWorkflowStatus) -> Self {
@@ -543,7 +535,7 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentExistence for Artifac
         self.cite_as_reference.is_some() || self.cite_as_markdown.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_title(&self) -> bool {
         self.title.is_some()
@@ -561,7 +553,7 @@ impl crate::traits::artifact_assessment::ArtifactAssessmentExistence for Artifac
         self.last_review_date.is_some()
     }
     fn has_content(&self) -> bool {
-        self.content.as_ref().is_some_and(|v| !v.is_empty())
+        !self.content.is_empty()
     }
     fn has_workflow_status(&self) -> bool {
         self.workflow_status.is_some()

@@ -32,27 +32,35 @@ pub struct CarePlan {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External Ids for this plan
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// Fulfills CarePlan
     #[serde(rename = "basedOn")]
-    pub based_on: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub based_on: Vec<Reference>,
     /// CarePlan replaced by this CarePlan
-    pub replaces: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub replaces: Vec<Reference>,
     /// Part of referenced CarePlan
     #[serde(rename = "partOf")]
-    pub part_of: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub part_of: Vec<Reference>,
     /// draft | active | on-hold | revoked | completed | entered-in-error | unknown
     pub status: RequestStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -66,7 +74,8 @@ pub struct CarePlan {
     /// Binding: example (Identifies what "kind" of plan this is to support differentiation between multiple co-existing plans; e.g. "Home health", "psychiatric", "asthma", "disease management", etc.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/care-plan-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Human-friendly name for the care plan
     pub title: Option<StringType>,
     /// Extension element for the 'title' primitive field. Contains metadata and extensions.
@@ -88,21 +97,28 @@ pub struct CarePlan {
     /// Who is the designated responsible party
     pub author: Option<Reference>,
     /// Who provided the content of the care plan
-    pub contributor: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contributor: Vec<Reference>,
     /// Who's involved in plan?
     #[serde(rename = "careTeam")]
-    pub care_team: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub care_team: Vec<Reference>,
     /// Health issues this plan addresses
-    pub addresses: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addresses: Vec<Reference>,
     /// Information considered as part of plan
     #[serde(rename = "supportingInfo")]
-    pub supporting_info: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supporting_info: Vec<Reference>,
     /// Desired outcome of plan
-    pub goal: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goal: Vec<Reference>,
     /// Action to occur as part of plan
-    pub activity: Option<Vec<CarePlanActivity>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub activity: Vec<CarePlanActivity>,
     /// Comments about the plan
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// CarePlan nested structure for the 'activity' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,12 +134,15 @@ pub struct CarePlanActivity {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/care-plan-activity-outcome
     #[serde(rename = "outcomeCodeableConcept")]
-    pub outcome_codeable_concept: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcome_codeable_concept: Vec<CodeableConcept>,
     /// Appointment, Encounter, Procedure, etc.
     #[serde(rename = "outcomeReference")]
-    pub outcome_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub outcome_reference: Vec<Reference>,
     /// Comments about the activity status/progress
-    pub progress: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub progress: Vec<Annotation>,
     /// Activity details defined in specific resource
     pub reference: Option<Reference>,
 }
@@ -139,16 +158,20 @@ pub struct CarePlanActivityDetail {
     pub _kind: Option<Element>,
     /// Instantiates FHIR protocol or definition
     #[serde(rename = "instantiatesCanonical")]
-    pub instantiates_canonical: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_canonical: Vec<StringType>,
     /// Extension element for the 'instantiatesCanonical' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesCanonical")]
-    pub _instantiates_canonical: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_canonical: Vec<Element>,
     /// Instantiates external protocol or definition
     #[serde(rename = "instantiatesUri")]
-    pub instantiates_uri: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instantiates_uri: Vec<StringType>,
     /// Extension element for the 'instantiatesUri' primitive field. Contains metadata and extensions.
     #[serde(rename = "_instantiatesUri")]
-    pub _instantiates_uri: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _instantiates_uri: Vec<Element>,
     /// Detail type of activity
     ///
     /// Binding: example (Detailed description of the type of activity; e.g. What lab test, what procedure, what kind of encounter.)
@@ -161,12 +184,15 @@ pub struct CarePlanActivityDetail {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/clinical-findings
     #[serde(rename = "reasonCode")]
-    pub reason_code: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_code: Vec<CodeableConcept>,
     /// Why activity is needed
     #[serde(rename = "reasonReference")]
-    pub reason_reference: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reason_reference: Vec<Reference>,
     /// Goals this activity relates to
-    pub goal: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub goal: Vec<Reference>,
     /// not-started | scheduled | in-progress | on-hold | completed | cancelled | stopped | unknown | entered-in-error
     pub status: CarePlanActivityStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -192,7 +218,8 @@ pub struct CarePlanActivityDetail {
     /// Where it should happen
     pub location: Option<Reference>,
     /// Who will be responsible?
-    pub performer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub performer: Vec<Reference>,
     /// What is to be administered/supplied (CodeableConcept)
     #[serde(rename = "productCodeableConcept")]
     pub product_codeable_concept: Option<CodeableConcept>,
@@ -501,13 +528,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for CarePlan {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -522,44 +549,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for CarePlan {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -569,37 +584,34 @@ impl crate::traits::domain_resource::DomainResourceExistence for CarePlan {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::care_plan::CarePlanAccessors for CarePlan {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn instantiates_canonical(&self) -> &[StringType] {
-        self.instantiates_canonical.as_deref().unwrap_or(&[])
+        self.instantiates_canonical.as_slice()
     }
     fn instantiates_uri(&self) -> &[StringType] {
-        self.instantiates_uri.as_deref().unwrap_or(&[])
+        self.instantiates_uri.as_slice()
     }
     fn based_on(&self) -> &[Reference] {
-        self.based_on.as_deref().unwrap_or(&[])
+        self.based_on.as_slice()
     }
     fn replaces(&self) -> &[Reference] {
-        self.replaces.as_deref().unwrap_or(&[])
+        self.replaces.as_slice()
     }
     fn part_of(&self) -> &[Reference] {
-        self.part_of.as_deref().unwrap_or(&[])
+        self.part_of.as_slice()
     }
     fn status(&self) -> RequestStatus {
         self.status.clone()
@@ -608,7 +620,7 @@ impl crate::traits::care_plan::CarePlanAccessors for CarePlan {
         self.intent.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn title(&self) -> Option<StringType> {
         self.title.clone()
@@ -632,25 +644,25 @@ impl crate::traits::care_plan::CarePlanAccessors for CarePlan {
         self.author.clone()
     }
     fn contributor(&self) -> &[Reference] {
-        self.contributor.as_deref().unwrap_or(&[])
+        self.contributor.as_slice()
     }
     fn care_team(&self) -> &[Reference] {
-        self.care_team.as_deref().unwrap_or(&[])
+        self.care_team.as_slice()
     }
     fn addresses(&self) -> &[Reference] {
-        self.addresses.as_deref().unwrap_or(&[])
+        self.addresses.as_slice()
     }
     fn supporting_info(&self) -> &[Reference] {
-        self.supporting_info.as_deref().unwrap_or(&[])
+        self.supporting_info.as_slice()
     }
     fn goal(&self) -> &[Reference] {
-        self.goal.as_deref().unwrap_or(&[])
+        self.goal.as_slice()
     }
     fn activity(&self) -> &[CarePlanActivity] {
-        self.activity.as_deref().unwrap_or(&[])
+        self.activity.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -660,68 +672,62 @@ impl crate::traits::care_plan::CarePlanMutators for CarePlan {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_instantiates_canonical(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_canonical = Some(value);
+        resource.instantiates_canonical = value;
         resource
     }
     fn add_instantiates_canonical(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_canonical
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_canonical.push(item);
         resource
     }
     fn set_instantiates_uri(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.instantiates_uri = Some(value);
+        resource.instantiates_uri = value;
         resource
     }
     fn add_instantiates_uri(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .instantiates_uri
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.instantiates_uri.push(item);
         resource
     }
     fn set_based_on(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.based_on = Some(value);
+        resource.based_on = value;
         resource
     }
     fn add_based_on(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.based_on.get_or_insert_with(Vec::new).push(item);
+        resource.based_on.push(item);
         resource
     }
     fn set_replaces(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.replaces = Some(value);
+        resource.replaces = value;
         resource
     }
     fn add_replaces(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.replaces.get_or_insert_with(Vec::new).push(item);
+        resource.replaces.push(item);
         resource
     }
     fn set_part_of(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.part_of = Some(value);
+        resource.part_of = value;
         resource
     }
     fn add_part_of(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.part_of.get_or_insert_with(Vec::new).push(item);
+        resource.part_of.push(item);
         resource
     }
     fn set_status(self, value: RequestStatus) -> Self {
@@ -736,12 +742,12 @@ impl crate::traits::care_plan::CarePlanMutators for CarePlan {
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_title(self, value: String) -> Self {
@@ -781,101 +787,94 @@ impl crate::traits::care_plan::CarePlanMutators for CarePlan {
     }
     fn set_contributor(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.contributor = Some(value);
+        resource.contributor = value;
         resource
     }
     fn add_contributor(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.contributor.get_or_insert_with(Vec::new).push(item);
+        resource.contributor.push(item);
         resource
     }
     fn set_care_team(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.care_team = Some(value);
+        resource.care_team = value;
         resource
     }
     fn add_care_team(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.care_team.get_or_insert_with(Vec::new).push(item);
+        resource.care_team.push(item);
         resource
     }
     fn set_addresses(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.addresses = Some(value);
+        resource.addresses = value;
         resource
     }
     fn add_addresses(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.addresses.get_or_insert_with(Vec::new).push(item);
+        resource.addresses.push(item);
         resource
     }
     fn set_supporting_info(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.supporting_info = Some(value);
+        resource.supporting_info = value;
         resource
     }
     fn add_supporting_info(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .supporting_info
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.supporting_info.push(item);
         resource
     }
     fn set_goal(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.goal = Some(value);
+        resource.goal = value;
         resource
     }
     fn add_goal(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.goal.get_or_insert_with(Vec::new).push(item);
+        resource.goal.push(item);
         resource
     }
     fn set_activity(self, value: Vec<CarePlanActivity>) -> Self {
         let mut resource = self.clone();
-        resource.activity = Some(value);
+        resource.activity = value;
         resource
     }
     fn add_activity(self, item: CarePlanActivity) -> Self {
         let mut resource = self.clone();
-        resource.activity.get_or_insert_with(Vec::new).push(item);
+        resource.activity.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::care_plan::CarePlanExistence for CarePlan {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_instantiates_canonical(&self) -> bool {
-        self.instantiates_canonical
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_canonical.is_empty()
     }
     fn has_instantiates_uri(&self) -> bool {
-        self.instantiates_uri
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.instantiates_uri.is_empty()
     }
     fn has_based_on(&self) -> bool {
-        self.based_on.as_ref().is_some_and(|v| !v.is_empty())
+        !self.based_on.is_empty()
     }
     fn has_replaces(&self) -> bool {
-        self.replaces.as_ref().is_some_and(|v| !v.is_empty())
+        !self.replaces.is_empty()
     }
     fn has_part_of(&self) -> bool {
-        self.part_of.as_ref().is_some_and(|v| !v.is_empty())
+        !self.part_of.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -884,7 +883,7 @@ impl crate::traits::care_plan::CarePlanExistence for CarePlan {
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_title(&self) -> bool {
         self.title.is_some()
@@ -908,25 +907,25 @@ impl crate::traits::care_plan::CarePlanExistence for CarePlan {
         self.author.is_some()
     }
     fn has_contributor(&self) -> bool {
-        self.contributor.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contributor.is_empty()
     }
     fn has_care_team(&self) -> bool {
-        self.care_team.as_ref().is_some_and(|v| !v.is_empty())
+        !self.care_team.is_empty()
     }
     fn has_addresses(&self) -> bool {
-        self.addresses.as_ref().is_some_and(|v| !v.is_empty())
+        !self.addresses.is_empty()
     }
     fn has_supporting_info(&self) -> bool {
-        self.supporting_info.as_ref().is_some_and(|v| !v.is_empty())
+        !self.supporting_info.is_empty()
     }
     fn has_goal(&self) -> bool {
-        self.goal.as_ref().is_some_and(|v| !v.is_empty())
+        !self.goal.is_empty()
     }
     fn has_activity(&self) -> bool {
-        self.activity.as_ref().is_some_and(|v| !v.is_empty())
+        !self.activity.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

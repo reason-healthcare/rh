@@ -36,7 +36,8 @@ pub struct ClaimResponse {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for a claim response
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | cancelled | draft | entered-in-error
     pub status: FmStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -97,14 +98,18 @@ pub struct ClaimResponse {
     #[serde(rename = "payeeType")]
     pub payee_type: Option<CodeableConcept>,
     /// Adjudication for claim line items
-    pub item: Option<Vec<ClaimResponseItem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item: Vec<ClaimResponseItem>,
     /// Insurer added line items
     #[serde(rename = "addItem")]
-    pub add_item: Option<Vec<ClaimResponseAdditem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub add_item: Vec<ClaimResponseAdditem>,
     /// Header-level adjudication
-    pub adjudication: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub adjudication: Vec<StringType>,
     /// Adjudication totals
-    pub total: Option<Vec<ClaimResponseTotal>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub total: Vec<ClaimResponseTotal>,
     /// Payment Details
     pub payment: Option<ClaimResponsePayment>,
     /// Funds reserved status
@@ -125,95 +130,128 @@ pub struct ClaimResponse {
     pub form: Option<Attachment>,
     /// Note concerning adjudication
     #[serde(rename = "processNote")]
-    pub process_note: Option<Vec<ClaimResponseProcessnote>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub process_note: Vec<ClaimResponseProcessnote>,
     /// Request for additional information
     #[serde(rename = "communicationRequest")]
-    pub communication_request: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication_request: Vec<Reference>,
     /// Patient insurance information
-    pub insurance: Option<Vec<ClaimResponseInsurance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub insurance: Vec<ClaimResponseInsurance>,
     /// Processing errors
-    pub error: Option<Vec<ClaimResponseError>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub error: Vec<ClaimResponseError>,
 }
-/// ClaimResponse nested structure for the 'processNote' field
+/// ClaimResponse nested structure for the 'addItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseProcessnote {
+pub struct ClaimResponseAdditem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Note instance identifier
-    pub number: Option<PositiveIntType>,
-    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
-    pub _number: Option<Element>,
-    /// display | print | printoper
-    #[serde(rename = "type")]
-    pub type_: Option<NoteType>,
-    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
-    pub _type: Option<Element>,
-    /// Note explanatory text
-    pub text: StringType,
-    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
-    pub _text: Option<Element>,
-    /// Language of the text
-    ///
-    /// Binding: preferred (A human language.)
-    ///
-    /// Available values:
-    /// - `ar`: Arabic
-    /// - `bn`: Bengali
-    /// - `cs`: Czech
-    /// - `da`: Danish
-    /// - `de`: German
-    /// - `de-AT`: German (Austria)
-    /// - `de-CH`: German (Switzerland)
-    /// - `de-DE`: German (Germany)
-    /// - `el`: Greek
-    /// - `en`: English
-    /// - ... and 46 more values
-    pub language: Option<StringType>,
-}
-/// ClaimResponseItemDetail nested structure for the 'subDetail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemDetailSubdetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Claim sub-detail instance identifier
-    #[serde(rename = "subDetailSequence")]
-    pub sub_detail_sequence: PositiveIntType,
-    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_subDetailSequence")]
-    pub _sub_detail_sequence: Option<Element>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Subdetail level adjudication details
-    pub adjudication: Option<Vec<StringType>>,
-}
-/// ClaimResponse nested structure for the 'item' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItem {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Adjudication for claim details
-    pub detail: Option<Vec<ClaimResponseItemDetail>>,
-    /// Adjudication details
-    pub adjudication: Vec<ClaimResponseItemAdjudication>,
-    /// Claim item instance identifier
+    /// Insurer added line details
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<ClaimResponseAdditemDetail>,
+    /// Item sequence number
     #[serde(rename = "itemSequence")]
-    pub item_sequence: PositiveIntType,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub item_sequence: Vec<PositiveIntType>,
     /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
     #[serde(rename = "_itemSequence")]
-    pub _item_sequence: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _item_sequence: Vec<Element>,
+    /// Detail sequence number
+    #[serde(rename = "detailSequence")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail_sequence: Vec<PositiveIntType>,
+    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_detailSequence")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _detail_sequence: Vec<Element>,
+    /// Subdetail sequence number
+    #[serde(rename = "subdetailSequence")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subdetail_sequence: Vec<PositiveIntType>,
+    /// Extension element for the 'subdetailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_subdetailSequence")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _subdetail_sequence: Vec<Element>,
+    /// Authorized providers
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provider: Vec<Reference>,
+    /// Billing, service, product, or drug code
+    ///
+    /// Binding: example (Allowable service and product codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
+    #[serde(rename = "productOrService")]
+    pub product_or_service: CodeableConcept,
+    /// Service/Product billing modifiers
+    ///
+    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<CodeableConcept>,
+    /// Program the product or service is provided under
+    ///
+    /// Binding: example (Program specific reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
+    #[serde(rename = "programCode")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub program_code: Vec<CodeableConcept>,
+    /// Date or dates of service or product delivery (date)
+    #[serde(rename = "servicedDate")]
+    pub serviced_date: Option<DateType>,
+    /// Date or dates of service or product delivery (Period)
+    #[serde(rename = "servicedPeriod")]
+    pub serviced_period: Option<Period>,
+    /// Place of service or where product was supplied (CodeableConcept)
+    #[serde(rename = "locationCodeableConcept")]
+    pub location_codeable_concept: Option<CodeableConcept>,
+    /// Place of service or where product was supplied (Address)
+    #[serde(rename = "locationAddress")]
+    pub location_address: Option<Address>,
+    /// Place of service or where product was supplied (Reference)
+    #[serde(rename = "locationReference")]
+    pub location_reference: Option<Reference>,
+    /// Count of products or services
+    pub quantity: Option<Quantity>,
+    /// Fee, charge or cost per item
+    #[serde(rename = "unitPrice")]
+    pub unit_price: Option<Money>,
+    /// Price scaling factor
+    pub factor: Option<DecimalType>,
+    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
+    pub _factor: Option<Element>,
+    /// Total item cost
+    pub net: Option<Money>,
+    /// Anatomical location
+    ///
+    /// Binding: example (The code for the teeth, quadrant, sextant and arch.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/tooth
+    #[serde(rename = "bodySite")]
+    pub body_site: Option<CodeableConcept>,
+    /// Anatomical sub-location
+    ///
+    /// Binding: example (The code for the tooth surface and surface combinations.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/surface
+    #[serde(rename = "subSite")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sub_site: Vec<CodeableConcept>,
     /// Applicable note numbers
     #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_number: Vec<PositiveIntType>,
     /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
     #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _note_number: Vec<Element>,
+    /// Added items adjudication
+    pub adjudication: Vec<StringType>,
 }
 /// ClaimResponseAdditem nested structure for the 'detail' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,7 +271,8 @@ pub struct ClaimResponseAdditemDetail {
     /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<CodeableConcept>,
     /// Count of products or services
     pub quantity: Option<Quantity>,
     /// Fee, charge or cost per item
@@ -247,10 +286,12 @@ pub struct ClaimResponseAdditemDetail {
     pub net: Option<Money>,
     /// Applicable note numbers
     #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_number: Vec<PositiveIntType>,
     /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
     #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _note_number: Vec<Element>,
     /// Added items detail adjudication
     pub adjudication: Vec<StringType>,
 }
@@ -272,7 +313,8 @@ pub struct ClaimResponseAdditemDetailSubdetail {
     /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<CodeableConcept>,
     /// Count of products or services
     pub quantity: Option<Quantity>,
     /// Fee, charge or cost per item
@@ -286,57 +328,13 @@ pub struct ClaimResponseAdditemDetailSubdetail {
     pub net: Option<Money>,
     /// Applicable note numbers
     #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_number: Vec<PositiveIntType>,
     /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
     #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _note_number: Vec<Element>,
     /// Added items detail adjudication
-    pub adjudication: Vec<StringType>,
-}
-/// ClaimResponseItem nested structure for the 'adjudication' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemAdjudication {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Type of adjudication information
-    ///
-    /// Binding: example (The adjudication codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
-    pub category: CodeableConcept,
-    /// Explanation of adjudication outcome
-    ///
-    /// Binding: example (The adjudication reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-reason
-    pub reason: Option<CodeableConcept>,
-    /// Monetary amount
-    pub amount: Option<Money>,
-    /// Non-monetary value
-    pub value: Option<DecimalType>,
-    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
-    pub _value: Option<Element>,
-}
-/// ClaimResponseItem nested structure for the 'detail' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseItemDetail {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Claim detail instance identifier
-    #[serde(rename = "detailSequence")]
-    pub detail_sequence: PositiveIntType,
-    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_detailSequence")]
-    pub _detail_sequence: Option<Element>,
-    /// Applicable note numbers
-    #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Detail level adjudication details
     pub adjudication: Vec<StringType>,
 }
 /// ClaimResponse nested structure for the 'error' field
@@ -396,106 +394,35 @@ pub struct ClaimResponseInsurance {
     #[serde(rename = "claimResponse")]
     pub claim_response: Option<Reference>,
 }
-/// ClaimResponse nested structure for the 'addItem' field
+/// ClaimResponse nested structure for the 'item' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseAdditem {
+pub struct ClaimResponseItem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Insurer added line details
-    pub detail: Option<Vec<ClaimResponseAdditemDetail>>,
-    /// Item sequence number
+    /// Adjudication details
+    pub adjudication: Vec<ClaimResponseItemAdjudication>,
+    /// Adjudication for claim details
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<ClaimResponseItemDetail>,
+    /// Claim item instance identifier
     #[serde(rename = "itemSequence")]
-    pub item_sequence: Option<Vec<PositiveIntType>>,
+    pub item_sequence: PositiveIntType,
     /// Extension element for the 'itemSequence' primitive field. Contains metadata and extensions.
     #[serde(rename = "_itemSequence")]
     pub _item_sequence: Option<Element>,
-    /// Detail sequence number
-    #[serde(rename = "detailSequence")]
-    pub detail_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_detailSequence")]
-    pub _detail_sequence: Option<Element>,
-    /// Subdetail sequence number
-    #[serde(rename = "subdetailSequence")]
-    pub subdetail_sequence: Option<Vec<PositiveIntType>>,
-    /// Extension element for the 'subdetailSequence' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_subdetailSequence")]
-    pub _subdetail_sequence: Option<Element>,
-    /// Authorized providers
-    pub provider: Option<Vec<Reference>>,
-    /// Billing, service, product, or drug code
-    ///
-    /// Binding: example (Allowable service and product codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/service-uscls
-    #[serde(rename = "productOrService")]
-    pub product_or_service: CodeableConcept,
-    /// Service/Product billing modifiers
-    ///
-    /// Binding: example (Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/claim-modifiers
-    pub modifier: Option<Vec<CodeableConcept>>,
-    /// Program the product or service is provided under
-    ///
-    /// Binding: example (Program specific reason codes.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/ex-program-code
-    #[serde(rename = "programCode")]
-    pub program_code: Option<Vec<CodeableConcept>>,
-    /// Date or dates of service or product delivery (date)
-    #[serde(rename = "servicedDate")]
-    pub serviced_date: Option<DateType>,
-    /// Date or dates of service or product delivery (Period)
-    #[serde(rename = "servicedPeriod")]
-    pub serviced_period: Option<Period>,
-    /// Place of service or where product was supplied (CodeableConcept)
-    #[serde(rename = "locationCodeableConcept")]
-    pub location_codeable_concept: Option<CodeableConcept>,
-    /// Place of service or where product was supplied (Address)
-    #[serde(rename = "locationAddress")]
-    pub location_address: Option<Address>,
-    /// Place of service or where product was supplied (Reference)
-    #[serde(rename = "locationReference")]
-    pub location_reference: Option<Reference>,
-    /// Count of products or services
-    pub quantity: Option<Quantity>,
-    /// Fee, charge or cost per item
-    #[serde(rename = "unitPrice")]
-    pub unit_price: Option<Money>,
-    /// Price scaling factor
-    pub factor: Option<DecimalType>,
-    /// Extension element for the 'factor' primitive field. Contains metadata and extensions.
-    pub _factor: Option<Element>,
-    /// Total item cost
-    pub net: Option<Money>,
-    /// Anatomical location
-    ///
-    /// Binding: example (The code for the teeth, quadrant, sextant and arch.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/tooth
-    #[serde(rename = "bodySite")]
-    pub body_site: Option<CodeableConcept>,
-    /// Anatomical sub-location
-    ///
-    /// Binding: example (The code for the tooth surface and surface combinations.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/surface
-    #[serde(rename = "subSite")]
-    pub sub_site: Option<Vec<CodeableConcept>>,
     /// Applicable note numbers
     #[serde(rename = "noteNumber")]
-    pub note_number: Option<Vec<PositiveIntType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_number: Vec<PositiveIntType>,
     /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
     #[serde(rename = "_noteNumber")]
-    pub _note_number: Option<Element>,
-    /// Added items adjudication
-    pub adjudication: Vec<StringType>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _note_number: Vec<Element>,
 }
-/// ClaimResponse nested structure for the 'total' field
+/// ClaimResponseItem nested structure for the 'adjudication' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaimResponseTotal {
+pub struct ClaimResponseItemAdjudication {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
@@ -505,8 +432,65 @@ pub struct ClaimResponseTotal {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
     pub category: CodeableConcept,
-    /// Financial total for the category
-    pub amount: Money,
+    /// Explanation of adjudication outcome
+    ///
+    /// Binding: example (The adjudication reason codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication-reason
+    pub reason: Option<CodeableConcept>,
+    /// Monetary amount
+    pub amount: Option<Money>,
+    /// Non-monetary value
+    pub value: Option<DecimalType>,
+    /// Extension element for the 'value' primitive field. Contains metadata and extensions.
+    pub _value: Option<Element>,
+}
+/// ClaimResponseItem nested structure for the 'detail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemDetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Claim detail instance identifier
+    #[serde(rename = "detailSequence")]
+    pub detail_sequence: PositiveIntType,
+    /// Extension element for the 'detailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_detailSequence")]
+    pub _detail_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_number: Vec<PositiveIntType>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _note_number: Vec<Element>,
+    /// Detail level adjudication details
+    pub adjudication: Vec<StringType>,
+}
+/// ClaimResponseItemDetail nested structure for the 'subDetail' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseItemDetailSubdetail {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Claim sub-detail instance identifier
+    #[serde(rename = "subDetailSequence")]
+    pub sub_detail_sequence: PositiveIntType,
+    /// Extension element for the 'subDetailSequence' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_subDetailSequence")]
+    pub _sub_detail_sequence: Option<Element>,
+    /// Applicable note numbers
+    #[serde(rename = "noteNumber")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_number: Vec<PositiveIntType>,
+    /// Extension element for the 'noteNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_noteNumber")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _note_number: Vec<Element>,
+    /// Subdetail level adjudication details
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub adjudication: Vec<StringType>,
 }
 /// ClaimResponse nested structure for the 'payment' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -538,6 +522,58 @@ pub struct ClaimResponsePayment {
     pub amount: Money,
     /// Business identifier for the payment
     pub identifier: Option<Identifier>,
+}
+/// ClaimResponse nested structure for the 'processNote' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseProcessnote {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Note instance identifier
+    pub number: Option<PositiveIntType>,
+    /// Extension element for the 'number' primitive field. Contains metadata and extensions.
+    pub _number: Option<Element>,
+    /// display | print | printoper
+    #[serde(rename = "type")]
+    pub type_: Option<NoteType>,
+    /// Extension element for the 'type' primitive field. Contains metadata and extensions.
+    pub _type: Option<Element>,
+    /// Note explanatory text
+    pub text: StringType,
+    /// Extension element for the 'text' primitive field. Contains metadata and extensions.
+    pub _text: Option<Element>,
+    /// Language of the text
+    ///
+    /// Binding: preferred (A human language.)
+    ///
+    /// Available values:
+    /// - `ar`: Arabic
+    /// - `bn`: Bengali
+    /// - `cs`: Czech
+    /// - `da`: Danish
+    /// - `de`: German
+    /// - `de-AT`: German (Austria)
+    /// - `de-CH`: German (Switzerland)
+    /// - `de-DE`: German (Germany)
+    /// - `el`: Greek
+    /// - `en`: English
+    /// - ... and 46 more values
+    pub language: Option<StringType>,
+}
+/// ClaimResponse nested structure for the 'total' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimResponseTotal {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Type of adjudication information
+    ///
+    /// Binding: example (The adjudication codes.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/adjudication
+    pub category: CodeableConcept,
+    /// Financial total for the category
+    pub amount: Money,
 }
 
 impl Default for ClaimResponse {
@@ -581,44 +617,36 @@ impl Default for ClaimResponse {
     }
 }
 
-impl Default for ClaimResponseProcessnote {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            number: Default::default(),
-            _number: Default::default(),
-            type_: Default::default(),
-            _type: Default::default(),
-            text: Default::default(),
-            _text: Default::default(),
-            language: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItemDetailSubdetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            sub_detail_sequence: Default::default(),
-            _sub_detail_sequence: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItem {
+impl Default for ClaimResponseAdditem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
             detail: Default::default(),
-            adjudication: Vec::new(),
-            item_sequence: PositiveIntType::default(),
+            item_sequence: Default::default(),
             _item_sequence: Default::default(),
+            detail_sequence: Default::default(),
+            _detail_sequence: Default::default(),
+            subdetail_sequence: Default::default(),
+            _subdetail_sequence: Default::default(),
+            provider: Default::default(),
+            product_or_service: Default::default(),
+            modifier: Default::default(),
+            program_code: Default::default(),
+            serviced_date: Default::default(),
+            serviced_period: Default::default(),
+            location_codeable_concept: Default::default(),
+            location_address: Default::default(),
+            location_reference: Default::default(),
+            quantity: Default::default(),
+            unit_price: Default::default(),
+            factor: Default::default(),
+            _factor: Default::default(),
+            net: Default::default(),
+            body_site: Default::default(),
+            sub_site: Default::default(),
             note_number: Default::default(),
             _note_number: Default::default(),
+            adjudication: Default::default(),
         }
     }
 }
@@ -659,32 +687,6 @@ impl Default for ClaimResponseAdditemDetailSubdetail {
     }
 }
 
-impl Default for ClaimResponseItemAdjudication {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            category: Default::default(),
-            reason: Default::default(),
-            amount: Default::default(),
-            value: Default::default(),
-            _value: Default::default(),
-        }
-    }
-}
-
-impl Default for ClaimResponseItemDetail {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            detail_sequence: Default::default(),
-            _detail_sequence: Default::default(),
-            note_number: Default::default(),
-            _note_number: Default::default(),
-            adjudication: Default::default(),
-        }
-    }
-}
-
 impl Default for ClaimResponseError {
     fn default() -> Self {
         Self {
@@ -716,33 +718,39 @@ impl Default for ClaimResponseInsurance {
     }
 }
 
-impl Default for ClaimResponseAdditem {
+impl Default for ClaimResponseItem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
+            adjudication: Vec::new(),
             detail: Default::default(),
-            item_sequence: Default::default(),
+            item_sequence: PositiveIntType::default(),
             _item_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItemAdjudication {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: Default::default(),
+            reason: Default::default(),
+            amount: Default::default(),
+            value: Default::default(),
+            _value: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseItemDetail {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
             detail_sequence: Default::default(),
             _detail_sequence: Default::default(),
-            subdetail_sequence: Default::default(),
-            _subdetail_sequence: Default::default(),
-            provider: Default::default(),
-            product_or_service: Default::default(),
-            modifier: Default::default(),
-            program_code: Default::default(),
-            serviced_date: Default::default(),
-            serviced_period: Default::default(),
-            location_codeable_concept: Default::default(),
-            location_address: Default::default(),
-            location_reference: Default::default(),
-            quantity: Default::default(),
-            unit_price: Default::default(),
-            factor: Default::default(),
-            _factor: Default::default(),
-            net: Default::default(),
-            body_site: Default::default(),
-            sub_site: Default::default(),
             note_number: Default::default(),
             _note_number: Default::default(),
             adjudication: Default::default(),
@@ -750,12 +758,15 @@ impl Default for ClaimResponseAdditem {
     }
 }
 
-impl Default for ClaimResponseTotal {
+impl Default for ClaimResponseItemDetailSubdetail {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            category: CodeableConcept::default(),
-            amount: Money::default(),
+            sub_detail_sequence: Default::default(),
+            _sub_detail_sequence: Default::default(),
+            note_number: Default::default(),
+            _note_number: Default::default(),
+            adjudication: Default::default(),
         }
     }
 }
@@ -771,6 +782,31 @@ impl Default for ClaimResponsePayment {
             _date: Default::default(),
             amount: Money::default(),
             identifier: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseProcessnote {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            number: Default::default(),
+            _number: Default::default(),
+            type_: Default::default(),
+            _type: Default::default(),
+            text: Default::default(),
+            _text: Default::default(),
+            language: Default::default(),
+        }
+    }
+}
+
+impl Default for ClaimResponseTotal {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            category: CodeableConcept::default(),
+            amount: Money::default(),
         }
     }
 }
@@ -1243,13 +1279,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ClaimResponse {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -1264,44 +1300,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ClaimResponse {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -1311,22 +1335,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for ClaimResponse {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::claim_response::ClaimResponseAccessors for ClaimResponse {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> FmStatus {
         self.status.clone()
@@ -1371,13 +1392,13 @@ impl crate::traits::claim_response::ClaimResponseAccessors for ClaimResponse {
         self.payee_type.clone()
     }
     fn item(&self) -> &[ClaimResponseItem] {
-        self.item.as_deref().unwrap_or(&[])
+        self.item.as_slice()
     }
     fn add_item(&self) -> &[ClaimResponseAdditem] {
-        self.add_item.as_deref().unwrap_or(&[])
+        self.add_item.as_slice()
     }
     fn total(&self) -> &[ClaimResponseTotal] {
-        self.total.as_deref().unwrap_or(&[])
+        self.total.as_slice()
     }
     fn payment(&self) -> Option<ClaimResponsePayment> {
         self.payment.clone()
@@ -1392,16 +1413,16 @@ impl crate::traits::claim_response::ClaimResponseAccessors for ClaimResponse {
         self.form.clone()
     }
     fn process_note(&self) -> &[ClaimResponseProcessnote] {
-        self.process_note.as_deref().unwrap_or(&[])
+        self.process_note.as_slice()
     }
     fn communication_request(&self) -> &[Reference] {
-        self.communication_request.as_deref().unwrap_or(&[])
+        self.communication_request.as_slice()
     }
     fn insurance(&self) -> &[ClaimResponseInsurance] {
-        self.insurance.as_deref().unwrap_or(&[])
+        self.insurance.as_slice()
     }
     fn error(&self) -> &[ClaimResponseError] {
-        self.error.as_deref().unwrap_or(&[])
+        self.error.as_slice()
     }
 }
 
@@ -1411,12 +1432,12 @@ impl crate::traits::claim_response::ClaimResponseMutators for ClaimResponse {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: FmStatus) -> Self {
@@ -1491,45 +1512,42 @@ impl crate::traits::claim_response::ClaimResponseMutators for ClaimResponse {
     }
     fn set_item(self, value: Vec<ClaimResponseItem>) -> Self {
         let mut resource = self.clone();
-        resource.item = Some(value);
+        resource.item = value;
         resource
     }
     fn add_item(self, item: ClaimResponseItem) -> Self {
         let mut resource = self.clone();
-        resource.item.get_or_insert_with(Vec::new).push(item);
+        resource.item.push(item);
         resource
     }
     fn set_add_item(self, value: Vec<ClaimResponseAdditem>) -> Self {
         let mut resource = self.clone();
-        resource.add_item = Some(value);
+        resource.add_item = value;
         resource
     }
     fn add_add_item(self, item: ClaimResponseAdditem) -> Self {
         let mut resource = self.clone();
-        resource.add_item.get_or_insert_with(Vec::new).push(item);
+        resource.add_item.push(item);
         resource
     }
     fn set_adjudication(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.adjudication = Some(value);
+        resource.adjudication = value;
         resource
     }
     fn add_adjudication(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .adjudication
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.adjudication.push(item);
         resource
     }
     fn set_total(self, value: Vec<ClaimResponseTotal>) -> Self {
         let mut resource = self.clone();
-        resource.total = Some(value);
+        resource.total = value;
         resource
     }
     fn add_total(self, item: ClaimResponseTotal) -> Self {
         let mut resource = self.clone();
-        resource.total.get_or_insert_with(Vec::new).push(item);
+        resource.total.push(item);
         resource
     }
     fn set_payment(self, value: ClaimResponsePayment) -> Self {
@@ -1554,55 +1572,49 @@ impl crate::traits::claim_response::ClaimResponseMutators for ClaimResponse {
     }
     fn set_process_note(self, value: Vec<ClaimResponseProcessnote>) -> Self {
         let mut resource = self.clone();
-        resource.process_note = Some(value);
+        resource.process_note = value;
         resource
     }
     fn add_process_note(self, item: ClaimResponseProcessnote) -> Self {
         let mut resource = self.clone();
-        resource
-            .process_note
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.process_note.push(item);
         resource
     }
     fn set_communication_request(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.communication_request = Some(value);
+        resource.communication_request = value;
         resource
     }
     fn add_communication_request(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .communication_request
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.communication_request.push(item);
         resource
     }
     fn set_insurance(self, value: Vec<ClaimResponseInsurance>) -> Self {
         let mut resource = self.clone();
-        resource.insurance = Some(value);
+        resource.insurance = value;
         resource
     }
     fn add_insurance(self, item: ClaimResponseInsurance) -> Self {
         let mut resource = self.clone();
-        resource.insurance.get_or_insert_with(Vec::new).push(item);
+        resource.insurance.push(item);
         resource
     }
     fn set_error(self, value: Vec<ClaimResponseError>) -> Self {
         let mut resource = self.clone();
-        resource.error = Some(value);
+        resource.error = value;
         resource
     }
     fn add_error(self, item: ClaimResponseError) -> Self {
         let mut resource = self.clone();
-        resource.error.get_or_insert_with(Vec::new).push(item);
+        resource.error.push(item);
         resource
     }
 }
 
 impl crate::traits::claim_response::ClaimResponseExistence for ClaimResponse {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -1647,16 +1659,16 @@ impl crate::traits::claim_response::ClaimResponseExistence for ClaimResponse {
         self.payee_type.is_some()
     }
     fn has_item(&self) -> bool {
-        self.item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.item.is_empty()
     }
     fn has_add_item(&self) -> bool {
-        self.add_item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.add_item.is_empty()
     }
     fn has_adjudication(&self) -> bool {
-        self.adjudication.as_ref().is_some_and(|v| !v.is_empty())
+        !self.adjudication.is_empty()
     }
     fn has_total(&self) -> bool {
-        self.total.as_ref().is_some_and(|v| !v.is_empty())
+        !self.total.is_empty()
     }
     fn has_payment(&self) -> bool {
         self.payment.is_some()
@@ -1671,18 +1683,16 @@ impl crate::traits::claim_response::ClaimResponseExistence for ClaimResponse {
         self.form.is_some()
     }
     fn has_process_note(&self) -> bool {
-        self.process_note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.process_note.is_empty()
     }
     fn has_communication_request(&self) -> bool {
-        self.communication_request
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.communication_request.is_empty()
     }
     fn has_insurance(&self) -> bool {
-        self.insurance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.insurance.is_empty()
     }
     fn has_error(&self) -> bool {
-        self.error.as_ref().is_some_and(|v| !v.is_empty())
+        !self.error.is_empty()
     }
 }
 

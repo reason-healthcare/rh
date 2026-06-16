@@ -45,71 +45,34 @@ pub struct NutritionProduct {
     /// Binding: example (Codes identifying classes of nutrition products.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/nutrition-product-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Manufacturer, representative or officially responsible for the product
-    pub manufacturer: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub manufacturer: Vec<Reference>,
     /// The product's nutritional information expressed by the nutrients
-    pub nutrient: Option<Vec<NutritionProductNutrient>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nutrient: Vec<NutritionProductNutrient>,
     /// Ingredients contained in this product
-    pub ingredient: Option<Vec<NutritionProductIngredient>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ingredient: Vec<NutritionProductIngredient>,
     /// Known or suspected allergens that are a part of this product
     ///
     /// Binding: example (Codes that identify substances that can be an allergen.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/allergen-class
     #[serde(rename = "knownAllergen")]
-    pub known_allergen: Option<Vec<CodeableReference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub known_allergen: Vec<CodeableReference>,
     /// Specifies descriptive properties of the nutrition product
-    pub characteristic: Option<Vec<NutritionProductCharacteristic>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub characteristic: Vec<NutritionProductCharacteristic>,
     /// One or several physical instances or occurrences of the nutrition product
-    pub instance: Option<Vec<NutritionProductInstance>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub instance: Vec<NutritionProductInstance>,
     /// Comments made about the product
-    pub note: Option<Vec<Annotation>>,
-}
-/// NutritionProduct nested structure for the 'ingredient' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductIngredient {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The ingredient contained in the product
-    pub item: CodeableReference,
-    /// The amount of ingredient that is in the product
-    pub amount: Option<Vec<Ratio>>,
-}
-/// NutritionProduct nested structure for the 'instance' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NutritionProductInstance {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// The amount of items or instances
-    pub quantity: Option<Quantity>,
-    /// The identifier for the physical instance, typically a serial number or manufacturer number
-    pub identifier: Option<Vec<Identifier>>,
-    /// The name for the specific product
-    pub name: Option<StringType>,
-    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
-    pub _name: Option<Element>,
-    /// The identification of the batch or lot of the product
-    #[serde(rename = "lotNumber")]
-    pub lot_number: Option<StringType>,
-    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_lotNumber")]
-    pub _lot_number: Option<Element>,
-    /// The expiry date or date and time for the product
-    pub expiry: Option<DateTimeType>,
-    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
-    pub _expiry: Option<Element>,
-    /// The date until which the product is expected to be good for consumption
-    #[serde(rename = "useBy")]
-    pub use_by: Option<DateTimeType>,
-    /// Extension element for the 'useBy' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_useBy")]
-    pub _use_by: Option<Element>,
-    /// An identifier that supports traceability to the event during which material in this product from one or more biological entities was obtained or pooled
-    #[serde(rename = "biologicalSourceEvent")]
-    pub biological_source_event: Option<Identifier>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 /// NutritionProduct nested structure for the 'characteristic' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,6 +106,53 @@ pub struct NutritionProductCharacteristic {
     #[serde(rename = "valueBoolean")]
     pub value_boolean: BooleanType,
 }
+/// NutritionProduct nested structure for the 'ingredient' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductIngredient {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The ingredient contained in the product
+    pub item: CodeableReference,
+    /// The amount of ingredient that is in the product
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amount: Vec<Ratio>,
+}
+/// NutritionProduct nested structure for the 'instance' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionProductInstance {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// The amount of items or instances
+    pub quantity: Option<Quantity>,
+    /// The identifier for the physical instance, typically a serial number or manufacturer number
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
+    /// The name for the specific product
+    pub name: Option<StringType>,
+    /// Extension element for the 'name' primitive field. Contains metadata and extensions.
+    pub _name: Option<Element>,
+    /// The identification of the batch or lot of the product
+    #[serde(rename = "lotNumber")]
+    pub lot_number: Option<StringType>,
+    /// Extension element for the 'lotNumber' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_lotNumber")]
+    pub _lot_number: Option<Element>,
+    /// The expiry date or date and time for the product
+    pub expiry: Option<DateTimeType>,
+    /// Extension element for the 'expiry' primitive field. Contains metadata and extensions.
+    pub _expiry: Option<Element>,
+    /// The date until which the product is expected to be good for consumption
+    #[serde(rename = "useBy")]
+    pub use_by: Option<DateTimeType>,
+    /// Extension element for the 'useBy' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_useBy")]
+    pub _use_by: Option<Element>,
+    /// An identifier that supports traceability to the event during which material in this product from one or more biological entities was obtained or pooled
+    #[serde(rename = "biologicalSourceEvent")]
+    pub biological_source_event: Option<Identifier>,
+}
 /// NutritionProduct nested structure for the 'nutrient' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NutritionProductNutrient {
@@ -156,7 +166,8 @@ pub struct NutritionProductNutrient {
     /// ValueSet: http://hl7.org/fhir/ValueSet/nutrition-product-nutrient
     pub item: Option<CodeableReference>,
     /// The amount of nutrient expressed in one or more units: X per pack / per serving / per dose
-    pub amount: Option<Vec<Ratio>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub amount: Vec<Ratio>,
 }
 
 impl Default for NutritionProduct {
@@ -174,6 +185,21 @@ impl Default for NutritionProduct {
             characteristic: Default::default(),
             instance: Default::default(),
             note: Default::default(),
+        }
+    }
+}
+
+impl Default for NutritionProductCharacteristic {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            type_: Default::default(),
+            value_codeable_concept: Default::default(),
+            value_string: Default::default(),
+            value_quantity: Default::default(),
+            value_base64_binary: Default::default(),
+            value_attachment: Default::default(),
+            value_boolean: Default::default(),
         }
     }
 }
@@ -203,21 +229,6 @@ impl Default for NutritionProductInstance {
             use_by: Default::default(),
             _use_by: Default::default(),
             biological_source_event: Default::default(),
-        }
-    }
-}
-
-impl Default for NutritionProductCharacteristic {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            type_: Default::default(),
-            value_codeable_concept: Default::default(),
-            value_string: Default::default(),
-            value_quantity: Default::default(),
-            value_base64_binary: Default::default(),
-            value_attachment: Default::default(),
-            value_boolean: Default::default(),
         }
     }
 }
@@ -433,13 +444,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for NutritionProduc
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -454,44 +465,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for NutritionProduct
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -501,16 +500,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for NutritionProduc
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -522,28 +518,28 @@ impl crate::traits::nutrition_product::NutritionProductAccessors for NutritionPr
         self.status.clone()
     }
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn manufacturer(&self) -> &[Reference] {
-        self.manufacturer.as_deref().unwrap_or(&[])
+        self.manufacturer.as_slice()
     }
     fn nutrient(&self) -> &[NutritionProductNutrient] {
-        self.nutrient.as_deref().unwrap_or(&[])
+        self.nutrient.as_slice()
     }
     fn ingredient(&self) -> &[NutritionProductIngredient] {
-        self.ingredient.as_deref().unwrap_or(&[])
+        self.ingredient.as_slice()
     }
     fn known_allergen(&self) -> &[CodeableReference] {
-        self.known_allergen.as_deref().unwrap_or(&[])
+        self.known_allergen.as_slice()
     }
     fn characteristic(&self) -> &[NutritionProductCharacteristic] {
-        self.characteristic.as_deref().unwrap_or(&[])
+        self.characteristic.as_slice()
     }
     fn instance(&self) -> &[NutritionProductInstance] {
-        self.instance.as_deref().unwrap_or(&[])
+        self.instance.as_slice()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -563,91 +559,82 @@ impl crate::traits::nutrition_product::NutritionProductMutators for NutritionPro
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_manufacturer(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.manufacturer = Some(value);
+        resource.manufacturer = value;
         resource
     }
     fn add_manufacturer(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource
-            .manufacturer
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.manufacturer.push(item);
         resource
     }
     fn set_nutrient(self, value: Vec<NutritionProductNutrient>) -> Self {
         let mut resource = self.clone();
-        resource.nutrient = Some(value);
+        resource.nutrient = value;
         resource
     }
     fn add_nutrient(self, item: NutritionProductNutrient) -> Self {
         let mut resource = self.clone();
-        resource.nutrient.get_or_insert_with(Vec::new).push(item);
+        resource.nutrient.push(item);
         resource
     }
     fn set_ingredient(self, value: Vec<NutritionProductIngredient>) -> Self {
         let mut resource = self.clone();
-        resource.ingredient = Some(value);
+        resource.ingredient = value;
         resource
     }
     fn add_ingredient(self, item: NutritionProductIngredient) -> Self {
         let mut resource = self.clone();
-        resource.ingredient.get_or_insert_with(Vec::new).push(item);
+        resource.ingredient.push(item);
         resource
     }
     fn set_known_allergen(self, value: Vec<CodeableReference>) -> Self {
         let mut resource = self.clone();
-        resource.known_allergen = Some(value);
+        resource.known_allergen = value;
         resource
     }
     fn add_known_allergen(self, item: CodeableReference) -> Self {
         let mut resource = self.clone();
-        resource
-            .known_allergen
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.known_allergen.push(item);
         resource
     }
     fn set_characteristic(self, value: Vec<NutritionProductCharacteristic>) -> Self {
         let mut resource = self.clone();
-        resource.characteristic = Some(value);
+        resource.characteristic = value;
         resource
     }
     fn add_characteristic(self, item: NutritionProductCharacteristic) -> Self {
         let mut resource = self.clone();
-        resource
-            .characteristic
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.characteristic.push(item);
         resource
     }
     fn set_instance(self, value: Vec<NutritionProductInstance>) -> Self {
         let mut resource = self.clone();
-        resource.instance = Some(value);
+        resource.instance = value;
         resource
     }
     fn add_instance(self, item: NutritionProductInstance) -> Self {
         let mut resource = self.clone();
-        resource.instance.get_or_insert_with(Vec::new).push(item);
+        resource.instance.push(item);
         resource
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
@@ -660,28 +647,28 @@ impl crate::traits::nutrition_product::NutritionProductExistence for NutritionPr
         true
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_manufacturer(&self) -> bool {
-        self.manufacturer.as_ref().is_some_and(|v| !v.is_empty())
+        !self.manufacturer.is_empty()
     }
     fn has_nutrient(&self) -> bool {
-        self.nutrient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.nutrient.is_empty()
     }
     fn has_ingredient(&self) -> bool {
-        self.ingredient.as_ref().is_some_and(|v| !v.is_empty())
+        !self.ingredient.is_empty()
     }
     fn has_known_allergen(&self) -> bool {
-        self.known_allergen.as_ref().is_some_and(|v| !v.is_empty())
+        !self.known_allergen.is_empty()
     }
     fn has_characteristic(&self) -> bool {
-        self.characteristic.as_ref().is_some_and(|v| !v.is_empty())
+        !self.characteristic.is_empty()
     }
     fn has_instance(&self) -> bool {
-        self.instance.as_ref().is_some_and(|v| !v.is_empty())
+        !self.instance.is_empty()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

@@ -29,7 +29,8 @@ pub struct Invoice {
     #[serde(flatten)]
     pub base: DomainResource,
     /// Business Identifier for item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// draft | issued | balanced | cancelled | entered-in-error
     pub status: InvoiceStatus,
     /// Extension element for the 'status' primitive field. Contains metadata and extensions.
@@ -52,17 +53,20 @@ pub struct Invoice {
     /// Extension element for the 'date' primitive field. Contains metadata and extensions.
     pub _date: Option<Element>,
     /// Participant in creation of this Invoice
-    pub participant: Option<Vec<InvoiceParticipant>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub participant: Vec<InvoiceParticipant>,
     /// Issuing Organization of Invoice
     pub issuer: Option<Reference>,
     /// Account that is being balanced
     pub account: Option<Reference>,
     /// Line items of this Invoice
     #[serde(rename = "lineItem")]
-    pub line_item: Option<Vec<InvoiceLineitem>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub line_item: Vec<InvoiceLineitem>,
     /// Components of Invoice total
     #[serde(rename = "totalPriceComponent")]
-    pub total_price_component: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub total_price_component: Vec<StringType>,
     /// Net total of this Invoice
     #[serde(rename = "totalNet")]
     pub total_net: Option<Money>,
@@ -76,18 +80,29 @@ pub struct Invoice {
     #[serde(rename = "_paymentTerms")]
     pub _payment_terms: Option<Element>,
     /// Comments made about the invoice
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
-/// Invoice nested structure for the 'participant' field
+/// Invoice nested structure for the 'lineItem' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceParticipant {
+pub struct InvoiceLineitem {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Type of involvement in creation of this Invoice
-    pub role: Option<CodeableConcept>,
-    /// Individual who was involved
-    pub actor: Reference,
+    /// Components of total line item price
+    #[serde(rename = "priceComponent")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub price_component: Vec<InvoiceLineitemPricecomponent>,
+    /// Sequence number of line item
+    pub sequence: Option<PositiveIntType>,
+    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
+    pub _sequence: Option<Element>,
+    /// Reference to ChargeItem containing details of this line item or an inline billing code (Reference)
+    #[serde(rename = "chargeItemReference")]
+    pub charge_item_reference: Reference,
+    /// Reference to ChargeItem containing details of this line item or an inline billing code (CodeableConcept)
+    #[serde(rename = "chargeItemCodeableConcept")]
+    pub charge_item_codeable_concept: CodeableConcept,
 }
 /// InvoiceLineitem nested structure for the 'priceComponent' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,25 +124,16 @@ pub struct InvoiceLineitemPricecomponent {
     /// Monetary amount associated with this component
     pub amount: Option<Money>,
 }
-/// Invoice nested structure for the 'lineItem' field
+/// Invoice nested structure for the 'participant' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InvoiceLineitem {
+pub struct InvoiceParticipant {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: BackboneElement,
-    /// Components of total line item price
-    #[serde(rename = "priceComponent")]
-    pub price_component: Option<Vec<InvoiceLineitemPricecomponent>>,
-    /// Sequence number of line item
-    pub sequence: Option<PositiveIntType>,
-    /// Extension element for the 'sequence' primitive field. Contains metadata and extensions.
-    pub _sequence: Option<Element>,
-    /// Reference to ChargeItem containing details of this line item or an inline billing code (Reference)
-    #[serde(rename = "chargeItemReference")]
-    pub charge_item_reference: Reference,
-    /// Reference to ChargeItem containing details of this line item or an inline billing code (CodeableConcept)
-    #[serde(rename = "chargeItemCodeableConcept")]
-    pub charge_item_codeable_concept: CodeableConcept,
+    /// Type of involvement in creation of this Invoice
+    pub role: Option<CodeableConcept>,
+    /// Individual who was involved
+    pub actor: Reference,
 }
 
 impl Default for Invoice {
@@ -158,12 +164,15 @@ impl Default for Invoice {
     }
 }
 
-impl Default for InvoiceParticipant {
+impl Default for InvoiceLineitem {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            role: Default::default(),
-            actor: Reference::default(),
+            price_component: Default::default(),
+            sequence: Default::default(),
+            _sequence: Default::default(),
+            charge_item_reference: Default::default(),
+            charge_item_codeable_concept: Default::default(),
         }
     }
 }
@@ -182,15 +191,12 @@ impl Default for InvoiceLineitemPricecomponent {
     }
 }
 
-impl Default for InvoiceLineitem {
+impl Default for InvoiceParticipant {
     fn default() -> Self {
         Self {
             base: BackboneElement::default(),
-            price_component: Default::default(),
-            sequence: Default::default(),
-            _sequence: Default::default(),
-            charge_item_reference: Default::default(),
-            charge_item_codeable_concept: Default::default(),
+            role: Default::default(),
+            actor: Reference::default(),
         }
     }
 }
@@ -379,13 +385,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for Invoice {
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -400,44 +406,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for Invoice {
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -447,22 +441,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for Invoice {
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::invoice::InvoiceAccessors for Invoice {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn status(&self) -> InvoiceStatus {
         self.status.clone()
@@ -483,7 +474,7 @@ impl crate::traits::invoice::InvoiceAccessors for Invoice {
         self.date.clone()
     }
     fn participant(&self) -> &[InvoiceParticipant] {
-        self.participant.as_deref().unwrap_or(&[])
+        self.participant.as_slice()
     }
     fn issuer(&self) -> Option<Reference> {
         self.issuer.clone()
@@ -492,7 +483,7 @@ impl crate::traits::invoice::InvoiceAccessors for Invoice {
         self.account.clone()
     }
     fn line_item(&self) -> &[InvoiceLineitem] {
-        self.line_item.as_deref().unwrap_or(&[])
+        self.line_item.as_slice()
     }
     fn total_net(&self) -> Option<Money> {
         self.total_net.clone()
@@ -504,7 +495,7 @@ impl crate::traits::invoice::InvoiceAccessors for Invoice {
         self.payment_terms.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
 }
 
@@ -514,12 +505,12 @@ impl crate::traits::invoice::InvoiceMutators for Invoice {
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_status(self, value: InvoiceStatus) -> Self {
@@ -554,12 +545,12 @@ impl crate::traits::invoice::InvoiceMutators for Invoice {
     }
     fn set_participant(self, value: Vec<InvoiceParticipant>) -> Self {
         let mut resource = self.clone();
-        resource.participant = Some(value);
+        resource.participant = value;
         resource
     }
     fn add_participant(self, item: InvoiceParticipant) -> Self {
         let mut resource = self.clone();
-        resource.participant.get_or_insert_with(Vec::new).push(item);
+        resource.participant.push(item);
         resource
     }
     fn set_issuer(self, value: Reference) -> Self {
@@ -574,25 +565,22 @@ impl crate::traits::invoice::InvoiceMutators for Invoice {
     }
     fn set_line_item(self, value: Vec<InvoiceLineitem>) -> Self {
         let mut resource = self.clone();
-        resource.line_item = Some(value);
+        resource.line_item = value;
         resource
     }
     fn add_line_item(self, item: InvoiceLineitem) -> Self {
         let mut resource = self.clone();
-        resource.line_item.get_or_insert_with(Vec::new).push(item);
+        resource.line_item.push(item);
         resource
     }
     fn set_total_price_component(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.total_price_component = Some(value);
+        resource.total_price_component = value;
         resource
     }
     fn add_total_price_component(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .total_price_component
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.total_price_component.push(item);
         resource
     }
     fn set_total_net(self, value: Money) -> Self {
@@ -612,19 +600,19 @@ impl crate::traits::invoice::InvoiceMutators for Invoice {
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
 }
 
 impl crate::traits::invoice::InvoiceExistence for Invoice {
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_status(&self) -> bool {
         true
@@ -645,7 +633,7 @@ impl crate::traits::invoice::InvoiceExistence for Invoice {
         self.date.is_some()
     }
     fn has_participant(&self) -> bool {
-        self.participant.as_ref().is_some_and(|v| !v.is_empty())
+        !self.participant.is_empty()
     }
     fn has_issuer(&self) -> bool {
         self.issuer.is_some()
@@ -654,12 +642,10 @@ impl crate::traits::invoice::InvoiceExistence for Invoice {
         self.account.is_some()
     }
     fn has_line_item(&self) -> bool {
-        self.line_item.as_ref().is_some_and(|v| !v.is_empty())
+        !self.line_item.is_empty()
     }
     fn has_total_price_component(&self) -> bool {
-        self.total_price_component
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.total_price_component.is_empty()
     }
     fn has_total_net(&self) -> bool {
         self.total_net.is_some()
@@ -671,7 +657,7 @@ impl crate::traits::invoice::InvoiceExistence for Invoice {
         self.payment_terms.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
 }
 

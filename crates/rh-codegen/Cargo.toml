@@ -28,6 +28,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 once_cell = "1.19"
+rayon = { workspace = true }
 
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2", features = ["http"] }
@@ -36,6 +37,11 @@ rh-foundation = { path = "../rh-foundation", version = "0.2.0-beta.2", features 
 tempfile = "3.0"
 tokio-test = "0.4"
 serial_test = "3.0"
+criterion = { workspace = true }
+
+[[bench]]
+name = "generate"
+harness = false
 
 [lints]
 workspace = true

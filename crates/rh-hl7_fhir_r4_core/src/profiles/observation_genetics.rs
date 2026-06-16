@@ -17,18 +17,18 @@ pub struct ObservationGenetics {
     #[serde(flatten)]
     pub base: Observation,
 }
-/// DNARegionName
+/// Allele
 ///
-/// A human readable name for the region of interest. Typically Exon #, Intron # or other. NOTE: This is not standardized and is mainly for convenience and display purposes.  LOINC Code: ([47999-8](http://loinc.org/47999-8)).
+/// Allele information.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsDNARegionName
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAllele
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsDNARegionName {
+pub struct ObservationGeneticsAllele {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,
@@ -49,22 +49,6 @@ pub struct ObservationGeneticsAminoAcidChange {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Interpretation
-///
-/// Clinical Interpretations for variant. It's a reference to an Observation resource.
-///
-/// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsInterpretation
-/// - Version: 4.0.1
-/// - Kind: complex-type
-/// - Type: Extension
-/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsInterpretation {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: Extension,
-}
 /// Ancestry
 ///
 /// Ancestry information.
@@ -81,18 +65,114 @@ pub struct ObservationGeneticsAncestry {
     #[serde(flatten)]
     pub base: Extension,
 }
-/// Allele
+/// CopyNumberEvent
 ///
-/// Allele information.
+/// A variation that increases or decreases the copy number of a given region ([SO:0001019](http://www.sequenceontology.org/browser/current_svn/term/SO:0001019)). Values: amplification/deletion/LOH.
 ///
 /// **Source:**
-/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsAllele
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsCopyNumberEvent
 /// - Version: 4.0.1
 /// - Kind: complex-type
 /// - Type: Extension
 /// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationGeneticsAllele {
+pub struct ObservationGeneticsCopyNumberEvent {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// DNARegionName
+///
+/// A human readable name for the region of interest. Typically Exon #, Intron # or other. NOTE: This is not standardized and is mainly for convenience and display purposes.  LOINC Code: ([47999-8](http://loinc.org/47999-8)).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsDNARegionName
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsDNARegionName {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Gene
+///
+/// A region (or regions) that includes all of the sequence elements necessary to encode a functional transcript. A gene may include regulatory regions, transcribed regions and/or other functional sequence regions ([SO:0000704](http://www.sequenceontology.org/browser/current_svn/term/SO:0000704)). This element is the official gene symbol approved by the HGNC, which is a short abbreviated form of the gene name ([HGNC](http://www.genenames.org)). LOINC Code: ([48018-6](http://loinc.org/48018-6)).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsGene
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsGene {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// GenomicSourceClass
+///
+/// Source of sample used to determine the sequence in sequencing lab -- germline, somatic, prenatal. LOINC Code: ([48002-0](http://loinc.org/48002-0)).
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsGenomicSourceClass
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsGenomicSourceClass {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Interpretation
+///
+/// Clinical Interpretations for variant. It's a reference to an Observation resource.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsInterpretation
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsInterpretation {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// PhaseSet
+///
+/// Phase set information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsPhaseSet
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsPhaseSet {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: Extension,
+}
+/// Variant
+///
+/// Variant information.
+///
+/// **Source:**
+/// - URL: http://hl7.org/fhir/StructureDefinition/observation-geneticsVariant
+/// - Version: 4.0.1
+/// - Kind: complex-type
+/// - Type: Extension
+/// - Base Definition: http://hl7.org/fhir/StructureDefinition/Extension
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationGeneticsVariant {
     /// Base definition inherited from FHIR specification
     #[serde(flatten)]
     pub base: Extension,

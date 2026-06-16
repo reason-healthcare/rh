@@ -47,8 +47,9 @@ impl<'a> StructGenerator<'a> {
             });
         }
 
-        // Skip examples
-        if structure_def.url.to_lowercase().contains("example") {
+        // Skip sample/example profiles such as `example-composition`, but do not skip
+        // real FHIR types whose names contain "Example" (for example, ExampleScenario).
+        if TypeUtilities::is_example_structure_definition(structure_def) {
             return Err(CodegenError::Generation {
                 message: format!(
                     "Skipping example StructureDefinition '{}'",
@@ -136,11 +137,24 @@ impl<'a> StructGenerator<'a> {
                 continue;
             }
 
-            let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+            let field_path = element
+                .path
+                .strip_prefix(&format!("{base_path}."))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: element path '{}' does not start with '{base_path}.'",
+                        element.path
+                    )
+                });
 
             if field_path.contains('.') {
                 // This is a nested field - collect it for nested struct generation
-                let nested_field_name = field_path.split('.').next().unwrap();
+                let nested_field_name = field_path.split('.').next().unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: field path '{}' contains '.' but has no prefix segment",
+                        field_path
+                    )
+                });
                 nested_structs_info
                     .entry(nested_field_name.to_string())
                     .or_insert_with(Vec::new)
@@ -152,7 +166,10 @@ impl<'a> StructGenerator<'a> {
         }
 
         // First pass: Generate nested structs for BackboneElements
-        for (nested_field_name, nested_elements) in &nested_structs_info {
+        let mut nested_structs: Vec<_> = nested_structs_info.iter().collect();
+        nested_structs.sort_by_key(|(left_name, _)| *left_name);
+
+        for (nested_field_name, nested_elements) in nested_structs {
             if let Some(nested_struct) = self.generate_nested_struct(
                 &struct_name,
                 nested_field_name,
@@ -278,11 +295,24 @@ impl<'a> StructGenerator<'a> {
                 continue;
             }
 
-            let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+            let field_path = element
+                .path
+                .strip_prefix(&format!("{base_path}."))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: element path '{}' does not start with '{base_path}.'",
+                        element.path
+                    )
+                });
 
             if field_path.contains('.') {
                 // This is a sub-nested field - collect it for recursive nested struct generation
-                let sub_nested_field_name = field_path.split('.').next().unwrap();
+                let sub_nested_field_name = field_path.split('.').next().unwrap_or_else(|| {
+                    panic!(
+                        "codegen bug: field path '{}' contains '.' but has no prefix segment",
+                        field_path
+                    )
+                });
                 sub_nested_structs
                     .entry(sub_nested_field_name.to_string())
                     .or_insert_with(Vec::new)
@@ -311,7 +341,10 @@ impl<'a> StructGenerator<'a> {
         }
 
         // First, generate any sub-nested structs
-        for (sub_nested_field_name, sub_nested_elements) in &sub_nested_structs {
+        let mut sorted_sub_nested_structs: Vec<_> = sub_nested_structs.iter().collect();
+        sorted_sub_nested_structs.sort_by_key(|(left_name, _)| *left_name);
+
+        for (sub_nested_field_name, sub_nested_elements) in sorted_sub_nested_structs {
             // For recursive calls, we need to create a modified context
             // The base path for sub-nested structs should be the current nested struct's path
             let sub_nested_struct_name = format!(
@@ -361,11 +394,15 @@ impl<'a> StructGenerator<'a> {
                     let sub_field_path = element
                         .path
                         .strip_prefix(&format!("{sub_base_path}."))
-                        .unwrap();
+                        .unwrap_or_else(|| {
+                            panic!("codegen bug: element path '{}' does not start with '{sub_base_path}.'", element.path)
+                        });
 
                     if sub_field_path.contains('.') {
                         // This is a further sub-nested field - collect it for recursive generation
-                        let sub_sub_nested_field_name = sub_field_path.split('.').next().unwrap();
+                        let sub_sub_nested_field_name = sub_field_path.split('.').next().unwrap_or_else(|| {
+                            panic!("codegen bug: field path '{}' contains '.' but has no prefix segment", sub_field_path)
+                        });
                         sub_sub_nested_structs
                             .entry(sub_sub_nested_field_name.to_string())
                             .or_default()
@@ -394,7 +431,12 @@ impl<'a> StructGenerator<'a> {
                 }
 
                 // First, recursively generate any further sub-nested structs
-                for (sub_sub_nested_field_name, sub_sub_nested_elements) in &sub_sub_nested_structs
+                let mut sorted_sub_sub_nested_structs: Vec<_> =
+                    sub_sub_nested_structs.iter().collect();
+                sorted_sub_sub_nested_structs.sort_by_key(|(left_name, _)| *left_name);
+
+                for (sub_sub_nested_field_name, sub_sub_nested_elements) in
+                    sorted_sub_sub_nested_structs
                 {
                     self.generate_deeply_nested_struct(
                         &sub_nested_struct_name,
@@ -501,11 +543,24 @@ impl<'a> StructGenerator<'a> {
                     continue;
                 }
 
-                let field_path = element.path.strip_prefix(&format!("{base_path}.")).unwrap();
+                let field_path = element
+                    .path
+                    .strip_prefix(&format!("{base_path}."))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "codegen bug: element path '{}' does not start with '{base_path}.'",
+                            element.path
+                        )
+                    });
 
                 if field_path.contains('.') {
                     // This is a further nested field - collect it for recursive generation
-                    let sub_nested_field_name = field_path.split('.').next().unwrap();
+                    let sub_nested_field_name = field_path.split('.').next().unwrap_or_else(|| {
+                        panic!(
+                            "codegen bug: field path '{}' contains '.' but has no prefix segment",
+                            field_path
+                        )
+                    });
                     sub_nested_structs
                         .entry(sub_nested_field_name.to_string())
                         .or_default()
@@ -534,7 +589,10 @@ impl<'a> StructGenerator<'a> {
             }
 
             // First, recursively generate any further nested structs
-            for (sub_nested_field_name, sub_nested_elements) in &sub_nested_structs {
+            let mut sorted_sub_nested_structs: Vec<_> = sub_nested_structs.iter().collect();
+            sorted_sub_nested_structs.sort_by_key(|(left_name, _)| *left_name);
+
+            for (sub_nested_field_name, sub_nested_elements) in sorted_sub_nested_structs {
                 self.generate_deeply_nested_struct(
                     &nested_struct_name,
                     sub_nested_field_name,
@@ -622,7 +680,17 @@ impl<'a> StructGenerator<'a> {
         field_generator.create_fields_from_element(element)
     }
 
-    /// Apply Box wrapper to field types to prevent circular dependencies
+    /// Apply `Box` wrapper to field types that form circular dependencies.
+    ///
+    /// FHIR's `Identifier.assigner` is `Reference`, and `Reference.identifier` is `Identifier`,
+    /// forming a direct cycle. Rust structs cannot contain themselves (even indirectly) without
+    /// indirection, so we wrap these cross-references in `Box<T>` to break the cycle.
+    ///
+    /// Currently the only known cycle is `Identifier ↔ Reference`. If future FHIR versions
+    /// introduce additional cycles, add them to the `circular_dependencies` table below.
+    ///
+    /// The recursive handling of `Option<T>` and `Vec<T>` ensures that `Option<Box<Reference>>`
+    /// and `Vec<Box<Reference>>` are emitted correctly rather than `Box<Option<Reference>>`.
     fn apply_box_for_circular_dependencies(
         field_type: RustType,
         current_struct_name: &str,

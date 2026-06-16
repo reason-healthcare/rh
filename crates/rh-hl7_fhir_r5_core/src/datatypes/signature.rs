@@ -27,7 +27,8 @@ pub struct Signature {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/signature-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<Coding>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<Coding>,
     /// When the signature was created
     pub when: Option<InstantType>,
     /// Extension element for the 'when' primitive field. Contains metadata and extensions.

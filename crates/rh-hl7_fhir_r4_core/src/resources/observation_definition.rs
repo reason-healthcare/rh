@@ -33,7 +33,8 @@ pub struct ObservationDefinition {
     /// Binding: example (Codes for high level observation categories.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/observation-category
-    pub category: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<CodeableConcept>,
     /// Type of observation (code / type)
     ///
     /// Binding: example (Codes identifying names of simple observations.)
@@ -41,13 +42,16 @@ pub struct ObservationDefinition {
     /// ValueSet: http://hl7.org/fhir/ValueSet/observation-codes
     pub code: CodeableConcept,
     /// Business identifier for this ObservationDefinition instance
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// Quantity | CodeableConcept | string | boolean | integer | Range | Ratio | SampledData | time | dateTime | Period
     #[serde(rename = "permittedDataType")]
-    pub permitted_data_type: Option<Vec<PermittedDataType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub permitted_data_type: Vec<PermittedDataType>,
     /// Extension element for the 'permittedDataType' primitive field. Contains metadata and extensions.
     #[serde(rename = "_permittedDataType")]
-    pub _permitted_data_type: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _permitted_data_type: Vec<Element>,
     /// Multiple results allowed
     #[serde(rename = "multipleResultsAllowed")]
     pub multiple_results_allowed: Option<BooleanType>,
@@ -71,7 +75,8 @@ pub struct ObservationDefinition {
     pub quantitative_details: Option<ObservationDefinitionQuantitativedetails>,
     /// Qualified range for continuous and ordinal observation results
     #[serde(rename = "qualifiedInterval")]
-    pub qualified_interval: Option<Vec<ObservationDefinitionQualifiedinterval>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub qualified_interval: Vec<ObservationDefinitionQualifiedinterval>,
     /// Value set of valid coded values for the observations conforming to this ObservationDefinition
     #[serde(rename = "validCodedValueSet")]
     pub valid_coded_value_set: Option<Reference>,
@@ -84,6 +89,49 @@ pub struct ObservationDefinition {
     /// Value set of critical coded values for the observations conforming to this ObservationDefinition
     #[serde(rename = "criticalCodedValueSet")]
     pub critical_coded_value_set: Option<Reference>,
+}
+/// ObservationDefinition nested structure for the 'qualifiedInterval' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservationDefinitionQualifiedinterval {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// reference | critical | absolute
+    pub category: Option<ObservationRangeCategory>,
+    /// Extension element for the 'category' primitive field. Contains metadata and extensions.
+    pub _category: Option<Element>,
+    /// The interval itself, for continuous or ordinal observations
+    pub range: Option<Range>,
+    /// Range context qualifier
+    ///
+    /// Binding: extensible (Code identifying the health context of a range.)
+    ///
+    /// ValueSet: http://hl7.org/fhir/ValueSet/referencerange-meaning
+    pub context: Option<CodeableConcept>,
+    /// Targetted population of the range
+    ///
+    /// Binding: example (Codes identifying the population the reference range applies to.)
+    ///
+    /// Available values:
+    /// - `248153007`
+    /// - `248152002`
+    /// - `77386006`
+    #[serde(rename = "appliesTo")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub applies_to: Vec<CodeableConcept>,
+    /// male | female | other | unknown
+    pub gender: Option<AdministrativeGender>,
+    /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
+    pub _gender: Option<Element>,
+    /// Applicable age range, if relevant
+    pub age: Option<Range>,
+    /// Applicable gestational age range, if relevant
+    #[serde(rename = "gestationalAge")]
+    pub gestational_age: Option<Range>,
+    /// Condition associated with the reference range
+    pub condition: Option<StringType>,
+    /// Extension element for the 'condition' primitive field. Contains metadata and extensions.
+    pub _condition: Option<Element>,
 }
 /// ObservationDefinition nested structure for the 'quantitativeDetails' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,48 +165,6 @@ pub struct ObservationDefinitionQuantitativedetails {
     #[serde(rename = "_decimalPrecision")]
     pub _decimal_precision: Option<Element>,
 }
-/// ObservationDefinition nested structure for the 'qualifiedInterval' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObservationDefinitionQualifiedinterval {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// reference | critical | absolute
-    pub category: Option<ObservationRangeCategory>,
-    /// Extension element for the 'category' primitive field. Contains metadata and extensions.
-    pub _category: Option<Element>,
-    /// The interval itself, for continuous or ordinal observations
-    pub range: Option<Range>,
-    /// Range context qualifier
-    ///
-    /// Binding: extensible (Code identifying the health context of a range.)
-    ///
-    /// ValueSet: http://hl7.org/fhir/ValueSet/referencerange-meaning
-    pub context: Option<CodeableConcept>,
-    /// Targetted population of the range
-    ///
-    /// Binding: example (Codes identifying the population the reference range applies to.)
-    ///
-    /// Available values:
-    /// - `248153007`
-    /// - `248152002`
-    /// - `77386006`
-    #[serde(rename = "appliesTo")]
-    pub applies_to: Option<Vec<CodeableConcept>>,
-    /// male | female | other | unknown
-    pub gender: Option<AdministrativeGender>,
-    /// Extension element for the 'gender' primitive field. Contains metadata and extensions.
-    pub _gender: Option<Element>,
-    /// Applicable age range, if relevant
-    pub age: Option<Range>,
-    /// Applicable gestational age range, if relevant
-    #[serde(rename = "gestationalAge")]
-    pub gestational_age: Option<Range>,
-    /// Condition associated with the reference range
-    pub condition: Option<StringType>,
-    /// Extension element for the 'condition' primitive field. Contains metadata and extensions.
-    pub _condition: Option<Element>,
-}
 
 impl Default for ObservationDefinition {
     fn default() -> Self {
@@ -184,20 +190,6 @@ impl Default for ObservationDefinition {
     }
 }
 
-impl Default for ObservationDefinitionQuantitativedetails {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            customary_unit: Default::default(),
-            unit: Default::default(),
-            conversion_factor: Default::default(),
-            _conversion_factor: Default::default(),
-            decimal_precision: Default::default(),
-            _decimal_precision: Default::default(),
-        }
-    }
-}
-
 impl Default for ObservationDefinitionQualifiedinterval {
     fn default() -> Self {
         Self {
@@ -213,6 +205,20 @@ impl Default for ObservationDefinitionQualifiedinterval {
             gestational_age: Default::default(),
             condition: Default::default(),
             _condition: Default::default(),
+        }
+    }
+}
+
+impl Default for ObservationDefinitionQuantitativedetails {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            customary_unit: Default::default(),
+            unit: Default::default(),
+            conversion_factor: Default::default(),
+            _conversion_factor: Default::default(),
+            decimal_precision: Default::default(),
+            _decimal_precision: Default::default(),
         }
     }
 }
@@ -488,13 +494,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for ObservationDefi
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -509,44 +515,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for ObservationDefin
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -556,16 +550,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for ObservationDefi
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -573,16 +564,16 @@ impl crate::traits::observation_definition::ObservationDefinitionAccessors
     for ObservationDefinition
 {
     fn category(&self) -> &[CodeableConcept] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn code(&self) -> CodeableConcept {
         self.code.clone()
     }
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn permitted_data_type(&self) -> &[PermittedDataType] {
-        self.permitted_data_type.as_deref().unwrap_or(&[])
+        self.permitted_data_type.as_slice()
     }
     fn multiple_results_allowed(&self) -> Option<BooleanType> {
         self.multiple_results_allowed
@@ -597,7 +588,7 @@ impl crate::traits::observation_definition::ObservationDefinitionAccessors
         self.quantitative_details.clone()
     }
     fn qualified_interval(&self) -> &[ObservationDefinitionQualifiedinterval] {
-        self.qualified_interval.as_deref().unwrap_or(&[])
+        self.qualified_interval.as_slice()
     }
     fn valid_coded_value_set(&self) -> Option<Reference> {
         self.valid_coded_value_set.clone()
@@ -621,12 +612,12 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_category(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_code(self, value: CodeableConcept) -> Self {
@@ -636,25 +627,22 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_permitted_data_type(self, value: Vec<PermittedDataType>) -> Self {
         let mut resource = self.clone();
-        resource.permitted_data_type = Some(value);
+        resource.permitted_data_type = value;
         resource
     }
     fn add_permitted_data_type(self, item: PermittedDataType) -> Self {
         let mut resource = self.clone();
-        resource
-            .permitted_data_type
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.permitted_data_type.push(item);
         resource
     }
     fn set_multiple_results_allowed(self, value: bool) -> Self {
@@ -679,15 +667,12 @@ impl crate::traits::observation_definition::ObservationDefinitionMutators
     }
     fn set_qualified_interval(self, value: Vec<ObservationDefinitionQualifiedinterval>) -> Self {
         let mut resource = self.clone();
-        resource.qualified_interval = Some(value);
+        resource.qualified_interval = value;
         resource
     }
     fn add_qualified_interval(self, item: ObservationDefinitionQualifiedinterval) -> Self {
         let mut resource = self.clone();
-        resource
-            .qualified_interval
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.qualified_interval.push(item);
         resource
     }
     fn set_valid_coded_value_set(self, value: Reference) -> Self {
@@ -716,18 +701,16 @@ impl crate::traits::observation_definition::ObservationDefinitionExistence
     for ObservationDefinition
 {
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_code(&self) -> bool {
         true
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_permitted_data_type(&self) -> bool {
-        self.permitted_data_type
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.permitted_data_type.is_empty()
     }
     fn has_multiple_results_allowed(&self) -> bool {
         self.multiple_results_allowed.is_some()
@@ -742,9 +725,7 @@ impl crate::traits::observation_definition::ObservationDefinitionExistence
         self.quantitative_details.is_some()
     }
     fn has_qualified_interval(&self) -> bool {
-        self.qualified_interval
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.qualified_interval.is_empty()
     }
     fn has_valid_coded_value_set(&self) -> bool {
         self.valid_coded_value_set.is_some()

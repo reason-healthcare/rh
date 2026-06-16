@@ -31,7 +31,8 @@ pub struct AllergyIntolerance {
     #[serde(flatten)]
     pub base: DomainResource,
     /// External ids for this item
-    pub identifier: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub identifier: Vec<Identifier>,
     /// active | inactive | resolved
     #[serde(rename = "clinicalStatus")]
     pub clinical_status: Option<CodeableConcept>,
@@ -44,9 +45,11 @@ pub struct AllergyIntolerance {
     /// Extension element for the 'type' primitive field. Contains metadata and extensions.
     pub _type: Option<Element>,
     /// food | medication | environment | biologic
-    pub category: Option<Vec<AllergyIntoleranceCategory>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub category: Vec<AllergyIntoleranceCategory>,
     /// Extension element for the 'category' primitive field. Contains metadata and extensions.
-    pub _category: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _category: Vec<Element>,
     /// low | high | unable-to-assess
     pub criticality: Option<AllergyIntoleranceCriticality>,
     /// Extension element for the 'criticality' primitive field. Contains metadata and extensions.
@@ -93,9 +96,11 @@ pub struct AllergyIntolerance {
     #[serde(rename = "_lastOccurrence")]
     pub _last_occurrence: Option<Element>,
     /// Additional text not captured in other fields
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
     /// Adverse Reaction Events linked to exposure to substance
-    pub reaction: Option<Vec<AllergyIntoleranceReaction>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reaction: Vec<AllergyIntoleranceReaction>,
 }
 /// AllergyIntolerance nested structure for the 'reaction' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -135,7 +140,8 @@ pub struct AllergyIntoleranceReaction {
     #[serde(rename = "exposureRoute")]
     pub exposure_route: Option<CodeableConcept>,
     /// Text about event not captured in other fields
-    pub note: Option<Vec<Annotation>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note: Vec<Annotation>,
 }
 
 impl Default for AllergyIntolerance {
@@ -361,13 +367,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for AllergyIntolera
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -382,44 +388,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for AllergyIntoleran
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -429,22 +423,19 @@ impl crate::traits::domain_resource::DomainResourceExistence for AllergyIntolera
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::allergy_intolerance::AllergyIntoleranceAccessors for AllergyIntolerance {
     fn identifier(&self) -> &[Identifier] {
-        self.identifier.as_deref().unwrap_or(&[])
+        self.identifier.as_slice()
     }
     fn clinical_status(&self) -> Option<CodeableConcept> {
         self.clinical_status.clone()
@@ -456,7 +447,7 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceAccessors for Allergy
         self.type_.clone()
     }
     fn category(&self) -> &[AllergyIntoleranceCategory] {
-        self.category.as_deref().unwrap_or(&[])
+        self.category.as_slice()
     }
     fn criticality(&self) -> Option<AllergyIntoleranceCriticality> {
         self.criticality.clone()
@@ -483,10 +474,10 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceAccessors for Allergy
         self.last_occurrence.clone()
     }
     fn note(&self) -> &[Annotation] {
-        self.note.as_deref().unwrap_or(&[])
+        self.note.as_slice()
     }
     fn reaction(&self) -> &[AllergyIntoleranceReaction] {
-        self.reaction.as_deref().unwrap_or(&[])
+        self.reaction.as_slice()
     }
 }
 
@@ -496,12 +487,12 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceMutators for AllergyI
     }
     fn set_identifier(self, value: Vec<Identifier>) -> Self {
         let mut resource = self.clone();
-        resource.identifier = Some(value);
+        resource.identifier = value;
         resource
     }
     fn add_identifier(self, item: Identifier) -> Self {
         let mut resource = self.clone();
-        resource.identifier.get_or_insert_with(Vec::new).push(item);
+        resource.identifier.push(item);
         resource
     }
     fn set_clinical_status(self, value: CodeableConcept) -> Self {
@@ -521,12 +512,12 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceMutators for AllergyI
     }
     fn set_category(self, value: Vec<AllergyIntoleranceCategory>) -> Self {
         let mut resource = self.clone();
-        resource.category = Some(value);
+        resource.category = value;
         resource
     }
     fn add_category(self, item: AllergyIntoleranceCategory) -> Self {
         let mut resource = self.clone();
-        resource.category.get_or_insert_with(Vec::new).push(item);
+        resource.category.push(item);
         resource
     }
     fn set_criticality(self, value: AllergyIntoleranceCriticality) -> Self {
@@ -571,22 +562,22 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceMutators for AllergyI
     }
     fn set_note(self, value: Vec<Annotation>) -> Self {
         let mut resource = self.clone();
-        resource.note = Some(value);
+        resource.note = value;
         resource
     }
     fn add_note(self, item: Annotation) -> Self {
         let mut resource = self.clone();
-        resource.note.get_or_insert_with(Vec::new).push(item);
+        resource.note.push(item);
         resource
     }
     fn set_reaction(self, value: Vec<AllergyIntoleranceReaction>) -> Self {
         let mut resource = self.clone();
-        resource.reaction = Some(value);
+        resource.reaction = value;
         resource
     }
     fn add_reaction(self, item: AllergyIntoleranceReaction) -> Self {
         let mut resource = self.clone();
-        resource.reaction.get_or_insert_with(Vec::new).push(item);
+        resource.reaction.push(item);
         resource
     }
 }
@@ -600,7 +591,7 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceExistence for Allergy
             || self.onset_string.is_some()
     }
     fn has_identifier(&self) -> bool {
-        self.identifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.identifier.is_empty()
     }
     fn has_clinical_status(&self) -> bool {
         self.clinical_status.is_some()
@@ -612,7 +603,7 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceExistence for Allergy
         self.type_.is_some()
     }
     fn has_category(&self) -> bool {
-        self.category.as_ref().is_some_and(|v| !v.is_empty())
+        !self.category.is_empty()
     }
     fn has_criticality(&self) -> bool {
         self.criticality.is_some()
@@ -639,10 +630,10 @@ impl crate::traits::allergy_intolerance::AllergyIntoleranceExistence for Allergy
         self.last_occurrence.is_some()
     }
     fn has_note(&self) -> bool {
-        self.note.as_ref().is_some_and(|v| !v.is_empty())
+        !self.note.is_empty()
     }
     fn has_reaction(&self) -> bool {
-        self.reaction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.reaction.is_empty()
     }
 }
 

@@ -26,13 +26,16 @@ pub struct VerificationResult {
     #[serde(flatten)]
     pub base: DomainResource,
     /// A resource that was validated
-    pub target: Option<Vec<Reference>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target: Vec<Reference>,
     /// The fhirpath location(s) within the resource that was validated
     #[serde(rename = "targetLocation")]
-    pub target_location: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_location: Vec<StringType>,
     /// Extension element for the 'targetLocation' primitive field. Contains metadata and extensions.
     #[serde(rename = "_targetLocation")]
-    pub _target_location: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _target_location: Vec<Element>,
     /// none | initial | periodic
     ///
     /// Binding: preferred (The frequency with which the target must be validated.)
@@ -62,7 +65,8 @@ pub struct VerificationResult {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-validation-process
     #[serde(rename = "validationProcess")]
-    pub validation_process: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub validation_process: Vec<CodeableConcept>,
     /// Frequency of revalidation
     pub frequency: Option<Timing>,
     /// The date/time validation was last completed (including failed validations)
@@ -86,11 +90,13 @@ pub struct VerificationResult {
     pub failure_action: Option<CodeableConcept>,
     /// Information about the primary source(s) involved in validation
     #[serde(rename = "primarySource")]
-    pub primary_source: Option<Vec<VerificationResultPrimarysource>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub primary_source: Vec<VerificationResultPrimarysource>,
     /// Information about the entity attesting to information
     pub attestation: Option<VerificationResultAttestation>,
     /// Information about the entity validating information
-    pub validator: Option<Vec<VerificationResultValidator>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub validator: Vec<VerificationResultValidator>,
 }
 /// VerificationResult nested structure for the 'attestation' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -133,24 +139,6 @@ pub struct VerificationResultAttestation {
     #[serde(rename = "sourceSignature")]
     pub source_signature: Option<Signature>,
 }
-/// VerificationResult nested structure for the 'validator' field
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VerificationResultValidator {
-    /// Base definition inherited from FHIR specification
-    #[serde(flatten)]
-    pub base: BackboneElement,
-    /// Reference to the organization validating information
-    pub organization: Reference,
-    /// A digital identity certificate associated with the validator
-    #[serde(rename = "identityCertificate")]
-    pub identity_certificate: Option<StringType>,
-    /// Extension element for the 'identityCertificate' primitive field. Contains metadata and extensions.
-    #[serde(rename = "_identityCertificate")]
-    pub _identity_certificate: Option<Element>,
-    /// Validator signature
-    #[serde(rename = "attestationSignature")]
-    pub attestation_signature: Option<Signature>,
-}
 /// VerificationResult nested structure for the 'primarySource' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResultPrimarysource {
@@ -165,14 +153,16 @@ pub struct VerificationResultPrimarysource {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-primary-source-type
     #[serde(rename = "type")]
-    pub type_: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub type_: Vec<CodeableConcept>,
     /// Method for exchanging information with the primary source
     ///
     /// Binding: example (Method for communicating with the data source (manual; API; Push).)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-communication-method
     #[serde(rename = "communicationMethod")]
-    pub communication_method: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub communication_method: Vec<CodeableConcept>,
     /// successful | failed | unknown
     ///
     /// Binding: preferred (Status of the validation of the target against the primary source.)
@@ -199,7 +189,26 @@ pub struct VerificationResultPrimarysource {
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/verificationresult-push-type-available
     #[serde(rename = "pushTypeAvailable")]
-    pub push_type_available: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub push_type_available: Vec<CodeableConcept>,
+}
+/// VerificationResult nested structure for the 'validator' field
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResultValidator {
+    /// Base definition inherited from FHIR specification
+    #[serde(flatten)]
+    pub base: BackboneElement,
+    /// Reference to the organization validating information
+    pub organization: Reference,
+    /// A digital identity certificate associated with the validator
+    #[serde(rename = "identityCertificate")]
+    pub identity_certificate: Option<StringType>,
+    /// Extension element for the 'identityCertificate' primitive field. Contains metadata and extensions.
+    #[serde(rename = "_identityCertificate")]
+    pub _identity_certificate: Option<Element>,
+    /// Validator signature
+    #[serde(rename = "attestationSignature")]
+    pub attestation_signature: Option<Signature>,
 }
 
 impl Default for VerificationResult {
@@ -248,18 +257,6 @@ impl Default for VerificationResultAttestation {
     }
 }
 
-impl Default for VerificationResultValidator {
-    fn default() -> Self {
-        Self {
-            base: BackboneElement::default(),
-            organization: Reference::default(),
-            identity_certificate: Default::default(),
-            _identity_certificate: Default::default(),
-            attestation_signature: Default::default(),
-        }
-    }
-}
-
 impl Default for VerificationResultPrimarysource {
     fn default() -> Self {
         Self {
@@ -272,6 +269,18 @@ impl Default for VerificationResultPrimarysource {
             _validation_date: Default::default(),
             can_push_updates: Default::default(),
             push_type_available: Default::default(),
+        }
+    }
+}
+
+impl Default for VerificationResultValidator {
+    fn default() -> Self {
+        Self {
+            base: BackboneElement::default(),
+            organization: Reference::default(),
+            identity_certificate: Default::default(),
+            _identity_certificate: Default::default(),
+            attestation_signature: Default::default(),
         }
     }
 }
@@ -527,13 +536,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for VerificationRes
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -548,44 +557,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for VerificationResu
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -595,25 +592,22 @@ impl crate::traits::domain_resource::DomainResourceExistence for VerificationRes
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
 impl crate::traits::verification_result::VerificationResultAccessors for VerificationResult {
     fn target(&self) -> &[Reference] {
-        self.target.as_deref().unwrap_or(&[])
+        self.target.as_slice()
     }
     fn target_location(&self) -> &[StringType] {
-        self.target_location.as_deref().unwrap_or(&[])
+        self.target_location.as_slice()
     }
     fn need(&self) -> Option<CodeableConcept> {
         self.need.clone()
@@ -628,7 +622,7 @@ impl crate::traits::verification_result::VerificationResultAccessors for Verific
         self.validation_type.clone()
     }
     fn validation_process(&self) -> &[CodeableConcept] {
-        self.validation_process.as_deref().unwrap_or(&[])
+        self.validation_process.as_slice()
     }
     fn frequency(&self) -> Option<Timing> {
         self.frequency.clone()
@@ -643,13 +637,13 @@ impl crate::traits::verification_result::VerificationResultAccessors for Verific
         self.failure_action.clone()
     }
     fn primary_source(&self) -> &[VerificationResultPrimarysource] {
-        self.primary_source.as_deref().unwrap_or(&[])
+        self.primary_source.as_slice()
     }
     fn attestation(&self) -> Option<VerificationResultAttestation> {
         self.attestation.clone()
     }
     fn validator(&self) -> &[VerificationResultValidator] {
-        self.validator.as_deref().unwrap_or(&[])
+        self.validator.as_slice()
     }
 }
 
@@ -659,25 +653,22 @@ impl crate::traits::verification_result::VerificationResultMutators for Verifica
     }
     fn set_target(self, value: Vec<Reference>) -> Self {
         let mut resource = self.clone();
-        resource.target = Some(value);
+        resource.target = value;
         resource
     }
     fn add_target(self, item: Reference) -> Self {
         let mut resource = self.clone();
-        resource.target.get_or_insert_with(Vec::new).push(item);
+        resource.target.push(item);
         resource
     }
     fn set_target_location(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.target_location = Some(value);
+        resource.target_location = value;
         resource
     }
     fn add_target_location(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .target_location
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.target_location.push(item);
         resource
     }
     fn set_need(self, value: CodeableConcept) -> Self {
@@ -702,15 +693,12 @@ impl crate::traits::verification_result::VerificationResultMutators for Verifica
     }
     fn set_validation_process(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.validation_process = Some(value);
+        resource.validation_process = value;
         resource
     }
     fn add_validation_process(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .validation_process
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.validation_process.push(item);
         resource
     }
     fn set_frequency(self, value: Timing) -> Self {
@@ -735,15 +723,12 @@ impl crate::traits::verification_result::VerificationResultMutators for Verifica
     }
     fn set_primary_source(self, value: Vec<VerificationResultPrimarysource>) -> Self {
         let mut resource = self.clone();
-        resource.primary_source = Some(value);
+        resource.primary_source = value;
         resource
     }
     fn add_primary_source(self, item: VerificationResultPrimarysource) -> Self {
         let mut resource = self.clone();
-        resource
-            .primary_source
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.primary_source.push(item);
         resource
     }
     fn set_attestation(self, value: VerificationResultAttestation) -> Self {
@@ -753,22 +738,22 @@ impl crate::traits::verification_result::VerificationResultMutators for Verifica
     }
     fn set_validator(self, value: Vec<VerificationResultValidator>) -> Self {
         let mut resource = self.clone();
-        resource.validator = Some(value);
+        resource.validator = value;
         resource
     }
     fn add_validator(self, item: VerificationResultValidator) -> Self {
         let mut resource = self.clone();
-        resource.validator.get_or_insert_with(Vec::new).push(item);
+        resource.validator.push(item);
         resource
     }
 }
 
 impl crate::traits::verification_result::VerificationResultExistence for VerificationResult {
     fn has_target(&self) -> bool {
-        self.target.as_ref().is_some_and(|v| !v.is_empty())
+        !self.target.is_empty()
     }
     fn has_target_location(&self) -> bool {
-        self.target_location.as_ref().is_some_and(|v| !v.is_empty())
+        !self.target_location.is_empty()
     }
     fn has_need(&self) -> bool {
         self.need.is_some()
@@ -783,9 +768,7 @@ impl crate::traits::verification_result::VerificationResultExistence for Verific
         self.validation_type.is_some()
     }
     fn has_validation_process(&self) -> bool {
-        self.validation_process
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.validation_process.is_empty()
     }
     fn has_frequency(&self) -> bool {
         self.frequency.is_some()
@@ -800,13 +783,13 @@ impl crate::traits::verification_result::VerificationResultExistence for Verific
         self.failure_action.is_some()
     }
     fn has_primary_source(&self) -> bool {
-        self.primary_source.as_ref().is_some_and(|v| !v.is_empty())
+        !self.primary_source.is_empty()
     }
     fn has_attestation(&self) -> bool {
         self.attestation.is_some()
     }
     fn has_validator(&self) -> bool {
-        self.validator.as_ref().is_some_and(|v| !v.is_empty())
+        !self.validator.is_empty()
     }
 }
 

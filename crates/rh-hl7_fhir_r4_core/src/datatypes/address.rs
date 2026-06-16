@@ -34,9 +34,11 @@ pub struct Address {
     /// Extension element for the 'text' primitive field. Contains metadata and extensions.
     pub _text: Option<Element>,
     /// Street name, number, direction & P.O. Box etc.
-    pub line: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub line: Vec<StringType>,
     /// Extension element for the 'line' primitive field. Contains metadata and extensions.
-    pub _line: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _line: Vec<Element>,
     /// Name of city, town etc.
     pub city: Option<StringType>,
     /// Extension element for the 'city' primitive field. Contains metadata and extensions.

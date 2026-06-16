@@ -64,20 +64,23 @@ pub struct SearchParameter {
     /// Extension element for the 'publisher' primitive field. Contains metadata and extensions.
     pub _publisher: Option<Element>,
     /// Contact details for the publisher
-    pub contact: Option<Vec<ContactDetail>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact: Vec<ContactDetail>,
     /// Natural language description of the search parameter
     pub description: StringType,
     /// Extension element for the 'description' primitive field. Contains metadata and extensions.
     pub _description: Option<Element>,
     /// The context that the content is intended to support
     #[serde(rename = "useContext")]
-    pub use_context: Option<Vec<UsageContext>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_context: Vec<UsageContext>,
     /// Intended jurisdiction for search parameter (if applicable)
     ///
     /// Binding: extensible (Countries and regions within which this artifact is targeted for use.)
     ///
     /// ValueSet: http://hl7.org/fhir/ValueSet/jurisdiction
-    pub jurisdiction: Option<Vec<CodeableConcept>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub jurisdiction: Vec<CodeableConcept>,
     /// Why this search parameter is defined
     pub purpose: Option<StringType>,
     /// Extension element for the 'purpose' primitive field. Contains metadata and extensions.
@@ -90,7 +93,8 @@ pub struct SearchParameter {
     #[serde(rename = "base")]
     pub base_definition: Vec<ResourceTypes>,
     /// Extension element for the 'base' primitive field. Contains metadata and extensions.
-    pub _base: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _base: Vec<Element>,
     /// number | date | string | token | reference | composite | quantity | uri | special
     #[serde(rename = "type")]
     pub type_: SearchParamType,
@@ -111,9 +115,11 @@ pub struct SearchParameter {
     #[serde(rename = "_xpathUsage")]
     pub _xpath_usage: Option<Element>,
     /// Types of resource (if a resource reference)
-    pub target: Option<Vec<ResourceTypes>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target: Vec<ResourceTypes>,
     /// Extension element for the 'target' primitive field. Contains metadata and extensions.
-    pub _target: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _target: Vec<Element>,
     /// Allow multiple values per parameter (or)
     #[serde(rename = "multipleOr")]
     pub multiple_or: Option<BooleanType>,
@@ -127,19 +133,26 @@ pub struct SearchParameter {
     #[serde(rename = "_multipleAnd")]
     pub _multiple_and: Option<Element>,
     /// eq | ne | gt | lt | ge | le | sa | eb | ap
-    pub comparator: Option<Vec<SearchComparator>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comparator: Vec<SearchComparator>,
     /// Extension element for the 'comparator' primitive field. Contains metadata and extensions.
-    pub _comparator: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _comparator: Vec<Element>,
     /// missing | exact | contains | not | text | in | not-in | below | above | type | identifier | ofType
-    pub modifier: Option<Vec<SearchModifierCode>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifier: Vec<SearchModifierCode>,
     /// Extension element for the 'modifier' primitive field. Contains metadata and extensions.
-    pub _modifier: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _modifier: Vec<Element>,
     /// Chained names supported
-    pub chain: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub chain: Vec<StringType>,
     /// Extension element for the 'chain' primitive field. Contains metadata and extensions.
-    pub _chain: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _chain: Vec<Element>,
     /// For Composite resources to define the parts
-    pub component: Option<Vec<SearchParameterComponent>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub component: Vec<SearchParameterComponent>,
 }
 /// SearchParameter nested structure for the 'component' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -384,13 +397,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SearchParameter
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -405,44 +418,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SearchParameter 
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -452,16 +453,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SearchParameter
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -491,16 +489,16 @@ impl crate::traits::search_parameter::SearchParameterAccessors for SearchParamet
         self.publisher.clone()
     }
     fn contact(&self) -> &[ContactDetail] {
-        self.contact.as_deref().unwrap_or(&[])
+        self.contact.as_slice()
     }
     fn description(&self) -> StringType {
         self.description.clone()
     }
     fn use_context(&self) -> &[UsageContext] {
-        self.use_context.as_deref().unwrap_or(&[])
+        self.use_context.as_slice()
     }
     fn jurisdiction(&self) -> &[CodeableConcept] {
-        self.jurisdiction.as_deref().unwrap_or(&[])
+        self.jurisdiction.as_slice()
     }
     fn purpose(&self) -> Option<StringType> {
         self.purpose.clone()
@@ -524,7 +522,7 @@ impl crate::traits::search_parameter::SearchParameterAccessors for SearchParamet
         self.xpath_usage.clone()
     }
     fn target(&self) -> &[ResourceTypes] {
-        self.target.as_deref().unwrap_or(&[])
+        self.target.as_slice()
     }
     fn multiple_or(&self) -> Option<BooleanType> {
         self.multiple_or
@@ -533,16 +531,16 @@ impl crate::traits::search_parameter::SearchParameterAccessors for SearchParamet
         self.multiple_and
     }
     fn comparator(&self) -> &[SearchComparator] {
-        self.comparator.as_deref().unwrap_or(&[])
+        self.comparator.as_slice()
     }
     fn modifier(&self) -> &[SearchModifierCode] {
-        self.modifier.as_deref().unwrap_or(&[])
+        self.modifier.as_slice()
     }
     fn chain(&self) -> &[StringType] {
-        self.chain.as_deref().unwrap_or(&[])
+        self.chain.as_slice()
     }
     fn component(&self) -> &[SearchParameterComponent] {
-        self.component.as_deref().unwrap_or(&[])
+        self.component.as_slice()
     }
 }
 
@@ -592,12 +590,12 @@ impl crate::traits::search_parameter::SearchParameterMutators for SearchParamete
     }
     fn set_contact(self, value: Vec<ContactDetail>) -> Self {
         let mut resource = self.clone();
-        resource.contact = Some(value);
+        resource.contact = value;
         resource
     }
     fn add_contact(self, item: ContactDetail) -> Self {
         let mut resource = self.clone();
-        resource.contact.get_or_insert_with(Vec::new).push(item);
+        resource.contact.push(item);
         resource
     }
     fn set_description(self, value: String) -> Self {
@@ -607,25 +605,22 @@ impl crate::traits::search_parameter::SearchParameterMutators for SearchParamete
     }
     fn set_use_context(self, value: Vec<UsageContext>) -> Self {
         let mut resource = self.clone();
-        resource.use_context = Some(value);
+        resource.use_context = value;
         resource
     }
     fn add_use_context(self, item: UsageContext) -> Self {
         let mut resource = self.clone();
-        resource.use_context.get_or_insert_with(Vec::new).push(item);
+        resource.use_context.push(item);
         resource
     }
     fn set_jurisdiction(self, value: Vec<CodeableConcept>) -> Self {
         let mut resource = self.clone();
-        resource.jurisdiction = Some(value);
+        resource.jurisdiction = value;
         resource
     }
     fn add_jurisdiction(self, item: CodeableConcept) -> Self {
         let mut resource = self.clone();
-        resource
-            .jurisdiction
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.jurisdiction.push(item);
         resource
     }
     fn set_purpose(self, value: String) -> Self {
@@ -670,12 +665,12 @@ impl crate::traits::search_parameter::SearchParameterMutators for SearchParamete
     }
     fn set_target(self, value: Vec<ResourceTypes>) -> Self {
         let mut resource = self.clone();
-        resource.target = Some(value);
+        resource.target = value;
         resource
     }
     fn add_target(self, item: ResourceTypes) -> Self {
         let mut resource = self.clone();
-        resource.target.get_or_insert_with(Vec::new).push(item);
+        resource.target.push(item);
         resource
     }
     fn set_multiple_or(self, value: bool) -> Self {
@@ -690,42 +685,42 @@ impl crate::traits::search_parameter::SearchParameterMutators for SearchParamete
     }
     fn set_comparator(self, value: Vec<SearchComparator>) -> Self {
         let mut resource = self.clone();
-        resource.comparator = Some(value);
+        resource.comparator = value;
         resource
     }
     fn add_comparator(self, item: SearchComparator) -> Self {
         let mut resource = self.clone();
-        resource.comparator.get_or_insert_with(Vec::new).push(item);
+        resource.comparator.push(item);
         resource
     }
     fn set_modifier(self, value: Vec<SearchModifierCode>) -> Self {
         let mut resource = self.clone();
-        resource.modifier = Some(value);
+        resource.modifier = value;
         resource
     }
     fn add_modifier(self, item: SearchModifierCode) -> Self {
         let mut resource = self.clone();
-        resource.modifier.get_or_insert_with(Vec::new).push(item);
+        resource.modifier.push(item);
         resource
     }
     fn set_chain(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.chain = Some(value);
+        resource.chain = value;
         resource
     }
     fn add_chain(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource.chain.get_or_insert_with(Vec::new).push(item);
+        resource.chain.push(item);
         resource
     }
     fn set_component(self, value: Vec<SearchParameterComponent>) -> Self {
         let mut resource = self.clone();
-        resource.component = Some(value);
+        resource.component = value;
         resource
     }
     fn add_component(self, item: SearchParameterComponent) -> Self {
         let mut resource = self.clone();
-        resource.component.get_or_insert_with(Vec::new).push(item);
+        resource.component.push(item);
         resource
     }
 }
@@ -756,16 +751,16 @@ impl crate::traits::search_parameter::SearchParameterExistence for SearchParamet
         self.publisher.is_some()
     }
     fn has_contact(&self) -> bool {
-        self.contact.as_ref().is_some_and(|v| !v.is_empty())
+        !self.contact.is_empty()
     }
     fn has_description(&self) -> bool {
         true
     }
     fn has_use_context(&self) -> bool {
-        self.use_context.as_ref().is_some_and(|v| !v.is_empty())
+        !self.use_context.is_empty()
     }
     fn has_jurisdiction(&self) -> bool {
-        self.jurisdiction.as_ref().is_some_and(|v| !v.is_empty())
+        !self.jurisdiction.is_empty()
     }
     fn has_purpose(&self) -> bool {
         self.purpose.is_some()
@@ -789,7 +784,7 @@ impl crate::traits::search_parameter::SearchParameterExistence for SearchParamet
         self.xpath_usage.is_some()
     }
     fn has_target(&self) -> bool {
-        self.target.as_ref().is_some_and(|v| !v.is_empty())
+        !self.target.is_empty()
     }
     fn has_multiple_or(&self) -> bool {
         self.multiple_or.is_some()
@@ -798,16 +793,16 @@ impl crate::traits::search_parameter::SearchParameterExistence for SearchParamet
         self.multiple_and.is_some()
     }
     fn has_comparator(&self) -> bool {
-        self.comparator.as_ref().is_some_and(|v| !v.is_empty())
+        !self.comparator.is_empty()
     }
     fn has_modifier(&self) -> bool {
-        self.modifier.as_ref().is_some_and(|v| !v.is_empty())
+        !self.modifier.is_empty()
     }
     fn has_chain(&self) -> bool {
-        self.chain.as_ref().is_some_and(|v| !v.is_empty())
+        !self.chain.is_empty()
     }
     fn has_component(&self) -> bool {
-        self.component.as_ref().is_some_and(|v| !v.is_empty())
+        !self.component.is_empty()
     }
 }
 

@@ -33,12 +33,15 @@ pub struct SubstanceProtein {
     pub _number_of_subunits: Option<Element>,
     /// The disulphide bond between two cysteine residues either on the same subunit or on two different subunits shall be described. The position of the disulfide bonds in the SubstanceProtein shall be listed in increasing order of subunit number and position within subunit followed by the abbreviation of the amino acids involved. The disulfide linkage positions shall actually contain the amino acid Cysteine at the respective positions
     #[serde(rename = "disulfideLinkage")]
-    pub disulfide_linkage: Option<Vec<StringType>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub disulfide_linkage: Vec<StringType>,
     /// Extension element for the 'disulfideLinkage' primitive field. Contains metadata and extensions.
     #[serde(rename = "_disulfideLinkage")]
-    pub _disulfide_linkage: Option<Element>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub _disulfide_linkage: Vec<Element>,
     /// This subclause refers to the description of each subunit constituting the SubstanceProtein. A subunit is a linear sequence of amino acids linked through peptide bonds. The Subunit information shall be provided when the finished SubstanceProtein is a complex of multiple sequences; subunits are not used to delineate domains within a single sequence. Subunits are listed in order of decreasing length; sequences of the same length will be ordered by decreasing molecular weight; subunits that have identical sequences will be repeated multiple times
-    pub subunit: Option<Vec<SubstanceProteinSubunit>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub subunit: Vec<SubstanceProteinSubunit>,
 }
 /// SubstanceProtein nested structure for the 'subunit' field
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -251,13 +254,13 @@ impl crate::traits::domain_resource::DomainResourceAccessors for SubstanceProtei
         self.base.text.clone()
     }
     fn contained(&self) -> &[crate::resources::resource::Resource] {
-        self.base.contained.as_deref().unwrap_or(&[])
+        self.base.contained.as_slice()
     }
     fn extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.extension.as_deref().unwrap_or(&[])
+        self.base.extension.as_slice()
     }
     fn modifier_extension(&self) -> &[crate::datatypes::extension::Extension] {
-        self.base.modifier_extension.as_deref().unwrap_or(&[])
+        self.base.modifier_extension.as_slice()
     }
 }
 
@@ -272,44 +275,32 @@ impl crate::traits::domain_resource::DomainResourceMutators for SubstanceProtein
     }
     fn set_contained(self, value: Vec<crate::resources::resource::Resource>) -> Self {
         let mut resource = self.clone();
-        resource.base.contained = Some(value);
+        resource.base.contained = value;
         resource
     }
     fn add_contained(self, item: crate::resources::resource::Resource) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .contained
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.contained.push(item);
         resource
     }
     fn set_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.extension = Some(value);
+        resource.base.extension = value;
         resource
     }
     fn add_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.extension.push(item);
         resource
     }
     fn set_modifier_extension(self, value: Vec<crate::datatypes::extension::Extension>) -> Self {
         let mut resource = self.clone();
-        resource.base.modifier_extension = Some(value);
+        resource.base.modifier_extension = value;
         resource
     }
     fn add_modifier_extension(self, item: crate::datatypes::extension::Extension) -> Self {
         let mut resource = self.clone();
-        resource
-            .base
-            .modifier_extension
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.base.modifier_extension.push(item);
         resource
     }
 }
@@ -319,16 +310,13 @@ impl crate::traits::domain_resource::DomainResourceExistence for SubstanceProtei
         self.base.text.is_some()
     }
     fn has_contained(&self) -> bool {
-        self.base.contained.as_ref().is_some_and(|c| !c.is_empty())
+        !self.base.contained.is_empty()
     }
     fn has_extension(&self) -> bool {
-        self.base.extension.as_ref().is_some_and(|e| !e.is_empty())
+        !self.base.extension.is_empty()
     }
     fn has_modifier_extension(&self) -> bool {
-        self.base
-            .modifier_extension
-            .as_ref()
-            .is_some_and(|m| !m.is_empty())
+        !self.base.modifier_extension.is_empty()
     }
 }
 
@@ -340,10 +328,10 @@ impl crate::traits::substance_protein::SubstanceProteinAccessors for SubstancePr
         self.number_of_subunits
     }
     fn disulfide_linkage(&self) -> &[StringType] {
-        self.disulfide_linkage.as_deref().unwrap_or(&[])
+        self.disulfide_linkage.as_slice()
     }
     fn subunit(&self) -> &[SubstanceProteinSubunit] {
-        self.subunit.as_deref().unwrap_or(&[])
+        self.subunit.as_slice()
     }
 }
 
@@ -363,25 +351,22 @@ impl crate::traits::substance_protein::SubstanceProteinMutators for SubstancePro
     }
     fn set_disulfide_linkage(self, value: Vec<String>) -> Self {
         let mut resource = self.clone();
-        resource.disulfide_linkage = Some(value);
+        resource.disulfide_linkage = value;
         resource
     }
     fn add_disulfide_linkage(self, item: String) -> Self {
         let mut resource = self.clone();
-        resource
-            .disulfide_linkage
-            .get_or_insert_with(Vec::new)
-            .push(item);
+        resource.disulfide_linkage.push(item);
         resource
     }
     fn set_subunit(self, value: Vec<SubstanceProteinSubunit>) -> Self {
         let mut resource = self.clone();
-        resource.subunit = Some(value);
+        resource.subunit = value;
         resource
     }
     fn add_subunit(self, item: SubstanceProteinSubunit) -> Self {
         let mut resource = self.clone();
-        resource.subunit.get_or_insert_with(Vec::new).push(item);
+        resource.subunit.push(item);
         resource
     }
 }
@@ -394,12 +379,10 @@ impl crate::traits::substance_protein::SubstanceProteinExistence for SubstancePr
         self.number_of_subunits.is_some()
     }
     fn has_disulfide_linkage(&self) -> bool {
-        self.disulfide_linkage
-            .as_ref()
-            .is_some_and(|v| !v.is_empty())
+        !self.disulfide_linkage.is_empty()
     }
     fn has_subunit(&self) -> bool {
-        self.subunit.as_ref().is_some_and(|v| !v.is_empty())
+        !self.subunit.is_empty()
     }
 }
 
