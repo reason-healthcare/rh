@@ -12,6 +12,11 @@ __pycache__/
 # Build artifacts
 build/
 pkg/
+packages/*/dist/
+packages/*/wasm/
+packages/*/wasm-node/
+packages/*/wasm-bundler/
+examples/playground/dist/
 
 # IDE files
 .vscode/

@@ -252,18 +252,32 @@ curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/i
 
 ## WASM Builds
 
-`rh-fhirpath` and `rh-vcl` also ship as WebAssembly packages. Build them after the Rust crates are published:
+`rh-fhirpath`, `rh-vcl`, and `rh-cql` also ship as WebAssembly-backed NPM packages.
+The local npm publish process is documented in [`packages/RELEASE.md`](packages/RELEASE.md).
+
+Build them after the Rust crates are published:
 
 ```bash
-# Build WASM for both crates
+# Build WASM for all npm-backed crates
 just wasm
 
 # Or individually
 cd crates/rh-fhirpath && just wasm
 cd crates/rh-vcl && just wasm
+cd crates/rh-cql && just wasm
 ```
 
-See [crates/rh-fhirpath/WASM_BUILD.md](crates/rh-fhirpath/WASM_BUILD.md) and [crates/rh-vcl/WASM_BUILD.md](crates/rh-vcl/WASM_BUILD.md) for full WASM build and deployment details.
+Before publishing NPM packages, run:
+
+```bash
+pnpm -r build
+pnpm -r test
+pnpm -r pack:dry-run
+```
+
+Then follow [`packages/RELEASE.md`](packages/RELEASE.md) to publish
+`@reason-healthcare/fhirpath`, `@reason-healthcare/vcl`, and
+`@reason-healthcare/cql` locally.
 
 ## Releasing a single crate
 

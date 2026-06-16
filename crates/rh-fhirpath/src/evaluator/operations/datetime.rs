@@ -6,7 +6,7 @@
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
-use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, Timelike, Utc};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, Timelike};
 use rust_decimal::Decimal;
 
 /// Helper function to parse datetime strings with timezone handling
@@ -37,8 +37,8 @@ impl DateTimeEvaluator {
     /// now() - Returns the current date and time (with timezone)
     /// Returns a DateTime value in ISO 8601 format
     pub fn now() -> FhirPathResult<FhirPathValue> {
-        let now = Utc::now();
-        let datetime_string = now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+        let now = Local::now();
+        let datetime_string = now.format("%Y-%m-%dT%H:%M:%S%.3f%:z").to_string();
         Ok(FhirPathValue::DateTime(datetime_string))
     }
 
@@ -299,14 +299,12 @@ mod tests {
         let result = DateTimeEvaluator::now().unwrap();
         match result {
             FhirPathValue::DateTime(dt_str) => {
-                // Verify it's a valid ISO 8601 datetime with UTC timezone
-                assert!(dt_str.ends_with('Z'), "DateTime should end with Z for UTC");
                 assert!(
                     dt_str.len() >= 20,
                     "DateTime should be at least 20 characters"
                 );
 
-                // Try to parse it back to verify format
+                // Try to parse it back to verify RFC3339 format with a timezone.
                 let parsed = DateTime::parse_from_rfc3339(&dt_str);
                 assert!(parsed.is_ok(), "DateTime should be valid RFC3339: {dt_str}");
             }
@@ -385,6 +383,18 @@ mod tests {
                 diff <= 1,
                 "now() should return current time within 1 second, diff: {diff} seconds"
             );
+        }
+    }
+
+    #[test]
+    fn test_now_and_today_use_same_calendar_basis() {
+        let now = DateTimeEvaluator::now().unwrap();
+        let today = DateTimeEvaluator::today().unwrap();
+        match (now, today) {
+            (FhirPathValue::DateTime(dt), FhirPathValue::Date(date)) => {
+                assert_eq!(&dt[..10], date);
+            }
+            _ => panic!("now() and today() should return DateTime and Date values"),
         }
     }
 

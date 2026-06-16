@@ -119,11 +119,10 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                     _ => {}
                 }
             }
-            Event::Text(t) => {
-                if in_expression || in_output {
-                    text_buf.push_str(&t.unescape().expect("decode text"));
-                }
+            Event::Text(t) if in_expression || in_output => {
+                text_buf.push_str(&t.unescape().expect("decode text"));
             }
+            Event::Text(_) => {}
             Event::End(e) => match e.name().as_ref() {
                 b"expression" => {
                     if let Some(case) = current.as_mut() {

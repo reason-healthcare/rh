@@ -1,0 +1,22 @@
+{
+  "name": "@reason-healthcare/playground",
+  "version": "0.2.0-beta.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:deps": "pnpm --filter @reason-healthcare/fhirpath --filter @reason-healthcare/vcl --filter @reason-healthcare/cql build",
+    "predev": "pnpm run build:deps",
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@reason-healthcare/cql": "workspace:*",
+    "@reason-healthcare/fhirpath": "workspace:*",
+    "@reason-healthcare/vcl": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^7.2.6",
+    "vitest": "^4.0.14"
+  }
+}

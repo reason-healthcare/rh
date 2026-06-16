@@ -381,43 +381,86 @@ regen-check:
     fi
     echo "No drift detected. Generated crates are up to date."
 
-# Build WASM packages for all WASM-capable crates (rh-fhirpath and rh-vcl)
+# Build all WASM packages for WASM-bindgen crates.
 wasm:
-    cd crates/rh-fhirpath && just wasm
-    cd crates/rh-vcl && just wasm
+    just wasm-build fhirpath all
+    just wasm-build vcl all
+    just wasm-build cql all
 
-# Build WASM package for VCL (web target)
+# Build one WASM-bindgen crate for a target: web, node, bundler, or all.
+wasm-build crate target="all":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{crate}}" in
+      fhirpath) crate_dir="crates/rh-fhirpath" ;;
+      vcl) crate_dir="crates/rh-vcl" ;;
+      cql) crate_dir="crates/rh-cql" ;;
+      *) echo "unknown WASM crate: {{crate}} (expected fhirpath, vcl, or cql)" >&2; exit 2 ;;
+    esac
+
+    case "{{target}}" in
+      all) recipe="wasm" ;;
+      web) recipe="wasm-web" ;;
+      node|nodejs) recipe="wasm-node" ;;
+      bundler) recipe="wasm-bundler" ;;
+      *) echo "unknown WASM target: {{target}} (expected web, node, bundler, or all)" >&2; exit 2 ;;
+    esac
+
+    cd "$crate_dir"
+    just "$recipe"
+
+# Compile-check all WASM-capable crates without running wasm-pack.
+wasm-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cargo check -p rh-foundation --target wasm32-unknown-unknown --no-default-features --features wasm
+    cargo check -p rh-fhirpath --target wasm32-unknown-unknown --features wasm
+    cargo check -p rh-vcl --target wasm32-unknown-unknown --features wasm
+    cargo check -p rh-cql --target wasm32-unknown-unknown --no-default-features --features wasm
+
+# Build WASM web packages.
 build-wasm:
     #!/usr/bin/env bash
-    echo "Building VCL WASM (web target)..."
-    cd crates/rh-vcl && just wasm-web
-    # Copy to workspace pkg directory for compatibility
-    mkdir -p ../../pkg/wasm
-    cp -r pkg/web/* ../../pkg/wasm/
-    echo "✅ WASM web build complete! Output in pkg/wasm/ and crates/rh-vcl/pkg/web/"
+    set -euo pipefail
+    just wasm-build fhirpath web
+    just wasm-build vcl web
+    just wasm-build cql web
+    mkdir -p pkg/wasm/fhirpath pkg/wasm/vcl pkg/wasm/cql
+    cp -R crates/rh-fhirpath/pkg/web/. pkg/wasm/fhirpath/
+    cp -R crates/rh-vcl/pkg/web/. pkg/wasm/vcl/
+    cp -R crates/rh-cql/pkg/web/. pkg/wasm/cql/
+    echo "WASM web build complete. Output in pkg/wasm/ and crate pkg/web/ directories."
 
-# Build WASM package for Node.js
+# Build WASM Node.js packages.
 build-wasm-node:
     #!/usr/bin/env bash
-    echo "Building VCL WASM (Node.js target)..."
-    cd crates/rh-vcl && just wasm-node
-    # Copy to workspace pkg directory for compatibility
-    mkdir -p ../../pkg/wasm-node
-    cp -r pkg/node/* ../../pkg/wasm-node/
-    echo "✅ WASM Node.js build complete! Output in pkg/wasm-node/ and crates/rh-vcl/pkg/node/"
+    set -euo pipefail
+    just wasm-build fhirpath node
+    just wasm-build vcl node
+    just wasm-build cql node
+    mkdir -p pkg/wasm-node/fhirpath pkg/wasm-node/vcl pkg/wasm-node/cql
+    cp -R crates/rh-fhirpath/pkg/node/. pkg/wasm-node/fhirpath/
+    cp -R crates/rh-vcl/pkg/node/. pkg/wasm-node/vcl/
+    cp -R crates/rh-cql/pkg/node/. pkg/wasm-node/cql/
+    echo "WASM Node.js build complete. Output in pkg/wasm-node/ and crate pkg/node/ directories."
 
-# Build WASM package for bundlers (webpack, etc.)
+# Build WASM bundler packages.
 build-wasm-bundler:
     #!/usr/bin/env bash
-    echo "Building VCL WASM (bundler target)..."
-    cd crates/rh-vcl && just wasm-bundler
-    # Copy to workspace pkg directory for compatibility
-    mkdir -p ../../pkg/wasm-bundler
-    cp -r pkg/bundler/* ../../pkg/wasm-bundler/
-    echo "✅ WASM bundler build complete! Output in pkg/wasm-bundler/ and crates/rh-vcl/pkg/bundler/"
+    set -euo pipefail
+    just wasm-build fhirpath bundler
+    just wasm-build vcl bundler
+    just wasm-build cql bundler
+    mkdir -p pkg/wasm-bundler/fhirpath pkg/wasm-bundler/vcl pkg/wasm-bundler/cql
+    cp -R crates/rh-fhirpath/pkg/bundler/. pkg/wasm-bundler/fhirpath/
+    cp -R crates/rh-vcl/pkg/bundler/. pkg/wasm-bundler/vcl/
+    cp -R crates/rh-cql/pkg/bundler/. pkg/wasm-bundler/cql/
+    echo "WASM bundler build complete. Output in pkg/wasm-bundler/ and crate pkg/bundler/ directories."
 
-# Test WASM build 
+# Test WASM Node.js builds.
 test-wasm:
     #!/usr/bin/env bash
-    echo "Testing VCL WASM build..."
-    cd crates/rh-vcl && just test-wasm
+    set -euo pipefail
+    cd crates/rh-fhirpath && just test-wasm
+    cd ../../crates/rh-vcl && just test-wasm
+    cd ../../crates/rh-cql && just test-wasm

@@ -16,10 +16,7 @@ fn test_now_function() {
 
     match result {
         FhirPathValue::DateTime(dt_str) => {
-            // Verify it's a valid ISO 8601 datetime with UTC timezone
-            assert!(dt_str.ends_with('Z'), "DateTime should end with Z for UTC");
-
-            // Try to parse it back to verify format
+            // Try to parse it back to verify format and offset.
             let parsed = DateTime::parse_from_rfc3339(&dt_str);
             assert!(parsed.is_ok(), "DateTime should be valid RFC3339: {dt_str}");
 

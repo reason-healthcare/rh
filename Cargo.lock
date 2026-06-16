@@ -2122,7 +2122,9 @@ name = "rh-cql"
 version = "0.2.0-beta.2"
 dependencies = [
  "anyhow",
+ "console_error_panic_hook",
  "criterion",
+ "js-sys",
  "nom",
  "quick-xml",
  "regex",
@@ -2131,6 +2133,8 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tracing",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

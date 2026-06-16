@@ -712,6 +712,7 @@ mod tests {
         assert_eq!(from_unknown.len(), 0);
     }
 
+    #[cfg(feature = "fs")]
     #[test]
     fn test_load_from_real_modelinfo() {
         // Test with real ModelInfo if available

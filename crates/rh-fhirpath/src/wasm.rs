@@ -156,8 +156,10 @@ pub fn evaluate_fhirpath_expression(
         }
         crate::FhirPathValue::Collection(ref items)
         | crate::FhirPathValue::UnorderedCollection(ref items) => {
+            let json_items: Vec<serde_json::Value> =
+                items.iter().map(|item| item.to_json()).collect();
             serde_json::json!({
-                "result": items,
+                "result": json_items,
                 "count": items.len(),
                 "type": "collection",
                 "trace": trace_output
@@ -172,8 +174,9 @@ pub fn evaluate_fhirpath_expression(
             })
         }
         ref single_value => {
+            let json_value = single_value.to_json();
             serde_json::json!({
-                "result": single_value,
+                "result": json_value,
                 "count": 1,
                 "type": "single_value",
                 "trace": trace_output

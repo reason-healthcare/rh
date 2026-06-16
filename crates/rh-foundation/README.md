@@ -14,13 +14,13 @@ Foundation crate providing common utilities, error handling, and shared function
 - **Snapshot Generator**: StructureDefinition snapshot generation with differential merging (module: `snapshot`) - [Snapshot documentation](SNAPSHOT.md)
 - **JSON Utilities**: Convenient JSON parsing and serialization
 - **CLI Utilities**: Common CLI patterns for input/output and formatting
-- **WASM Utilities**: WebAssembly helpers (feature: `wasm`)
+- **WASM Utilities**: WebAssembly support infrastructure for workspace crates (feature: `wasm`)
 
 ## Features
 
 - **Default**: Core functionality (error handling, config, I/O, JSON, CLI, snapshot generation)
 - **http**: Enables HTTP client, FHIR package loader, and enhanced snapshot loading (requires `reqwest`, `tokio`, `url`, `tar`, `flate2`)
-- **wasm**: Enables WebAssembly utilities (requires `wasm-bindgen`)
+- **wasm**: Enables WebAssembly support infrastructure (requires `wasm-bindgen`). This crate does not expose a user-facing WebAssembly API; crates such as `rh-fhirpath`, `rh-vcl`, and `rh-cql` provide the public WASM exports.
 
 ## Usage
 
@@ -162,6 +162,14 @@ let success = cli::print_result(some_result);
 // Conditional exit (useful for --strict flags)
 cli::exit_if(has_errors && strict, 1);
 ```
+
+### WASM Utilities
+
+The `wasm` feature provides shared infrastructure for other workspace crates:
+a stable `WasmResult` envelope, panic-hook setup, and JSON-oriented error
+plumbing used by the public WebAssembly packages. It is intentionally not a
+standalone browser API for `rh-foundation`; use the domain packages under
+`packages/` for JavaScript and TypeScript consumption.
 
 ### Package Loader (with `http` feature)
 

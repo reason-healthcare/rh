@@ -74,28 +74,12 @@ dev-web: wasm-web
     echo "Open http://localhost:8000/pkg/web/ to see generated files"
     cd pkg/web && python3 -m http.server 8000
 
-# Build demo app (WASM + HTML static site)
-build-demo: wasm-web
+# Build shared playground app from the workspace root.
+build-demo:
     #!/usr/bin/env bash
-    echo "Building FHIRPath demo app..."
-    
-    # Create build directory (gitignored)
-    mkdir -p build/
-    
-    # Copy demo HTML
-    cp demo/index.html build/
-    
-    # Copy WASM files from web build
-    cp pkg/web/rh_fhirpath.js build/
-    cp pkg/web/rh_fhirpath_bg.wasm build/
-    
-    echo "Demo build complete! Output in build/"
-    echo "  - Open build/index.html in a browser"
-    echo "  - Or run: cd build && python3 -m http.server 8000"
+    cd ../.. && pnpm --filter @reason-healthcare/playground build
 
-# Build and serve demo locally
-demo: build-demo
+# Build and serve shared playground locally.
+demo:
     #!/usr/bin/env bash
-    echo "Starting demo server on http://localhost:8000"
-    echo "Demo ready at: http://localhost:8000"
-    cd build && python3 -m http.server 8000
+    cd ../.. && pnpm --filter @reason-healthcare/playground dev
