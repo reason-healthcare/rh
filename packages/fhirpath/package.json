@@ -1,0 +1,53 @@
+{
+  "name": "@reason-healthcare/fhirpath",
+  "version": "0.2.0-beta.2",
+  "description": "Typed TypeScript wrappers for the Reason Health FHIRPath WebAssembly package.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "./wasm-bundler/rh_fhirpath.js",
+    "./wasm-bundler/snippets/*",
+    "./wasm/snippets/*"
+  ],
+  "files": [
+    "dist",
+    "wasm",
+    "wasm-node",
+    "wasm-bundler",
+    "README.md"
+  ],
+  "main": "./dist/node.js",
+  "types": "./dist/bundler.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/bundler.d.ts",
+      "node": "./dist/node.js",
+      "browser": "./dist/web.js",
+      "import": "./dist/bundler.js",
+      "default": "./dist/bundler.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    },
+    "./web": {
+      "types": "./dist/web.d.ts",
+      "import": "./dist/web.js"
+    },
+    "./bundler": {
+      "types": "./dist/bundler.d.ts",
+      "import": "./dist/bundler.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm run build:wasm && tsc -p tsconfig.json",
+    "build:wasm": "node ../scripts/build-wasm-package.mjs fhirpath rh_fhirpath",
+    "test": "vitest run",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reason-healthcare/rh.git",
+    "directory": "packages/fhirpath"
+  }
+}

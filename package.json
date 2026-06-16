@@ -1,0 +1,16 @@
+{
+  "name": "reason-healthcare-rh",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "pack:dry-run": "pnpm -r pack:dry-run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  }
+}

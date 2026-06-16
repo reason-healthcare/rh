@@ -14,7 +14,7 @@
 | WS3 CLI | ✅ done |3.1-3.7 all complete |
 | WS4 Codegen | ✅ done (2026-06-15) | **4.1✅** regen harness + CI drift. **4.2✅** R5 patches. **4.3✅** golden tests. **4.4✅** god-file splits. **4.5✅** borrow-checker clones. **4.6✅** unwraps. **4.7✅** rayon parallelization. **4.8✅** (needs R4/R5 regen): Vec<T> with serde(default). **4.9✅** Box doc. **4.10✅** metadata split. **4.11✅** R5 extensions parity (regen recipe + extension_by_url helper). **4.12✅** parse tests. |
 | WS5 Performance | ⏸ deferred (2026-06-15) | Deferred by maintainer decision; WS6 starts first because it can proceed after WS1 and stable crate APIs. |
-| WS6 WASM/NPM | 🔶 in progress (2026-06-15) | 6.1 started: root `just wasm-build <crate> <target>` and `just wasm-check` added; CI now compile-checks foundation, fhirpath, vcl, and cql-core for `wasm32-unknown-unknown`. |
+| WS6 WASM/NPM | 🔶 in progress (2026-06-15) | 6.1 done: root `just wasm-build <crate> <target>` and `just wasm-check` added; CI now compile-checks foundation, fhirpath, vcl, and cql-core for `wasm32-unknown-unknown`. 6.2 done: pnpm workspace with `@reason-healthcare/fhirpath` and `@reason-healthcare/vcl` TS wrappers, node/web/bundler exports, Vitest suites, README files, and npm pack dry-runs. |
 | WS7 Docs + gates | ⬜ not started | |
 
 ---
