@@ -54,11 +54,38 @@ fn classify_metadata(sd: &StructureDefinition) -> MetadataCategory {
     }
 }
 
+fn metadata_category_priority(category: MetadataCategory) -> u8 {
+    match category {
+        MetadataCategory::Primitives => 0,
+        MetadataCategory::Datatypes => 1,
+        MetadataCategory::Resources => 2,
+        MetadataCategory::Profiles => 3,
+        MetadataCategory::Other => 4,
+    }
+}
+
+fn sorted_structure_definitions(
+    structure_defs: &[StructureDefinition],
+) -> Vec<&StructureDefinition> {
+    let mut sorted_defs: Vec<_> = structure_defs.iter().collect();
+    sorted_defs.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then_with(|| {
+                metadata_category_priority(classify_metadata(left))
+                    .cmp(&metadata_category_priority(classify_metadata(right)))
+            })
+            .then_with(|| left.url.cmp(&right.url))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    sorted_defs
+}
+
 /// Build metadata registry from StructureDefinitions
 pub fn build_metadata_registry(structure_defs: &[StructureDefinition]) -> MetadataRegistry {
     let mut registry = MetadataRegistry::new();
 
-    for structure_def in structure_defs {
+    for structure_def in sorted_structure_definitions(structure_defs) {
         if let Some(type_metadata) = extract_type_metadata(structure_def) {
             // Only add if not already present (avoid duplicates)
             if !registry.types.contains_key(&type_metadata.name) {
@@ -423,7 +450,7 @@ pub fn generate_metadata_code_split(
 
     // Build name -> category mapping from structure definitions (first definition wins for duplicates)
     let mut name_to_category: HashMap<&str, MetadataCategory> = HashMap::new();
-    for sd in structure_defs {
+    for sd in sorted_structure_definitions(structure_defs) {
         name_to_category
             .entry(&sd.name)
             .or_insert_with(|| classify_metadata(sd));

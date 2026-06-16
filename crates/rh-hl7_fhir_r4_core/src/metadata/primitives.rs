@@ -439,3 +439,26 @@ pub static UUID_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
 };
+
+/// Field metadata for xhtml
+#[rustfmt::skip]
+pub static XHTML_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: Some(0),
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "value" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};

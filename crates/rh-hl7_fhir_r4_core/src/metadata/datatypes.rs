@@ -3843,11 +3843,6 @@ pub static WG_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 pub static WORKFLOWSTATUS_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 };
 
-/// Field metadata for xhtml
-#[rustfmt::skip]
-pub static XHTML_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
-};
-
 /// Field metadata for xml-no-order
 #[rustfmt::skip]
 pub static XML_NO_ORDER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
