@@ -160,6 +160,11 @@ show-versions:
 bump-version new-version:
     python3 scripts/bump-version {{new-version}}
 
+# Compute the Nix source and Cargo vendor hashes for an immutable release tag.
+# Usage: just nix-release-hashes v0.2.1
+nix-release-hashes tag:
+    scripts/nix-release-hashes {{tag}}
+
 # [exceptional] Bump only the shared workspace version, leaving rh-validator unchanged
 # Use when releasing workspace crates independently of rh-validator
 # Usage: just bump-workspace-version 0.2.0-beta.1

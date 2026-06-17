@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage: scripts/nix-release-hashes <tag>
+
+Computes the Nix hashes needed to package an rh release from the immutable
+GitHub tag archive. Example:
+
+  scripts/nix-release-hashes v0.2.1
+USAGE
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 2
+fi
+
+TAG="$1"
+VERSION="${TAG#v}"
+
+if [ -z "$VERSION" ] || [ "$TAG" = "$VERSION" ]; then
+  echo "error: tag must include the leading v, for example v0.2.1" >&2
+  exit 2
+fi
+
+if ! command -v nix >/dev/null 2>&1; then
+  if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+    # shellcheck disable=SC1091
+    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+  fi
+fi
+
+if ! command -v nix >/dev/null 2>&1 || ! command -v nix-prefetch-url >/dev/null 2>&1; then
+  echo "error: nix and nix-prefetch-url must be available on PATH" >&2
+  exit 1
+fi
+
+NIX=(nix --extra-experimental-features nix-command --extra-experimental-features flakes)
+ARCHIVE_URL="https://github.com/reason-healthcare/rh/archive/refs/tags/${TAG}.tar.gz"
+
+echo "Computing Nix hashes for rh ${TAG}..."
+echo
+
+SOURCE_BASE32="$(nix-prefetch-url --unpack "$ARCHIVE_URL" 2>/dev/null | awk 'NR == 1 { print }')"
+SOURCE_HASH="$("${NIX[@]}" hash convert --to sri --hash-algo sha256 "$SOURCE_BASE32")"
+
+EXPR="$(
+  cat <<EOF
+let
+  pkgs = import (builtins.getFlake "github:NixOS/nixpkgs/nixpkgs-unstable") {
+    system = builtins.currentSystem;
+  };
+in
+pkgs.rustPlatform.buildRustPackage {
+  pname = "rh";
+  version = "${VERSION}";
+  src = pkgs.fetchFromGitHub {
+    owner = "reason-healthcare";
+    repo = "rh";
+    tag = "${TAG}";
+    hash = "${SOURCE_HASH}";
+  };
+  cargoHash = pkgs.lib.fakeHash;
+  cargoBuildFlags = [
+    "-p"
+    "rh-cli"
+  ];
+  cargoTestFlags = [
+    "-p"
+    "rh-cli"
+  ];
+}
+EOF
+)"
+
+set +e
+BUILD_OUTPUT="$("${NIX[@]}" build --impure --no-link --expr "$EXPR" 2>&1)"
+BUILD_STATUS="$?"
+set -e
+
+CARGO_HASH="$(printf '%s\n' "$BUILD_OUTPUT" | awk '/got:[[:space:]]+sha256-/ { print $2; exit }')"
+
+if [ "$BUILD_STATUS" -eq 0 ] || [ -z "$CARGO_HASH" ]; then
+  echo "$BUILD_OUTPUT" >&2
+  echo "error: could not determine cargoHash from Nix build output" >&2
+  exit 1
+fi
+
+cat <<EOF
+fetchFromGitHub.hash = "${SOURCE_HASH}";
+cargoHash           = "${CARGO_HASH}";
+
+nixpkgs package snippet:
+
+src = fetchFromGitHub {
+  owner = "reason-healthcare";
+  repo = "rh";
+  tag = "${TAG}";
+  hash = "${SOURCE_HASH}";
+};
+
+cargoHash = "${CARGO_HASH}";
+EOF

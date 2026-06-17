@@ -24,7 +24,7 @@
 
           src = ./.;
 
-          cargoHash = "sha256-iLaaxz76QGRZ3U1eFdjLn0w9T7F8CJ9OqS/yTUjBjWY=";
+					cargoHash = "sha256-8yR1nb6aJ9DrgN3DP/bSZjWTo5luskS/QgxNG35zIgM=";
 
           cargoBuildFlags = [
             "-p"
