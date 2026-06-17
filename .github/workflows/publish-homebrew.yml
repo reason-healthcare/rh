@@ -56,7 +56,7 @@ jobs:
           SHA_X86_MACOS: ${{ steps.checksums.outputs.x86_macos }}
           SHA_X86_LINUX: ${{ steps.checksums.outputs.x86_linux }}
         run: |
-          cat > homebrew-tap-repo/Formula/rh.rb <<'FORMULA'
+          cat > homebrew-tap-repo/Formula/rh.rb <<FORMULA
           class Rh < Formula
             desc "Unified CLI for FHIR processing tools"
             homepage "https://github.com/reason-healthcare/rh"
