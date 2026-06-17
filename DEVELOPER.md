@@ -163,4 +163,4 @@ just regen-check    # drift-check committed generated crates
 
 ## Release Management
 
-See [RELEASING.md](RELEASING.md) for the full release workflow, version bump commands, and publish order.
+See [RELEASE.md](RELEASE.md) for the full release workflow, version bump commands, and publish order.

@@ -26,9 +26,14 @@
 
           cargoHash = "sha256-iLaaxz76QGRZ3U1eFdjLn0w9T7F8CJ9OqS/yTUjBjWY=";
 
-          # Build only the CLI binary from the workspace
-          cargoBuildFlags = [ "-p" "rh-cli" ];
-          cargoTestFlags = [ "-p" "rh-cli" ];
+          cargoBuildFlags = [
+            "-p"
+            "rh-cli"
+          ];
+          cargoTestFlags = [
+            "-p"
+            "rh-cli"
+          ];
 
           meta = with pkgs.lib; {
             description = "High-performance FHIR toolkit and CLI written in Rust";
@@ -47,7 +52,10 @@
             '';
             homepage = "https://github.com/reason-healthcare/rh";
             changelog = "https://github.com/reason-healthcare/rh/releases/tag/v${version}";
-            license = licenses.mit;
+            license = with licenses; [
+              mit
+              asl20
+            ];
             mainProgram = "rh";
             platforms = platforms.all;
           };
