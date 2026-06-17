@@ -1,6 +1,16 @@
-# Releasing Crates to crates.io
+# Release Guide
+
+> **Note**: This document has been superseded by [RELEASE_GUIDE.md](RELEASE_GUIDE.md), which is now the **single source of truth** for all release processes across all distribution channels.
+>
+> **Please refer to [RELEASE_GUIDE.md](RELEASE_GUIDE.md) for complete, up-to-date release documentation.**
+
+---
+
+# Releasing Crates to crates.io (Legacy)
 
 This document describes the end-to-end process for versioning, validating, and publishing crates from this workspace to [crates.io](https://crates.io).
+
+**This information is now consolidated in [RELEASE_GUIDE.md](RELEASE_GUIDE.md).**
 
 ## Prerequisites
 
