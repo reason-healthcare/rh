@@ -3,6 +3,12 @@ name: Publish Homebrew Tap
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish to Homebrew, for example v0.3.0"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,13 +17,18 @@ jobs:
   update-tap:
     name: Update Homebrew tap formula
     runs-on: ubuntu-latest
-    if: "!contains(github.event.release.tag_name, '-beta') && !contains(github.event.release.tag_name, '-alpha')"
+    if: >-
+      ${{
+        !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name, '-beta') &&
+        !contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name, '-alpha')
+      }}
 
     steps:
       - name: Determine version
         id: version
+        env:
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           VERSION="${TAG#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
@@ -83,13 +94,15 @@ jobs:
             end
 
             test do
-              assert_match version.to_s, shell_output("\#{bin}/rh --version")
+              assert_match version.to_s, shell_output("#{bin}/rh --version")
             end
           end
           FORMULA
 
       - name: Commit and push formula
         working-directory: homebrew-tap-repo
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
