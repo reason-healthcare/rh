@@ -57,16 +57,7 @@ pub fn register_datetime_functions(functions: &mut HashMap<String, FhirPathFunct
                     message: "yearOf() function takes no parameters".to_string(),
                 });
             }
-            match target {
-                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                    let mut results = Vec::new();
-                    for item in items {
-                        results.push(DateTimeEvaluator::year_of(item)?);
-                    }
-                    Ok(FhirPathValue::Collection(results))
-                }
-                single => DateTimeEvaluator::year_of(single),
-            }
+            DateTimeEvaluator::year_of(target)
         }),
     );
 

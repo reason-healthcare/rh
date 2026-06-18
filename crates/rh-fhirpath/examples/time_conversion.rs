@@ -136,13 +136,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{{}}.convertsToTime() → {result:?}");
     println!();
 
-    // Multiple items (should return empty/false)
+    // Multiple items should error for singleton conversion functions.
     let expr = parser.parse("('10:30:45' | '14:25:36').toTime()")?;
-    let result = evaluator.evaluate(&expr, &context)?;
+    let result = evaluator.evaluate(&expr, &context);
     println!("('10:30:45' | '14:25:36').toTime() → {result:?}");
 
     let expr = parser.parse("('10:30:45' | '14:25:36').convertsToTime()")?;
-    let result = evaluator.evaluate(&expr, &context)?;
+    let result = evaluator.evaluate(&expr, &context);
     println!("('10:30:45' | '14:25:36').convertsToTime() → {result:?}");
     println!();
 
@@ -167,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Convert mixed time formats
     let expr = parser.parse(
-        "(('10:30:45' | @T14:25:36 | @2023-01-15T16:45:30).where($this.convertsToTime())).toTime()",
+        "('10:30:45' | @T14:25:36 | @2023-01-15T16:45:30).where($this.convertsToTime()).select(toTime())",
     )?;
     let result = evaluator.evaluate(&expr, &context)?;
     println!("Convert mixed time formats: {result:?}");

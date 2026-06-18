@@ -17,9 +17,10 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 **Conformance**: the official HL7 FHIRPath test suite (937 cases) runs in CI
 via `cargo test -p rh-fhirpath --test hl7_conformance`. Current scored result:
-**99.9%** (934/935), with **0 wrong answers**, **0 parse errors**, and
-**0 eval errors**; the only non-pass is one skipped HL7 fixture that is not
-published with the test case bundle. See
+**99.8%** (933/935), with **1 known wrong answer** due to an R4/R5
+fractional-second datetime arithmetic expectation difference, **0 parse
+errors**, and **0 eval errors**; the other non-pass is one skipped HL7 fixture
+that is not published with the test case bundle. See
 [CONFORMANCE.md](CONFORMANCE.md) and [SPEC_COVERAGE.md](SPEC_COVERAGE.md).
 
 ## Usage
@@ -123,6 +124,40 @@ cargo test -p rh-fhirpath
 # Run with output
 cargo test -p rh-fhirpath -- --nocapture
 ```
+
+### R5 Testlab Harness
+
+The dev-only R5 XML testlab runner lives at
+`crates/rh-fhirpath/testlab/run_r5_testlab.py`. It parses
+`tests-fhir-r5.xml`, invokes the `rh fhirpath eval` CLI for each selected case,
+and writes a report showing the input fixture, expression, expectation, engine
+result, outcome, and rationale for skipped or not implemented cases.
+
+```bash
+# Run the full R5 testlab suite and write target/fhirpath-r5-testlab-report.md
+just test-fhirpath-r5-testlab
+
+# Run selected tests by XML test name
+python3 crates/rh-fhirpath/testlab/run_r5_testlab.py \
+  --name testLiteralTrue \
+  --name testPolymorphismB
+
+# Write JSON or text instead of markdown
+python3 crates/rh-fhirpath/testlab/run_r5_testlab.py \
+  --report target/fhirpath-r5-testlab-report.json \
+  --report-format json
+```
+
+If a test has both an expected output and an expected exception, the harness
+treats it as an expected-exception test. Unimplemented engine behavior is
+classified as `not_implemented` rather than a wrong-answer failure. Skipped
+tests include rationale in the report, usually because the XML references an
+input fixture that is not present locally.
+
+The repository-level `just check` recipe runs this harness after the normal
+Rust tests and examples. Known conformance gaps are reported but do not fail
+`just check`; use `--fail-on-fail` when you want the harness to return a
+non-zero exit code for any failing selected test.
 
 ## Contributing
 

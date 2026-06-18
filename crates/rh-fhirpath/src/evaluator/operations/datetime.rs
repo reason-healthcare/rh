@@ -5,29 +5,64 @@
 //! Also includes component extraction functions for Date, DateTime, and Time values.
 
 use crate::error::*;
+use crate::evaluator::operations::temporal::parse_temporal;
 use crate::evaluator::types::FhirPathValue;
-use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, Timelike};
+use chrono::{DateTime, Local};
 use rust_decimal::Decimal;
 
 /// Helper function to parse datetime strings with timezone handling
 fn parse_datetime_str(dt_str: &str) -> Result<DateTime<chrono::FixedOffset>, chrono::ParseError> {
-    if dt_str.ends_with('Z') || dt_str.contains('+') || dt_str.contains('-') {
+    let has_tz = dt_str.ends_with('Z')
+        || dt_str
+            .find('T')
+            .is_some_and(|t| dt_str[t + 1..].contains('+') || dt_str[t + 1..].contains('-'));
+    if has_tz {
         DateTime::parse_from_rfc3339(dt_str)
     } else {
         DateTime::parse_from_rfc3339(&format!("{dt_str}Z"))
     }
 }
 
-/// Helper function to parse time strings with optional T prefix
-fn parse_time_str(time_str: &str) -> Result<NaiveTime, chrono::ParseError> {
-    let time_part = if let Some(stripped) = time_str.strip_prefix('T') {
-        stripped
-    } else {
-        time_str
+fn component(
+    value: &FhirPathValue,
+    extract: impl FnOnce(crate::evaluator::operations::temporal::TemporalParts) -> Option<i64>,
+) -> FhirPathResult<FhirPathValue> {
+    let text = match value {
+        FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => s,
+        FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+            if items.len() == 1 =>
+        {
+            return component(&items[0], extract);
+        }
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+            if items.is_empty() =>
+        {
+            return Ok(FhirPathValue::Empty);
+        }
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+            return Err(FhirPathError::TypeError {
+                message: format!(
+                    "Date/time component functions require a single item, found {}",
+                    items.len()
+                ),
+            });
+        }
+        _ => return Ok(FhirPathValue::Empty),
     };
-    // Try parsing with milliseconds first, then fall back to seconds only
-    NaiveTime::parse_from_str(time_part, "%H:%M:%S%.3f")
-        .or_else(|_| NaiveTime::parse_from_str(time_part, "%H:%M:%S"))
+    let normalized;
+    let temporal_text = if matches!(value, FhirPathValue::Time(_)) && !text.starts_with('T') {
+        normalized = format!("T{text}");
+        normalized.as_str()
+    } else {
+        text
+    };
+    let Some(parts) = parse_temporal(temporal_text) else {
+        return Ok(FhirPathValue::Empty);
+    };
+    Ok(extract(parts)
+        .map(FhirPathValue::Integer)
+        .unwrap_or(FhirPathValue::Empty))
 }
 
 /// Date/time function evaluator
@@ -38,7 +73,7 @@ impl DateTimeEvaluator {
     /// Returns a DateTime value in ISO 8601 format
     pub fn now() -> FhirPathResult<FhirPathValue> {
         let now = Local::now();
-        let datetime_string = now.format("%Y-%m-%dT%H:%M:%S%.3f%:z").to_string();
+        let datetime_string = now.format("%Y-%m-%dT%H:%M:%S%:z").to_string();
         Ok(FhirPathValue::DateTime(datetime_string))
     }
 
@@ -54,189 +89,84 @@ impl DateTimeEvaluator {
     /// Returns a Time value in ISO 8601 format (HH:MM:SS.sss)
     pub fn time_of_day() -> FhirPathResult<FhirPathValue> {
         let now = Local::now().time();
-        let time_string = now.format("%H:%M:%S%.3f").to_string();
+        let time_string = now.format("%H:%M:%S").to_string();
         Ok(FhirPathValue::Time(time_string))
     }
 
     /// yearOf(date) - Extract year component from Date or DateTime
     /// Returns the year as an Integer value
     pub fn year_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Date(date_str) => {
-                let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|_| {
-                    FhirPathError::TypeError {
-                        message: format!("Invalid date format: {date_str}"),
-                    }
-                })?;
-                Ok(FhirPathValue::Integer(date.year() as i64))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(datetime.year() as i64))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("yearOf() requires Date or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| parts.year.map(i64::from))
     }
 
     /// monthOf(date) - Extract month component from Date or DateTime  
     /// Returns the month as an Integer value (1-12)
     pub fn month_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Date(date_str) => {
-                let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|_| {
-                    FhirPathError::TypeError {
-                        message: format!("Invalid date format: {date_str}"),
-                    }
-                })?;
-                Ok(FhirPathValue::Integer(date.month() as i64))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(datetime.month() as i64))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("monthOf() requires Date or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| parts.month.map(i64::from))
     }
 
     /// dayOf(date) - Extract day component from Date or DateTime
     /// Returns the day as an Integer value (1-31)
     pub fn day_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Date(date_str) => {
-                let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|_| {
-                    FhirPathError::TypeError {
-                        message: format!("Invalid date format: {date_str}"),
-                    }
-                })?;
-                Ok(FhirPathValue::Integer(date.day() as i64))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(datetime.day() as i64))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("dayOf() requires Date or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| parts.day.map(i64::from))
     }
 
     /// hourOf(time) - Extract hour component from Time or DateTime
     /// Returns the hour as an Integer value (0-23)
     pub fn hour_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Time(time_str) => {
-                let time = parse_time_str(time_str).map_err(|_| FhirPathError::TypeError {
-                    message: format!("Invalid time format: {time_str}"),
-                })?;
-                Ok(FhirPathValue::Integer(time.hour() as i64))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(datetime.hour() as i64))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("hourOf() requires Time or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| parts.hour.map(i64::from))
     }
 
     /// minuteOf(time) - Extract minute component from Time or DateTime
     /// Returns the minute as an Integer value (0-59)
     pub fn minute_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Time(time_str) => {
-                // Parse time with T prefix (format: "T14:30:25")
-                let time = parse_time_str(time_str).map_err(|_| FhirPathError::TypeError {
-                    message: format!("Invalid time format: {time_str}"),
-                })?;
-                Ok(FhirPathValue::Integer(time.minute() as i64))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(datetime.minute() as i64))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("minuteOf() requires Time or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| parts.minute.map(i64::from))
     }
 
     /// secondOf(time) - Extract second component from Time or DateTime
     /// Returns the second as an Integer value (0-59)
     pub fn second_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Time(time_str) => {
-                // Parse time with T prefix (format: "T14:30:25")
-                let time = parse_time_str(time_str).map_err(|_| FhirPathError::TypeError {
-                    message: format!("Invalid time format: {time_str}"),
-                })?;
-                Ok(FhirPathValue::Integer(time.second() as i64))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(datetime.second() as i64))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("secondOf() requires Time or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| parts.second.map(i64::from))
     }
 
     /// millisecondOf(time) - Extract millisecond component from Time or DateTime
     /// Returns the millisecond as an Integer value (0-999)
     pub fn millisecond_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Time(time_str) => {
-                let time = parse_time_str(time_str).map_err(|_| FhirPathError::TypeError {
-                    message: format!("Invalid time format: {time_str}"),
-                })?;
-                // Extract milliseconds from nanoseconds (1 millisecond = 1,000,000 nanoseconds)
-                Ok(FhirPathValue::Integer(
-                    (time.nanosecond() / 1_000_000) as i64,
-                ))
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                Ok(FhirPathValue::Integer(
-                    (datetime.nanosecond() / 1_000_000) as i64,
-                ))
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("millisecondOf() requires Time or DateTime value, got: {value:?}"),
-            }),
-        }
+        component(value, |parts| {
+            parts.fraction_ns.map(|ns| i64::from(ns / 1_000_000))
+        })
     }
 
     /// timezoneOffsetOf(datetime) - Extract timezone offset from DateTime
     /// Returns the timezone offset as a Number in hours (e.g., -5.0 for EST, 0.0 for UTC)
     pub fn timezone_offset_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match value {
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::timezone_offset_of(&items[0])
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                Err(FhirPathError::TypeError {
+                    message: format!(
+                        "timezoneOffsetOf() requires a single item, found {}",
+                        items.len()
+                    ),
+                })
+            }
             FhirPathValue::DateTime(dt_str) => {
+                let Some(parts) = parse_temporal(dt_str) else {
+                    return Ok(FhirPathValue::Empty);
+                };
+                if parts.tz_offset_min.is_none() {
+                    return Ok(FhirPathValue::Empty);
+                }
                 let datetime =
                     parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
                         message: format!("Invalid datetime format: {dt_str}"),
@@ -246,9 +176,7 @@ impl DateTimeEvaluator {
                     Decimal::from_f64_retain(offset_seconds / 3600.0).unwrap_or(Decimal::ZERO);
                 Ok(FhirPathValue::Number(offset_hours))
             }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("timezoneOffsetOf() requires DateTime value, got: {value:?}"),
-            }),
+            _ => Ok(FhirPathValue::Empty),
         }
     }
 
@@ -256,17 +184,27 @@ impl DateTimeEvaluator {
     /// Returns the date part as a Date value
     pub fn date_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match value {
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                let date_string = datetime.format("%Y-%m-%d").to_string();
-                Ok(FhirPathValue::Date(date_string))
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::date_of(&items[0])
             }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("dateOf() requires DateTime value, got: {value:?}"),
-            }),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                Err(FhirPathError::TypeError {
+                    message: format!("dateOf() requires a single item, found {}", items.len()),
+                })
+            }
+            FhirPathValue::Date(date_str) => Ok(FhirPathValue::Date(date_str.clone())),
+            FhirPathValue::DateTime(dt_str) => Ok(FhirPathValue::Date(
+                dt_str.split('T').next().unwrap_or(dt_str).to_string(),
+            )),
+            _ => Ok(FhirPathValue::Empty),
         }
     }
 
@@ -274,18 +212,43 @@ impl DateTimeEvaluator {
     /// Returns the time part as a Time value
     pub fn time_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match value {
-            FhirPathValue::DateTime(dt_str) => {
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                let time_string = datetime.format("%H:%M:%S%.3f").to_string();
-                Ok(FhirPathValue::Time(time_string))
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::time_of(&items[0])
             }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("timeOf() requires DateTime value, got: {value:?}"),
-            }),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                Err(FhirPathError::TypeError {
+                    message: format!("timeOf() requires a single item, found {}", items.len()),
+                })
+            }
+            FhirPathValue::DateTime(dt_str) => {
+                if let Some(time) = dt_str.split_once('T').map(|(_, time)| time) {
+                    Ok(FhirPathValue::Time(format!("T{}", strip_timezone(time))))
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
+            _ => Ok(FhirPathValue::Empty),
         }
+    }
+}
+
+fn strip_timezone(time: &str) -> &str {
+    if let Some(stripped) = time.strip_suffix('Z') {
+        return stripped;
+    }
+    let plus = time.rfind('+');
+    let minus = time.rfind('-');
+    match (plus, minus) {
+        (Some(pos), _) | (_, Some(pos)) => &time[..pos],
+        _ => time,
     }
 }
 
@@ -521,34 +484,31 @@ mod tests {
     fn test_time_of() {
         let datetime_value = FhirPathValue::DateTime("2023-07-15T14:30:25.123Z".to_string());
         let result = DateTimeEvaluator::time_of(&datetime_value).unwrap();
-        assert_eq!(result, FhirPathValue::Time("14:30:25.123".to_string()));
+        assert_eq!(result, FhirPathValue::Time("T14:30:25.123".to_string()));
 
         // With timezone
         let datetime_tz = FhirPathValue::DateTime("2023-12-25T09:15:30.500+02:00".to_string());
         let result = DateTimeEvaluator::time_of(&datetime_tz).unwrap();
-        assert_eq!(result, FhirPathValue::Time("09:15:30.500".to_string()));
+        assert_eq!(result, FhirPathValue::Time("T09:15:30.500".to_string()));
     }
 
     #[test]
     fn test_component_extraction_errors() {
         let string_value = FhirPathValue::String("not a date".to_string());
 
-        // yearOf should reject non-date/datetime values
+        // Non-date/time values return empty per FHIRPath component extraction semantics.
         let result = DateTimeEvaluator::year_of(&string_value);
-        assert!(result.is_err());
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
 
-        // hourOf should reject non-time/datetime values
         let result = DateTimeEvaluator::hour_of(&string_value);
-        assert!(result.is_err());
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
 
-        // timezoneOffsetOf should reject non-datetime values
         let date_value = FhirPathValue::Date("2023-07-15".to_string());
         let result = DateTimeEvaluator::timezone_offset_of(&date_value);
-        assert!(result.is_err());
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
 
-        // dateOf should reject non-datetime values
         let time_value = FhirPathValue::Time("14:30:25.123".to_string());
         let result = DateTimeEvaluator::date_of(&time_value);
-        assert!(result.is_err());
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
     }
 }

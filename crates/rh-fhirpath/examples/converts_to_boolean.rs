@@ -117,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   singleFlag.convertsToBoolean() = {result:?}");
 
     let expr = parser.parse("flags.convertsToBoolean()")?;
-    let result = evaluator.evaluate(&expr, &collection_context)?;
+    let result = evaluator.evaluate(&expr, &collection_context);
     println!("   flags.convertsToBoolean() = {result:?}");
 
     let expr = parser.parse("emptyArray.convertsToBoolean()")?;
@@ -154,7 +154,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("- Decimal: true if 1.0 or 0.0, false otherwise");
     println!("- String: true if 'true','t','yes','y','1','1.0','false','f','no','n','0','0.0' (case-insensitive)");
     println!("          false otherwise");
-    println!("- Collections: true if single convertible item, false if multiple items or empty");
+    println!(
+        "- Collections: single item converts normally, empty returns empty, multiple items error"
+    );
     println!("- Other types: Always false");
     println!("\nThis differs from toBoolean() which returns the actual converted boolean value");
     println!("or Empty for non-convertible values.");

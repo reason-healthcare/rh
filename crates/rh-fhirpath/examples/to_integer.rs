@@ -146,7 +146,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   singleValue.toInteger() = {result:?}");
 
     let expr = parser.parse("values.toInteger()")?;
-    let result = evaluator.evaluate(&expr, &collection_context)?;
+    let result = evaluator.evaluate(&expr, &collection_context);
     println!("   values.toInteger() = {result:?}");
 
     // Example 7: convertsToInteger() function
@@ -183,7 +183,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("- Decimal: whole numbers (42.0) → integer (42), fractional → empty");
     println!("- String: valid integer strings ('42', '-123') → integer, others → empty");
     println!("- Other types: → empty");
-    println!("- Collections: single item → convert item, multiple items → empty");
+    println!(
+        "- Collections: single item converts normally, empty returns empty, multiple items error"
+    );
     println!();
     println!("The convertsToInteger() function tests if a value can be converted:");
     println!("- Returns true if toInteger() would return a value");

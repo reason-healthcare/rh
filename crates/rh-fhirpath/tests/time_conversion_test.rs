@@ -179,18 +179,18 @@ fn test_time_conversion_edge_cases() {
 
     let expr = parser.parse("{}.convertsToTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
-
-    // Test multiple items (should return empty/false)
-    let expr = parser.parse("('10:30:45' | '14:25:36').toTime()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Empty);
+
+    // Test multiple items
+    let expr = parser.parse("('10:30:45' | '14:25:36').toTime()").unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 
     let expr = parser
         .parse("('10:30:45' | '14:25:36').convertsToTime()")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 
     // Test single item collection
     let expr = parser.parse("('10:30:45').toTime()").unwrap();

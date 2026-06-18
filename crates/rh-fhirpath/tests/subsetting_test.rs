@@ -42,15 +42,11 @@ mod subsetting_tests {
     }
 
     #[test]
-    fn test_single_function_error_empty_collection() {
+    fn test_single_function_empty_collection() {
         let data = json!({});
 
-        let result = evaluate_expression(&data, "{}.single()");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("single() cannot be called on empty collection"));
+        let result = evaluate_expression(&data, "{}.single()").unwrap();
+        assert_eq!(result, FhirPathValue::Empty);
     }
 
     #[test]

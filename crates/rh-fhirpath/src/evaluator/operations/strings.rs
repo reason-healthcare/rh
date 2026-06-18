@@ -4,6 +4,41 @@ use crate::evaluator::types::FhirPathValue;
 /// Evaluator for string manipulation functions in FHIRPath expressions
 pub struct StringEvaluator;
 
+fn regex_pattern_with_flags(
+    pattern: &str,
+    flags: Option<&FhirPathValue>,
+) -> Result<String, FhirPathError> {
+    let flags_str = match flags {
+        None => "",
+        Some(FhirPathValue::String(s)) => s,
+        Some(FhirPathValue::Empty) => return Ok(format!("(?s){pattern}")),
+        Some(FhirPathValue::Collection(items)) if items.is_empty() => {
+            return Ok(format!("(?s){pattern}"))
+        }
+        _ => {
+            return Err(FhirPathError::TypeError {
+                message: "Regex flags parameter must be a String".to_string(),
+            })
+        }
+    };
+
+    let mut prefix = String::from("(?s");
+    for flag in flags_str.chars() {
+        match flag {
+            'i' if !prefix.contains('i') => prefix.push('i'),
+            'm' if !prefix.contains('m') => prefix.push('m'),
+            'i' | 'm' => {}
+            _ => {
+                return Err(FhirPathError::EvaluationError {
+                    message: format!("Invalid regex flag: {flag}"),
+                })
+            }
+        }
+    }
+    prefix.push(')');
+    Ok(format!("{prefix}{pattern}"))
+}
+
 impl StringEvaluator {
     /// Propagate FHIRPath empty collections: empty.anything() = empty.
     fn is_empty(v: &FhirPathValue) -> bool {
@@ -18,7 +53,7 @@ impl StringEvaluator {
     /// FHIRPath: String.length() -> Integer
     pub fn length(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
-            FhirPathValue::String(s) => Ok(FhirPathValue::Integer(s.len() as i64)),
+            FhirPathValue::String(s) => Ok(FhirPathValue::Integer(s.chars().count() as i64)),
             FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
                 if items.is_empty() =>
@@ -57,6 +92,9 @@ impl StringEvaluator {
             }
         };
 
+        if Self::is_empty(start) {
+            return Ok(FhirPathValue::Empty);
+        }
         let start_signed = match start {
             FhirPathValue::Integer(i) => *i,
             FhirPathValue::Long(i) => *i,
@@ -69,13 +107,19 @@ impl StringEvaluator {
 
         // Negative starts and starts past the end of the string both yield
         // the empty collection per the FHIRPath spec.
-        if start_signed < 0 || start_signed as usize >= string.len() {
+        let char_len = string.chars().count();
+        if start_signed < 0 || start_signed as usize >= char_len {
             return Ok(FhirPathValue::Empty);
         }
         let start_index = start_signed as usize;
 
         let result = match length {
             Some(len_val) => {
+                if Self::is_empty(len_val) {
+                    return Ok(FhirPathValue::String(
+                        string.chars().skip(start_index).collect(),
+                    ));
+                }
                 let length_val = match len_val {
                     FhirPathValue::Integer(i) => *i,
                     FhirPathValue::Long(i) => *i,
@@ -86,12 +130,15 @@ impl StringEvaluator {
                     }
                 };
                 if length_val <= 0 {
-                    return Ok(FhirPathValue::Empty);
+                    return Ok(FhirPathValue::String(String::new()));
                 }
-                let end_index = std::cmp::min(start_index + length_val as usize, string.len());
-                string[start_index..end_index].to_string()
+                string
+                    .chars()
+                    .skip(start_index)
+                    .take(length_val as usize)
+                    .collect()
             }
-            None => string[start_index..].to_string(),
+            None => string.chars().skip(start_index).collect(),
         };
 
         Ok(FhirPathValue::String(result))
@@ -195,7 +242,9 @@ impl StringEvaluator {
         };
 
         match string.find(substring_str) {
-            Some(index) => Ok(FhirPathValue::Integer(index as i64)),
+            Some(index) => Ok(FhirPathValue::Integer(
+                string[..index].chars().count() as i64
+            )),
             None => Ok(FhirPathValue::Integer(-1)),
         }
     }
@@ -232,7 +281,9 @@ impl StringEvaluator {
         };
 
         match string.rfind(substring_str) {
-            Some(index) => Ok(FhirPathValue::Integer(index as i64)),
+            Some(index) => Ok(FhirPathValue::Integer(
+                string[..index].chars().count() as i64
+            )),
             None => Ok(FhirPathValue::Integer(-1)),
         }
     }
@@ -291,6 +342,7 @@ impl StringEvaluator {
         target: &FhirPathValue,
         regex_pattern: &FhirPathValue,
         substitution: &FhirPathValue,
+        flags: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
         if Self::is_empty(target) || Self::is_empty(regex_pattern) || Self::is_empty(substitution) {
             return Ok(FhirPathValue::Empty);
@@ -330,7 +382,8 @@ impl StringEvaluator {
             return Ok(FhirPathValue::String(string.clone()));
         }
 
-        match regex::Regex::new(pattern_str) {
+        let pattern = regex_pattern_with_flags(pattern_str, flags)?;
+        match regex::Regex::new(&pattern) {
             Ok(re) => Ok(FhirPathValue::String(
                 re.replace_all(string, substitution_str).to_string(),
             )),
@@ -345,6 +398,17 @@ impl StringEvaluator {
     pub fn upper(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::String(s.to_uppercase())),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::upper(&items[0])
+            }
             _ => Err(FhirPathError::TypeError {
                 message: "upper() can only be called on String values".to_string(),
             }),
@@ -356,6 +420,17 @@ impl StringEvaluator {
     pub fn lower(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
         match target {
             FhirPathValue::String(s) => Ok(FhirPathValue::String(s.to_lowercase())),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::lower(&items[0])
+            }
             _ => Err(FhirPathError::TypeError {
                 message: "lower() can only be called on String values".to_string(),
             }),
@@ -390,6 +465,9 @@ impl StringEvaluator {
         target: &FhirPathValue,
         delimiter: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
         let string = match target {
             FhirPathValue::String(s) => s,
             _ => {
@@ -422,8 +500,23 @@ impl StringEvaluator {
         target: &FhirPathValue,
         delimiter: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
+        if Self::is_empty(target) {
+            return Ok(FhirPathValue::Empty);
+        }
         let collection = match target {
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => items,
+            FhirPathValue::String(s) => {
+                let delimiter_str = match delimiter {
+                    FhirPathValue::String(s) => s,
+                    _ => {
+                        return Err(FhirPathError::TypeError {
+                            message: "join() delimiter parameter must be a String".to_string(),
+                        })
+                    }
+                };
+                let _ = delimiter_str;
+                return Ok(FhirPathValue::String(s.clone()));
+            }
             _ => {
                 return Err(FhirPathError::TypeError {
                     message: "join() can only be called on Collection values".to_string(),
@@ -462,6 +555,7 @@ impl StringEvaluator {
     pub fn matches(
         target: &FhirPathValue,
         pattern: &FhirPathValue,
+        flags: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
         if Self::is_empty(target) {
             return Ok(FhirPathValue::Empty);
@@ -487,10 +581,8 @@ impl StringEvaluator {
             }
         };
 
-        // FHIRPath matches() uses single-line mode: dot matches newlines.
-        // Wrap the pattern with (?s) to enable dotall mode.
-        let dotall_pattern = format!("(?s){}", pattern_str);
-        match regex::Regex::new(&dotall_pattern) {
+        let pattern = regex_pattern_with_flags(pattern_str, flags)?;
+        match regex::Regex::new(&pattern) {
             Ok(re) => Ok(FhirPathValue::Boolean(re.is_match(string))),
             Err(_) => {
                 // If regex compilation fails, return false (invalid pattern)
@@ -505,6 +597,7 @@ impl StringEvaluator {
     pub fn matches_full(
         target: &FhirPathValue,
         pattern: &FhirPathValue,
+        flags: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
         if Self::is_empty(target) {
             return Ok(FhirPathValue::Empty);
@@ -530,8 +623,8 @@ impl StringEvaluator {
             }
         };
 
-        // Add anchors to pattern for full match
-        let anchored_pattern = format!("^{pattern_str}$");
+        let flagged_pattern = regex_pattern_with_flags(pattern_str, flags)?;
+        let anchored_pattern = format!("^(?:{flagged_pattern})$");
 
         // Use regex for proper pattern matching with anchors
         match regex::Regex::new(&anchored_pattern) {
@@ -586,6 +679,17 @@ impl StringEvaluator {
                     .map(|c| FhirPathValue::String(c.to_string()))
                     .collect();
                 Ok(FhirPathValue::Collection(chars))
+            }
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(FhirPathValue::Empty)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::to_chars(&items[0])
             }
             _ => Err(FhirPathError::TypeError {
                 message: "toChars() can only be called on String values".to_string(),
@@ -776,7 +880,7 @@ mod tests {
             FhirPathValue::String("The year 2023 was great, and 2024 will be better!".to_string());
         let regex = FhirPathValue::String(r"\d{4}".to_string());
         let substitution = FhirPathValue::String("YYYY".to_string());
-        let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
+        let result = StringEvaluator::replace_matches(&input, &regex, &substitution, None).unwrap();
         assert_eq!(
             result,
             FhirPathValue::String("The year YYYY was great, and YYYY will be better!".to_string())
@@ -786,7 +890,7 @@ mod tests {
         let input = FhirPathValue::String("john.doe@example.com".to_string());
         let regex = FhirPathValue::String(r"(\w+)\.(\w+)@(.+)".to_string());
         let substitution = FhirPathValue::String("$2, $1 from $3".to_string());
-        let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
+        let result = StringEvaluator::replace_matches(&input, &regex, &substitution, None).unwrap();
         assert_eq!(
             result,
             FhirPathValue::String("doe, john from example.com".to_string())
@@ -796,7 +900,7 @@ mod tests {
         let input = FhirPathValue::String("cat catastrophe scattered".to_string());
         let regex = FhirPathValue::String(r"\bcat\b".to_string());
         let substitution = FhirPathValue::String("dog".to_string());
-        let result = StringEvaluator::replace_matches(&input, &regex, &substitution).unwrap();
+        let result = StringEvaluator::replace_matches(&input, &regex, &substitution, None).unwrap();
         assert_eq!(
             result,
             FhirPathValue::String("dog catastrophe scattered".to_string())
@@ -806,7 +910,7 @@ mod tests {
         let input = FhirPathValue::String("test".to_string());
         let invalid_regex = FhirPathValue::String("[".to_string()); // Invalid regex
         let substitution = FhirPathValue::String("replacement".to_string());
-        let result = StringEvaluator::replace_matches(&input, &invalid_regex, &substitution);
+        let result = StringEvaluator::replace_matches(&input, &invalid_regex, &substitution, None);
         assert!(result.is_err());
     }
 

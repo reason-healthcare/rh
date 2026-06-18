@@ -73,6 +73,13 @@ impl CollectionEvaluator {
                 }
             }
             (FhirPathValue::Empty, FhirPathValue::Integer(_)) => Ok(FhirPathValue::Empty),
+            (value, FhirPathValue::Integer(idx)) => {
+                if *idx == 0 {
+                    Ok(value.clone())
+                } else {
+                    Ok(FhirPathValue::Empty)
+                }
+            }
             _ => Err(FhirPathError::InvalidOperation {
                 message: "Invalid indexer operation".to_string(),
             }),
@@ -163,9 +170,7 @@ impl CollectionEvaluator {
     /// Get single item from collection - fails if not exactly one item
     pub fn single(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
-            FhirPathValue::Empty => Err(FhirPathError::InvalidOperation {
-                message: "single() cannot be called on empty collection".to_string(),
-            }),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Ok(items[0].clone())
@@ -257,9 +262,7 @@ impl CollectionEvaluator {
         check_ordered: bool,
     ) -> FhirPathResult<FhirPathValue> {
         if count < 0 {
-            return Err(FhirPathError::InvalidOperation {
-                message: "skip() count cannot be negative".to_string(),
-            });
+            return Ok(target.clone());
         }
 
         match target {
@@ -298,9 +301,7 @@ impl CollectionEvaluator {
     /// Take the first n items from collection
     pub fn take(target: &FhirPathValue, count: i64) -> FhirPathResult<FhirPathValue> {
         if count < 0 {
-            return Err(FhirPathError::InvalidOperation {
-                message: "take() count cannot be negative".to_string(),
-            });
+            return Ok(FhirPathValue::Empty);
         }
 
         if count == 0 {
@@ -686,7 +687,13 @@ impl CollectionEvaluator {
 
                 if let Some(object_map) = obj.as_object() {
                     for value in object_map.values() {
-                        children.push(FhirPathValue::from_json(value));
+                        match FhirPathValue::from_json(value) {
+                            FhirPathValue::Collection(items)
+                            | FhirPathValue::UnorderedCollection(items) => {
+                                children.extend(items);
+                            }
+                            child => children.push(child),
+                        }
                     }
                 }
 

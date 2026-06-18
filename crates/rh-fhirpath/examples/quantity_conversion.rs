@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for example in test_cases {
         let expr = parser.parse(example)?;
-        let result = evaluator.evaluate(&expr, &context)?;
+        let result = evaluator.evaluate(&expr, &context);
         println!("{example} → {result:?}");
     }
 
@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{{}}.toQuantity() → {result:?}");
 
     let expr = parser.parse("(1 | 2).toQuantity()")?;
-    let result = evaluator.evaluate(&expr, &context)?;
+    let result = evaluator.evaluate(&expr, &context);
     println!("(1 | 2).toQuantity() → {result:?}");
 
     println!();

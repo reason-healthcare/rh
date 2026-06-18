@@ -13,6 +13,15 @@ use crate::evaluator::{
 };
 use rust_decimal::Decimal;
 
+fn is_empty_sort_key(value: &FhirPathValue) -> bool {
+    matches!(value, FhirPathValue::Empty)
+        || matches!(
+            value,
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty()
+        )
+}
+
 /// FHIRPath expression evaluator
 pub struct FhirPathEvaluator {
     /// Built-in functions registry
@@ -278,9 +287,7 @@ impl FhirPathEvaluator {
                 if let Some(idx) = context.index_value {
                     Ok(FhirPathValue::Integer(idx))
                 } else {
-                    Err(FhirPathError::EvaluationError {
-                        message: "$index is only available inside select(), where(), or similar iteration functions".to_string(),
-                    })
+                    Ok(FhirPathValue::Empty)
                 }
             }
             Invocation::Total => {
@@ -593,7 +600,11 @@ impl FhirPathEvaluator {
         // This matches FHIRPath semantics: x.iif(criterion, t, f) evaluates
         // criterion/t/f with x as the focus. When iif has no explicit receiver
         // the target is the root context object, so focus = root (correct).
-        let iif_ctx = context.with_this_value(target.clone());
+        let iif_ctx = if context.index_value.is_some() {
+            context.with_this_value(target.clone())
+        } else {
+            context.with_this_and_index(target.clone(), 0)
+        };
         let criterion_val = self.evaluate_expression(&parameters[0], &iif_ctx)?;
 
         let effective = match &criterion_val {
@@ -669,6 +680,14 @@ impl FhirPathEvaluator {
         let key_specs: Vec<(bool, &Expression)> = parameters
             .iter()
             .map(|p| match p {
+                Expression::Invocation {
+                    left,
+                    invocation: Invocation::Member(direction),
+                } if direction == "asc" => (false, left.as_ref()),
+                Expression::Invocation {
+                    left,
+                    invocation: Invocation::Member(direction),
+                } if direction == "desc" => (true, left.as_ref()),
                 Expression::Polarity {
                     operator: PolarityOperator::Minus,
                     operand,
@@ -679,8 +698,8 @@ impl FhirPathEvaluator {
 
         // Build (item, key_tuple) pairs
         let mut keyed: Vec<(FhirPathValue, Vec<(bool, FhirPathValue)>)> = Vec::new();
-        for item in &items {
-            let item_ctx = context.with_this_value(item.clone());
+        for (idx, item) in items.iter().enumerate() {
+            let item_ctx = context.with_this_and_index(item.clone(), idx as i64);
             let mut keys = Vec::new();
             for (descending, expr) in &key_specs {
                 let key = self.evaluate_expression(expr, &item_ctx)?;
@@ -694,6 +713,9 @@ impl FhirPathEvaluator {
                 let ord =
                     crate::evaluator::functions::collection_functions::compare_for_sort_pub(a, b);
                 if ord != std::cmp::Ordering::Equal {
+                    if is_empty_sort_key(a) || is_empty_sort_key(b) {
+                        return ord;
+                    }
                     return if *desc { ord.reverse() } else { ord };
                 }
             }
@@ -730,8 +752,8 @@ impl FhirPathEvaluator {
             FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(false)),
             v => vec![v],
         };
-        for item in items {
-            let item_ctx = context.with_this_value(item.clone());
+        for (idx, item) in items.iter().enumerate() {
+            let item_ctx = context.with_this_and_index((*item).clone(), idx as i64);
             let result = self.evaluate_expression(criterion, &item_ctx)?;
             if result.is_truthy() {
                 return Ok(FhirPathValue::Boolean(true));
@@ -760,8 +782,8 @@ impl FhirPathEvaluator {
             FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(true)),
             v => vec![v],
         };
-        for item in items {
-            let item_ctx = context.with_this_value(item.clone());
+        for (idx, item) in items.iter().enumerate() {
+            let item_ctx = context.with_this_and_index((*item).clone(), idx as i64);
             let result = self.evaluate_expression(criterion, &item_ctx)?;
             if !result.is_truthy() {
                 return Ok(FhirPathValue::Boolean(false));
@@ -860,8 +882,8 @@ impl FhirPathEvaluator {
                 FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                     let mut projected_items = Vec::new();
 
-                    for item in items {
-                        let item_context = context.with_this_value(item.clone());
+                    for (idx, item) in items.iter().enumerate() {
+                        let item_context = context.with_this_and_index(item.clone(), idx as i64);
                         let projection_result =
                             self.evaluate_expression(projection_expr, &item_context)?;
 
@@ -945,8 +967,8 @@ impl FhirPathEvaluator {
             let mut next_collection = Vec::new();
 
             // Apply the projection expression to each item in the current collection
-            for item in &current_collection {
-                let item_context = context.with_this_value(item.clone());
+            for (idx, item) in current_collection.iter().enumerate() {
+                let item_context = context.with_this_and_index(item.clone(), idx as i64);
 
                 // Evaluate the projection expression in the item context
                 let projection_result = self.evaluate_expression(projection_expr, &item_context)?;
@@ -961,8 +983,8 @@ impl FhirPathEvaluator {
                                 .any(|e| FhirPathValue::equals_static(e, &new_item))
                             {
                                 seen.push(new_item.clone());
+                                all_results.push(new_item.clone());
                                 next_collection.push(new_item.clone());
-                                all_results.push(new_item);
                             }
                         }
                     }
@@ -970,8 +992,8 @@ impl FhirPathEvaluator {
                     value => {
                         if !seen.iter().any(|e| FhirPathValue::equals_static(e, &value)) {
                             seen.push(value.clone());
+                            all_results.push(value.clone());
                             next_collection.push(value.clone());
-                            all_results.push(value);
                         }
                     }
                 }
@@ -1102,8 +1124,8 @@ impl FhirPathEvaluator {
         };
 
         let mut total = init;
-        for item in items {
-            let iter_ctx = context.with_aggregate_vars(item, total);
+        for (idx, item) in items.into_iter().enumerate() {
+            let iter_ctx = context.with_aggregate_vars_and_index(item, total, idx as i64);
             total = self.evaluate_expression(expr, &iter_ctx)?;
         }
         Ok(total)

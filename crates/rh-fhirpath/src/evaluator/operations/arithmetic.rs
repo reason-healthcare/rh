@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::error::*;
 use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 
@@ -22,6 +22,46 @@ fn round_to_decimal_precision(result: Decimal, a: Decimal, b: Decimal) -> Decima
 
 fn decimal_places(n: Decimal) -> u8 {
     n.scale() as u8
+}
+
+fn is_empty_value(value: &FhirPathValue) -> bool {
+    match value {
+        FhirPathValue::Empty => true,
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+            items.is_empty()
+        }
+        _ => false,
+    }
+}
+
+fn integer_result(value: i64) -> FhirPathValue {
+    if value < i32::MIN as i64 || value > i32::MAX as i64 {
+        FhirPathValue::Empty
+    } else {
+        FhirPathValue::Integer(value)
+    }
+}
+
+fn duration_millis(precision: &DateTimePrecision, count: Decimal) -> FhirPathResult<i64> {
+    let multiplier = match precision {
+        DateTimePrecision::Week => Decimal::from(604_800_000_i64),
+        DateTimePrecision::Day => Decimal::from(86_400_000_i64),
+        DateTimePrecision::Hour => Decimal::from(3_600_000_i64),
+        DateTimePrecision::Minute => Decimal::from(60_000_i64),
+        DateTimePrecision::Second => Decimal::from(1_000_i64),
+        DateTimePrecision::Millisecond => Decimal::ONE,
+        DateTimePrecision::Year | DateTimePrecision::Month => {
+            return Err(FhirPathError::EvaluationError {
+                message: format!("Cannot use {precision} precision in time arithmetic"),
+            })
+        }
+    };
+    (count * multiplier)
+        .round()
+        .to_i64()
+        .ok_or_else(|| FhirPathError::EvaluationError {
+            message: format!("Duration is out of range: {count} {precision}"),
+        })
 }
 
 /// Split a datetime literal into its `(base, tz_suffix)` components.
@@ -91,9 +131,11 @@ impl ArithmeticEvaluator {
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (left, right) {
-            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
-                Ok(FhirPathValue::Integer(a + b))
-            }
+            _ if is_empty_value(left) || is_empty_value(right) => Ok(FhirPathValue::Empty),
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => Ok(a
+                .checked_add(*b)
+                .map(integer_result)
+                .unwrap_or(FhirPathValue::Empty)),
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 Ok(FhirPathValue::Number(a + b))
             }
@@ -162,6 +204,19 @@ impl ArithmeticEvaluator {
                 FhirPathValue::DateTimePrecision(precision),
                 FhirPathValue::DateTime(datetime_str),
             ) => Self::add_precision_to_datetime(datetime_str, precision, 1),
+            (FhirPathValue::Time(time_str), FhirPathValue::DateTimePrecision(precision)) => {
+                Self::add_precision_to_time(time_str, precision, Decimal::ONE)
+            }
+            (
+                FhirPathValue::Time(time_str),
+                FhirPathValue::Quantity {
+                    value,
+                    unit: Some(unit_str),
+                },
+            ) => {
+                let precision = Self::parse_precision_unit(unit_str)?;
+                Self::add_precision_to_time(time_str, &precision, *value)
+            }
             // Date/DateTime arithmetic with compound duration quantities (6 months, etc.)
             (
                 FhirPathValue::Date(date_str),
@@ -219,11 +274,7 @@ impl ArithmeticEvaluator {
                 },
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_datetime(
-                        datetime_str,
-                        &precision,
-                        value.to_i64().unwrap_or(0),
-                    )
+                    Self::add_decimal_precision_to_datetime(datetime_str, &precision, *value)
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!("Cannot add quantity with unit '{unit_str}' to datetime"),
@@ -238,11 +289,7 @@ impl ArithmeticEvaluator {
                 FhirPathValue::DateTime(datetime_str),
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_datetime(
-                        datetime_str,
-                        &precision,
-                        value.to_i64().unwrap_or(0),
-                    )
+                    Self::add_decimal_precision_to_datetime(datetime_str, &precision, *value)
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!("Cannot add quantity with unit '{unit_str}' to datetime"),
@@ -377,9 +424,11 @@ impl ArithmeticEvaluator {
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (left, right) {
-            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
-                Ok(FhirPathValue::Integer(a - b))
-            }
+            _ if is_empty_value(left) || is_empty_value(right) => Ok(FhirPathValue::Empty),
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => Ok(a
+                .checked_sub(*b)
+                .map(integer_result)
+                .unwrap_or(FhirPathValue::Empty)),
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => Ok(FhirPathValue::Number(
                 round_to_decimal_precision(a - b, *a, *b),
             )),
@@ -460,6 +509,19 @@ impl ArithmeticEvaluator {
                 FhirPathValue::DateTime(datetime_str),
                 FhirPathValue::DateTimePrecision(precision),
             ) => Self::add_precision_to_datetime(datetime_str, precision, -1),
+            (FhirPathValue::Time(time_str), FhirPathValue::DateTimePrecision(precision)) => {
+                Self::add_precision_to_time(time_str, precision, Decimal::NEGATIVE_ONE)
+            }
+            (
+                FhirPathValue::Time(time_str),
+                FhirPathValue::Quantity {
+                    value,
+                    unit: Some(unit_str),
+                },
+            ) => {
+                let precision = Self::parse_precision_unit(unit_str)?;
+                Self::add_precision_to_time(time_str, &precision, -*value)
+            }
             // Date/DateTime arithmetic with compound duration quantities (subtraction)
             (
                 FhirPathValue::Date(date_str),
@@ -490,11 +552,7 @@ impl ArithmeticEvaluator {
                 },
             ) => {
                 if let Ok(precision) = Self::parse_precision_unit(unit_str) {
-                    Self::add_precision_to_datetime(
-                        datetime_str,
-                        &precision,
-                        -(value.to_i64().unwrap_or(0)),
-                    )
+                    Self::add_decimal_precision_to_datetime(datetime_str, &precision, -*value)
                 } else {
                     Err(FhirPathError::EvaluationError {
                         message: format!(
@@ -567,9 +625,11 @@ impl ArithmeticEvaluator {
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (left, right) {
-            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
-                Ok(FhirPathValue::Integer(a * b))
-            }
+            _ if is_empty_value(left) || is_empty_value(right) => Ok(FhirPathValue::Empty),
+            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => Ok(a
+                .checked_mul(*b)
+                .map(integer_result)
+                .unwrap_or(FhirPathValue::Empty)),
             (FhirPathValue::Number(a), FhirPathValue::Number(b)) => {
                 Ok(FhirPathValue::Number(a * b))
             }
@@ -615,6 +675,7 @@ impl ArithmeticEvaluator {
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (left, right) {
+            _ if is_empty_value(left) || is_empty_value(right) => Ok(FhirPathValue::Empty),
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
@@ -704,6 +765,7 @@ impl ArithmeticEvaluator {
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (left, right) {
+            _ if is_empty_value(left) || is_empty_value(right) => Ok(FhirPathValue::Empty),
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
@@ -750,6 +812,7 @@ impl ArithmeticEvaluator {
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
         match (left, right) {
+            _ if is_empty_value(left) || is_empty_value(right) => Ok(FhirPathValue::Empty),
             (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => {
                 if *b == 0 {
                     Ok(FhirPathValue::Empty)
@@ -801,12 +864,17 @@ impl ArithmeticEvaluator {
     /// Negate a value
     pub fn negate_value(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match value {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(-n)),
+            FhirPathValue::Integer(n) => Ok(n
+                .checked_neg()
+                .map(integer_result)
+                .unwrap_or(FhirPathValue::Empty)),
+            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(-n)),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Number(-n)),
             FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
                 value: -value,
                 unit: unit.clone(),
             }),
+            _ if is_empty_value(value) => Ok(FhirPathValue::Empty),
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot negate {value:?}"),
             }),
@@ -939,6 +1007,14 @@ impl ArithmeticEvaluator {
         precision: &DateTimePrecision,
         count: i64,
     ) -> FhirPathResult<FhirPathValue> {
+        Self::add_decimal_precision_to_datetime(datetime_str, precision, Decimal::from(count))
+    }
+
+    fn add_decimal_precision_to_datetime(
+        datetime_str: &str,
+        precision: &DateTimePrecision,
+        count: Decimal,
+    ) -> FhirPathResult<FhirPathValue> {
         // Split off the timezone marker (Z, +HH:MM, or -HH:MM) so the base
         // string starts with `YYYY-MM-DDTHH:MM:SS[.fff]` and nothing more.
         let (base_str, tz_str) = split_datetime_tz(datetime_str);
@@ -956,6 +1032,7 @@ impl ArithmeticEvaluator {
 
         let new_datetime = match precision {
             DateTimePrecision::Year => {
+                let count = count.to_i64().unwrap_or(0);
                 if let Some(new_date) = datetime
                     .date()
                     .with_year((datetime.year() as i64 + count) as i32)
@@ -968,6 +1045,7 @@ impl ArithmeticEvaluator {
                 }
             }
             DateTimePrecision::Month => {
+                let count = count.to_i64().unwrap_or(0);
                 let total_months =
                     datetime.year() as i64 * 12 + datetime.month() as i64 - 1 + count;
                 let new_year = (total_months / 12) as i32;
@@ -987,36 +1065,19 @@ impl ArithmeticEvaluator {
                     }
                 }
             }
-            DateTimePrecision::Week => datetime
-                .checked_add_signed(Duration::weeks(count))
-                .ok_or_else(|| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime after adding {count} weeks"),
-                })?,
-            DateTimePrecision::Day => datetime
-                .checked_add_signed(Duration::days(count))
-                .ok_or_else(|| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime after adding {count} days"),
-                })?,
-            DateTimePrecision::Hour => datetime
-                .checked_add_signed(Duration::hours(count))
-                .ok_or_else(|| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime after adding {count} hours"),
-                })?,
-            DateTimePrecision::Minute => datetime
-                .checked_add_signed(Duration::minutes(count))
-                .ok_or_else(|| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime after adding {count} minutes"),
-                })?,
-            DateTimePrecision::Second => datetime
-                .checked_add_signed(Duration::seconds(count))
-                .ok_or_else(|| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime after adding {count} seconds"),
-                })?,
-            DateTimePrecision::Millisecond => datetime
-                .checked_add_signed(Duration::milliseconds(count))
-                .ok_or_else(|| FhirPathError::EvaluationError {
-                    message: format!("Invalid datetime after adding {count} milliseconds"),
-                })?,
+            DateTimePrecision::Week
+            | DateTimePrecision::Day
+            | DateTimePrecision::Hour
+            | DateTimePrecision::Minute
+            | DateTimePrecision::Second
+            | DateTimePrecision::Millisecond => {
+                let millis = duration_millis(precision, count)?;
+                datetime
+                    .checked_add_signed(Duration::milliseconds(millis))
+                    .ok_or_else(|| FhirPathError::EvaluationError {
+                        message: format!("Invalid datetime after adding {count} {precision}"),
+                    })?
+            }
         };
 
         // Preserve original sub-second precision (3-digit millisecond format
@@ -1028,6 +1089,41 @@ impl ArithmeticEvaluator {
         };
         let result_str = format!("{body}{tz_str}");
         Ok(FhirPathValue::DateTime(result_str))
+    }
+
+    fn add_precision_to_time(
+        time_str: &str,
+        precision: &DateTimePrecision,
+        count: Decimal,
+    ) -> FhirPathResult<FhirPathValue> {
+        let raw = time_str.strip_prefix('T').unwrap_or(time_str);
+        let has_fraction = raw.contains('.');
+        let time = NaiveTime::parse_from_str(raw, "%H:%M:%S%.f")
+            .or_else(|_| NaiveTime::parse_from_str(raw, "%H:%M:%S"))
+            .map_err(|_| FhirPathError::EvaluationError {
+                message: format!("Invalid time format: {time_str}"),
+            })?;
+
+        let millis = duration_millis(precision, count)?;
+        let day_millis = 86_400_000_i64;
+        let current = i64::from(time.num_seconds_from_midnight()) * 1000
+            + i64::from(time.nanosecond() / 1_000_000);
+        let wrapped = (current + millis).rem_euclid(day_millis);
+        let secs = (wrapped / 1000) as u32;
+        let nanos = ((wrapped % 1000) as u32) * 1_000_000;
+        let result =
+            NaiveTime::from_num_seconds_from_midnight_opt(secs, nanos).ok_or_else(|| {
+                FhirPathError::EvaluationError {
+                    message: format!("Invalid time after adding {count} {precision}"),
+                }
+            })?;
+
+        let result_str = if has_fraction || nanos != 0 {
+            format!("T{}", result.format("%H:%M:%S%.3f"))
+        } else {
+            format!("T{}", result.format("%H:%M:%S"))
+        };
+        Ok(FhirPathValue::Time(result_str))
     }
 
     /// Parse a precision unit from a string. Accepts both FHIRPath calendar-

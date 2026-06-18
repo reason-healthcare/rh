@@ -192,10 +192,10 @@ fn test_to_boolean_with_multiple_item_collection() {
         "values": [true, false]
     }));
 
-    // Multiple items should return empty
+    // Multiple items should error
     let expr = parser.parse("values.toBoolean()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Empty);
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 }
 
 #[test]
@@ -233,11 +233,11 @@ fn test_to_boolean_chained_with_other_functions() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     println!("flags result: {result:?}");
 
-    let expr = parser.parse("flags.toBoolean()").unwrap();
+    let expr = parser.parse("flags.select(toBoolean())").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    println!("flags.toBoolean() result: {result:?}"); // Should convert only valid boolean strings and filter for true values
+    println!("flags.select(toBoolean()) result: {result:?}"); // Should convert only valid boolean strings and filter for true values
     let expr = parser
-        .parse("flags.toBoolean().where($this = true)")
+        .parse("flags.select(toBoolean()).where($this = true)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 

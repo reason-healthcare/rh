@@ -53,38 +53,27 @@ fn test_to_quantity_with_unit_parameter() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test numeric to quantity with unit parameter
+    // Numeric input converts to the UCUM default unit '1'. Physical-unit
+    // targets are not compatible with '1' and therefore return empty.
     let expr = parser.parse("42.toQuantity('mg')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    match result {
-        FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
-            assert_eq!(unit, Some("mg".to_string()));
-        }
-        _ => panic!("Expected Quantity, got: {result:?}"),
-    }
+    assert_eq!(result, FhirPathValue::Empty);
 
-    // Test decimal with unit parameter
-    let expr = parser.parse("37.2.toQuantity('Cel')").unwrap();
+    // Test decimal with compatible default unit parameter
+    let expr = parser.parse("37.2.toQuantity('1')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, Decimal::from_str_exact("37.2").unwrap());
-            assert_eq!(unit, Some("Cel".to_string()));
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
 
-    // Test long with unit parameter
+    // Test long with incompatible physical unit parameter
     let expr = parser.parse("100L.toQuantity('mm[Hg]')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    match result {
-        FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("100.0").unwrap());
-            assert_eq!(unit, Some("mm[Hg]".to_string()));
-        }
-        _ => panic!("Expected Quantity, got: {result:?}"),
-    }
+    assert_eq!(result, FhirPathValue::Empty);
 }
 
 #[test]
@@ -106,24 +95,23 @@ fn test_to_quantity_string_conversions() {
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
 
-    // Test plain numeric string with unit parameter
+    // Test plain numeric string with incompatible physical unit parameter
     let expr = parser.parse("'42.7'.toQuantity('L')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    match result {
-        FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("42.7").unwrap());
-            assert_eq!(unit, Some("L".to_string()));
-        }
-        _ => panic!("Expected Quantity, got: {result:?}"),
-    }
+    assert_eq!(result, FhirPathValue::Empty);
 
-    // Test string quantity with unit parameter override
+    // Test plain numeric string with compatible default unit parameter
     let expr = parser.parse("'5.0'.toQuantity('g')").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Empty);
+
+    // Test string quantity with unit conversion
+    let expr = parser.parse("'5.0 \\'mg\\''.toQuantity('g')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("5.0").unwrap());
-            assert_eq!(unit, Some("g".to_string())); // Should use parameter unit
+            assert_eq!(value, Decimal::from_str_exact("0.005").unwrap());
+            assert_eq!(unit, Some("g".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -146,24 +134,29 @@ fn test_to_quantity_existing_quantity() {
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
 
-    // Test existing quantity with unit parameter (unit override)
+    // Test existing quantity with compatible unit parameter conversion
     let expr = parser.parse("5'mg'.toQuantity('g')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("5.0").unwrap());
-            assert_eq!(unit, Some("g".to_string())); // Should use parameter unit
+            assert_eq!(value, Decimal::from_str_exact("0.005").unwrap());
+            assert_eq!(unit, Some("g".to_string()));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
 
-    // Test quantity without unit getting unit parameter
+    // Test quantity without unit cannot convert to a physical unit
     let expr = parser.parse("42''.toQuantity('kg')").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Empty);
+
+    // Test quantity without unit can convert to the UCUM default unit
+    let expr = parser.parse("42''.toQuantity('1')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
-            assert_eq!(unit, Some("kg".to_string()));
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -196,18 +189,18 @@ fn test_to_quantity_edge_cases() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Empty);
 
-    // Test multiple items collection (should return empty)
+    // Test multiple items collection
     let expr = parser.parse("(1 | 2).toQuantity()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Empty);
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 
     // Test single item collection
-    let expr = parser.parse("(42).toQuantity('mg')").unwrap();
+    let expr = parser.parse("(42).toQuantity('1')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
             assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
-            assert_eq!(unit, Some("mg".to_string()));
+            assert_eq!(unit.as_deref(), Some("1"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
@@ -295,15 +288,13 @@ fn test_converts_to_quantity_other_types() {
     assert_eq!(result, FhirPathValue::Boolean(true));
 
     // Booleans convert to Quantity per spec (true → 1 '1', false → 0 '1');
-    // temporals and multi-item / empty collections do not.
+    // temporals do not.
     let test_cases = [
         ("true.convertsToQuantity()", true),
         ("false.convertsToQuantity()", true),
         ("@2023-01-15.convertsToQuantity()", false),
         ("@2023-01-15T10:30:45.convertsToQuantity()", false),
         ("@T10:30:45.convertsToQuantity()", false),
-        ("{}.convertsToQuantity()", false),
-        ("(1 | 2).convertsToQuantity()", false), // Multiple items
     ];
 
     for (input, expected) in test_cases {
@@ -314,6 +305,14 @@ fn test_converts_to_quantity_other_types() {
             _ => panic!("Expected Boolean for {input}, got: {result:?}"),
         }
     }
+
+    let expr = parser.parse("{}.convertsToQuantity()").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Empty);
+
+    let expr = parser.parse("(1 | 2).convertsToQuantity()").unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 
     // Test single item collection
     let expr = parser.parse("(42).convertsToQuantity()").unwrap();
@@ -327,8 +326,12 @@ fn test_quantity_conversion_with_unit_parameters() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test convertsToQuantity with unit parameter (should still work)
+    // Test convertsToQuantity with unit parameter follows actual conversion
     let expr = parser.parse("42.convertsToQuantity('mg')").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Boolean(false));
+
+    let expr = parser.parse("42.convertsToQuantity('1')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
@@ -338,23 +341,25 @@ fn test_quantity_conversion_with_unit_parameters() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(false));
 
-    // Test toQuantity with various unit formats
+    // Test toQuantity with incompatible unit formats on dimensionless input
     let expr = parser.parse("100.toQuantity('mm[Hg]')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    match result {
-        FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("100.0").unwrap());
-            assert_eq!(unit, Some("mm[Hg]".to_string()));
-        }
-        _ => panic!("Expected Quantity, got: {result:?}"),
-    }
+    assert_eq!(result, FhirPathValue::Empty);
 
     let expr = parser.parse("98.6.toQuantity('[degF]')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Empty);
+
+    // Existing quantities can convert among compatible units.
+    let expr = parser.parse("100'mm[Hg]'.toQuantity('Pa')").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
         FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("98.6").unwrap());
-            assert_eq!(unit, Some("[degF]".to_string()));
+            assert_eq!(
+                value.round_dp(1),
+                Decimal::from_str_exact("13332.2").unwrap()
+            );
+            assert_eq!(unit.as_deref(), Some("Pa"));
         }
         _ => panic!("Expected Quantity, got: {result:?}"),
     }

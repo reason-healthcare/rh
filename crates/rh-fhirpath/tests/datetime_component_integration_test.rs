@@ -17,6 +17,14 @@ fn extract_single_value(result: FhirPathValue) -> FhirPathValue {
     }
 }
 
+fn assert_empty(result: FhirPathValue) {
+    match result {
+        FhirPathValue::Empty => {}
+        FhirPathValue::Collection(values) if values.is_empty() => {}
+        other => panic!("Expected Empty value, got: {other:?}"),
+    }
+}
+
 #[test]
 fn test_year_of_integration() {
     let parser = FhirPathParser::new();
@@ -102,19 +110,13 @@ fn test_time_components_integration() {
         panic!("Expected Integer value, got: {value:?}");
     }
 
-    // Test millisecondOf() - since parser doesn't support milliseconds in literals,
-    // we'll test with a datetime without milliseconds (should return 0)
+    // Test millisecondOf() with no millisecond precision.
     let expression = parser
         .parse("@2023-07-15T14:30:25Z.millisecondOf()")
         .unwrap();
     let result = evaluator.evaluate(&expression, &context).unwrap();
 
-    let value = extract_single_value(result);
-    if let FhirPathValue::Integer(ms) = value {
-        assert_eq!(ms, 0); // No milliseconds in the literal
-    } else {
-        panic!("Expected Integer value, got: {value:?}");
-    }
+    assert_empty(result);
 }
 
 #[test]
@@ -173,7 +175,7 @@ fn test_date_time_extraction_integration() {
 
     let value = extract_single_value(result);
     if let FhirPathValue::Time(time) = value {
-        assert!(time.to_string().starts_with("14:30:25"));
+        assert_eq!(time.to_string(), "T14:30:25");
     } else {
         panic!("Expected Time value, got: {value:?}");
     }
@@ -207,27 +209,12 @@ fn test_chained_component_operations() {
         panic!("Expected Boolean value, got: {value:?}");
     }
 
-    // Test with collections
+    // Component functions require a singleton input.
     let expression = parser
         .parse("(@2023-07-15 | @2024-12-25).yearOf()")
         .unwrap();
-    let result = evaluator.evaluate(&expression, &context).unwrap();
-
-    if let FhirPathValue::Collection(values) = result {
-        assert_eq!(values.len(), 2);
-        if let FhirPathValue::Integer(year1) = &values[0] {
-            assert_eq!(*year1, 2023);
-        } else {
-            panic!("Expected Integer value, got: {:?}", values[0]);
-        }
-        if let FhirPathValue::Integer(year2) = &values[1] {
-            assert_eq!(*year2, 2024);
-        } else {
-            panic!("Expected Integer value, got: {:?}", values[1]);
-        }
-    } else {
-        panic!("Expected collection result, got: {result:?}");
-    }
+    let result = evaluator.evaluate(&expression, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 }
 
 #[test]
@@ -236,13 +223,12 @@ fn test_component_extraction_error_cases() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test with invalid date
+    // Invalid scalar inputs and absent timezone precision return Empty.
     let expression = parser.parse("'not a date'.yearOf()").unwrap();
-    let result = evaluator.evaluate(&expression, &context);
-    assert!(result.is_err(), "Expected error for invalid date");
+    let result = evaluator.evaluate(&expression, &context).unwrap();
+    assert_empty(result);
 
-    // Test timezone offset on a date without timezone
     let expression = parser.parse("@2023-07-15.timezoneOffsetOf()").unwrap();
-    let result = evaluator.evaluate(&expression, &context);
-    assert!(result.is_err(), "Expected error for date without timezone");
+    let result = evaluator.evaluate(&expression, &context).unwrap();
+    assert_empty(result);
 }

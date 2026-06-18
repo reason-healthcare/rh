@@ -157,4 +157,23 @@ impl EvaluationContext {
             check_ordered_functions: self.check_ordered_functions,
         }
     }
+
+    pub fn with_aggregate_vars_and_index(
+        &self,
+        this_value: FhirPathValue,
+        total_value: FhirPathValue,
+        index: i64,
+    ) -> Self {
+        Self {
+            root: self.root.clone(),
+            current: this_value.to_json(),
+            this_value: Some(this_value),
+            total_value: Some(total_value),
+            index_value: Some(index),
+            constants: self.constants.clone(),
+            trace_logs: self.trace_logs.clone(),
+            strict_mode: self.strict_mode,
+            check_ordered_functions: self.check_ordered_functions,
+        }
+    }
 }

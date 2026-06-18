@@ -64,14 +64,16 @@ fn test_skip_with_various_counts() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Empty));
 
-    // Skip negative count (should return error)
+    // Negative skip returns the input unchanged.
     let expr = parser.parse("(1 | 2 | 3).skip(-1)").unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("skip() count cannot be negative"));
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = result {
+        assert_eq!(items.len(), 3);
+        assert!(matches!(items[0], FhirPathValue::Integer(1)));
+        assert!(matches!(items[2], FhirPathValue::Integer(3)));
+    } else {
+        panic!("Expected collection result");
+    }
 }
 
 #[test]
@@ -107,14 +109,10 @@ fn test_take_with_various_counts() {
         panic!("Expected collection result");
     }
 
-    // Take negative count (should return error)
+    // Negative take returns empty.
     let expr = parser.parse("(1 | 2 | 3).take(-1)").unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("take() count cannot be negative"));
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(matches!(result, FhirPathValue::Empty));
 }
 
 #[test]

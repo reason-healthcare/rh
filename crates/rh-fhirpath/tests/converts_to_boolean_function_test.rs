@@ -18,7 +18,7 @@ fn test_converts_to_boolean_with_empty_collection() {
 
     let expr = parser.parse("emptyArray.convertsToBoolean()").unwrap();
     let result = evaluator.evaluate(&expr, &empty_context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    assert_eq!(result, FhirPathValue::Empty);
 }
 
 #[test]
@@ -173,10 +173,10 @@ fn test_converts_to_boolean_with_multiple_item_collection() {
         "values": [true, false]
     }));
 
-    // Multiple items should return false (not convertible)
+    // Multiple items signal an error for conversion functions.
     let expr = parser.parse("values.convertsToBoolean()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err());
 }
 
 #[test]

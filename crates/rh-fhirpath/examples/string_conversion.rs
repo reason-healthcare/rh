@@ -133,11 +133,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Multiple items
     let expr = parser.parse("(1 | 2).toString()")?;
-    let result = evaluator.evaluate(&expr, &context)?;
+    let result = evaluator.evaluate(&expr, &context);
     println!("(1 | 2).toString() → {result:?}");
 
     let expr = parser.parse("(1 | 2).convertsToString()")?;
-    let result = evaluator.evaluate(&expr, &context)?;
+    let result = evaluator.evaluate(&expr, &context);
     println!("(1 | 2).convertsToString() → {result:?}");
 
     // Single item collection

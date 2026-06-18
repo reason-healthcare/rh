@@ -10,14 +10,14 @@ fn test_mass_unit_conversion() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test adding 1 kg + 500 g should equal 1.5 kg (in kg units)
+    // Test adding 1 kg + 500 g should equal 1500 g.
     let expr_str = "1.0'kg' + 500.0'g'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
-        assert_eq!(unit, &Some("kg".to_string()));
+        assert!((value.to_f64().unwrap() - 1500.0).abs() < 0.001);
+        assert_eq!(unit, &Some("g".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
     }
@@ -29,14 +29,14 @@ fn test_length_unit_conversion() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test adding 1 m + 50 cm should equal 1.5 m
+    // Test adding 1 m + 50 cm should equal 150 cm.
     let expr_str = "1.0'm' + 50.0'cm'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
-        assert_eq!(unit, &Some("m".to_string()));
+        assert!((value.to_f64().unwrap() - 150.0).abs() < 0.001);
+        assert_eq!(unit, &Some("cm".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
     }
@@ -48,14 +48,14 @@ fn test_volume_unit_conversion() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test adding 1 L + 500 mL should equal 1.5 L
+    // Test adding 1 L + 500 mL should equal 1500 mL.
     let expr_str = "1.0'L' + 500.0'mL'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
-        assert_eq!(unit, &Some("L".to_string()));
+        assert!((value.to_f64().unwrap() - 1500.0).abs() < 0.001);
+        assert_eq!(unit, &Some("mL".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
     }
@@ -67,14 +67,14 @@ fn test_subtraction_with_conversion() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test subtracting 1 kg - 200 g should equal 0.8 kg
+    // Test subtracting 1 kg - 200 g should equal 800 g.
     let expr_str = "1.0'kg' - 200.0'g'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value.to_f64().unwrap() - 0.8).abs() < 0.001);
-        assert_eq!(unit, &Some("kg".to_string()));
+        assert!((value.to_f64().unwrap() - 800.0).abs() < 0.001);
+        assert_eq!(unit, &Some("g".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
     }
@@ -178,14 +178,14 @@ fn test_time_unit_conversion() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test adding time units: 1 h + 30 min should equal 1.5 h
+    // Test adding time units: 1 h + 30 min should equal 90 min.
     let expr_str = "1.0'h' + 30.0'min'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 
     if let FhirPathValue::Quantity { value, unit } = &result {
-        assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
-        assert_eq!(unit, &Some("h".to_string()));
+        assert!((value.to_f64().unwrap() - 90.0).abs() < 0.001);
+        assert_eq!(unit, &Some("min".to_string()));
     } else {
         panic!("Expected quantity result, got {result:?}");
     }

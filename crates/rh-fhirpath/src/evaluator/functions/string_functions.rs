@@ -125,14 +125,14 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
     functions.insert(
         "replaceMatches".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 2 {
+            if !(2..=3).contains(&params.len()) {
                 return Err(FhirPathError::InvalidOperation {
                     message:
-                        "replaceMatches() requires exactly two parameters (regex, substitution)"
+                        "replaceMatches() requires two or three parameters (regex, substitution, flags)"
                             .to_string(),
                 });
             }
-            StringEvaluator::replace_matches(target, &params[0], &params[1])
+            StringEvaluator::replace_matches(target, &params[0], &params[1], params.get(2))
         }),
     );
 
@@ -153,12 +153,13 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
     functions.insert(
         "join".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
+            if params.len() > 1 {
                 return Err(FhirPathError::InvalidOperation {
-                    message: "join() requires exactly one parameter (delimiter)".to_string(),
+                    message: "join() accepts at most one parameter (delimiter)".to_string(),
                 });
             }
-            StringEvaluator::join(target, &params[0])
+            let empty = FhirPathValue::String(String::new());
+            StringEvaluator::join(target, params.first().unwrap_or(&empty))
         }),
     );
 
@@ -166,12 +167,13 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
     functions.insert(
         "matches".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
+            if !(1..=2).contains(&params.len()) {
                 return Err(FhirPathError::InvalidOperation {
-                    message: "matches() requires exactly one parameter (pattern)".to_string(),
+                    message: "matches() requires one or two parameters (pattern, flags)"
+                        .to_string(),
                 });
             }
-            StringEvaluator::matches(target, &params[0])
+            StringEvaluator::matches(target, &params[0], params.get(1))
         }),
     );
 
@@ -179,12 +181,13 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
     functions.insert(
         "matchesFull".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
+            if !(1..=2).contains(&params.len()) {
                 return Err(FhirPathError::InvalidOperation {
-                    message: "matchesFull() requires exactly one parameter (pattern)".to_string(),
+                    message: "matchesFull() requires one or two parameters (pattern, flags)"
+                        .to_string(),
                 });
             }
-            StringEvaluator::matches_full(target, &params[0])
+            StringEvaluator::matches_full(target, &params[0], params.get(1))
         }),
     );
 
@@ -213,6 +216,9 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
     functions.insert(
         "encode".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            if params.is_empty() {
+                return Ok(FhirPathValue::Empty);
+            }
             with_string_arg(target, params, "encode", encode_string)
         }),
     );
@@ -313,11 +319,17 @@ fn decode_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
 fn escape_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
     Ok(match format {
         "html" => Some(
-            s.replace('&', "&amp;")
-                .replace('<', "&lt;")
-                .replace('>', "&gt;")
-                .replace('"', "&quot;")
-                .replace('\'', "&#39;"),
+            s.chars()
+                .map(|ch| match ch {
+                    '&' => "&amp;".to_string(),
+                    '<' => "&lt;".to_string(),
+                    '>' => "&gt;".to_string(),
+                    '"' => "&quot;".to_string(),
+                    '\'' => "&#39;".to_string(),
+                    ch if !ch.is_ascii() => format!("&#{};", ch as u32),
+                    ch => ch.to_string(),
+                })
+                .collect(),
         ),
         "json" => Some(
             s.replace('\\', "\\\\")

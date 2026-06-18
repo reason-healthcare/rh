@@ -49,6 +49,22 @@ fn is_temporal(v: &FhirPathValue) -> bool {
     )
 }
 
+fn is_empty_collection(v: &FhirPathValue) -> bool {
+    match v {
+        FhirPathValue::Empty => true,
+        FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => c.is_empty(),
+        _ => false,
+    }
+}
+
+fn collection_len(v: &FhirPathValue) -> Option<usize> {
+    match v {
+        FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => Some(c.len()),
+        FhirPathValue::Empty => Some(0),
+        _ => None,
+    }
+}
+
 impl ComparisonEvaluator {
     /// Evaluate equality operation
     pub fn evaluate_equality(
@@ -95,15 +111,6 @@ impl ComparisonEvaluator {
 
         // Per spec §6.5.1: `=` and `!=` propagate empty (unknown) when either
         // operand is the empty collection; `~` and `!~` do not.
-        fn is_empty_collection(v: &FhirPathValue) -> bool {
-            match v {
-                FhirPathValue::Empty => true,
-                FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => {
-                    c.is_empty()
-                }
-                _ => false,
-            }
-        }
         if (is_empty_collection(left) || is_empty_collection(right))
             && matches!(
                 operator,
@@ -199,6 +206,10 @@ impl ComparisonEvaluator {
         operator: &InequalityOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
+        if is_empty_collection(left) || is_empty_collection(right) {
+            return Ok(FhirPathValue::Empty);
+        }
+
         // Precision-aware temporal comparison: a precision mismatch yields
         // empty per the spec, even though > / < etc. normally return Boolean.
         if let (Some(a), Some(b)) = (try_temporal(left), try_temporal(right)) {
@@ -230,6 +241,33 @@ impl ComparisonEvaluator {
         operator: &MembershipOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
+        if matches!(operator, MembershipOperator::In) {
+            if is_empty_collection(left) {
+                return Ok(FhirPathValue::Empty);
+            }
+            if collection_len(left).is_some_and(|len| len > 1) {
+                return Err(FhirPathError::EvaluationError {
+                    message: "Left operand of 'in' cannot contain multiple items".to_string(),
+                });
+            }
+            if is_empty_collection(right) {
+                return Ok(FhirPathValue::Boolean(false));
+            }
+        } else {
+            if is_empty_collection(right) {
+                return Ok(FhirPathValue::Empty);
+            }
+            if collection_len(right).is_some_and(|len| len > 1) {
+                return Err(FhirPathError::EvaluationError {
+                    message: "Right operand of 'contains' cannot contain multiple items"
+                        .to_string(),
+                });
+            }
+            if is_empty_collection(left) {
+                return Ok(FhirPathValue::Boolean(false));
+            }
+        }
+
         let result = match operator {
             MembershipOperator::In => left.is_member_of(right)?,
             MembershipOperator::Contains => right.is_member_of(left)?,

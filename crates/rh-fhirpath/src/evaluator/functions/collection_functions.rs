@@ -250,10 +250,11 @@ pub fn register_subsetting_functions(functions: &mut HashMap<String, FhirPathFun
     functions.insert(
         "combine".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
+            if !(1..=2).contains(&params.len()) {
                 return Err(FhirPathError::InvalidOperation {
-                    message: "combine() requires exactly one parameter (other collection)"
-                        .to_string(),
+                    message:
+                        "combine() requires one or two parameters (other collection, preserveOrder)"
+                            .to_string(),
                 });
             }
             CollectionEvaluator::combine(target, &params[0])
@@ -352,10 +353,17 @@ pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunc
     functions.insert(
         "type".to_string(),
         Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
+            if matches!(target, FhirPathValue::Empty)
+                || matches!(target, FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) if items.is_empty())
+            {
+                return Ok(FhirPathValue::Empty);
+            }
             let (namespace, name) = fhirpath_type_of(target);
+            let base_type = fhirpath_base_type_of(target);
             Ok(FhirPathValue::Object(serde_json::json!({
                 "namespace": namespace,
-                "name": name
+                "name": name,
+                "baseType": base_type
             })))
         }),
     );
@@ -366,7 +374,10 @@ pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunc
         "comparable".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
             let other = params.first().unwrap_or(&FhirPathValue::Empty);
-            Ok(FhirPathValue::Boolean(are_comparable(target, other)))
+            match are_comparable(target, other) {
+                Some(result) => Ok(FhirPathValue::Boolean(result)),
+                None => Ok(FhirPathValue::Empty),
+            }
         }),
     );
 }
@@ -387,10 +398,10 @@ fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering 
         return Ordering::Equal;
     }
     if a_empty {
-        return Ordering::Greater;
+        return Ordering::Less;
     }
     if b_empty {
-        return Ordering::Less;
+        return Ordering::Greater;
     }
     match (a, b) {
         (Boolean(x), Boolean(y)) => x.cmp(y),
@@ -472,6 +483,19 @@ fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
     }
 }
 
+fn fhirpath_base_type_of(v: &FhirPathValue) -> String {
+    match v {
+        FhirPathValue::Object(json) if json.get("resourceType").is_some() => {
+            "FHIR.DomainResource".to_string()
+        }
+        FhirPathValue::TypedString { .. }
+        | FhirPathValue::TypedBoolean { .. }
+        | FhirPathValue::TypedDateTime { .. }
+        | FhirPathValue::FhirPrimitive { .. } => "FHIR.Element".to_string(),
+        _ => "System.Any".to_string(),
+    }
+}
+
 /// UCUM base-unit classification for `comparable()`.
 /// Two quantities are comparable when they share the same dimension.
 fn ucum_dimension(unit: &str) -> Option<&'static str> {
@@ -485,16 +509,43 @@ fn ucum_dimension(unit: &str) -> Option<&'static str> {
     }
 }
 
-fn are_comparable(a: &FhirPathValue, b: &FhirPathValue) -> bool {
+fn are_comparable(a: &FhirPathValue, b: &FhirPathValue) -> Option<bool> {
+    fn singleton(value: &FhirPathValue) -> Option<Option<&FhirPathValue>> {
+        match value {
+            FhirPathValue::Empty => Some(None),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                if items.len() == 1 {
+                    Some(Some(&items[0]))
+                } else {
+                    Some(None)
+                }
+            }
+            other => Some(Some(other)),
+        }
+    }
+    let a = singleton(a)??;
+    let b = singleton(b)??;
     match (a, b) {
+        (
+            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
+            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
+        ) => Some(true),
+        (
+            FhirPathValue::Quantity { unit, .. },
+            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
+        )
+        | (
+            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
+            FhirPathValue::Quantity { unit, .. },
+        ) => Some(unit.as_deref().is_none_or(|u| u == "1")),
         (FhirPathValue::Quantity { unit: ua, .. }, FhirPathValue::Quantity { unit: ub, .. }) => {
             let ua_str = ua.as_deref().unwrap_or("");
             let ub_str = ub.as_deref().unwrap_or("");
             match (ucum_dimension(ua_str), ucum_dimension(ub_str)) {
-                (Some(da), Some(db)) => da == db,
-                _ => ua == ub,
+                (Some(da), Some(db)) => Some(da == db),
+                _ => Some(ua == ub),
             }
         }
-        _ => false,
+        _ => None,
     }
 }

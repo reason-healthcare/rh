@@ -148,16 +148,16 @@ fn test_string_conversion_edge_cases() {
 
     let expr = parser.parse("{}.convertsToString()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
-
-    // Test multiple items (should return empty/false)
-    let expr = parser.parse("(1 | 2).toString()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Empty);
 
+    // Test multiple items
+    let expr = parser.parse("(1 | 2).toString()").unwrap();
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
+
     let expr = parser.parse("(1 | 2).convertsToString()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 
     // Test single item collection
     let expr = parser.parse("(42).toString()").unwrap();

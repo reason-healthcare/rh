@@ -5,7 +5,7 @@
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
-use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
@@ -44,6 +44,17 @@ impl UnitConverter {
     /// Create a new unit converter with UCUM mappings
     pub fn new() -> Self {
         let mut unit_mappings = HashMap::new();
+
+        // Dimensionless UCUM default unit.
+        unit_mappings.insert(
+            "1".to_string(),
+            UnitMapping {
+                quantity_type: QuantityType::Dimensionless,
+                base_unit: "1".to_string(),
+                to_base_factor: 1.0,
+                from_base_factor: 1.0,
+            },
+        );
 
         // Mass units (base: gram)
         unit_mappings.insert(
@@ -366,9 +377,16 @@ impl UnitConverter {
     pub fn are_units_compatible(&self, unit1: &Option<String>, unit2: &Option<String>) -> bool {
         match (unit1, unit2) {
             (None, None) => true, // Both dimensionless
+            (None, Some(u)) | (Some(u), None) => u == "1",
             (Some(u1), Some(u2)) => {
                 if u1 == u2 {
                     return true; // Same units
+                }
+                if let (Some((base1, power1)), Some((base2, power2))) =
+                    (parse_simple_power_unit(u1), parse_simple_power_unit(u2))
+                {
+                    return power1 == power2
+                        && self.are_units_compatible(&Some(base1), &Some(base2));
                 }
                 // Check if they're the same quantity type
                 if let (Some(mapping1), Some(mapping2)) =
@@ -379,8 +397,39 @@ impl UnitConverter {
                     false
                 }
             }
-            _ => false, // One has units, one doesn't
         }
+    }
+
+    /// Convert a quantity value to a compatible target unit.
+    pub fn convert_quantity(
+        &self,
+        value: Decimal,
+        unit: &Option<String>,
+        target_unit: &Option<String>,
+    ) -> FhirPathResult<FhirPathValue> {
+        if !self.are_units_compatible(unit, target_unit) {
+            return Err(FhirPathError::EvaluationError {
+                message: format!("Cannot convert quantity from {unit:?} to {target_unit:?}"),
+            });
+        }
+
+        let source_unit = unit.clone().or_else(|| Some("1".to_string()));
+        let target_unit = target_unit.clone().or_else(|| Some("1".to_string()));
+        if source_unit == target_unit {
+            return Ok(FhirPathValue::Quantity {
+                value,
+                unit: target_unit,
+            });
+        }
+
+        let value_f64 = value.to_f64().unwrap_or(0.0);
+        let (base_value, base_unit) = self.to_base_unit(value_f64, &source_unit)?;
+        let result = self.convert_from_base_unit(base_value, &base_unit, &target_unit)?;
+
+        Ok(FhirPathValue::Quantity {
+            value: Decimal::from_f64(result).unwrap_or(Decimal::ZERO),
+            unit: target_unit.clone(),
+        })
     }
 
     /// Convert a quantity to a standard base unit for the quantity type
@@ -392,6 +441,14 @@ impl UnitConverter {
         match unit {
             None => Ok((value, None)), // Dimensionless
             Some(unit_str) => {
+                if let Some((base_unit, power)) = parse_simple_power_unit(unit_str) {
+                    let Some(mapping) = self.unit_mappings.get(&base_unit) else {
+                        return Ok((value, unit.clone()));
+                    };
+                    let factor = mapping.to_base_factor.powi(power);
+                    let base_value = value * factor;
+                    return Ok((base_value, Some(format!("{}{}", mapping.base_unit, power))));
+                }
                 if let Some(mapping) = self.unit_mappings.get(unit_str) {
                     // Special handling for temperature units (require offset conversion)
                     if mapping.quantity_type == QuantityType::Temperature {
@@ -427,6 +484,28 @@ impl UnitConverter {
             (Some(base), Some(target)) => {
                 if base == target {
                     return Ok(base_value);
+                }
+                if let (Some((base_base, base_power)), Some((target_base, target_power))) = (
+                    parse_simple_power_unit(base),
+                    parse_simple_power_unit(target),
+                ) {
+                    if base_power == target_power {
+                        let Some(base_mapping) = self.unit_mappings.get(&base_base) else {
+                            return Err(FhirPathError::EvaluationError {
+                                message: format!("Unknown base unit: {base_base}"),
+                            });
+                        };
+                        let Some(target_mapping) = self.unit_mappings.get(&target_base) else {
+                            return Err(FhirPathError::EvaluationError {
+                                message: format!("Unknown target unit: {target_base}"),
+                            });
+                        };
+                        if base_mapping.base_unit == target_mapping.base_unit {
+                            return Ok(
+                                base_value * target_mapping.from_base_factor.powi(target_power)
+                            );
+                        }
+                    }
                 }
                 if let Some(target_mapping) = self.unit_mappings.get(target) {
                     if target_mapping.base_unit == *base {
@@ -502,11 +581,12 @@ impl UnitConverter {
         let result_base = left_base + right_base;
 
         // Convert back to the left operand's unit (maintain left operand unit for result)
-        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, left_unit)?;
+        let result_unit = self.most_granular_unit(left_unit, right_unit);
+        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, &result_unit)?;
 
         Ok(FhirPathValue::Quantity {
             value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
-            unit: left_unit.clone(),
+            unit: result_unit,
         })
     }
 
@@ -533,12 +613,38 @@ impl UnitConverter {
 
         let result_base = left_base - right_base;
 
-        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, left_unit)?;
+        let result_unit = self.most_granular_unit(left_unit, right_unit);
+        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, &result_unit)?;
 
         Ok(FhirPathValue::Quantity {
             value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
-            unit: left_unit.clone(),
+            unit: result_unit,
         })
+    }
+
+    fn most_granular_unit(
+        &self,
+        left_unit: &Option<String>,
+        right_unit: &Option<String>,
+    ) -> Option<String> {
+        match (left_unit, right_unit) {
+            (Some(left), Some(right)) => {
+                match (self.unit_mappings.get(left), self.unit_mappings.get(right)) {
+                    (Some(left_mapping), Some(right_mapping))
+                        if left_mapping.quantity_type == right_mapping.quantity_type =>
+                    {
+                        if left_mapping.to_base_factor <= right_mapping.to_base_factor {
+                            Some(left.clone())
+                        } else {
+                            Some(right.clone())
+                        }
+                    }
+                    _ => Some(left.clone()),
+                }
+            }
+            (Some(unit), None) | (None, Some(unit)) => Some(unit.clone()),
+            (None, None) => None,
+        }
     }
 
     /// Multiply a quantity by a scalar
@@ -615,7 +721,9 @@ impl UnitConverter {
         let (left_base, _) = self.to_base_unit(left_f64, left_unit)?;
         let (right_base, _) = self.to_base_unit(right_f64, right_unit)?;
 
-        if left_base < right_base {
+        if (left_base - right_base).abs() <= 1e-12 {
+            Ok(0)
+        } else if left_base < right_base {
             Ok(-1)
         } else if left_base > right_base {
             Ok(1)
@@ -679,9 +787,50 @@ fn compose_product_unit(left: &Option<String>, right: &Option<String>) -> Option
     match (left.as_deref(), right.as_deref()) {
         (None, None) => None,
         (Some(unit), None) | (None, Some(unit)) => Some(unit.to_string()),
-        (Some(left), Some(right)) if left == right => Some(format!("{left}2")),
-        (Some(left), Some(right)) => Some(format!("{left}.{right}")),
+        (Some(left), Some(right)) => {
+            if let Some(unit) = multiply_simple_units(left, right) {
+                return Some(unit);
+            }
+            if left == right {
+                Some(format!("{left}2"))
+            } else {
+                Some(format!("{left}.{right}"))
+            }
+        }
     }
+}
+
+fn multiply_simple_units(left: &str, right: &str) -> Option<String> {
+    let (left_base, left_power) = parse_simple_power_unit(left).unwrap_or((left.to_string(), 1));
+    let (right_base, right_power) =
+        parse_simple_power_unit(right).unwrap_or((right.to_string(), 1));
+    if left_base == right_base {
+        let power = left_power + right_power;
+        return if power == 1 {
+            Some(left_base)
+        } else {
+            Some(format!("{left_base}{power}"))
+        };
+    }
+    None
+}
+
+fn parse_simple_power_unit(unit: &str) -> Option<(String, i32)> {
+    let digits_start = unit
+        .char_indices()
+        .find_map(|(idx, ch)| ch.is_ascii_digit().then_some(idx))?;
+    if digits_start == 0 {
+        return None;
+    }
+    let (base, power) = unit.split_at(digits_start);
+    if base.is_empty() || power.is_empty() || !power.chars().all(|ch| ch.is_ascii_digit()) {
+        return None;
+    }
+    let power = power.parse::<i32>().ok()?;
+    if power <= 1 {
+        return None;
+    }
+    Some((base.to_string(), power))
 }
 
 fn compose_quotient_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
@@ -713,8 +862,8 @@ mod tests {
             )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
-            assert_eq!(unit, Some("kg".to_string()));
+            assert!((value.to_f64().unwrap() - 1500.0).abs() < 0.001);
+            assert_eq!(unit, Some("g".to_string()));
         } else {
             panic!("Expected Quantity result");
         }
@@ -733,8 +882,8 @@ mod tests {
             )
             .unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value.to_f64().unwrap() - 1.5).abs() < 0.001);
-            assert_eq!(unit, Some("m".to_string()));
+            assert!((value.to_f64().unwrap() - 150.0).abs() < 0.001);
+            assert_eq!(unit, Some("cm".to_string()));
         } else {
             panic!("Expected Quantity result");
         }

@@ -30,6 +30,10 @@ test-examples:
     # cargo run -p rh-validator --example basic_validation > /dev/null
     @echo "✅ All examples compiled successfully!"
 
+# Run the dev-only FHIRPath R5 XML testlab harness through the rh CLI
+test-fhirpath-r5-testlab:
+    python3 crates/rh-fhirpath/testlab/run_r5_testlab.py --no-baseline-check
+
 # Run FHIR validation test cases (quick - 5 tests)
 # For more options, see: just --justfile crates/rh-validator/justfile --list
 # Or run from validator dir: cd crates/rh-validator && just --list
@@ -106,8 +110,8 @@ audit:
 clean:
     cargo clean
 
-# Check everything (format, lint, test, audit, examples)
-check: fmt-check lint test test-examples audit
+# Check everything (format, lint, test, audit, examples, conformance harnesses)
+check: fmt-check lint test test-examples test-fhirpath-r5-testlab audit
 
 # Watch for changes and run tests
 watch:

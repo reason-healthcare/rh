@@ -213,8 +213,8 @@ mod quantity_tests {
         let expr = parser.parse("10'kg' - 3'mg'").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
         if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value.to_f64().unwrap() - 9.999997).abs() < 0.000001);
-            assert_eq!(unit, Some("kg".to_string()));
+            assert_eq!(value, Decimal::from(9_999_997));
+            assert_eq!(unit, Some("mg".to_string()));
         } else {
             panic!("Expected Quantity result with unit conversion, got: {result:?}");
         }

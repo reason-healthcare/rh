@@ -330,8 +330,8 @@ fn test_membership_edge_cases() {
     let expr = parser.parse("{} in ('a' | 'b' | 'c')").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
-        FhirPathValue::Boolean(_) => {}
-        _ => panic!("Expected boolean result"),
+        FhirPathValue::Empty => {}
+        _ => panic!("Expected empty result"),
     }
 
     // Test contains with empty collection

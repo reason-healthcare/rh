@@ -18,7 +18,7 @@ fn test_converts_to_integer_with_empty_collection() {
 
     let expr = parser.parse("emptyArray.convertsToInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &empty_context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    assert_eq!(result, FhirPathValue::Empty);
 }
 
 #[test]
@@ -146,10 +146,10 @@ fn test_converts_to_integer_with_multiple_items() {
         "numbers": [1, 2, 3]
     }));
 
-    // Multiple items should not be convertible
+    // Multiple items signal an error for conversion functions.
     let expr = parser.parse("numbers.convertsToInteger()").unwrap();
-    let result = evaluator.evaluate(&expr, &multi_context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    let result = evaluator.evaluate(&expr, &multi_context);
+    assert!(result.is_err());
 }
 
 #[test]

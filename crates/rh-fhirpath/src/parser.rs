@@ -171,15 +171,30 @@ where
 
 // Parse expression (top level)
 fn parse_expression(input: &str) -> IResult<&str, Expression> {
-    parse_or_expression(input)
+    parse_implies_expression(input)
 }
 
-// Parse OR/XOR expressions (lowest precedence)
+// Parse implies expressions (lowest precedence)
+fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_or_expression(input)?;
+    let (input, rest) = many0(preceded(ws(tag("implies")), parse_or_expression))(input)?;
+
+    Ok((
+        input,
+        rest.into_iter()
+            .fold(first, |acc, expr| Expression::Implies {
+                left: Box::new(acc),
+                right: Box::new(expr),
+            }),
+    ))
+}
+
+// Parse OR/XOR expressions
 fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_implies_expression(input)?;
+    let (input, first) = parse_and_expression(input)?;
     let (input, rest) = many0(tuple((
         ws(alt((tag("or"), tag("xor")))),
-        parse_implies_expression,
+        parse_and_expression,
     )))(input)?;
 
     Ok((
@@ -196,21 +211,6 @@ fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
                 right: Box::new(expr),
             }
         }),
-    ))
-}
-
-// Parse implies expressions (between and and or)
-fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_and_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("implies")), parse_and_expression))(input)?;
-
-    Ok((
-        input,
-        rest.into_iter()
-            .fold(first, |acc, expr| Expression::Implies {
-                left: Box::new(acc),
-                right: Box::new(expr),
-            }),
     ))
 }
 
@@ -493,16 +493,40 @@ fn parse_invocation(input: &str) -> IResult<&str, Invocation> {
 // Parse function call or simple member access
 fn parse_function_or_member(input: &str) -> IResult<&str, Invocation> {
     let (input, name) = parse_identifier(input)?;
-    let (input, params) = opt(delimited(
-        ws(char('(')),
-        separated_list0(ws(char(',')), parse_expression),
-        ws(char(')')),
-    ))(input)?;
+    let (input, params) = if name == "sort" {
+        opt(delimited(
+            ws(char('(')),
+            separated_list0(ws(char(',')), parse_sort_parameter),
+            ws(char(')')),
+        ))(input)?
+    } else {
+        opt(delimited(
+            ws(char('(')),
+            separated_list0(ws(char(',')), parse_expression),
+            ws(char(')')),
+        ))(input)?
+    };
 
     if let Some(parameters) = params {
         Ok((input, Invocation::Function { name, parameters }))
     } else {
         Ok((input, Invocation::Member(name)))
+    }
+}
+
+fn parse_sort_parameter(input: &str) -> IResult<&str, Expression> {
+    let (input, expr) = parse_expression(input)?;
+    let (input, direction) = opt(ws(alt((tag("asc"), tag("desc")))))(input)?;
+    if let Some(direction) = direction {
+        Ok((
+            input,
+            Expression::Invocation {
+                left: Box::new(expr),
+                invocation: Invocation::Member(direction.to_string()),
+            },
+        ))
+    } else {
+        Ok((input, expr))
     }
 }
 
@@ -561,12 +585,11 @@ fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
                             continue;
                         }
                     }
-                    // Not a valid unicode escape — keep verbatim.
-                    out.push('\\');
+                    // Not a valid unicode escape — FHIRPath drops the
+                    // backslash and keeps the following characters.
                     out.push('u');
                 }
                 Some((_, other)) => {
-                    out.push('\\');
                     out.push(other);
                 }
                 None => {

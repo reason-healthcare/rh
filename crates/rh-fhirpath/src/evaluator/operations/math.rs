@@ -3,14 +3,19 @@
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;
 use rust_decimal::prelude::ToPrimitive;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 
 pub struct MathEvaluator;
+
+fn round_decimal_away_from_zero(value: Decimal, precision: u32) -> Decimal {
+    value.round_dp_with_strategy(precision, RoundingStrategy::MidpointAwayFromZero)
+}
 
 impl MathEvaluator {
     pub fn abs(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(n.abs())),
+            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(n.abs())),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Number(n.abs())),
             FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
                 value: value.abs(),
@@ -37,9 +42,15 @@ impl MathEvaluator {
     pub fn ceiling(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
+            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(*n)),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(
                 n.ceil().to_i64().unwrap_or(i64::MAX),
             )),
+            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
+                value: value.ceil(),
+                unit: unit.clone(),
+            }),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::ceiling(&items[0])
@@ -87,9 +98,15 @@ impl MathEvaluator {
     pub fn floor(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
+            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(*n)),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(
                 n.floor().to_i64().unwrap_or(i64::MIN),
             )),
+            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
+                value: value.floor(),
+                unit: unit.clone(),
+            }),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::floor(&items[0])
@@ -121,6 +138,17 @@ impl MathEvaluator {
                     ))
                 }
             }
+            FhirPathValue::Long(n) => {
+                if *n <= 0 {
+                    Err(FhirPathError::EvaluationError {
+                        message: "ln() requires a positive number".to_string(),
+                    })
+                } else {
+                    Ok(FhirPathValue::Number(
+                        Decimal::from_f64_retain((*n as f64).ln()).unwrap_or(Decimal::ZERO),
+                    ))
+                }
+            }
             FhirPathValue::Number(n) => {
                 if *n <= Decimal::ZERO {
                     Err(FhirPathError::EvaluationError {
@@ -132,6 +160,7 @@ impl MathEvaluator {
                     ))
                 }
             }
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::ln(&items[0])
@@ -150,6 +179,9 @@ impl MathEvaluator {
     }
 
     pub fn log(target: &FhirPathValue, base: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
+        if Self::is_empty_value(target) || Self::is_empty_value(base) {
+            return Ok(FhirPathValue::Empty);
+        }
         let target_num = Self::extract_number_f64(target)?;
         let base_num = Self::extract_number_f64(base)?;
 
@@ -174,6 +206,9 @@ impl MathEvaluator {
         target: &FhirPathValue,
         exponent: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
+        if Self::is_empty_value(target) || Self::is_empty_value(exponent) {
+            return Ok(FhirPathValue::Empty);
+        }
         let base_num = Self::extract_number_f64(target)?;
         let exp_num = Self::extract_number_f64(exponent)?;
 
@@ -183,64 +218,31 @@ impl MathEvaluator {
             return Ok(FhirPathValue::Empty);
         }
 
-        if result.fract() == 0.0
-            && Self::is_integer_value(target)
-            && Self::is_integer_value(exponent)
-        {
-            Ok(FhirPathValue::Integer(result as i64))
-        } else {
-            Ok(FhirPathValue::Number(
-                Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
-            ))
-        }
+        Ok(FhirPathValue::Number(
+            Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
+        ))
     }
 
     pub fn round(
         target: &FhirPathValue,
         precision: Option<&FhirPathValue>,
     ) -> FhirPathResult<FhirPathValue> {
+        if Self::is_empty_value(target) {
+            return Ok(FhirPathValue::Empty);
+        }
+        if let FhirPathValue::Quantity { value, unit } = target {
+            let precision_val = Self::extract_precision(precision)?;
+            return Ok(FhirPathValue::Quantity {
+                value: round_decimal_away_from_zero(*value, precision_val),
+                unit: unit.clone(),
+            });
+        }
+
         let num = Self::extract_number(target)?;
 
-        let precision_val: u32 = if let Some(p) = precision {
-            match p {
-                FhirPathValue::Integer(i) => {
-                    if *i < 0 {
-                        return Err(FhirPathError::EvaluationError {
-                            message: "round() precision must be non-negative".to_string(),
-                        });
-                    }
-                    *i as u32
-                }
-                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                    if items.len() == 1 =>
-                {
-                    match &items[0] {
-                        FhirPathValue::Integer(i) => {
-                            if *i < 0 {
-                                return Err(FhirPathError::EvaluationError {
-                                    message: "round() precision must be non-negative".to_string(),
-                                });
-                            }
-                            *i as u32
-                        }
-                        _ => {
-                            return Err(FhirPathError::TypeError {
-                                message: "round() precision must be an integer".to_string(),
-                            })
-                        }
-                    }
-                }
-                _ => {
-                    return Err(FhirPathError::TypeError {
-                        message: "round() precision must be an integer".to_string(),
-                    })
-                }
-            }
-        } else {
-            0
-        };
+        let precision_val = Self::extract_precision(precision)?;
 
-        let result = num.round_dp(precision_val);
+        let result = round_decimal_away_from_zero(num, precision_val);
 
         if precision_val == 0 && Self::is_integer_value(target) {
             Ok(FhirPathValue::Integer(
@@ -272,6 +274,7 @@ impl MathEvaluator {
                     ))
                 }
             }
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::sqrt(&items[0])
@@ -292,7 +295,13 @@ impl MathEvaluator {
     pub fn truncate(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
+            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(*n)),
             FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(n.trunc().to_i64().unwrap_or(0))),
+            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
+                value: value.trunc(),
+                unit: unit.clone(),
+            }),
+            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
                     Self::truncate(&items[0])
@@ -317,6 +326,7 @@ impl MathEvaluator {
     fn extract_number(value: &FhirPathValue) -> FhirPathResult<Decimal> {
         match value {
             FhirPathValue::Integer(n) => Ok(Decimal::from(*n)),
+            FhirPathValue::Long(n) => Ok(Decimal::from(*n)),
             FhirPathValue::Number(n) => Ok(*n),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
@@ -337,9 +347,40 @@ impl MathEvaluator {
         }
     }
 
+    fn extract_precision(precision: Option<&FhirPathValue>) -> FhirPathResult<u32> {
+        let Some(p) = precision else {
+            return Ok(0);
+        };
+        match p {
+            FhirPathValue::Integer(i) | FhirPathValue::Long(i) => {
+                if *i < 0 {
+                    return Err(FhirPathError::EvaluationError {
+                        message: "round() precision must be non-negative".to_string(),
+                    });
+                }
+                Ok(*i as u32)
+            }
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.len() == 1 =>
+            {
+                Self::extract_precision(Some(&items[0]))
+            }
+            FhirPathValue::Empty => Ok(0),
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
+                if items.is_empty() =>
+            {
+                Ok(0)
+            }
+            _ => Err(FhirPathError::TypeError {
+                message: "round() precision must be an integer".to_string(),
+            }),
+        }
+    }
+
     fn extract_number_f64(value: &FhirPathValue) -> FhirPathResult<f64> {
         match value {
             FhirPathValue::Integer(n) => Ok(*n as f64),
+            FhirPathValue::Long(n) => Ok(*n as f64),
             FhirPathValue::Number(n) => Ok(n.to_f64().unwrap_or(0.0)),
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 if items.len() == 1 {
@@ -366,6 +407,16 @@ impl MathEvaluator {
             FhirPathValue::Number(n) => n.fract() == Decimal::ZERO,
             FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
                 items.len() == 1 && Self::is_integer_value(&items[0])
+            }
+            _ => false,
+        }
+    }
+
+    fn is_empty_value(value: &FhirPathValue) -> bool {
+        match value {
+            FhirPathValue::Empty => true,
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                items.is_empty()
             }
             _ => false,
         }
@@ -487,7 +538,7 @@ mod tests {
     fn test_power() {
         assert_eq!(
             MathEvaluator::power(&FhirPathValue::Integer(2), &FhirPathValue::Integer(3)).unwrap(),
-            FhirPathValue::Integer(8)
+            FhirPathValue::Number(d("8"))
         );
         assert_eq!(
             MathEvaluator::power(

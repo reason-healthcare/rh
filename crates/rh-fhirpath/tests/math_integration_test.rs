@@ -101,7 +101,7 @@ mod math_integration_tests {
 
         let expr = parser.parse("(2).power(3)").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-        assert_eq!(result, FhirPathValue::Integer(8));
+        assert_eq!(result, FhirPathValue::Number(Decimal::from(8)));
 
         let expr = parser.parse("(2.0).power(0.5)").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();

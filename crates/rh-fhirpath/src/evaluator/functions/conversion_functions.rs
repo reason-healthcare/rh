@@ -2,7 +2,9 @@
 
 use crate::error::*;
 use crate::evaluator::operations::temporal::parse_temporal;
+use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
+use chrono::{NaiveDate, NaiveDateTime};
 use regex::Regex;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
@@ -51,25 +53,33 @@ pub fn register_conversion_functions(functions: &mut HashMap<String, FhirPathFun
     // toDate() function
     functions.insert(
         "toDate".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| to_date(target)),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            to_date_with_format(target, params.first())
+        }),
     );
 
     // convertsToDate() function
     functions.insert(
         "convertsToDate".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| converts_to_date(target)),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            converts_to_date_with_format(target, params.first())
+        }),
     );
 
     // toDateTime() function
     functions.insert(
         "toDateTime".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| to_datetime(target)),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            to_datetime_with_format(target, params.first())
+        }),
     );
 
     // convertsToDateTime() function
     functions.insert(
         "convertsToDateTime".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| converts_to_datetime(target)),
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            converts_to_datetime_with_format(target, params.first())
+        }),
     );
 
     // toString() function
@@ -133,7 +143,7 @@ fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_decimal(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toDecimal"))
             }
         }
         FhirPathValue::Number(n) => Ok(FhirPathValue::Number(*n)),
@@ -163,11 +173,11 @@ fn to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check whether a value is convertible to Decimal.
 fn converts_to_decimal(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
             if items.len() != 1 =>
         {
-            Ok(FhirPathValue::Empty)
+            Err(multiple_item_conversion_error("convertsToDecimal"))
         }
         other => match to_decimal(other)? {
             FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
@@ -187,7 +197,7 @@ fn to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_boolean(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toBoolean"))
             }
         }
 
@@ -223,13 +233,13 @@ fn to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Boolean according to FHIRPath specification
 fn converts_to_boolean(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_boolean(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToBoolean"))
             }
         }
 
@@ -267,7 +277,7 @@ fn to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_integer(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toInteger"))
             }
         }
 
@@ -309,13 +319,13 @@ fn to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Integer according to FHIRPath specification
 fn converts_to_integer(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_integer(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToInteger"))
             }
         }
 
@@ -352,7 +362,7 @@ fn to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_long(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toLong"))
             }
         }
 
@@ -395,13 +405,13 @@ fn to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Long according to FHIRPath specification
 fn converts_to_long(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_long(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToLong"))
             }
         }
 
@@ -440,7 +450,7 @@ fn to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_date(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toDate"))
             }
         }
 
@@ -479,16 +489,44 @@ fn to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     }
 }
 
+fn to_date_with_format(
+    value: &FhirPathValue,
+    format: Option<&FhirPathValue>,
+) -> FhirPathResult<FhirPathValue> {
+    let Some(format) = format else {
+        return to_date(value);
+    };
+    match (value, format) {
+        (FhirPathValue::String(s), FhirPathValue::String(fmt)) => {
+            if let Some(chrono_fmt) = date_format_to_chrono(fmt) {
+                match NaiveDate::parse_from_str(s, chrono_fmt) {
+                    Ok(date) => Ok(FhirPathValue::Date(date.format("%Y-%m-%d").to_string())),
+                    Err(_) => Ok(FhirPathValue::Empty),
+                }
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        (FhirPathValue::Collection(items), _) | (FhirPathValue::UnorderedCollection(items), _)
+            if items.len() == 1 =>
+        {
+            to_date_with_format(&items[0], Some(format))
+        }
+        (FhirPathValue::Empty, _) => Ok(FhirPathValue::Empty),
+        _ => to_date(value),
+    }
+}
+
 /// Check if a value can be converted to Date according to FHIRPath specification
 fn converts_to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_date(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToDate"))
             }
         }
 
@@ -520,6 +558,20 @@ fn converts_to_date(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     }
 }
 
+fn converts_to_date_with_format(
+    value: &FhirPathValue,
+    format: Option<&FhirPathValue>,
+) -> FhirPathResult<FhirPathValue> {
+    if format.is_none() {
+        return converts_to_date(value);
+    }
+    match to_date_with_format(value, format)? {
+        FhirPathValue::Empty if matches!(value, FhirPathValue::Empty) => Ok(FhirPathValue::Empty),
+        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        _ => Ok(FhirPathValue::Boolean(true)),
+    }
+}
+
 /// Convert a value to DateTime according to FHIRPath specification
 fn to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
@@ -529,7 +581,7 @@ fn to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_datetime(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toDateTime"))
             }
         }
 
@@ -558,16 +610,46 @@ fn to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     }
 }
 
+fn to_datetime_with_format(
+    value: &FhirPathValue,
+    format: Option<&FhirPathValue>,
+) -> FhirPathResult<FhirPathValue> {
+    let Some(format) = format else {
+        return to_datetime(value);
+    };
+    match (value, format) {
+        (FhirPathValue::String(s), FhirPathValue::String(fmt)) => {
+            if let Some(chrono_fmt) = datetime_format_to_chrono(fmt) {
+                match NaiveDateTime::parse_from_str(s, chrono_fmt) {
+                    Ok(dt) => Ok(FhirPathValue::DateTime(
+                        dt.format("%Y-%m-%dT%H:%M").to_string(),
+                    )),
+                    Err(_) => Ok(FhirPathValue::Empty),
+                }
+            } else {
+                Ok(FhirPathValue::Empty)
+            }
+        }
+        (FhirPathValue::Collection(items), _) | (FhirPathValue::UnorderedCollection(items), _)
+            if items.len() == 1 =>
+        {
+            to_datetime_with_format(&items[0], Some(format))
+        }
+        (FhirPathValue::Empty, _) => Ok(FhirPathValue::Empty),
+        _ => to_datetime(value),
+    }
+}
+
 /// Check if a value can be converted to DateTime according to FHIRPath specification
 fn converts_to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_datetime(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToDateTime"))
             }
         }
 
@@ -588,6 +670,20 @@ fn converts_to_datetime(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> 
     }
 }
 
+fn converts_to_datetime_with_format(
+    value: &FhirPathValue,
+    format: Option<&FhirPathValue>,
+) -> FhirPathResult<FhirPathValue> {
+    if format.is_none() {
+        return converts_to_datetime(value);
+    }
+    match to_datetime_with_format(value, format)? {
+        FhirPathValue::Empty if matches!(value, FhirPathValue::Empty) => Ok(FhirPathValue::Empty),
+        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        _ => Ok(FhirPathValue::Boolean(true)),
+    }
+}
+
 /// Convert a value to String according to FHIRPath specification
 fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
@@ -597,7 +693,7 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_string(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toString"))
             }
         }
 
@@ -659,13 +755,13 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to String according to FHIRPath specification
 fn converts_to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_string(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToString"))
             }
         }
 
@@ -694,7 +790,7 @@ fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
             if items.len() == 1 {
                 to_time(&items[0])
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toTime"))
             }
         }
 
@@ -733,13 +829,13 @@ fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 /// Check if a value can be converted to Time according to FHIRPath specification
 fn converts_to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
     match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
+        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
 
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
             if items.len() == 1 {
                 converts_to_time(&items[0])
             } else {
-                Ok(FhirPathValue::Boolean(false))
+                Err(multiple_item_conversion_error("convertsToTime"))
             }
         }
 
@@ -769,74 +865,50 @@ fn to_quantity(
             if items.len() == 1 {
                 to_quantity(&items[0], unit_param)
             } else {
-                Ok(FhirPathValue::Empty)
+                Err(multiple_item_conversion_error("toQuantity"))
             }
         }
 
         // Single item conversions
         FhirPathValue::Quantity { value, unit } => {
-            // If unit parameter is provided, use it; otherwise keep existing unit
-            let target_unit = if let Some(unit_param) = unit_param {
-                match unit_param {
-                    FhirPathValue::String(u) => Some(u.clone()),
-                    _ => unit.clone(), // Invalid unit parameter, keep existing
-                }
-            } else {
-                unit.clone()
+            let Some(target_unit) = quantity_unit_arg(unit_param) else {
+                return Ok(FhirPathValue::Quantity {
+                    value: *value,
+                    unit: unit.clone(),
+                });
             };
 
-            Ok(FhirPathValue::Quantity {
-                value: *value,
-                unit: target_unit,
-            })
+            UnitConverter::new()
+                .convert_quantity(*value, unit, &Some(target_unit))
+                .or(Ok(FhirPathValue::Empty))
         }
 
         // Numeric and Boolean conversions get the default UCUM unit "1"
         // when no explicit unit is supplied — per FHIRPath §6.3 toQuantity().
-        FhirPathValue::Integer(i) => Ok(FhirPathValue::Quantity {
-            value: Decimal::from(*i),
-            unit: Some(quantity_unit_or_default(unit_param)),
-        }),
+        FhirPathValue::Integer(i) => quantity_from_dimensionless(Decimal::from(*i), unit_param),
 
-        FhirPathValue::Number(n) => Ok(FhirPathValue::Quantity {
-            value: *n,
-            unit: Some(quantity_unit_or_default(unit_param)),
-        }),
+        FhirPathValue::Number(n) => quantity_from_dimensionless(*n, unit_param),
 
-        FhirPathValue::Long(l) => Ok(FhirPathValue::Quantity {
-            value: Decimal::from(*l),
-            unit: Some(quantity_unit_or_default(unit_param)),
-        }),
+        FhirPathValue::Long(l) => quantity_from_dimensionless(Decimal::from(*l), unit_param),
 
-        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Quantity {
-            value: if *b { Decimal::ONE } else { Decimal::ZERO },
-            unit: Some(quantity_unit_or_default(unit_param)),
-        }),
+        FhirPathValue::Boolean(b) => {
+            quantity_from_dimensionless(if *b { Decimal::ONE } else { Decimal::ZERO }, unit_param)
+        }
 
         FhirPathValue::String(s) => {
             // Try to parse as a quantity string or as a number
             if let Some((value, unit)) = parse_quantity_string(s) {
-                // If unit parameter is provided, use it; otherwise use parsed unit
-                let target_unit = if let Some(unit_param) = unit_param {
-                    match unit_param {
-                        FhirPathValue::String(u) => Some(u.clone()),
-                        _ => unit, // Invalid unit parameter, use parsed unit
-                    }
-                } else {
-                    unit
+                let Some(target_unit) = quantity_unit_arg(unit_param) else {
+                    return Ok(FhirPathValue::Quantity { value, unit });
                 };
 
-                Ok(FhirPathValue::Quantity {
-                    value,
-                    unit: target_unit,
-                })
+                UnitConverter::new()
+                    .convert_quantity(value, &unit, &Some(target_unit))
+                    .or(Ok(FhirPathValue::Empty))
             } else if let Ok(value) = Decimal::from_str_exact(s.trim()) {
                 // Plain numeric string — defaults to UCUM unit "1" like the
                 // direct numeric-input path does.
-                Ok(FhirPathValue::Quantity {
-                    value,
-                    unit: Some(quantity_unit_or_default(unit_param)),
-                })
+                quantity_from_dimensionless(value, unit_param)
             } else {
                 // Not convertible
                 Ok(FhirPathValue::Empty)
@@ -851,43 +923,16 @@ fn to_quantity(
 /// Check if a value can be converted to Quantity according to FHIRPath specification
 fn converts_to_quantity(
     value: &FhirPathValue,
-    _unit_param: Option<&FhirPathValue>,
+    unit_param: Option<&FhirPathValue>,
 ) -> FhirPathResult<FhirPathValue> {
-    match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
-
-        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-            if items.len() == 1 {
-                converts_to_quantity(&items[0], _unit_param)
-            } else {
-                Ok(FhirPathValue::Boolean(false))
-            }
-        }
-
-        // Single item checks
-        FhirPathValue::Quantity { .. } => {
-            // Always convertible (identity or unit change)
-            Ok(FhirPathValue::Boolean(true))
-        }
-
-        FhirPathValue::Integer(_)
-        | FhirPathValue::Number(_)
-        | FhirPathValue::Long(_)
-        | FhirPathValue::Boolean(_) => {
-            // Numeric and Boolean inputs convert via the default unit "1".
-            Ok(FhirPathValue::Boolean(true))
-        }
-
-        FhirPathValue::String(s) => {
-            // Check if string can be parsed as quantity or number
-            let is_quantity = parse_quantity_string(s).is_some();
-            let is_number = Decimal::from_str_exact(s.trim()).is_ok();
-            Ok(FhirPathValue::Boolean(is_quantity || is_number))
-        }
-
-        // All other types cannot be converted to Quantity
-        _ => Ok(FhirPathValue::Boolean(false)),
+    let converted = to_quantity(value, unit_param)?;
+    if matches!(converted, FhirPathValue::Empty) && matches!(value, FhirPathValue::Empty) {
+        return Ok(FhirPathValue::Empty);
     }
+    Ok(FhirPathValue::Boolean(!matches!(
+        converted,
+        FhirPathValue::Empty
+    )))
 }
 
 /// Helper function to validate date string format (YYYY-MM-DD)
@@ -956,6 +1001,13 @@ fn is_valid_datetime_string(s: &str) -> bool {
 /// Storage form has a leading T; user-supplied strings often do not, so we
 /// normalise before delegating to the temporal parser.
 fn is_valid_time_string(s: &str) -> bool {
+    if s.ends_with('Z')
+        || s.contains('+')
+        || s.rsplit_once('-')
+            .is_some_and(|(head, _)| head.contains(':'))
+    {
+        return false;
+    }
     let with_t = if s.starts_with('T') {
         s.to_string()
     } else {
@@ -983,6 +1035,20 @@ fn is_valid_time_string(s: &str) -> bool {
         }
     }
     true
+}
+
+fn date_format_to_chrono(format: &str) -> Option<&'static str> {
+    match format {
+        "dd-MM-yyyy" => Some("%d-%m-%Y"),
+        _ => None,
+    }
+}
+
+fn datetime_format_to_chrono(format: &str) -> Option<&'static str> {
+    match format {
+        "dd-MM-yyyy HH:mm" | "dd-MM-yyyy hh:mm" => Some("%d-%m-%Y %H:%M"),
+        _ => None,
+    }
 }
 
 /// Extract time part from datetime string
@@ -1048,12 +1114,31 @@ fn parse_quantity_string(s: &str) -> Option<(Decimal, Option<String>)> {
     None
 }
 
-/// Read the unit-argument for `toQuantity(unit)`, defaulting to the UCUM
-/// "no unit" code `'1'` when no argument is supplied — per FHIRPath §6.3.
-fn quantity_unit_or_default(unit_param: Option<&FhirPathValue>) -> String {
+/// Read the string unit argument for `toQuantity(unit)`.
+fn quantity_unit_arg(unit_param: Option<&FhirPathValue>) -> Option<String> {
     match unit_param {
-        Some(FhirPathValue::String(u)) => u.clone(),
-        _ => "1".to_string(),
+        Some(FhirPathValue::String(u)) => Some(u.clone()),
+        _ => None,
+    }
+}
+
+/// Numeric, Boolean, and plain numeric String inputs first become quantities
+/// with the UCUM default unit `'1'`; a supplied unit is a conversion target.
+fn quantity_from_dimensionless(
+    value: Decimal,
+    unit_param: Option<&FhirPathValue>,
+) -> FhirPathResult<FhirPathValue> {
+    let source_unit = Some("1".to_string());
+    let target_unit = quantity_unit_arg(unit_param).unwrap_or_else(|| "1".to_string());
+
+    UnitConverter::new()
+        .convert_quantity(value, &source_unit, &Some(target_unit))
+        .or(Ok(FhirPathValue::Empty))
+}
+
+fn multiple_item_conversion_error(function_name: &str) -> FhirPathError {
+    FhirPathError::EvaluationError {
+        message: format!("{function_name}() cannot convert a collection with multiple items"),
     }
 }
 

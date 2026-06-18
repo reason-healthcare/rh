@@ -149,10 +149,10 @@ fn test_to_integer_with_multiple_items() {
         "numbers": [1, 2, 3]
     }));
 
-    // Multiple items should return empty
+    // Multiple items should error
     let expr = parser.parse("numbers.toInteger()").unwrap();
-    let result = evaluator.evaluate(&expr, &multi_context).unwrap();
-    assert_eq!(result, FhirPathValue::Empty);
+    let result = evaluator.evaluate(&expr, &multi_context);
+    assert!(result.is_err(), "Expected error for multi-item input");
 }
 
 #[test]

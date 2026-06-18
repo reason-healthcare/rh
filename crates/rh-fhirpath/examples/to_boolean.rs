@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   singleFlag.toBoolean() = {result:?}");
 
     let expr = parser.parse("flags.toBoolean()")?;
-    let result = evaluator.evaluate(&expr, &collection_context)?;
+    let result = evaluator.evaluate(&expr, &collection_context);
     println!("   flags.toBoolean() = {result:?}");
     println!("\n=== Summary ===");
     println!("The toBoolean() function converts values according to FHIRPath spec:");
@@ -116,7 +116,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("- String: 'true','t','yes','y','1','1.0' → true (case-insensitive)");
     println!("          'false','f','no','n','0','0.0' → false (case-insensitive)");
     println!("          others → empty");
-    println!("- Collections: single item → convert item, multiple items → empty");
+    println!(
+        "- Collections: single item converts normally, empty returns empty, multiple items error"
+    );
 
     Ok(())
 }

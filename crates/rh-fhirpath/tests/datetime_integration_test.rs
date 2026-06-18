@@ -187,20 +187,12 @@ fn test_multiple_datetime_function_calls() {
     let expr = parser.parse("now()").unwrap();
     let result1 = evaluator.evaluate(&expr, &context).unwrap();
 
-    // Small delay to ensure different timestamps
-    std::thread::sleep(std::time::Duration::from_millis(10));
-
     let result2 = evaluator.evaluate(&expr, &context).unwrap();
 
-    // Both should be DateTime values
+    // Both should be DateTime values. now() is second-precision, so two
+    // immediate calls may legitimately produce the same value.
     assert!(matches!(result1, FhirPathValue::DateTime(_)));
     assert!(matches!(result2, FhirPathValue::DateTime(_)));
-
-    // They should be different (since time has passed)
-    assert_ne!(
-        result1, result2,
-        "Multiple now() calls should return different values"
-    );
 
     // Test today() returns same value (should be same day)
     let expr = parser.parse("today()").unwrap();

@@ -185,20 +185,20 @@ fn test_date_conversion_edge_cases() {
 
     let expr = parser.parse("{}.convertsToDate()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    assert_eq!(result, FhirPathValue::Empty);
 
-    // Test multiple items (should return empty)
+    // Multiple-item conversion signals an error.
     let expr = parser
         .parse("('2023-01-01' | '2023-01-02').toDate()")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Empty);
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err());
 
     let expr = parser
         .parse("('2023-01-01' | '2023-01-02').convertsToDate()")
         .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(false));
+    let result = evaluator.evaluate(&expr, &context);
+    assert!(result.is_err());
 
     // Test DateTime with timezone
     let expr = parser.parse("'2023-12-25T10:30:45Z'.toDateTime()").unwrap();
