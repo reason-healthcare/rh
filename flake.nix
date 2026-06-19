@@ -20,11 +20,11 @@
       {
         packages.default = pkgs.rustPlatform.buildRustPackage rec {
           pname = "rh";
-          version = "0.2.1";
+          version = "0.2.2";
 
           src = ./.;
 
-					cargoHash = "sha256-8yR1nb6aJ9DrgN3DP/bSZjWTo5luskS/QgxNG35zIgM=";
+          cargoHash = "sha256-iumklh82kHsTiCZU3N9e2DLkh3759TZBzVxk9QZypA0=";
 
           cargoBuildFlags = [
             "-p"

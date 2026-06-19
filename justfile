@@ -104,7 +104,7 @@ lint:
 
 # Run security audit
 audit:
-    cargo audit
+    cargo audit || (echo "cargo audit failed; retrying once..." >&2; sleep 2; cargo audit)
 
 # Clean build artifacts
 clean:

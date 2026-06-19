@@ -12,6 +12,7 @@ __pycache__/
 # Build artifacts
 build/
 pkg/
+result
 packages/*/dist/
 packages/*/wasm/
 packages/*/wasm-node/

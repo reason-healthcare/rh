@@ -23,10 +23,10 @@ nom = { workspace = true }
 quick-xml = { workspace = true }
 regex = { workspace = true }
 tracing = { workspace = true }
-rh-foundation = { path = "../rh-foundation", version = "0.2.1" }
+rh-foundation = { path = "../rh-foundation", version = "0.2.2" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-rh-foundation = { path = "../rh-foundation", version = "0.2.1", features = ["wasm"] }
+rh-foundation = { path = "../rh-foundation", version = "0.2.2", features = ["wasm"] }
 wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }

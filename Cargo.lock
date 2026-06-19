@@ -2063,7 +2063,7 @@ dependencies = [
 
 [[package]]
 name = "rh-cli"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2093,7 +2093,7 @@ dependencies = [
 
 [[package]]
 name = "rh-codegen"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2119,7 +2119,7 @@ dependencies = [
 
 [[package]]
 name = "rh-cql"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -2139,7 +2139,7 @@ dependencies = [
 
 [[package]]
 name = "rh-fhirpath"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "base64",
@@ -2163,7 +2163,7 @@ dependencies = [
 
 [[package]]
 name = "rh-foundation"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -2186,7 +2186,7 @@ dependencies = [
 
 [[package]]
 name = "rh-fsh"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "criterion",
  "indexmap",
@@ -2202,7 +2202,7 @@ dependencies = [
 
 [[package]]
 name = "rh-hl7-fhir-r4-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "once_cell",
  "phf",
@@ -2213,7 +2213,7 @@ dependencies = [
 
 [[package]]
 name = "rh-hl7-fhir-r5-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "once_cell",
  "phf",
@@ -2224,7 +2224,7 @@ dependencies = [
 
 [[package]]
 name = "rh-packager"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "base64",
@@ -2247,7 +2247,7 @@ dependencies = [
 
 [[package]]
 name = "rh-validator"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "criterion",
@@ -2269,7 +2269,7 @@ dependencies = [
 
 [[package]]
 name = "rh-vcl"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",

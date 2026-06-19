@@ -113,7 +113,7 @@ just wasm-build vcl all
 just wasm-build cql all
 ```
 
-The interactive playground is documented in [examples/playground/README.md](examples/playground/README.md). The npm publish process is documented in [packages/RELEASE.md](packages/RELEASE.md).
+The interactive playground is documented in [examples/playground/README.md](examples/playground/README.md). The npm publish process is documented in [RELEASE.md](RELEASE.md).
 
 ## Dependency Management
 
