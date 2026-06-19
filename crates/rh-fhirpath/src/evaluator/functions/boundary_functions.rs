@@ -260,7 +260,8 @@ fn boundary_datetime(s: &str, digits: i64, high: bool) -> FhirPathResult<FhirPat
 }
 
 fn boundary_time(s: &str, digits: i64, high: bool) -> String {
-    let t: Vec<&str> = s.split(':').collect();
+    let raw = s.strip_prefix('T').unwrap_or(s);
+    let t: Vec<&str> = raw.split(':').collect();
     let hour = t.first().copied().unwrap_or(if high { "23" } else { "00" });
     let minute = t.get(1).copied().unwrap_or(if high { "59" } else { "00" });
     let (sec, ms) = match t.get(2) {

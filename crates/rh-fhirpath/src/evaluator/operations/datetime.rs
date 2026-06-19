@@ -230,7 +230,7 @@ impl DateTimeEvaluator {
             }
             FhirPathValue::DateTime(dt_str) => {
                 if let Some(time) = dt_str.split_once('T').map(|(_, time)| time) {
-                    Ok(FhirPathValue::Time(format!("T{}", strip_timezone(time))))
+                    Ok(FhirPathValue::Time(strip_timezone(time).to_string()))
                 } else {
                     Ok(FhirPathValue::Empty)
                 }
@@ -484,12 +484,12 @@ mod tests {
     fn test_time_of() {
         let datetime_value = FhirPathValue::DateTime("2023-07-15T14:30:25.123Z".to_string());
         let result = DateTimeEvaluator::time_of(&datetime_value).unwrap();
-        assert_eq!(result, FhirPathValue::Time("T14:30:25.123".to_string()));
+        assert_eq!(result, FhirPathValue::Time("14:30:25.123".to_string()));
 
         // With timezone
         let datetime_tz = FhirPathValue::DateTime("2023-12-25T09:15:30.500+02:00".to_string());
         let result = DateTimeEvaluator::time_of(&datetime_tz).unwrap();
-        assert_eq!(result, FhirPathValue::Time("T09:15:30.500".to_string()));
+        assert_eq!(result, FhirPathValue::Time("09:15:30.500".to_string()));
     }
 
     #[test]

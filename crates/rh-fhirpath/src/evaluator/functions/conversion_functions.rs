@@ -726,15 +726,9 @@ fn to_string(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
 
         FhirPathValue::DateTime(dt) => Ok(FhirPathValue::String(dt.clone())),
 
-        FhirPathValue::Time(t) => {
-            // Remove the leading 'T' from time format for string conversion
-            let time_str = if let Some(stripped) = t.strip_prefix('T') {
-                stripped.to_string()
-            } else {
-                t.clone()
-            };
-            Ok(FhirPathValue::String(time_str))
-        }
+        FhirPathValue::Time(t) => Ok(FhirPathValue::String(
+            t.strip_prefix('T').unwrap_or(t).to_string(),
+        )),
 
         FhirPathValue::Quantity { value, unit } => match unit {
             // Calendar-duration words are emitted unquoted (`1 week`),
@@ -800,13 +794,9 @@ fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         FhirPathValue::String(s) => {
             // Validate time format: HH:MM:SS or HH:MM:SS.sss
             if is_valid_time_string(s) {
-                // Add leading 'T' for internal representation
-                let time_with_t = if s.starts_with('T') {
-                    s.clone()
-                } else {
-                    format!("T{s}")
-                };
-                Ok(FhirPathValue::Time(time_with_t))
+                Ok(FhirPathValue::Time(
+                    s.strip_prefix('T').unwrap_or(s).to_string(),
+                ))
             } else {
                 Ok(FhirPathValue::Empty)
             }
@@ -815,7 +805,7 @@ fn to_time(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         FhirPathValue::DateTime(dt) => {
             // Extract time part from datetime
             if let Some(time_part) = extract_time_from_datetime(dt) {
-                Ok(FhirPathValue::Time(format!("T{time_part}")))
+                Ok(FhirPathValue::Time(time_part))
             } else {
                 Ok(FhirPathValue::Empty)
             }
@@ -998,8 +988,8 @@ fn is_valid_datetime_string(s: &str) -> bool {
 }
 
 /// Per FHIRPath spec, Time accepts hh, hh:mm, hh:mm:ss, or hh:mm:ss.fff.
-/// Storage form has a leading T; user-supplied strings often do not, so we
-/// normalise before delegating to the temporal parser.
+/// FHIRPath time literals use `@T`, but Time values are represented without the
+/// literal prefix. Normalize before delegating to the temporal parser.
 fn is_valid_time_string(s: &str) -> bool {
     if s.ends_with('Z')
         || s.contains('+')
