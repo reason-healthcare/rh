@@ -19,8 +19,16 @@ pub struct ComparisonEvaluator;
 /// start/end fields accessed without typed metadata).
 fn try_temporal(v: &FhirPathValue) -> Option<TemporalParts> {
     match v {
-        FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => {
-            parse_temporal(s)
+        FhirPathValue::Date(s) | FhirPathValue::DateTime(s) => parse_temporal(s),
+        FhirPathValue::Time(s) => {
+            let normalized;
+            let temporal_text = if s.starts_with('T') {
+                s.as_str()
+            } else {
+                normalized = format!("T{s}");
+                normalized.as_str()
+            };
+            parse_temporal(temporal_text)
         }
         FhirPathValue::String(s) => parse_temporal(s),
         _ => None,

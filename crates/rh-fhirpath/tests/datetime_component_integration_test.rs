@@ -175,7 +175,7 @@ fn test_date_time_extraction_integration() {
 
     let value = extract_single_value(result);
     if let FhirPathValue::Time(time) = value {
-        assert_eq!(time.to_string(), "T14:30:25");
+        assert_eq!(time.to_string(), "14:30:25");
     } else {
         panic!("Expected Time value, got: {value:?}");
     }

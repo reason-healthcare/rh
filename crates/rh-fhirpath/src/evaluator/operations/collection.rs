@@ -850,7 +850,9 @@ impl CollectionEvaluator {
             (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => a == b,
             (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
             (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
-            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
+            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => {
+                a.strip_prefix('T').unwrap_or(a) == b.strip_prefix('T').unwrap_or(b)
+            }
             (
                 FhirPathValue::Quantity {
                     value: a_val,

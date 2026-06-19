@@ -584,6 +584,23 @@ def render_markdown(payload: dict[str, Any]) -> str:
         for rationale, count in rationale_counts.items():
             lines.append(f"| {md(rationale)} | {count} |")
 
+    lines.extend(
+        [
+            "",
+            "## Result Index",
+            "",
+            "| Test | Outcome | Input | Expression | Expectation | Actual |",
+            "|---|---|---|---|---|---|",
+        ]
+    )
+    for item in payload["results"]:
+        test_id = f"{item['group']}::{item['name']}"
+        lines.append(
+            f"| {md_inline(test_id)} | {md_inline(item['outcome'])} | "
+            f"{md_inline(item['inputfile'])} | {md_inline(item['expression'])} | "
+            f"{md_inline(item['expectation'])} | {md_inline(item['actual'])} |"
+        )
+
     lines.extend(["", "## Results", ""])
     for item in payload["results"]:
         lines.extend(
@@ -631,6 +648,10 @@ def grouped_rationales_from_payload(results: list[dict[str, Any]]) -> dict[str, 
 
 def md(value: str) -> str:
     return value.replace("|", "\\|")
+
+
+def md_inline(value: str) -> str:
+    return md(value).replace("\n", " ").replace("\r", " ")
 
 
 def main() -> int:

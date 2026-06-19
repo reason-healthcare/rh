@@ -12,42 +12,42 @@ fn test_to_time_function() {
     // Test Time to Time (identity)
     let expr = parser.parse("@T10:30:45.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T10:30:45".to_string()));
+    assert_eq!(result, FhirPathValue::Time("10:30:45".to_string()));
 
     let expr = parser.parse("@T23:59:59.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T23:59:59".to_string()));
+    assert_eq!(result, FhirPathValue::Time("23:59:59".to_string()));
 
     // Test String to Time
     let expr = parser.parse("'10:30:45'.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T10:30:45".to_string()));
+    assert_eq!(result, FhirPathValue::Time("10:30:45".to_string()));
 
     let expr = parser.parse("'23:59:59.123'.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T23:59:59.123".to_string()));
+    assert_eq!(result, FhirPathValue::Time("23:59:59.123".to_string()));
 
     let expr = parser.parse("'00:00:00'.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T00:00:00".to_string()));
+    assert_eq!(result, FhirPathValue::Time("00:00:00".to_string()));
 
     // Test String with T prefix to Time
     let expr = parser.parse("'T14:25:36'.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T14:25:36".to_string()));
+    assert_eq!(result, FhirPathValue::Time("14:25:36".to_string()));
 
     // Test DateTime to Time (extract time part)
     let expr = parser.parse("@2023-01-15T10:30:45.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T10:30:45".to_string()));
+    assert_eq!(result, FhirPathValue::Time("10:30:45".to_string()));
 
     let expr = parser.parse("@2023-01-15T23:59:59Z.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T23:59:59".to_string()));
+    assert_eq!(result, FhirPathValue::Time("23:59:59".to_string()));
 
     let expr = parser.parse("@2023-01-15T14:25:36+05:30.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T14:25:36".to_string()));
+    assert_eq!(result, FhirPathValue::Time("14:25:36".to_string()));
 
     // Test invalid strings (should return empty)
     let expr = parser.parse("'not-a-time'.toTime()").unwrap();
@@ -195,7 +195,7 @@ fn test_time_conversion_edge_cases() {
     // Test single item collection
     let expr = parser.parse("('10:30:45').toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T10:30:45".to_string()));
+    assert_eq!(result, FhirPathValue::Time("10:30:45".to_string()));
 
     let expr = parser.parse("('10:30:45').convertsToTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
@@ -213,7 +213,7 @@ fn test_time_conversion_edge_cases() {
 
     let expr = parser.parse("'00:00:00'.toTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Time("T00:00:00".to_string()));
+    assert_eq!(result, FhirPathValue::Time("00:00:00".to_string()));
 
     // Test fractional seconds variations
     let expr = parser.parse("'12:30:45.1'.convertsToTime()").unwrap();
@@ -244,19 +244,19 @@ fn test_time_conversion_comprehensive() {
     // Test all valid time conversion patterns
     let test_cases = vec![
         // Time literals (identity)
-        ("@T10:30:45", "T10:30:45", true),
-        ("@T00:00:00", "T00:00:00", true),
-        ("@T23:59:59", "T23:59:59", true),
+        ("@T10:30:45", "10:30:45", true),
+        ("@T00:00:00", "00:00:00", true),
+        ("@T23:59:59", "23:59:59", true),
         // String time formats
-        ("'10:30:45'", "T10:30:45", true),
-        ("'00:00:00'", "T00:00:00", true),
-        ("'23:59:59'", "T23:59:59", true),
-        ("'12:30:45.123'", "T12:30:45.123", true),
-        ("'T14:25:36'", "T14:25:36", true),
+        ("'10:30:45'", "10:30:45", true),
+        ("'00:00:00'", "00:00:00", true),
+        ("'23:59:59'", "23:59:59", true),
+        ("'12:30:45.123'", "12:30:45.123", true),
+        ("'T14:25:36'", "14:25:36", true),
         // DateTime extraction
-        ("@2023-01-15T10:30:45", "T10:30:45", true),
-        ("@2023-01-15T00:00:00Z", "T00:00:00", true),
-        ("@2023-01-15T23:59:59+05:30", "T23:59:59", true),
+        ("@2023-01-15T10:30:45", "10:30:45", true),
+        ("@2023-01-15T00:00:00Z", "00:00:00", true),
+        ("@2023-01-15T23:59:59+05:30", "23:59:59", true),
     ];
 
     for (input, expected_time, should_convert) in test_cases {
@@ -297,4 +297,23 @@ fn test_time_conversion_comprehensive() {
         let result = evaluator.evaluate(&expr, &context).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(false));
     }
+}
+
+#[test]
+fn test_time_json_output_omits_literal_t_prefix() {
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let context = EvaluationContext::new(json!({}));
+
+    let expr = parser
+        .parse("@2012-01-01T12:30:00.000-07:00.timeOf()")
+        .unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Time("12:30:00.000".to_string()));
+    assert_eq!(result.to_json(), json!("12:30:00.000"));
+
+    let expr = parser.parse("@T10:30:00.000").unwrap();
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert_eq!(result, FhirPathValue::Time("10:30:00.000".to_string()));
+    assert_eq!(result.to_json(), json!("10:30:00.000"));
 }

@@ -1119,9 +1119,9 @@ impl ArithmeticEvaluator {
             })?;
 
         let result_str = if has_fraction || nanos != 0 {
-            format!("T{}", result.format("%H:%M:%S%.3f"))
+            result.format("%H:%M:%S%.3f").to_string()
         } else {
-            format!("T{}", result.format("%H:%M:%S"))
+            result.format("%H:%M:%S").to_string()
         };
         Ok(FhirPathValue::Time(result_str))
     }

@@ -62,6 +62,10 @@ pub enum FhirPathValue {
 }
 
 impl FhirPathValue {
+    fn canonical_time(value: &str) -> &str {
+        value.strip_prefix('T').unwrap_or(value)
+    }
+
     /// Returns `true` if this is an `UnorderedCollection`.
     pub fn is_unordered(&self) -> bool {
         matches!(self, FhirPathValue::UnorderedCollection(_))
@@ -143,7 +147,9 @@ impl FhirPathValue {
                 FhirPathValue::TypedDateTime { value: a, .. },
                 FhirPathValue::TypedDateTime { value: b, .. },
             ) => a == b,
-            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => a == b,
+            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => {
+                Self::canonical_time(a) == Self::canonical_time(b)
+            }
             (FhirPathValue::DateTimePrecision(a), FhirPathValue::DateTimePrecision(b)) => a == b,
             (FhirPathValue::Date(a), FhirPathValue::String(b))
             | (FhirPathValue::Date(a), FhirPathValue::TypedString { value: b, .. }) => a == b,
@@ -164,9 +170,13 @@ impl FhirPathValue {
                 FhirPathValue::TypedDateTime { value: b, .. },
             ) => a == b,
             (FhirPathValue::Time(a), FhirPathValue::String(b))
-            | (FhirPathValue::Time(a), FhirPathValue::TypedString { value: b, .. }) => a == b,
+            | (FhirPathValue::Time(a), FhirPathValue::TypedString { value: b, .. }) => {
+                Self::canonical_time(a) == Self::canonical_time(b)
+            }
             (FhirPathValue::String(a), FhirPathValue::Time(b))
-            | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::Time(b)) => a == b,
+            | (FhirPathValue::TypedString { value: a, .. }, FhirPathValue::Time(b)) => {
+                Self::canonical_time(a) == Self::canonical_time(b)
+            }
             (FhirPathValue::Empty, FhirPathValue::Empty) => true,
             (FhirPathValue::Collection(a), FhirPathValue::Collection(b)) => {
                 a.len() == b.len()
@@ -257,7 +267,7 @@ impl FhirPathValue {
             FhirPathValue::Date(d) => Ok(d.clone()),
             FhirPathValue::DateTime(dt) => Ok(dt.clone()),
             FhirPathValue::TypedDateTime { value, .. } => Ok(value.clone()),
-            FhirPathValue::Time(t) => Ok(t.clone()),
+            FhirPathValue::Time(t) => Ok(Self::canonical_time(t).to_string()),
             FhirPathValue::Empty => Ok("".to_string()),
             _ => Err(FhirPathError::EvaluationError {
                 message: format!("Cannot convert {self:?} to string"),
@@ -312,7 +322,7 @@ impl FhirPathValue {
             FhirPathValue::Date(s) => Value::String(s.clone()),
             FhirPathValue::DateTime(s) => Value::String(s.clone()),
             FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
-            FhirPathValue::Time(s) => Value::String(s.clone()),
+            FhirPathValue::Time(s) => Value::String(Self::canonical_time(s).to_string()),
             FhirPathValue::Quantity { value, unit: _ } => {
                 let fval = value.to_f64().unwrap_or(0.0);
                 Value::Number(
@@ -405,7 +415,9 @@ impl FhirPathValue {
                 FhirPathValue::TypedDateTime { value: a, .. },
                 FhirPathValue::TypedDateTime { value: b, .. },
             ) => Ok(a.cmp(b) as i32),
-            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => Ok(a.cmp(b) as i32),
+            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => {
+                Ok(Self::canonical_time(a).cmp(Self::canonical_time(b)) as i32)
+            }
 
             // Date/Time comparisons with implicit string conversion
             (FhirPathValue::Date(a), _) if right_str.is_some() => {
@@ -427,10 +439,10 @@ impl FhirPathValue {
                 Ok(left_str.unwrap().cmp(value.as_str()) as i32)
             }
             (FhirPathValue::Time(a), _) if right_str.is_some() => {
-                Ok(a.as_str().cmp(right_str.unwrap()) as i32)
+                Ok(Self::canonical_time(a).cmp(Self::canonical_time(right_str.unwrap())) as i32)
             }
             (_, FhirPathValue::Time(b)) if left_str.is_some() => {
-                Ok(left_str.unwrap().cmp(b.as_str()) as i32)
+                Ok(Self::canonical_time(left_str.unwrap()).cmp(Self::canonical_time(b)) as i32)
             }
 
             // Quantity comparisons with unit conversion

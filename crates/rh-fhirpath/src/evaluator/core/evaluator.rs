@@ -204,7 +204,9 @@ impl FhirPathEvaluator {
             Literal::LongNumber(i) => Ok(FhirPathValue::Long(*i)),
             Literal::Date(d) => Ok(FhirPathValue::Date(d.clone())),
             Literal::DateTime(dt) => Ok(FhirPathValue::DateTime(dt.clone())),
-            Literal::Time(t) => Ok(FhirPathValue::Time(t.clone())),
+            Literal::Time(t) => Ok(FhirPathValue::Time(
+                t.strip_prefix('T').unwrap_or(t).to_string(),
+            )),
             Literal::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
                 value: *value,
                 unit: unit.clone(),
@@ -1344,7 +1346,9 @@ fn construct_typed_choice_value(suffix: &str, value: &serde_json::Value) -> Opti
                 rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::DateTime
             },
         }),
-        "Time" => value.as_str().map(|s| FhirPathValue::Time(s.to_string())),
+        "Time" => value
+            .as_str()
+            .map(|s| FhirPathValue::Time(s.strip_prefix('T').unwrap_or(s).to_string())),
         // Complex types not yet modelled: CodeableConcept, Coding, Reference,
         // Identifier, etc. Caller falls back to metadata/JSON-object handling.
         _ => None,
