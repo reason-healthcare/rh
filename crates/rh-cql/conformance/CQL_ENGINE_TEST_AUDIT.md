@@ -46,6 +46,20 @@ just audit-references
 
 `just audit-full` runs both phases.
 
+Expanded corpus checks are separate from the HL7 expression matrix:
+
+```bash
+cd crates/rh-cql
+just corpus-audit-rh
+```
+
+They write `corpus_matrix.csv`, `corpus_matrix.json`, and
+`corpus_summary.json` under `crates/rh-cql/conformance/results/corpus/`.
+The current full RH-only corpus baseline is 1 248 files: 334 compile passes and
+914 compile errors across generated, CQFramework, Cooking with CQL, and CMS
+2025 eCQM sources.
+Use `just corpus-audit` for the heavier Java-inclusive reference pass.
+
 For Java CQL-to-ELM comparison, run the one-time setup first:
 
 ```bash
@@ -112,6 +126,7 @@ Gaps:
 - The checked-in Java reference corpus is very small: `simple` and `arithmetic`, plus in-test CQL strings.
 - JavaScript reference evaluation currently uses scalar HL7 expression tests and `rh-cql`-generated ELM. FHIR retrieve evaluation with `cql-exec-fhir` and bundles is still future work.
 - The Java comparison script and reference matrix harness are useful but not currently a CI gate and need local tool setup.
+- Expanded corpus checks currently assert compile/translation status by CQL source file. They do not yet compare normalized ELM structure or evaluate FHIR bundles.
 
 ## Evaluation Coverage
 

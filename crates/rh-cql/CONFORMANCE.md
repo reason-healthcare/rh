@@ -129,6 +129,33 @@ The JavaScript column evaluates `rh-cql`-generated ELM in `cql-execution`.
 Rows that fail there are interoperability findings about generated ELM and/or
 reference runtime behavior, not necessarily independent CQL compilation results.
 
+### 1.5 Expanded Source-File Corpus
+
+The HL7 matrix is row-per-expression-test. Larger source-file corpora are
+audited separately with:
+
+```bash
+cd crates/rh-cql
+just corpus-audit-rh
+```
+
+This discovers committed generated fixtures, CQFramework jvmTest CQL files,
+CQFramework examples, Cooking with CQL sources, and CMS 2025 FHIR eCQM content
+when the external checkout is present. Results are generated under
+`conformance/results/corpus/`.
+Use `just corpus-audit` for the heavier Java-inclusive reference pass.
+
+Current expanded corpus RH compile baseline:
+
+| Corpus | Files | Pass | Compile Err |
+|---|---:|---:|---:|
+| Generated fixtures | 8 | 4 | 4 |
+| CQFramework jvmTest | 358 | 182 | 176 |
+| CQFramework examples | 34 | 1 | 33 |
+| Cooking with CQL | 732 | 132 | 600 |
+| CMS 2025 eCQM | 116 | 15 | 101 |
+| **Total** | **1 248** | **334** | **914** |
+
 ---
 
 ## 2. ELM Emission Fidelity
@@ -257,6 +284,8 @@ Recommended focused commands:
 cd crates/rh-cql
 just audit-strict
 just audit-references
+just corpus-audit-rh
+just corpus-audit-smoke
 cargo clippy -p rh-cql --all-targets --all-features -- -D warnings
 ```
 

@@ -34,6 +34,8 @@ Then review:
 | `conformance/results/audit/hl7_eval_tests.txt` | Captured HL7 eval test output |
 | `conformance/results/audit/elm_production_tests.txt` | Captured ELM production/fidelity test output |
 | `conformance/results/audit/eval_engine_tests.txt` | Captured evaluator/semantic test output |
+| `conformance/results/corpus/corpus_matrix.csv` | Expanded source-file corpus matrix across generated, CQFramework, Cooking with CQL, and CMS eCQM sources |
+| `conformance/results/corpus/corpus_summary.json` | Expanded corpus status counts by corpus |
 
 ## Common Workflows
 
@@ -57,6 +59,17 @@ just audit-full
 
 This runs the strict Rust audit, then populates Java ELM and JavaScript
 `cql-execution` columns in `implementation_matrix.csv` / `.json`.
+
+### Expanded Corpus
+
+```bash
+cd crates/rh-cql
+just corpus-audit-rh
+```
+
+This writes source-file RH compile status reports under
+`conformance/results/corpus/`. Use `just corpus-audit` for the heavier
+Java-inclusive reference pass.
 
 ### Java Reference Translator Setup
 

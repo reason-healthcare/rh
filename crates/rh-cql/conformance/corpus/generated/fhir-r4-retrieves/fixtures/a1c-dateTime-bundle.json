@@ -1,0 +1,65 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-1"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "condition-1",
+        "subject": {
+          "reference": "Patient/patient-1"
+        },
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "73211009",
+              "display": "Diabetes mellitus"
+            }
+          ]
+        },
+        "onsetDateTime": "2024-01-15T10:00:00Z"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "a1c-1",
+        "subject": {
+          "reference": "Patient/patient-1"
+        },
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "4548-4",
+              "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+            }
+          ]
+        },
+        "effectiveDateTime": "2024-03-01T09:30:00Z",
+        "valueQuantity": {
+          "value": 9.2,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      }
+    }
+  ]
+}

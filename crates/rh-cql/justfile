@@ -42,6 +42,33 @@ audit-references:
 # Run the strict Rust audit, then run Java and JavaScript reference matrix checks.
 audit-full: audit-strict audit-references
 
+# Download/pin external CQL corpus sources used by corpus-audit.
+corpus-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd conformance && bash scripts/setup_corpora.sh)
+
+# Run expanded source-file corpus compile/translation checks.
+corpus-audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd conformance && bash scripts/setup_corpora.sh)
+    python3 conformance/scripts/run_corpus_audit.py --require-java
+
+# Run expanded source-file corpus compile checks with rh-cql only.
+corpus-audit-rh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cargo build --release -p rh-cli
+    python3 conformance/scripts/run_corpus_audit.py --skip-java
+
+# Smoke-test the expanded corpus runner without traversing every external file.
+corpus-audit-smoke:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cargo build --release -p rh-cli
+    python3 conformance/scripts/run_corpus_audit.py --results-dir conformance/results/corpus-smoke --limit 3 --skip-java
+
 # Compare rh-cql ELM output against the Java reference translator for a conformance test case.
 elm-reference test_case="simple":
     #!/usr/bin/env bash

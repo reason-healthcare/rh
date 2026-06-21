@@ -1,6 +1,6 @@
 # CQL Test Corpus Strategy
 
-Last updated: 2026-06-19
+Last updated: 2026-06-21
 
 This document defines the intended source mix for `rh-cql` CQL test content. It
 is a strategy, not a required directory layout. Keep concrete fixtures organized
@@ -12,10 +12,62 @@ the audit matrix.
 | Layer | Purpose | Primary Source | Current Status |
 |---|---|---|---|
 | Spec conformance | Core language behavior across operators, types, nullology, intervals, date/time, lists, strings, literals, and errors | HL7 CQL tests | Checked in under `tests/fixtures/hl7_cql_tests/`; evaluated by `tests/hl7_eval_tests.rs` |
-| Translation equivalence | Compare `rh-cql` ELM output against the reference CQL-to-ELM translator | `cqframework/clinical_quality_language` | Java setup pinned to `v4.2.0`; comparison harness exists under `conformance/scripts/` |
-| Clinical realism | Stress realistic FHIR/QI-Core authoring patterns, includes, retrieves, terminology, and define chains | `cqframework/ecqm-content-cms-2025` | Not yet imported; recommended next corpus |
-| Engine scenarios | Evaluate patient-level behavior against known data | Synthetic FHIR R4 Bundles plus targeted CQL | Local retrieve tests exist; broader bundle corpus not yet created |
-| Generated edge cases | Find parser/type/eval gaps outside realistic authoring style | Generated CQL for operators, intervals, nulls, choice types, terminology, and errors | Recommended after the first realistic corpus import |
+| Translation equivalence | Compare `rh-cql` ELM output against the reference CQL-to-ELM translator | `cqframework/clinical_quality_language` | Java setup pinned to `v4.2.0`; `corpus-audit` discovers jvmTest and example CQL files |
+| Clinical realism | Stress realistic FHIR/QI-Core authoring patterns, includes, retrieves, terminology, and define chains | `cqframework/ecqm-content-cms-2025` | `corpus-setup` clones/pins this repo under `conformance/tools/`; `corpus-audit` includes its CQL files |
+| Engine scenarios | Evaluate patient-level behavior against known data | Synthetic FHIR R4 Bundles plus targeted CQL | Generated FHIR R4 retrieve stress CQL and a minimal Bundle fixture are committed under `conformance/corpus/generated/` |
+| Generated edge cases | Find parser/type/eval gaps outside realistic authoring style | Generated CQL for operators, intervals, nulls, choice types, terminology, and errors | Committed under `conformance/corpus/generated/`; included in `corpus-audit` |
+
+## Expanded Corpus Audit
+
+The expanded source-file corpus is separate from the HL7 expression matrix.
+Run the fast RH-only baseline with:
+
+```bash
+cd crates/rh-cql
+just corpus-audit-rh
+```
+
+Run the Java-inclusive reference pass with:
+
+```bash
+cd crates/rh-cql
+just corpus-audit
+```
+
+For a fast local check of the discovery/reporting path:
+
+```bash
+cd crates/rh-cql
+just corpus-audit-smoke
+```
+
+Smoke output is written to `conformance/results/corpus-smoke/` so it does not
+replace the full corpus report.
+
+Generated outputs are written to `conformance/results/corpus/`:
+
+- `corpus_matrix.csv`
+- `corpus_matrix.json`
+- `corpus_summary.json`
+
+The audit currently records source-file compile/translation status for:
+
+- Committed generated fixtures under `conformance/corpus/generated/`.
+- CQFramework Java translator jvmTest CQL files.
+- CQFramework Java translator `Examples/` CQL files.
+- Cooking with CQL source CQL files.
+- CMS 2025 FHIR eCQM CQL files when `corpus-setup` has cloned the repo.
+
+Current full RH compile baseline:
+
+| Corpus | Files | Pass | Compile Err |
+|---|---:|---:|---:|
+| Generated fixtures | 8 | 4 | 4 |
+| CQFramework jvmTest | 358 | 182 | 176 |
+| CQFramework examples | 34 | 1 | 33 |
+| Cooking with CQL | 732 | 132 | 600 |
+| CMS 2025 eCQM | 116 | 15 | 101 |
+| **Total** | **1 248** | **334** | **914** |
 
 ## Verified Upstream Notes
 
@@ -119,11 +171,11 @@ For each committed CQL corpus item, prefer storing or generating:
 
 ## Near-Term Import Order
 
-1. Keep HL7 XML tests as the base matrix.
-2. Add CQFramework Java translator corpus slices to the ELM comparison harness.
-3. Add CMS 2025 FHIR eCQM content as compile/ELM realistic corpus.
-4. Add synthetic FHIR R4 bundles for patient-level evaluation.
-5. Add generated edge-case libraries for gaps revealed by the first four layers.
+1. Keep HL7 XML tests as the base row-per-test matrix.
+2. Use `corpus-audit` for CQFramework Java translator corpus slices.
+3. Use `corpus-audit` for CMS 2025 FHIR eCQM compile/ELM realistic corpus.
+4. Expand synthetic FHIR R4 bundles into patient-level evaluation fixtures.
+5. Add more generated edge-case libraries for gaps revealed by the first four layers.
 
 ## Source Links
 

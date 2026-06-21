@@ -2,6 +2,7 @@
 tools/
 javascript/node_modules/
 reference-version.json
+corpus-version.json
 
 # Generated comparison results
 results/

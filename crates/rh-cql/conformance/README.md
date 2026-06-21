@@ -77,6 +77,30 @@ cd crates/rh-cql
 just audit-references
 ```
 
+### Run Expanded Corpus Checks
+
+```bash
+cd crates/rh-cql
+just corpus-audit-rh
+```
+
+This writes the fast RH-only baseline:
+
+- `conformance/results/corpus/corpus_matrix.csv`
+- `conformance/results/corpus/corpus_matrix.json`
+- `conformance/results/corpus/corpus_summary.json`
+
+Use `just corpus-audit` for the heavier Java-inclusive reference pass.
+
+For a fast smoke run:
+
+```bash
+cd crates/rh-cql
+just corpus-audit-smoke
+```
+
+Smoke output is written under `conformance/results/corpus-smoke/`.
+
 ### Compare a single CQL file
 
 ```bash
