@@ -1,5 +1,7 @@
 # Generated tools (cloned repos, built artifacts)
 tools/
+javascript/node_modules/
+reference-version.json
 
 # Generated comparison results
 results/

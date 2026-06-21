@@ -28,6 +28,7 @@ It writes reviewable output to `crates/rh-cql/conformance/results/audit/`:
 - `hl7_eval_summary.md`
 - `implementation_matrix.json`
 - `implementation_matrix.csv`
+- `implementation_matrix_summary.json`
 
 For regression-sensitive runs, use the current HL7 unimplemented-count ceilings:
 
@@ -35,6 +36,15 @@ For regression-sensitive runs, use the current HL7 unimplemented-count ceilings:
 cd crates/rh-cql
 just audit-strict
 ```
+
+To populate the Java and JavaScript columns in the same implementation matrix:
+
+```bash
+cd crates/rh-cql
+just audit-references
+```
+
+`just audit-full` runs both phases.
 
 For Java CQL-to-ELM comparison, run the one-time setup first:
 
@@ -54,7 +64,7 @@ The Java comparison harness writes artifacts under `crates/rh-cql/conformance/re
 
 ## Current Verified Results
 
-On 2026-06-19, the focused audit commands passed.
+On 2026-06-21, the focused audit commands passed.
 
 HL7 evaluation suite:
 
@@ -63,8 +73,16 @@ HL7 evaluation suite:
 - Current expression-level result: `pass=765`, `fail=0`, `skip=48`, `compile_err=123`, `eval_err=467`, `invalid_fail=16`.
 - The suite is a "no wrong answers" gate. Compile errors, eval errors, and skipped cases are counted as unimplemented coverage, but they do not fail CI.
 - `just audit` writes generated JSON and Markdown summaries, so future `CONFORMANCE.md` metric updates can come from structured output instead of copied console text.
-- The generated implementation matrix is row-per-HL7-test and includes pass/fail/status plus notes columns for `rh-cql`, Java ELM, and JavaScript evaluation. Java ELM and JavaScript are currently explicit `not_run` columns until those harnesses are wired into the same matrix.
+- The generated implementation matrix is row-per-HL7-test and includes pass/fail/status plus notes columns for `rh-cql`, Java ELM, and JavaScript evaluation.
 - The 2026-06-19 summary work fixed total accounting for `invalid_fail`; those cases were previously present but not included in the printed total.
+
+Implementation matrix status counts after `just audit-references`:
+
+| Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented | Timeout |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `rh-cql` | 772 | 123 | 467 | 0 | 48 | 16 | 0 |
+| Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 | 0 |
+| JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 | 0 |
 
 ELM production tests:
 
@@ -90,10 +108,10 @@ Current strengths:
 
 Gaps:
 
-- The automated Rust test suite does not invoke the Java translator at test time. Most Java parity tests are structural assertions or comparison against checked-in Java output.
+- The automated Rust test suite does not invoke the Java translator at test time. `just audit-references` is an explicit external-reference step because it needs Java, npm dependencies, and local setup.
 - The checked-in Java reference corpus is very small: `simple` and `arithmetic`, plus in-test CQL strings.
-- There is no checked-in JavaScript execution harness for generated ELM.
-- The Java comparison script is useful but not currently a CI gate and needs local tool setup.
+- JavaScript reference evaluation currently uses scalar HL7 expression tests and `rh-cql`-generated ELM. FHIR retrieve evaluation with `cql-exec-fhir` and bundles is still future work.
+- The Java comparison script and reference matrix harness are useful but not currently a CI gate and need local tool setup.
 
 ## Evaluation Coverage
 
@@ -115,6 +133,7 @@ Gaps:
 Use cases covered today:
 
 - CQL-to-ELM production comparison through `crates/rh-cql/conformance/scripts/compare_translators.py`.
+- Full HL7 expression-corpus Java translation status through `crates/rh-cql/conformance/scripts/run_reference_matrix.py`.
 - Checked-in Java ELM fixture comparison for a small fixed corpus.
 
 Known caveats:
@@ -127,7 +146,7 @@ Known caveats:
 
 Local repo status:
 
-- No committed test harness currently runs `cql-execution` or `cql-exec-fhir` against `rh-cql` ELM.
+- `crates/rh-cql/conformance/scripts/evaluate_with_cql_execution.mjs` runs `cql-execution` against `rh-cql` ELM for the HL7 expression corpus.
 - `packages/cql/test/node.test.ts` verifies the Reason Health WASM wrapper compile/evaluate path only.
 
 Relevant upstream projects:
@@ -138,7 +157,7 @@ Relevant upstream projects:
 Recommended use:
 
 - Treat JavaScript as a consumer/interoperability oracle for generated ELM, not as a replacement for HL7 expected-result tests.
-- Add a small npm-based conformance harness that compiles CQL with `rh cql compile`, loads the JSON ELM into `cql-execution`, and compares JavaScript results against `rh-cql` for cases both engines support.
+- Use the npm-based conformance harness to compile CQL with `rh cql compile`, load JSON ELM into `cql-execution`, and compare JavaScript results against HL7 expected outputs for scalar expression cases.
 - Include `cql-exec-fhir` cases with small R4 bundles once retrieve semantics are stable enough.
 
 Known JavaScript ambiguity:

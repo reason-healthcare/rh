@@ -96,7 +96,7 @@ fi
 echo ""
 echo "Building Rust translator..."
 cd "$WORKSPACE_ROOT"
-cargo build --release -p rh
+cargo build --release -p rh-cli
 
 RUST_CLI="$WORKSPACE_ROOT/target/release/rh"
 if [ -f "$RUST_CLI" ]; then

@@ -19,7 +19,7 @@ Generated reports are not committed. Regenerate them with:
 
 ```bash
 cd crates/rh-cql
-just audit-strict
+just audit-full
 ```
 
 Then review:
@@ -30,6 +30,7 @@ Then review:
 | `conformance/results/audit/hl7_eval_summary.json` | Machine-readable suite-level HL7 eval summary |
 | `conformance/results/audit/implementation_matrix.csv` | Row-per-test implementation matrix with `rh-cql`, Java ELM, and JavaScript eval status/notes |
 | `conformance/results/audit/implementation_matrix.json` | Machine-readable implementation matrix |
+| `conformance/results/audit/implementation_matrix_summary.json` | Status counts for each implementation column |
 | `conformance/results/audit/hl7_eval_tests.txt` | Captured HL7 eval test output |
 | `conformance/results/audit/elm_production_tests.txt` | Captured ELM production/fidelity test output |
 | `conformance/results/audit/eval_engine_tests.txt` | Captured evaluator/semantic test output |
@@ -46,6 +47,16 @@ just audit-strict
 Use this before changing conformance documentation. It enforces current ceilings
 for skip, compile error, eval error, invalid failure, and total unimplemented
 HL7 outcomes.
+
+### Three-Engine Matrix
+
+```bash
+cd crates/rh-cql
+just audit-full
+```
+
+This runs the strict Rust audit, then populates Java ELM and JavaScript
+`cql-execution` columns in `implementation_matrix.csv` / `.json`.
 
 ### Java Reference Translator Setup
 
@@ -76,8 +87,8 @@ Comparison output is written under `conformance/results/`.
 
 ## Notes
 
-- `implementation_matrix.*` currently has populated `rh-cql` statuses from the
-  HL7 evaluator. Java ELM and JavaScript evaluation columns are explicit
-  `not_run` placeholders until those harnesses are wired into the same matrix.
+- `implementation_matrix.*` is generated in two phases: Rust statuses from
+  `just audit-strict`, then Java and JavaScript statuses from
+  `just audit-references`.
 - Historical wave/baseline notes are intentionally excluded from
   [CONFORMANCE.md](CONFORMANCE.md); keep that document focused on current state.

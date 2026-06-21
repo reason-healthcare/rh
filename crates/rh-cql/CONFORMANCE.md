@@ -113,9 +113,21 @@ case and implementation status/notes columns for:
 - Java ELM translator.
 - JavaScript evaluation.
 
-Currently, `rh-cql` statuses are populated from the HL7 runner. Java ELM and
-JavaScript columns are explicit `not_run` placeholders until those harnesses are
-wired into the same matrix.
+`just audit-strict` populates the `rh-cql` columns. `just audit-references`
+then runs the pinned Java CQL-to-ELM translator and JavaScript `cql-execution`
+against the same rows and rewrites the matrix with reference statuses.
+
+Current full-corpus reference counts:
+
+| Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented | Timeout |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `rh-cql` | 772 | 123 | 467 | 0 | 48 | 16 | 0 |
+| Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 | 0 |
+| JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 | 0 |
+
+The JavaScript column evaluates `rh-cql`-generated ELM in `cql-execution`.
+Rows that fail there are interoperability findings about generated ELM and/or
+reference runtime behavior, not necessarily independent CQL compilation results.
 
 ---
 
@@ -244,6 +256,7 @@ Recommended focused commands:
 ```bash
 cd crates/rh-cql
 just audit-strict
+just audit-references
 cargo clippy -p rh-cql --all-targets --all-features -- -D warnings
 ```
 
@@ -258,7 +271,7 @@ When a new CQL specification version ships:
 
 1. Download the new test fixtures from the CQL tests page.
 2. Replace `tests/fixtures/hl7_cql_tests/*.xml`.
-3. Run `cd crates/rh-cql && just audit-strict`.
+3. Run `cd crates/rh-cql && just audit-full`.
 4. Review generated `hl7_eval_summary.json`, `hl7_eval_summary.md`, and
    `implementation_matrix.*`.
 5. Update this document with the current generated totals.

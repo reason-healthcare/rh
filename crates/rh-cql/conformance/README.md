@@ -34,6 +34,7 @@ conformance/
 - Java 17+ (`java -version`)
 - Python 3.8+ (`python3 --version`)
 - Rust toolchain (`cargo --version`)
+- Node.js and npm for JavaScript `cql-execution` matrix checks
 
 ## Setup
 
@@ -57,6 +58,24 @@ CQL_JAVA_REF=v4.7.0 ./scripts/setup.sh
 ```
 
 ## Running Comparisons
+
+### Populate the Three-Engine Implementation Matrix
+
+```bash
+cd crates/rh-cql
+just audit-full
+```
+
+This regenerates the Rust HL7 audit and then updates
+`conformance/results/audit/implementation_matrix.csv` / `.json` with Java ELM
+and JavaScript `cql-execution` status columns.
+
+To run only the external-reference phase after `just audit-strict`:
+
+```bash
+cd crates/rh-cql
+just audit-references
+```
 
 ### Compare a single CQL file
 
