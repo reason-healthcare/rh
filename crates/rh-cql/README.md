@@ -20,6 +20,9 @@ This crate provides:
 ✅ **Core Complete** — Three-stage pipeline (Parse → Semantic Analysis → ELM Emit) implemented.
 Source maps, explain mode, and ELM evaluation engine are all functional.
 
+For conformance and specification coverage, start with
+[CONFORMANCE_INDEX.md](./CONFORMANCE_INDEX.md).
+
 ## Quick Start
 
 ```rust

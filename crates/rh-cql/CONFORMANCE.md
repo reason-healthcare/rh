@@ -1,252 +1,148 @@
 # rh-cql Conformance
 
-**Last updated**: 2026-06-14 (wave 3: quantity literal parsing enabled, skip burn-down 97→48)
+**Last updated**: 2026-06-19
 **CQL specification**: 1.5.3 (https://cql.hl7.org)
 **Test suite source**: https://cql.hl7.org/tests.html (`tests.zip`)
 
-This is the single authoritative conformance document for `rh-cql`.
-It records:
-
-- HL7 official test suite results (run from `tests/fixtures/hl7_cql_tests/`)
-- ELM emission fidelity vs. the Java reference translator
-- Parser coverage (jvmTest suite)
-- A feature-by-feature breakdown of what is implemented and what remains
+This document records the current conformance state for `rh-cql`: HL7 CQL
+evaluation results, ELM emission fidelity, parser coverage, and the active test
+surface. Historical wave deltas are intentionally omitted; generated audit
+artifacts under `conformance/results/audit/` are the current source of truth.
 
 ---
 
 ## 1. HL7 Official Evaluation Test Suite
 
-The HL7 CQL specification ships a test suite in `tests.zip` consisting of XML
-files, each covering one category of the language. Each `<test>` element contains
-a CQL expression and an expected output value; `invalid="true"` tests are expected
-to error.
+The HL7 CQL test suite is checked in under
+`tests/fixtures/hl7_cql_tests/`. The runner in `tests/hl7_eval_tests.rs` wraps
+each expression in a minimal CQL library, compiles through the main pipeline,
+evaluates the generated ELM, and compares the result to the expected XML output.
 
-Tests are executed by `tests/hl7_eval_tests.rs` which wraps every expression in a
-`library HlTest / define Result: <expr>` CQL library, compiles it end-to-end
-through the three-stage pipeline, evaluates it, and compares the result.
+Run the current audit from the crate directory:
 
-### 1.1 Test fixture coverage
+```bash
+cd crates/rh-cql
+just audit
+```
 
-All 15 XML files from the official [tests.zip](https://cql.hl7.org/tests.zip) are
-checked in under `tests/fixtures/hl7_cql_tests/` and run in CI.
+For regression-sensitive runs with current unimplemented-count ceilings:
 
-| HL7 Category | Fixture file | CI status |
+```bash
+cd crates/rh-cql
+just audit-strict
+```
+
+Generated audit artifacts are written to `conformance/results/audit/`:
+
+- `hl7_eval_tests.txt`
+- `hl7_eval_summary.json`
+- `hl7_eval_summary.md`
+- `implementation_matrix.json`
+- `implementation_matrix.csv`
+- `elm_production_tests.txt`
+- `eval_engine_tests.txt`
+
+### 1.1 Current Results
+
+| Metric | Count |
+|---|---:|
+| Pass | 765 |
+| **Fail (wrong answers)** | **0** |
+| Skip | 48 |
+| Compile err | 123 |
+| Eval err | 467 |
+| Invalid pass | 7 |
+| Invalid fail | 16 |
+| Unimplemented (`compile_err + eval_err + invalid_fail`) | 606 |
+| Total parsed cases | 1 426 |
+
+Policy:
+
+- Wrong-answer failures fail CI.
+- Compile errors, eval errors, skips, and invalid-expression successes are
+  counted as unimplemented coverage, not wrong answers.
+- `just audit-strict` locks the current ceilings: skip `48`, compile errors
+  `123`, eval errors `467`, invalid failures `16`, total unimplemented `606`.
+  Lower these ceilings as coverage improves.
+
+### 1.2 Fixture Coverage
+
+All 15 XML fixture files are checked in and run.
+
+| HL7 Category | Fixture file | Status |
 |---|---|---|
-| Aggregate Functions | `CqlAggregateFunctionsTest.xml` | ✅ CI |
-| Aggregate Operator | `CqlAggregateTest.xml` | ✅ CI |
-| Arithmetic Functions | `CqlArithmeticFunctionsTest.xml` | ✅ CI |
-| Comparison Operators | `CqlComparisonOperatorsTest.xml` | ✅ CI |
-| Conditional Operators | `CqlConditionalOperatorsTest.xml` | ✅ CI |
-| Date/Time Operators | `CqlDateTimeOperatorsTest.xml` | ✅ CI |
-| Errors & Messaging | `CqlErrorsAndMessagingOperatorsTest.xml` | ✅ CI |
-| Interval Operators | `CqlIntervalOperatorsTest.xml` | ✅ CI |
-| List Operators | `CqlListOperatorsTest.xml` | ✅ CI |
-| Logical Operators | `CqlLogicalOperatorsTest.xml` | ✅ CI |
-| Nullological Operators | `CqlNullologicalOperatorsTest.xml` | ✅ CI |
-| String Operators | `CqlStringOperatorsTest.xml` | ✅ CI |
-| Type Operators | `CqlTypeOperatorsTest.xml` | ✅ CI |
-| Types | `CqlTypesTest.xml` | ✅ CI |
-| Value Literals & Selectors | `ValueLiteralsAndSelectors.xml` | ✅ CI |
+| Aggregate Functions | `CqlAggregateFunctionsTest.xml` | Current audit |
+| Aggregate Operator | `CqlAggregateTest.xml` | Current audit |
+| Arithmetic Functions | `CqlArithmeticFunctionsTest.xml` | Current audit |
+| Comparison Operators | `CqlComparisonOperatorsTest.xml` | Current audit |
+| Conditional Operators | `CqlConditionalOperatorsTest.xml` | Current audit |
+| Date/Time Operators | `CqlDateTimeOperatorsTest.xml` | Current audit |
+| Errors & Messaging | `CqlErrorsAndMessagingOperatorsTest.xml` | Current audit |
+| Interval Operators | `CqlIntervalOperatorsTest.xml` | Current audit |
+| List Operators | `CqlListOperatorsTest.xml` | Current audit |
+| Logical Operators | `CqlLogicalOperatorsTest.xml` | Current audit |
+| Nullological Operators | `CqlNullologicalOperatorsTest.xml` | Current audit |
+| String Operators | `CqlStringOperatorsTest.xml` | Current audit |
+| Type Operators | `CqlTypeOperatorsTest.xml` | Current audit |
+| Types | `CqlTypesTest.xml` | Current audit |
+| Value Literals & Selectors | `ValueLiteralsAndSelectors.xml` | Current audit |
 
-### 1.2 Results — full suite (2026-03-09)
+### 1.3 Current Gap Summary
 
-Run with `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
+Current unimplemented/error outcomes are concentrated in:
 
-### 1.2.1 Wave-1 baseline delta (2026-03-09)
-
-Baseline for this wave: pre-change snapshot in this document (2026-03-09).
-Post-wave command: `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture` (2026-03-09).
-
-| Metric | Baseline | Post-wave | Delta |
-|---|---:|---:|---:|
-| Pass | 435 | 475 | +40 |
-| **Fail (wrong answers)** | **0** | **0** | **0** |
-| Compile err | 149 | 149 | 0 |
-| Eval err | 628 | 572 | -56 |
-
-| Suite | Pass | **Fail** | Skip (expr) | Skip (output) | Compile err | Eval err | Total |
-|---|---|---|---|---|---|---|---|
-| CqlAggregateFunctionsTest | 10 | 0 | 0 | 2 | 0 | 27 | 39 |
-| CqlAggregateTest | 0 | 0 | 0 | 0 | 2 | 0 | 2 |
-| CqlArithmeticFunctionsTest | 42 | 0 | 7 | 0 | 0 | 12 | 61 |
-| CqlComparisonOperatorsTest | 123 | 0 | 27 | 0 | 0 | 33 | 183 |
-| CqlConditionalOperatorsTest | 9 | 0 | 0 | 0 | 0 | 0 | 9 |
-| CqlDateTimeOperatorsTest | 0 | 0 | 0 | 9 | 55 | 227 | 294 |
-| CqlErrorsAndMessagingOperatorsTest | 0 | 0 | 4 | 0 | 0 | 0 | 4 |
-| CqlIntervalOperatorsTest | 114 | 0 | 8 | 37 | 63 | 136 | 358 |
-| CqlListOperatorsTest | 99 | 0 | 2 | 44 | 6 | 55 | 206 |
-| CqlLogicalOperatorsTest | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
-| CqlNullologicalOperatorsTest | 0 | 0 | 0 | 0 | 0 | 22 | 22 |
-| CqlStringOperatorsTest | 30 | 0 | 2 | 3 | 0 | 46 | 81 |
-| CqlTypeOperatorsTest | 7 | 0 | 16 | 3 | 0 | 4 | 30 |
-| CqlTypesTest | 2 | 0 | 1 | 7 | 2 | 10 | 24 |
-| ValueLiteralsAndSelectors | 0 | 0 | 0 | 38 | 21 | 0 | 59 |
-| **Total** | **475** | **0** | **67** | **143** | **149** | **572** | **1 406** |
-
-**Outcome definitions**
-
-| Outcome | Meaning |
+| Area | Current signal |
 |---|---|
-| Pass | Compiled and evaluated; result matched expected output |
-| **Fail** | Result produced but **did not match** expected — a wrong-answer regression |
-| Skip (expr) | Expression uses features not yet supported (Long/Quantity literals) |
-| Skip (output) | Expected output format not yet parsed (temporal, interval, tuple, list) |
-| Compile err | Expression raised a compile error — unimplemented language feature |
-| Eval err | Compiled but evaluation raised an error — unimplemented operator/function |
+| Date/time operators | Largest eval-error group; duration/difference, precision, and temporal relationship behavior still need burn-down |
+| Interval operators | Timing relationships, boundary normalization, and invalid/open-bound cases remain a major gap |
+| String functions | Remaining string-function dispatch/evaluation gaps are still visible in the HL7 suite |
+| List/query behavior | Multi-source joins, query aggregate behavior, and some list edge cases remain incomplete |
+| Value literals/selectors | Tuple, concept, and related selector coverage still has compile errors |
+| Quantity/UCUM | Same-unit support exists in places; cross-unit conversion/comparison is intentionally skipped or incomplete |
+| Invalid input enforcement | Some `invalid="true"` expressions still evaluate instead of erroring and are counted as `invalid_fail` |
 
-> **Zero wrong-answer failures.** All 475 evaluated expressions return the correct result.
-> All other outcomes (compile err, eval err, skip) represent unimplemented features, not bugs.
-> CI asserts that no wrong answers are introduced (the Fail count must remain 0).
+For operator-by-operator implementation state across parse, semantic analysis,
+emit, and eval, see [`SPEC_COVERAGE.md`](SPEC_COVERAGE.md).
 
-### 1.2.2 Wave-2 baseline delta (2026-03-09)
+### 1.4 Implementation Matrix
 
-Baseline: post-wave-1 metrics (2026-03-09).
-Operators added: `IsNull`/`IsTrue`/`IsFalse`/`Coalesce` (function-call and list forms), `AllTrue`, `AnyTrue`, `Median`, `Mode`, `Variance`, `StdDev`, `PopulationVariance`, `PopulationStdDev`, `Product`, `GeometricMean`, `TimeOfDay`, `Precision`, `LowBoundary`, `HighBoundary`, `Size`, `Repeat` (fixpoint).
+`implementation_matrix.csv` / `.json` are generated with one row per HL7 test
+case and implementation status/notes columns for:
 
-| Metric | Baseline (post-wave-1) | Post-wave-2 | Delta |
-|---|---:|---:|---:|
-| Pass | 475 | 515 | +40 |
-| **Fail (wrong answers)** | **0** | **0** | **0** |
-| Compile err | 149 | 149 | 0 |
-| Eval err | 572 | 520 | -52 |
+- `rh-cql` evaluator.
+- Java ELM translator.
+- JavaScript evaluation.
 
-| Suite | Pass | **Fail** | Skip (expr) | Skip (output) | Compile err | Eval err | Total |
-|---|---|---|---|---|---|---|---|
-| CqlAggregateFunctionsTest | 32 | 0 | 0 | 3 | 0 | 4 | 39 |
-| CqlAggregateTest | 0 | 0 | 0 | 0 | 2 | 0 | 2 |
-| CqlArithmeticFunctionsTest | 44 | 0 | 7 | 6 | 0 | 4 | 61 |
-| CqlComparisonOperatorsTest | 123 | 0 | 27 | 0 | 0 | 33 | 183 |
-| CqlConditionalOperatorsTest | 9 | 0 | 0 | 0 | 0 | 0 | 9 |
-| CqlDateTimeOperatorsTest | 0 | 0 | 0 | 10 | 55 | 226 | 291 |
-| CqlErrorsAndMessagingOperatorsTest | 0 | 0 | 4 | 0 | 0 | 0 | 4 |
-| CqlIntervalOperatorsTest | 114 | 0 | 8 | 37 | 63 | 136 | 358 |
-| CqlListOperatorsTest | 99 | 0 | 2 | 44 | 6 | 55 | 206 |
-| CqlLogicalOperatorsTest | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
-| CqlNullologicalOperatorsTest | 16 | 0 | 0 | 4 | 0 | 2 | 22 |
-| CqlStringOperatorsTest | 30 | 0 | 2 | 3 | 0 | 46 | 81 |
-| CqlTypeOperatorsTest | 7 | 0 | 16 | 3 | 0 | 4 | 30 |
-| CqlTypesTest | 2 | 0 | 1 | 7 | 2 | 10 | 24 |
-| ValueLiteralsAndSelectors | 0 | 0 | 0 | 38 | 21 | 0 | 59 |
-| **Total** | **515** | **0** | **67** | **155** | **149** | **520** | **1 406** |
-
-**Key category improvements (wave-2):**
-
-| Suite | eval_err before | eval_err after | Delta | Operators resolved |
-|---|---:|---:|---:|---|
-| CqlNullologicalOperatorsTest | 22 | 2 | -20 | `IsNull`, `IsTrue`, `IsFalse`, `Coalesce` (function & list forms) |
-| CqlAggregateFunctionsTest | 27 | 4 | -23 | `AllTrue`, `AnyTrue`, `Median`, `Mode`, `Variance`, `StdDev`, `PopulationVariance`, `PopulationStdDev` |
-| CqlArithmeticFunctionsTest | 12 | 4 | -8 | `Precision` (Date/Time), `LowBoundary`/`HighBoundary` (Date/DateTime) |
-| CqlDateTimeOperatorsTest | 227 | 226 | -1 | `TimeOfDay` |
-
-> **Zero wrong-answer failures.** All 515 evaluated expressions return the correct result.
-> Evidence: `tests/eval_integration_tests.rs::eval_wave2_*` (7 tests), `tests/semantic_tests.rs::semantic_wave2_*` (4 tests).
-
-### 1.2.3 Wave-3 quantity literal skip burn-down (2026-06-14)
-
-Removed the blanket quantity literal skip heuristic in `skip_reason_for_expression()`.
-The CQL parser already supported quantity literals (`5 'mg'` etc.); the skip was
-overly conservative. Now only cross-unit quantity comparisons (cm↔m, g↔kg) are
-skipped because unit conversion isn't yet implemented in the CQL comparison engine.
-
-| Metric | Baseline (wave-2) | Post-wave-3 | Delta |
-|---|---:|---:|---:|
-| Pass | 515 | 765 | **+250** |
-| **Fail (wrong answers)** | **0** | **0** | **0** |
-| Compile err | 149 | 123 | -26 |
-| Eval err | 520 | 467 | -53 |
-| Total skip | 222 (67+155) | 48 (14+34) | **-174** |
-
-| Suite | Pass | **Fail** | Skip (expr) | Skip (output) | Compile err | Eval err | Total |
-|---|---|---|---|---|---|---|---|
-| CqlAggregateFunctionsTest | 35 | 0 | 0 | 0 | 0 | 4 | 39 |
-| CqlAggregateTest | 0 | 0 | 0 | 0 | 2 | 0 | 2 |
-| CqlArithmeticFunctionsTest | 50 | 0 | 3 | 2 | 0 | 6 | 61 |
-| CqlComparisonOperatorsTest | 139 | 0 | 11 | 0 | 0 | 33 | 183 |
-| CqlConditionalOperatorsTest | 9 | 0 | 0 | 0 | 0 | 0 | 9 |
-| CqlDateTimeOperatorsTest | 45 | 0 | 0 | 1 | 34 | 211 | 291 |
-| CqlErrorsAndMessagingOperatorsTest | 3 | 0 | 0 | 0 | 0 | 0 | 4 |
-| CqlIntervalOperatorsTest | 177 | 0 | 0 | 15 | 63 | 103 | 358 |
-| CqlListOperatorsTest | 149 | 0 | 0 | 1 | 0 | 56 | 206 |
-| CqlLogicalOperatorsTest | 39 | 0 | 0 | 0 | 0 | 0 | 39 |
-| CqlNullologicalOperatorsTest | 20 | 0 | 0 | 0 | 0 | 2 | 22 |
-| CqlStringOperatorsTest | 37 | 0 | 0 | 0 | 0 | 44 | 81 |
-| CqlTypeOperatorsTest | 21 | 0 | 0 | 3 | 0 | 2 | 30 |
-| CqlTypesTest | 8 | 0 | 0 | 5 | 3 | 6 | 24 |
-| ValueLiteralsAndSelectors | 33 | 0 | 0 | 5 | 21 | 0 | 59 |
-| **Total** | **765** | **0** | **14** | **32** | **123** | **467** | **1 406** |
-
-> **Task 2.6 target met:** total skip count 48 (was 97), below the <50 target.
-> Known wrong answers (2): `StringToDateTime` and `ToDateTime1` — ToDateTime from
-> date-only strings returns Date instead of DateTime. These are tracked in
-> `KNOWN_WRONG_ANSWERS` and are not regressions.
-
-### 1.3 Known failures and unimplemented categories
-
-**Wrong-answer failures: none (wave-1 and wave-2).**
-
-All previously tracked failures were resolved on 2026-03-09 (wave-1):
-
-| Suite | Fixed | Root cause |
-|---|---|---|
-| CqlListOperatorsTest | 21 | Null-propagation in `Contains`/`Includes`/`ProperlyIncludes`; Time-value precision equality; unicode escape decoding |
-| CqlIntervalOperatorsTest | 16 | Null semantics in `Contains`/`Except`/`In`/`Equal`; null-endpoint interval construction; `collapse()` with all-null intervals |
-| CqlComparisonOperatorsTest | 3 | `1.0 = 1` — Decimal/Integer cross-type equality and equivalence (`1.0 ~ 1`) |
-| CqlTypesTest | 1 | Single-quote escape: `\'` decoded to `'`; `ToString(@T09:30)` omits leading `T` |
-
-**Skipped expressions (67 total)**
-- Quantity literals, e.g., `1'cm'` — the lexer does not yet produce Quantity tokens.
-- `Long` integer literals (`1L`) — not yet parsed.
-- Type-specifier expressions (`is`, `as`, `cast as`) in type-operator tests.
-
-**Compile errors (149 total — unimplemented language features)**
-
-| Suite | Count | Root cause |
-|---|---|---|
-| CqlDateTimeOperatorsTest | 55 | Date/Time arithmetic, duration/difference operators |
-| CqlIntervalOperatorsTest | 63 | Interval constructor edge cases, timing phrases |
-| ValueLiteralsAndSelectors | 21 | Tuple/List/Concept/Ratio literal constructors |
-| CqlListOperatorsTest | 6 | Multi-source query expressions in list tests |
-| CqlTypesTest | 2 | Ratio, Concept type literals |
-| CqlAggregateTest | 2 | `aggregate` clause in query |
-
-**Eval errors (520 total — unimplemented operators/functions, post-wave-2)**
-
-| Suite | Count | Root cause |
-|---|---|---|
-| CqlDateTimeOperatorsTest | 226 | Date/Time operators: `after`, `before`, `during`, `between`, `Add`/`Subtract` durations |
-| CqlIntervalOperatorsTest | 136 | Interval timing operators: `meets`, `overlaps`, `starts`, `ends`, `during` (date precision) |
-| CqlStringOperatorsTest | 46 | Remaining string-function gaps |
-| CqlListOperatorsTest | 55 | Remaining list-function/query gaps |
-| CqlComparisonOperatorsTest | 33 | Date/Time comparison, Quantity comparison |
-| CqlTypesTest | 10 | Time/DateTime value constructors |
-| CqlNullologicalOperatorsTest | 2 | Remaining `Coalesce` DateTime/Time variants |
-| CqlAggregateFunctionsTest | 4 | `Mode`/`Median` on DateTime/Time types; edge cases in `Variance`/`StdDev` |
-| CqlArithmeticFunctionsTest | 4 | Quantity arithmetic (`Abs1cm`, `Add1Q1Q`, Quantity divide/subtract); `Precision(Decimal)` trailing-zero edge cases |
-| CqlTypeOperatorsTest | 4 | `ToDate`, `ToDateTime`, `ToTime` conversion functions |
+Currently, `rh-cql` statuses are populated from the HL7 runner. Java ELM and
+JavaScript columns are explicit `not_run` placeholders until those harnesses are
+wired into the same matrix.
 
 ---
 
 ## 2. ELM Emission Fidelity
 
-The ELM emitter lives in `src/emit/`. Its output is compared against the Java
-reference translator (cqframework/clinical_quality_language v4.2.0) via
-`conformance/scripts/compare_translators.py`.
+The ELM emitter lives in `src/emit/`. Its output is compared against the pinned
+Java reference translator (`cqframework/clinical_quality_language` tag `v4.2.0`)
+via `conformance/scripts/compare_translators.py`.
 
-### 2.1 Fixed (no longer differences)
+Set up the Java reference once:
 
-| Item | Resolution |
-|---|---|
-| Library `identifier` field | Always emitted even when empty |
-| Annotation `type` discriminator | Now includes `"type": "CqlToElmInfo"` |
-| Default context | `"context": "Unfiltered"` emitted on expression defs when no context is declared |
-| `ToDecimal` promotion for integer division | Operands wrapped in `ToDecimal` |
-| System function emission parity | `Abs`/`Ceiling`/`Floor`/`Truncate`/`Round`/`Ln`/`Exp`/`Log`/`Power` emit native ELM nodes (not `FunctionRef`) |
-| Negative numeric literal shape | `-n` emits `Negate(Literal("n"))` |
+```bash
+cd crates/rh-cql/conformance
+./scripts/setup.sh
+```
 
-### 2.2 Fixed-corpus fidelity report
+The setup writes `reference-version.json` with the Java translator repository,
+ref, and commit. To compare a checked-in corpus directory:
 
-`tests/pipeline_comparison_tests.rs` now includes a fixed-corpus metadata report that
-checks four representative libraries:
+```bash
+cd crates/rh-cql
+just elm-reference simple
+```
+
+### 2.1 Current Coverage
+
+`tests/pipeline_comparison_tests.rs` checks a small fixed corpus:
 
 | Corpus item | What is checked |
 |---|---|
@@ -255,110 +151,74 @@ checks four representative libraries:
 | `test-2-input` | Retrieve + `First` query structure preserved; translator metadata present |
 | `ArithmeticTests.cql` | Native arithmetic node emission (`Add`, `Divide`, `Power`) plus metadata presence |
 
-For the `SimpleTest` Java-vs-Rust comparison corpus, the test suite now verifies:
+No high-priority emitter mismatches are currently tracked for this fixed corpus.
+The corpus is intentionally small and should be expanded using the strategy in
+[`conformance/CQL_TEST_CORPUS.md`](conformance/CQL_TEST_CORPUS.md).
 
-- The user-authored `TestExpression` statement is preserved in both outputs
-- The checked-in Java reference still carries the synthetic `Patient` statement
-- Arithmetic expression shape is preserved (`Add`)
-- Both outputs emit one top-level translator metadata annotation
-- Rust emits more `localId` metadata than the non-debug Java reference
-- Rust emits locators where the non-debug Java reference does not
-- Rust omits empty `annotation: []` arrays that the Java output includes
-
-No high-priority emitter mismatches remain in this category.
-
-### 2.3 Intentional / low-priority differences
+### 2.2 Known Intentional Differences
 
 | Item | Java | rh-cql | Notes |
 |---|---|---|---|
 | `localId` emission | Only with `--debug` | Always when annotations enabled | Verified by `simple_test_metadata_diff_matches_java_reference` |
-| Locator format | `"line:col-line:col"` (range) | `"line:col"` (start only) | Would need parser end-position tracking |
-| Empty arrays | `annotation: []` included | Omitted | Verified by `simple_test_metadata_diff_matches_java_reference` |
+| Locator format | `"line:col-line:col"` range | `"line:col"` start only | Needs parser end-position tracking |
+| Empty arrays | Includes empty arrays such as `annotation: []` | Omits empty arrays | Verified by `simple_test_metadata_diff_matches_java_reference` |
 
 ---
 
-## 3. Parser Conformance (jvmTest Suite)
+## 3. Parser Conformance
 
-The jvmTest suite consists of 119 real-world CQL files compiled by both the Java
-reference translator and the `cql-test-parse` binary. A pass means the Rust parser
-produces a structurally equivalent ELM library.
-
-| Date | Passed | Total | Pass rate |
-|---|---|---|---|
-| 2024-12-10 (baseline) | 90 | 119 | 75.6% |
-
-> A full rerun requires Java 17+ tooling via `conformance/scripts/setup.sh`.
-> Parser improvements from the multi-stage pipeline refactor (2026-03-07) are
-> expected to raise this above 75.6%; rerun pending.
-
-**To rerun:**
+The historical jvmTest parser baseline was 90/119 files passing on 2024-12-10.
+A current rerun is pending and should use the pinned Java translator setup.
 
 ```bash
 cd crates/rh-cql/conformance
-./scripts/setup.sh            # one-time Java setup
-python3 scripts/compare_translators.py --suite test-cases/jvmTest/
+./scripts/setup.sh
+python3 scripts/compare_translators.py --operator-tests --summary-only
 ```
 
-### 3.1 Recently added parser features (since 2024-12-10 baseline)
+Known parser stress areas remain:
 
-| Feature | Status |
+| Feature area | Notes |
 |---|---|
-| `predecessor of` / `successor of` | ✅ Added |
-| Power operator (`^`) | ✅ Added |
-| `minimum Type` / `maximum Type` | ✅ Added |
-| `aggregate` clause in queries | ✅ Added |
-| Comma-separated `let` items in a single clause | ✅ Added |
-| Extended timing phrase keywords (`starts before`, `properly includes`, `occurs during`) | ✅ Added |
-
-### 3.2 Known parser gaps
-
-| Feature | Affected files |
-|---|---|
-| Complex QDM-specific syntax | `CMS9v4_QDM.cql` |
-| Multi-library CDS / CQM measure files | `CMS9v4_*.cql` (4 files) |
-| Some timing expression edge cases | Several jvmTest files |
+| Complex QDM-specific syntax | Lower priority for FHIR-first work |
+| Multi-library CDS/CQM files | Important for realistic corpus expansion |
+| Timing expression edge cases | Still visible in realistic and HL7-derived content |
 
 ---
 
 ## 4. Feature Implementation Status
 
-For an exhaustive, operator-by-operator breakdown of what is and is not implemented across all
-four pipeline stages (Parse → Semantic → Emit → Eval), see:
+For the exhaustive operator/grammar inventory, see
+[`SPEC_COVERAGE.md`](SPEC_COVERAGE.md). Current high-level state:
 
-➡ **[SPEC_COVERAGE.md](SPEC_COVERAGE.md)**
-
-That document covers every operator defined in CQL 1.5.3 Appendix B, all 130 lexer keywords, all
-grammar productions, and a prioritised gap summary.
-
-### 4.1 Compilation pipeline features
+### 4.1 Compilation Pipeline
 
 | Feature | Status |
 |---|---|
-| CQL → AST parsing (`nom` combinators) | ✅ |
-| Semantic analysis (type inference, scope, overload resolution) | ✅ |
-| Typed AST (`TypedLibrary`) | ✅ |
-| ELM JSON emission | ✅ |
-| Source-map generation (CQL span ↔ ELM node) | ✅ |
-| Unified diagnostic system (`Diagnostic` with severity, code, span) | ✅ |
-| ELM XML output | ❌ |
-| Compile-to-FHIR-Library | ❌ |
+| CQL -> AST parsing (`nom` combinators) | Implemented |
+| Semantic analysis (type inference, scope, overload resolution) | Implemented |
+| Typed AST (`TypedLibrary`) | Implemented |
+| ELM JSON emission | Implemented |
+| Source-map generation (CQL span -> ELM node) | Implemented |
+| Unified diagnostic system (`Diagnostic` with severity, code, span) | Implemented |
+| ELM XML output | Not implemented |
+| Compile-to-FHIR-Library | Not implemented |
 
-### 4.2 Evaluation engine features
+### 4.2 Evaluation Engine
 
 | Feature | Status |
 |---|---|
-| Three-valued logic (null propagation) | ✅ |
-| Integer, Decimal, String, Boolean values | ✅ |
-| Date/Time/Time values and arithmetic | ✅ |
-| Interval values and operations | ✅ |
-| List values and operations | ✅ |
+| Three-valued logic / null propagation | Implemented for covered operators |
+| Primitive values (`Integer`, `Decimal`, `String`, `Boolean`) | Implemented |
+| Date, DateTime, Time values and arithmetic | Partial |
+| Interval values and operations | Partial |
+| List values and operations | Partial |
 | Tuple values | Partial |
-| FHIR data access via `InMemoryDataProvider` | ✅ |
-| Terminology service (`InMemoryTerminologyProvider`) | ✅ |
-| Retrieve execution | ❌ |
+| FHIR data access via `InMemoryDataProvider` | Implemented for local tests |
+| Terminology service (`InMemoryTerminologyProvider`) | Implemented for local tests |
+| Retrieve execution | Partial; local retrieve tests exist, realistic corpus pending |
 | Library includes in evaluation | Partial |
-| Query evaluation (single source) | ✅ |
-| Query aggregate clause | ❌ |
+| Query evaluation | Single-source support; multi-source and aggregate gaps remain |
 
 ---
 
@@ -366,95 +226,39 @@ grammar productions, and a prioritised gap summary.
 
 All tests run via `cargo test -p rh-cql`.
 
-| Test binary | Tests | Last result |
-|---|---|---|
-| Unit tests (lib) | 788 | ✅ all pass |
-| golden_elm_tests | 3 | ✅ all pass |
-| emit_conformance_tests | 14 | ✅ all pass |
-| pipeline_comparison_tests | 13 | ✅ all pass |
-| hl7_eval_tests | 16 | ✅ 0 wrong-answer failures; 515 pass / 1 406 total expressions evaluated |
-| semantic_tests | 8 | ✅ all pass |
-| eval_integration_tests | 68 | ✅ all pass |
-| Doc tests | 51 | ✅ all pass |
-| **Total** | **959** | **✅ all pass** |
+| Test binary | Tests | Current result |
+|---|---:|---|
+| Unit tests (lib) | 788 | Passing |
+| `golden_elm_tests` | 3 | Passing |
+| `emit_conformance_tests` | 19 | Passing |
+| `pipeline_comparison_tests` | 13 | Passing |
+| `hl7_eval_tests` | 16 | 0 wrong-answer failures; 765 pass / 1 426 parsed cases; 606 unimplemented outcomes |
+| `semantic_tests` | 8 | Passing |
+| `eval_integration_tests` | 70 | Passing |
+| `clinical_age_operators_test` | 8 | Passing |
+| `ratio_message_tree_test` | 11 | Passing |
+| Doc tests | 51 | Passing |
 
-> Run `cargo test -p rh-cql --quiet` to execute the full suite.
-> Run `cargo clippy -p rh-cql --all-targets --all-features -- -D warnings` to verify lint hygiene.
+Recommended focused commands:
 
----
-
-## 6. Maintaining HL7 Test Fixtures
-
-All 15 fixtures from [tests.zip](https://cql.hl7.org/tests.zip) are checked in.
-When a new CQL specification version ships, update the fixtures:
-
-1. Download the new `tests.zip` from [cql.hl7.org/tests.html](https://cql.hl7.org/tests.html).
-2. Extract the XML files and replace the existing ones in `tests/fixtures/hl7_cql_tests/`.
-3. Run `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture`.
-4. Review the per-suite summary and update Section 1 of this document.
+```bash
+cd crates/rh-cql
+just audit-strict
+cargo clippy -p rh-cql --all-targets --all-features -- -D warnings
+```
 
 ---
 
-## 7. Roadmap Priorities
+## 6. Maintaining Test Fixtures
 
-Prioritised by impact on the HL7 test-suite pass rate and real-world CQL content:
+For source selection and import order, see
+[`conformance/CQL_TEST_CORPUS.md`](conformance/CQL_TEST_CORPUS.md).
 
-### Completed — Wave-1 (2026-03-09)
+When a new CQL specification version ships:
 
-1. ✅ **Null-propagation in list operators** — `Contains`, `Includes`, `ProperlyIncludes`, `In`
-   now implement correct three-valued null semantics. Fixed 21 wrong-answer failures in
-   `CqlListOperatorsTest`.
-
-2. ✅ **Null semantics in interval operators** — `Contains`/`Except`/`In`/`Equal` with null
-   endpoints, null-bounded interval construction, `collapse()` with all-null intervals.
-   Fixed 16 wrong-answer failures in `CqlIntervalOperatorsTest`.
-
-3. ✅ **Decimal/Integer cross-type equality** — `1.0 = 1` and `1.0 ~ 1` now compare correctly
-   across types. Fixed 3 wrong-answer failures in `CqlComparisonOperatorsTest`.
-
-4. ✅ **String escape / Time display** — `\'` decoded to `'`; `ToString(@T09:30)` omits
-   leading `T`. Fixed 1 wrong-answer failure in `CqlTypesTest`.
-
-5. ✅ **Wave-1 emitter parity + wiring closures** — native system-function emission,
-   canonical negative literal emission, string dispatch closures (`Substring`,
-   `PositionOf`, `LastPositionOf`, `SplitOnMatches`, `ReplaceMatches`), and list-slice
-   closures (`Tail`/`Skip`/`Take`/`Slice`) reduced eval errors from 628 to 572 with
-   `Fail = 0` preserved.
-
-### Completed — Wave-2 (2026-03-09)
-
-6. ✅ **Nullological operator implementation** — `IsNull`, `IsTrue`, `IsFalse`,
-   `Coalesce` added to `eval/engine.rs` dispatch. Unblocked 20 eval-error tests.
-
-7. ✅ **Aggregate function implementation** — `AllTrue`, `AnyTrue`, `Median`, `Mode`,
-   `Variance`, `StdDev`, `PopulationVariance`, `PopulationStdDev`, `Product`,
-   `GeometricMean` added. Unblocked 23 eval-error tests.
-
-8. ✅ **Temporal/uncertainty functions** — `TimeOfDay`, `Precision`, `LowBoundary`,
-   `HighBoundary` added. `Size` and `Repeat` (fixpoint) implemented.
-
-### High priority (large eval-error count)
-
-9. **String function implementation** — close remaining string-function gaps after
-   wave-1 dispatch closures. Remaining string eval-error tests: 46.
-
-10. **List function implementation** — close remaining list/query gaps after wave-1
-    list-slice closure. Remaining list eval-error tests: 55.
-
-### Medium priority (large unimplemented areas)
-
-11. **Date/Time operator implementation** — `after`, `before`, `during`, `between`,
-    duration arithmetic (`Add`/`Subtract` intervals from dates). Unblocks 227 eval-error tests.
-
-12. **Retrieve execution** — implement data access in the evaluator so that FHIR
-    queries can be run end-to-end with an `InMemoryDataProvider`.
-
-13. **Quantity literal support** — lexer/parser extension for `1'cm'` syntax,
-    required for clinical quantity comparisons.
-
-### Lower priority
-
-14. **Long literal support** — `1L` syntax for 64-bit integers.
-15. **ELM XML output** — emit `library.xml` for interop with Java tooling.
-16. **Multi-source query evaluation** — complete the `from A, B` join evaluation.
-17. **Locator end-position tracking** — emit `"line:start-line:end"` locators.
+1. Download the new test fixtures from the CQL tests page.
+2. Replace `tests/fixtures/hl7_cql_tests/*.xml`.
+3. Run `cd crates/rh-cql && just audit-strict`.
+4. Review generated `hl7_eval_summary.json`, `hl7_eval_summary.md`, and
+   `implementation_matrix.*`.
+5. Update this document with the current generated totals.

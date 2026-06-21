@@ -800,6 +800,64 @@ enum Outcome {
     InvalidFail(#[allow(dead_code)] String),
 }
 
+#[derive(Debug, Clone)]
+struct TestMatrixRow {
+    suite: String,
+    group: String,
+    test: String,
+    rh_cql_status: String,
+    rh_cql_notes: String,
+    java_elm_status: String,
+    java_elm_notes: String,
+    javascript_eval_status: String,
+    javascript_eval_notes: String,
+}
+
+impl TestMatrixRow {
+    fn json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "suite": self.suite,
+            "group": self.group,
+            "test": self.test,
+            "implementations": {
+                "rh_cql": {
+                    "status": self.rh_cql_status,
+                    "notes": self.rh_cql_notes,
+                },
+                "java_elm": {
+                    "status": self.java_elm_status,
+                    "notes": self.java_elm_notes,
+                },
+                "javascript_eval": {
+                    "status": self.javascript_eval_status,
+                    "notes": self.javascript_eval_notes,
+                }
+            }
+        })
+    }
+}
+
+fn outcome_status_and_notes(outcome: &Outcome) -> (&'static str, String) {
+    match outcome {
+        Outcome::Pass => ("pass", String::new()),
+        Outcome::InvalidPass => (
+            "pass",
+            "invalid expression produced expected error".to_string(),
+        ),
+        Outcome::Fail { actual, expected } => {
+            ("fail", format!("expected {expected}; actual {actual}"))
+        }
+        Outcome::InvalidFail(actual) => (
+            "unimplemented",
+            format!("invalid expression unexpectedly evaluated: {actual}"),
+        ),
+        Outcome::SkipExpr(reason) => ("skip", reason.clone()),
+        Outcome::SkipOutput(reason) => ("skip", reason.clone()),
+        Outcome::CompileError(error) => ("compile_error", error.clone()),
+        Outcome::EvalError(error) => ("eval_error", error.clone()),
+    }
+}
+
 fn shared_clock() -> FixedClock {
     FixedClock::new(CqlDateTime {
         year: 2023,
@@ -906,7 +964,7 @@ fn run_test_case(tc: &HlTestCase) -> Outcome {
 // Suite runner
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct SuiteStats {
     pass: usize,
     fail: usize,
@@ -922,9 +980,28 @@ impl SuiteStats {
     fn total_attempted(&self) -> usize {
         self.pass + self.fail + self.compile_err + self.eval_err
     }
+
+    fn skip_total(&self) -> usize {
+        self.skip_expr + self.skip_output
+    }
+
+    fn unimplemented_total(&self) -> usize {
+        self.compile_err + self.eval_err + self.invalid_fail
+    }
+
+    fn total_cases(&self) -> usize {
+        self.pass
+            + self.fail
+            + self.skip_expr
+            + self.skip_output
+            + self.compile_err
+            + self.eval_err
+            + self.invalid_pass
+            + self.invalid_fail
+    }
 }
 
-fn run_suite(xml_path: &Path) -> (SuiteStats, Vec<String>) {
+fn run_suite(xml_path: &Path) -> (SuiteStats, Vec<String>, Vec<TestMatrixRow>) {
     let xml =
         fs::read_to_string(xml_path).unwrap_or_else(|e| panic!("cannot read {xml_path:?}: {e}"));
     let cases = parse_hl7_xml(&xml);
@@ -932,9 +1009,22 @@ fn run_suite(xml_path: &Path) -> (SuiteStats, Vec<String>) {
 
     let mut stats = SuiteStats::default();
     let mut failures = Vec::new();
+    let mut matrix_rows = Vec::new();
 
     for tc in &cases {
         let outcome = run_test_case(tc);
+        let (rh_cql_status, rh_cql_notes) = outcome_status_and_notes(&outcome);
+        matrix_rows.push(TestMatrixRow {
+            suite: file_name.to_string(),
+            group: tc.group.clone(),
+            test: tc.name.clone(),
+            rh_cql_status: rh_cql_status.to_string(),
+            rh_cql_notes,
+            java_elm_status: "not_run".to_string(),
+            java_elm_notes: "Java translator comparison is covered by the ELM conformance harness, not by this HL7 evaluation runner.".to_string(),
+            javascript_eval_status: "not_run".to_string(),
+            javascript_eval_notes: "JavaScript cql-execution harness is not wired yet.".to_string(),
+        });
         match outcome {
             Outcome::Pass | Outcome::InvalidPass => {
                 if matches!(outcome, Outcome::InvalidPass) {
@@ -976,11 +1066,208 @@ fn run_suite(xml_path: &Path) -> (SuiteStats, Vec<String>) {
         }
     }
 
-    (stats, failures)
+    (stats, failures, matrix_rows)
 }
 
 fn fixtures_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/hl7_cql_tests")
+}
+
+fn stats_json(stats: &SuiteStats) -> serde_json::Value {
+    serde_json::json!({
+        "pass": stats.pass,
+        "fail": stats.fail,
+        "skip_expr": stats.skip_expr,
+        "skip_output": stats.skip_output,
+        "skip": stats.skip_total(),
+        "compile_err": stats.compile_err,
+        "eval_err": stats.eval_err,
+        "invalid_pass": stats.invalid_pass,
+        "invalid_fail": stats.invalid_fail,
+        "unimplemented": stats.unimplemented_total(),
+        "total": stats.total_cases(),
+    })
+}
+
+fn write_hl7_summary(
+    output_dir: &Path,
+    suite_summaries: &[(String, SuiteStats)],
+    total_stats: &SuiteStats,
+    matrix_rows: &[TestMatrixRow],
+) {
+    fs::create_dir_all(output_dir)
+        .unwrap_or_else(|e| panic!("cannot create HL7 summary dir {output_dir:?}: {e}"));
+
+    let suites: Vec<_> = suite_summaries
+        .iter()
+        .map(|(name, stats)| {
+            serde_json::json!({
+                "suite": name,
+                "stats": stats_json(stats),
+            })
+        })
+        .collect();
+    let json = serde_json::json!({
+        "suite_count": suite_summaries.len(),
+        "totals": stats_json(total_stats),
+        "suites": suites,
+        "policy": {
+            "wrong_answers_fail_ci": true,
+            "compile_err_eval_err_invalid_fail_count_as_unimplemented": true
+        }
+    });
+    let json_path = output_dir.join("hl7_eval_summary.json");
+    let json_text = serde_json::to_string_pretty(&json).expect("serialize HL7 summary JSON");
+    fs::write(&json_path, json_text)
+        .unwrap_or_else(|e| panic!("cannot write HL7 summary JSON {json_path:?}: {e}"));
+
+    let mut markdown = String::new();
+    markdown.push_str("# HL7 CQL Evaluation Summary\n\n");
+    markdown.push_str("| Suite | Pass | Fail | Skip | Compile Err | Eval Err | Invalid Pass | Invalid Fail | Total |\n");
+    markdown.push_str("|---|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+    for (name, stats) in suite_summaries {
+        markdown.push_str(&format!(
+            "| `{}` | {} | {} | {} | {} | {} | {} | {} | {} |\n",
+            name,
+            stats.pass,
+            stats.fail,
+            stats.skip_total(),
+            stats.compile_err,
+            stats.eval_err,
+            stats.invalid_pass,
+            stats.invalid_fail,
+            stats.total_cases()
+        ));
+    }
+    markdown.push_str(&format!(
+        "| **Total** | **{}** | **{}** | **{}** | **{}** | **{}** | **{}** | **{}** | **{}** |\n\n",
+        total_stats.pass,
+        total_stats.fail,
+        total_stats.skip_total(),
+        total_stats.compile_err,
+        total_stats.eval_err,
+        total_stats.invalid_pass,
+        total_stats.invalid_fail,
+        total_stats.total_cases()
+    ));
+    markdown.push_str(&format!(
+        "Unimplemented outcomes: `{}` (`compile_err + eval_err + invalid_fail`).\n\n",
+        total_stats.unimplemented_total()
+    ));
+    markdown.push_str(
+        "Policy: wrong-answer failures fail CI; compile/eval/invalid failures are counted as unimplemented coverage.\n",
+    );
+    let markdown_path = output_dir.join("hl7_eval_summary.md");
+    fs::write(&markdown_path, markdown)
+        .unwrap_or_else(|e| panic!("cannot write HL7 summary Markdown {markdown_path:?}: {e}"));
+
+    let matrix_json = serde_json::json!({
+        "implementations": [
+            {
+                "id": "rh_cql",
+                "label": "rh-cql evaluator",
+                "notes": "CQL is compiled by rh-cql and evaluated by the rh-cql ELM runtime."
+            },
+            {
+                "id": "java_elm",
+                "label": "Java CQL-to-ELM translator",
+                "notes": "Not run by the HL7 evaluation runner; use the conformance comparison harness."
+            },
+            {
+                "id": "javascript_eval",
+                "label": "JavaScript cql-execution",
+                "notes": "Not wired yet."
+            }
+        ],
+        "rows": matrix_rows.iter().map(TestMatrixRow::json).collect::<Vec<_>>()
+    });
+    let matrix_json_path = output_dir.join("implementation_matrix.json");
+    let matrix_json_text =
+        serde_json::to_string_pretty(&matrix_json).expect("serialize implementation matrix JSON");
+    fs::write(&matrix_json_path, matrix_json_text).unwrap_or_else(|e| {
+        panic!("cannot write implementation matrix JSON {matrix_json_path:?}: {e}")
+    });
+
+    let mut matrix_csv = String::new();
+    matrix_csv.push_str(
+        "suite,group,test,rh_cql_status,rh_cql_notes,java_elm_status,java_elm_notes,javascript_eval_status,javascript_eval_notes\n",
+    );
+    for row in matrix_rows {
+        write_csv_row(
+            &mut matrix_csv,
+            &[
+                &row.suite,
+                &row.group,
+                &row.test,
+                &row.rh_cql_status,
+                &row.rh_cql_notes,
+                &row.java_elm_status,
+                &row.java_elm_notes,
+                &row.javascript_eval_status,
+                &row.javascript_eval_notes,
+            ],
+        );
+    }
+    let matrix_csv_path = output_dir.join("implementation_matrix.csv");
+    fs::write(&matrix_csv_path, matrix_csv).unwrap_or_else(|e| {
+        panic!("cannot write implementation matrix CSV {matrix_csv_path:?}: {e}")
+    });
+}
+
+fn write_csv_row(out: &mut String, fields: &[&str]) {
+    for (idx, field) in fields.iter().enumerate() {
+        if idx > 0 {
+            out.push(',');
+        }
+        out.push_str(&csv_escape(field));
+    }
+    out.push('\n');
+}
+
+fn csv_escape(value: &str) -> String {
+    let normalized = value.replace('\r', "").replace('\n', " ");
+    if normalized.contains([',', '"', '\n']) {
+        format!("\"{}\"", normalized.replace('"', "\"\""))
+    } else {
+        normalized
+    }
+}
+
+fn assert_threshold_from_env(env_name: &str, actual: usize, label: &str) {
+    let Ok(raw) = std::env::var(env_name) else {
+        return;
+    };
+    let max = raw
+        .parse::<usize>()
+        .unwrap_or_else(|e| panic!("{env_name} must be a non-negative integer, got {raw:?}: {e}"));
+    assert!(
+        actual <= max,
+        "{label} threshold exceeded: actual {actual} > max {max} from {env_name}"
+    );
+}
+
+fn enforce_hl7_thresholds(total_stats: &SuiteStats) {
+    assert_threshold_from_env("RH_CQL_HL7_MAX_SKIP", total_stats.skip_total(), "HL7 skip");
+    assert_threshold_from_env(
+        "RH_CQL_HL7_MAX_COMPILE_ERR",
+        total_stats.compile_err,
+        "HL7 compile_err",
+    );
+    assert_threshold_from_env(
+        "RH_CQL_HL7_MAX_EVAL_ERR",
+        total_stats.eval_err,
+        "HL7 eval_err",
+    );
+    assert_threshold_from_env(
+        "RH_CQL_HL7_MAX_INVALID_FAIL",
+        total_stats.invalid_fail,
+        "HL7 invalid_fail",
+    );
+    assert_threshold_from_env(
+        "RH_CQL_HL7_MAX_UNIMPLEMENTED",
+        total_stats.unimplemented_total(),
+        "HL7 unimplemented",
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1003,9 +1290,11 @@ fn hl7_eval_suite_all() {
 
     let mut total_stats = SuiteStats::default();
     let mut all_failures: Vec<String> = Vec::new();
+    let mut suite_summaries: Vec<(String, SuiteStats)> = Vec::new();
+    let mut matrix_rows: Vec<TestMatrixRow> = Vec::new();
 
     for path in &xml_paths {
-        let (stats, failures) = run_suite(path);
+        let (stats, failures, rows) = run_suite(path);
         let file = path.file_name().and_then(|s| s.to_str()).unwrap_or("?");
 
         println!(
@@ -1026,7 +1315,10 @@ fn hl7_eval_suite_all() {
         total_stats.compile_err += stats.compile_err;
         total_stats.eval_err += stats.eval_err;
         total_stats.invalid_pass += stats.invalid_pass;
+        total_stats.invalid_fail += stats.invalid_fail;
+        suite_summaries.push((file.to_string(), stats.clone()));
         all_failures.extend(failures);
+        matrix_rows.extend(rows);
     }
 
     println!(
@@ -1046,6 +1338,18 @@ fn hl7_eval_suite_all() {
         );
         println!("  These will become passing tests as the eval engine grows.");
     }
+
+    if let Ok(output_dir) = std::env::var("RH_CQL_HL7_SUMMARY_DIR") {
+        write_hl7_summary(
+            Path::new(&output_dir),
+            &suite_summaries,
+            &total_stats,
+            &matrix_rows,
+        );
+        println!("  wrote HL7 eval summary to {output_dir}");
+    }
+
+    enforce_hl7_thresholds(&total_stats);
 
     // Report all failures for debugging
     if !all_failures.is_empty() {
@@ -1078,7 +1382,7 @@ fn hl7_eval_suite_all() {
 #[test]
 fn hl7_eval_logical_operators() {
     let path = fixtures_dir().join("CqlLogicalOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
 
     assert!(
         failures.is_empty(),
@@ -1100,7 +1404,7 @@ fn hl7_eval_logical_operators() {
 #[test]
 fn hl7_eval_nullological_operators() {
     let path = fixtures_dir().join("CqlNullologicalOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
 
     // Document the eval-error count (unimplemented functions) in the output:
     if stats.eval_err > 0 {
@@ -1121,7 +1425,7 @@ fn hl7_eval_nullological_operators() {
 #[test]
 fn hl7_eval_conditional_operators() {
     let path = fixtures_dir().join("CqlConditionalOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
 
     assert!(
         failures.is_empty(),
@@ -1145,7 +1449,7 @@ fn hl7_eval_conditional_operators() {
 #[test]
 fn hl7_eval_arithmetic_functions() {
     let path = fixtures_dir().join("CqlArithmeticFunctionsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} arithmetic tests unimplemented (compile_err={} eval_err={})",
@@ -1167,7 +1471,7 @@ fn hl7_eval_arithmetic_functions() {
 #[test]
 fn hl7_eval_comparison_operators() {
     let path = fixtures_dir().join("CqlComparisonOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} comparison tests unimplemented (compile_err={} eval_err={})",
@@ -1192,7 +1496,7 @@ fn hl7_eval_comparison_operators() {
 #[test]
 fn hl7_eval_datetime_operators() {
     let path = fixtures_dir().join("CqlDateTimeOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} date/time tests unimplemented (compile_err={} eval_err={})",
@@ -1216,7 +1520,7 @@ fn hl7_eval_datetime_operators() {
 #[test]
 fn hl7_eval_errors_and_messaging() {
     let path = fixtures_dir().join("CqlErrorsAndMessagingOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} errors/messaging tests unimplemented (compile_err={} eval_err={})",
@@ -1239,7 +1543,7 @@ fn hl7_eval_errors_and_messaging() {
 #[test]
 fn hl7_eval_interval_operators() {
     let path = fixtures_dir().join("CqlIntervalOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} interval tests unimplemented (compile_err={} eval_err={})",
@@ -1262,7 +1566,7 @@ fn hl7_eval_interval_operators() {
 #[test]
 fn hl7_eval_list_operators() {
     let path = fixtures_dir().join("CqlListOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} list tests unimplemented (compile_err={} eval_err={})",
@@ -1285,7 +1589,7 @@ fn hl7_eval_list_operators() {
 #[test]
 fn hl7_eval_string_operators() {
     let path = fixtures_dir().join("CqlStringOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} string tests unimplemented (compile_err={} eval_err={})",
@@ -1308,7 +1612,7 @@ fn hl7_eval_string_operators() {
 #[test]
 fn hl7_eval_type_operators() {
     let path = fixtures_dir().join("CqlTypeOperatorsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} type-operator tests unimplemented (compile_err={} eval_err={})",
@@ -1331,7 +1635,7 @@ fn hl7_eval_type_operators() {
 #[test]
 fn hl7_eval_types() {
     let path = fixtures_dir().join("CqlTypesTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} types tests unimplemented (compile_err={} eval_err={})",
@@ -1354,7 +1658,7 @@ fn hl7_eval_types() {
 #[test]
 fn hl7_eval_value_literals_and_selectors() {
     let path = fixtures_dir().join("ValueLiteralsAndSelectors.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} value-literals tests unimplemented (compile_err={} eval_err={})",
@@ -1377,7 +1681,7 @@ fn hl7_eval_value_literals_and_selectors() {
 #[test]
 fn hl7_eval_aggregate_functions() {
     let path = fixtures_dir().join("CqlAggregateFunctionsTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} aggregate-functions tests unimplemented (compile_err={} eval_err={})",
@@ -1401,7 +1705,7 @@ fn hl7_eval_aggregate_functions() {
 #[test]
 fn hl7_eval_aggregate_operator() {
     let path = fixtures_dir().join("CqlAggregateTest.xml");
-    let (stats, failures) = run_suite(&path);
+    let (stats, failures, _) = run_suite(&path);
     if stats.compile_err + stats.eval_err > 0 {
         println!(
             "  note: {} aggregate-operator tests unimplemented (compile_err={} eval_err={})",

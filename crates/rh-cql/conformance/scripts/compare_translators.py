@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 # Paths
 SCRIPT_DIR = Path(__file__).parent
@@ -32,6 +32,31 @@ JAVA_CLI = TOOLS_DIR / "cql-java/Src/java/cql-to-elm-cli/build/install/cql-to-el
 # Rust CLI (relative to workspace root)
 WORKSPACE_ROOT = CONFORMANCE_DIR.parent.parent.parent
 RUST_CLI = WORKSPACE_ROOT / "target/release/rh"
+
+
+def git_commit(repo_dir: Path) -> Optional[str]:
+    """Return the checked-out git commit for a local repository."""
+    if not repo_dir.exists():
+        return None
+    result = subprocess.run(
+        ["git", "-C", str(repo_dir), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def reference_metadata() -> dict:
+    """Collect reference implementation metadata for reproducible reports."""
+    return {
+        "java_translator": {
+            "repository": "https://github.com/cqframework/clinical_quality_language.git",
+            "commit": git_commit(TOOLS_DIR / "cql-java"),
+        },
+        "rust_cli": str(RUST_CLI),
+    }
 
 
 def normalize_elm(elm: dict) -> dict:
@@ -192,7 +217,8 @@ def compare_outputs(java_file: Path, rust_file: Path) -> dict:
         'total_differences': len(differences),
         'differences': differences,
         'java_file': str(java_file),
-        'rust_file': str(rust_file)
+        'rust_file': str(rust_file),
+        'reference_metadata': reference_metadata()
     }
 
 
@@ -200,6 +226,10 @@ def summarize_differences(comparison: dict) -> str:
     """Generate a human-readable summary of differences."""
     lines = []
     lines.append(f"Total differences: {comparison['total_differences']}")
+    metadata = comparison.get("reference_metadata", {})
+    java_meta = metadata.get("java_translator", {})
+    if java_meta.get("commit"):
+        lines.append(f"Java reference commit: {java_meta['commit']}")
     lines.append("")
     
     if comparison['total_differences'] == 0:

@@ -2,12 +2,16 @@
 
 This directory contains infrastructure for comparing our Rust CQL-to-ELM translator against the reference Java implementation.
 
+For the full conformance/spec coverage map, start at
+[`../CONFORMANCE_INDEX.md`](../CONFORMANCE_INDEX.md).
+
 ## Directory Structure
 
 ```
 conformance/
 ├── README.md                 # This file
-├── CONFORMANCE_REPORT.md     # Summary of differences found
+├── CQL_ENGINE_TEST_AUDIT.md  # Audit workflow and generated report locations
+├── CQL_TEST_CORPUS.md        # Corpus/source strategy
 ├── scripts/
 │   ├── setup.sh              # One-time setup script
 │   └── compare_translators.py # Comparison tool
@@ -41,9 +45,16 @@ cd crates/rh-cql/conformance
 ```
 
 This will:
-1. Clone the cqframework/clinical_quality_language repository
+1. Clone the cqframework/clinical_quality_language repository at the pinned reference `v4.2.0`
 2. Build the cql-to-elm-cli using Gradle
 3. Verify both translators work
+4. Write `reference-version.json` with the Java translator repository, ref, and commit
+
+To override the pinned reference for an experiment:
+
+```bash
+CQL_JAVA_REF=v4.7.0 ./scripts/setup.sh
+```
 
 ## Running Comparisons
 
@@ -85,6 +96,9 @@ Results are saved to `results/<test-name>/`:
 - `comparison.json` - Structured list of differences
 - `summary.txt` - Human-readable summary
 
+Comparison reports include Java reference commit metadata when `tools/cql-java`
+has been set up.
+
 ### Difference Types
 
 | Type | Description |
@@ -96,6 +110,9 @@ Results are saved to `results/<test-name>/`:
 | `array_length_mismatch` | Arrays have different lengths |
 
 ## Adding Test Cases
+
+For source selection and corpus layering, see
+[`CQL_TEST_CORPUS.md`](CQL_TEST_CORPUS.md).
 
 1. Create a directory under `test-cases/`
 2. Add `.cql` files to the directory
@@ -124,7 +141,8 @@ cat results/*/summary.txt
 
 ## Known Differences
 
-See [CONFORMANCE_REPORT.md](CONFORMANCE_REPORT.md) for a detailed analysis of differences between our translator and the reference implementation.
+See [`../CONFORMANCE.md`](../CONFORMANCE.md) for the current known intentional
+differences between our translator and the Java reference implementation.
 
 ## Troubleshooting
 
