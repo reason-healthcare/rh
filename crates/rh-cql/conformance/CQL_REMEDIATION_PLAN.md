@@ -120,6 +120,13 @@ Acceptance criteria:
 
 Goal: reduce broad parse failures that Java accepts.
 
+Status:
+
+- [x] 2026-06-22: Added parser support for `define public` and
+  `define private` expression/function forms. Generated
+  `library-boundaries/HelperLibrary.cql` now advances from parser failure to a
+  semantic function-parameter resolution failure.
+
 Observed patterns:
 
 - Missing support for some real-world define forms and access modifiers.
@@ -130,7 +137,7 @@ Observed patterns:
 
 Initial targets:
 
-1. Support `define public` / `define private` forms in addition to current access parsing.
+1. [x] Support `define public` / `define private` forms in addition to current access parsing.
 2. Support omitted-colon define bodies where accepted by the Java translator, or explicitly classify source-invalid if not spec-valid.
 3. Expand retrieve parsing for measure-style `[Type: "Value Set"] Alias where ...`.
 4. Expand code, codesystem, valueset, and display parsing to match Java-passing corpus forms.

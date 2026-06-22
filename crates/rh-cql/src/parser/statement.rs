@@ -273,12 +273,14 @@ pub fn parse_context_def(input: Span<'_>) -> IResult<Span<'_>, ContextDef> {
 pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef> {
     let (input, _) = skip_ws_and_comments(input)?;
     let start_loc = input.location();
-    let (input, access) = parse_access_modifier(input)?;
+    let (input, leading_access) = parse_optional_access_modifier(input)?;
     let (input, _) = keyword("define")(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
+    let (input, trailing_access) = parse_optional_access_modifier(input)?;
     let (input, name) = any_identifier(input)?;
     let (input, _) = ws(char(':'))(input)?;
     let (input, expr) = expression(input)?;
+    let access = trailing_access.or(leading_access).unwrap_or_default();
 
     Ok((
         input,
@@ -298,10 +300,11 @@ pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef>
 /// Parse function definition: `define [fluent] function Name(params) returns Type: body`
 pub fn parse_function_def(input: Span<'_>) -> IResult<Span<'_>, FunctionDef> {
     let (input, _) = skip_ws_and_comments(input)?;
-    let (input, access) = parse_access_modifier(input)?;
+    let (input, leading_access) = parse_optional_access_modifier(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, _) = keyword("define")(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
+    let (input, trailing_access) = parse_optional_access_modifier(input)?;
     let (input, fluent) = opt(keyword("fluent"))(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, _) = keyword("function")(input)?;
@@ -324,6 +327,7 @@ pub fn parse_function_def(input: Span<'_>) -> IResult<Span<'_>, FunctionDef> {
         ExternalOrBody::External => (true, None),
         ExternalOrBody::Body(e) => (false, Some(*e)),
     };
+    let access = trailing_access.or(leading_access).unwrap_or_default();
 
     Ok((
         input,
@@ -406,6 +410,11 @@ pub fn parse_statement(input: Span<'_>) -> IResult<Span<'_>, Statement> {
 // ============================================================================
 
 fn parse_access_modifier(input: Span<'_>) -> IResult<Span<'_>, AccessModifier> {
+    let (input, modifier) = parse_optional_access_modifier(input)?;
+    Ok((input, modifier.unwrap_or_default()))
+}
+
+fn parse_optional_access_modifier(input: Span<'_>) -> IResult<Span<'_>, Option<AccessModifier>> {
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, modifier) = opt(alt((
         value(AccessModifier::Public, keyword("public")),
@@ -414,7 +423,7 @@ fn parse_access_modifier(input: Span<'_>) -> IResult<Span<'_>, AccessModifier> {
     // Skip whitespace after the modifier
     let (input, _) = skip_ws_and_comments(input)?;
 
-    Ok((input, modifier.unwrap_or_default()))
+    Ok((input, modifier))
 }
 
 // ============================================================================
@@ -675,6 +684,20 @@ mod tests {
         assert_eq!(expr_def.access, AccessModifier::Private);
     }
 
+    #[test]
+    fn test_expression_def_define_public() {
+        let (_, expr_def) = parse_expression_def(span("define public PublicValue: 5")).unwrap();
+        assert_eq!(expr_def.name, "PublicValue");
+        assert_eq!(expr_def.access, AccessModifier::Public);
+    }
+
+    #[test]
+    fn test_expression_def_define_private() {
+        let (_, expr_def) = parse_expression_def(span("define private PrivateValue: 7")).unwrap();
+        assert_eq!(expr_def.name, "PrivateValue");
+        assert_eq!(expr_def.access, AccessModifier::Private);
+    }
+
     // ========================================================================
     // Function Definition Tests
     // ========================================================================
@@ -710,6 +733,28 @@ mod tests {
         .unwrap();
         assert_eq!(func.name, "toAge");
         assert!(func.fluent);
+    }
+
+    #[test]
+    fn test_function_def_define_public() {
+        let (_, func) = parse_function_def(span(
+            "define public function AddOne(value Integer): value + 1",
+        ))
+        .unwrap();
+        assert_eq!(func.name, "AddOne");
+        assert_eq!(func.access, AccessModifier::Public);
+        assert!(func.body.is_some());
+    }
+
+    #[test]
+    fn test_function_def_define_private() {
+        let (_, func) = parse_function_def(span(
+            "define private function AddOne(value Integer): value + 1",
+        ))
+        .unwrap();
+        assert_eq!(func.name, "AddOne");
+        assert_eq!(func.access, AccessModifier::Private);
+        assert!(func.body.is_some());
     }
 
     // ========================================================================
