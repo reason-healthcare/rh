@@ -69,6 +69,12 @@ corpus-audit-smoke:
     cargo build --release -p rh-cli
     python3 conformance/scripts/run_corpus_audit.py --results-dir conformance/results/corpus-smoke --limit 3 --skip-java
 
+# Generate a date-stamped summary from audit-full and corpus-audit outputs.
+audit-summary:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 conformance/scripts/summarize_audits.py
+
 # Compare rh-cql ELM output against the Java reference translator for a conformance test case.
 elm-reference test_case="simple":
     #!/usr/bin/env bash

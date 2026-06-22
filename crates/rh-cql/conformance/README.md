@@ -101,6 +101,20 @@ just corpus-audit-smoke
 
 Smoke output is written under `conformance/results/corpus-smoke/`.
 
+### Generate a Date-Stamped Summary
+
+```bash
+cd crates/rh-cql
+just audit-summary
+```
+
+This reads the generated `audit-full` and corpus audit JSON outputs and writes:
+
+- `conformance/results/summaries/<date>/summary.md`
+- `conformance/results/summaries/<date>/summary.json`
+- `conformance/results/summaries/latest-summary.md`
+- `conformance/results/summaries/latest-summary.json`
+
 ### Compare a single CQL file
 
 ```bash

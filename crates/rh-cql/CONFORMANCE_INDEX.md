@@ -36,6 +36,8 @@ Then review:
 | `conformance/results/audit/eval_engine_tests.txt` | Captured evaluator/semantic test output |
 | `conformance/results/corpus/corpus_matrix.csv` | Expanded source-file corpus matrix across generated, CQFramework, Cooking with CQL, and CMS eCQM sources |
 | `conformance/results/corpus/corpus_summary.json` | Expanded corpus status counts by corpus |
+| `conformance/results/summaries/<date>/summary.md` | Date-stamped summary of `audit-full` and corpus audit outputs |
+| `conformance/results/summaries/latest-summary.md` | Latest generated audit summary |
 
 ## Common Workflows
 
@@ -70,6 +72,17 @@ just corpus-audit-rh
 This writes source-file RH compile status reports under
 `conformance/results/corpus/`. Use `just corpus-audit` for the heavier
 Java-inclusive reference pass.
+
+### Date-Stamped Summary
+
+```bash
+cd crates/rh-cql
+just audit-summary
+```
+
+This reads the generated `audit-full` and corpus audit JSON outputs and writes
+Markdown/JSON summaries under `conformance/results/summaries/<date>/`, plus
+`latest-summary.*` aliases.
 
 ### Java Reference Translator Setup
 

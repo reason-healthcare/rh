@@ -60,6 +60,16 @@ The current full RH-only corpus baseline is 1 248 files: 334 compile passes and
 2025 eCQM sources.
 Use `just corpus-audit` for the heavier Java-inclusive reference pass.
 
+To summarize the latest generated audit and corpus outputs:
+
+```bash
+cd crates/rh-cql
+just audit-summary
+```
+
+This writes date-stamped Markdown and JSON summaries under
+`crates/rh-cql/conformance/results/summaries/`.
+
 For Java CQL-to-ELM comparison, run the one-time setup first:
 
 ```bash
