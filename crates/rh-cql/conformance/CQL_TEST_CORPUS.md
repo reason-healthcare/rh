@@ -171,6 +171,39 @@ For each committed CQL corpus item, prefer storing or generating:
 - Expected evaluation result by expression.
 - Implementation matrix row(s), including status and notes for `rh-cql`, Java ELM, and JavaScript evaluation.
 
+## Reduction Workflow
+
+Use this workflow to turn external corpus failures into small committed
+fixtures:
+
+1. Start from `conformance/results/corpus/java_pass_rh_fail.csv`, sorted by
+   corpus and diagnostic class. Prefer parser reductions before semantic
+   reductions because parser fixes unlock more downstream diagnostics.
+2. Copy the failing source into a scratch file outside the committed corpus and
+   remove declarations until the smallest failing construct remains.
+3. Re-run Java translation after each reduction with `just corpus-audit` or a
+   direct Java translator invocation. Keep the reduced source only when Java
+   still passes; otherwise move the source issue to the invalid/ambiguous
+   review queue instead of treating it as a remediation target.
+4. Re-run `rh cql compile <scratch-file>` and keep the `rh-cql` diagnostic in
+   the remediation note. The reduced fixture should preserve the original
+   diagnostic class unless the reduction intentionally isolates a narrower
+   follow-up issue.
+5. Commit the minimized fixture under
+   `conformance/corpus/generated/<topic>/<Name>.cql`. Use a topic directory
+   that names the language feature, such as `date-time-precision`,
+   `intervals`, `library-boundaries`, `terminology`, `retrieves`, or
+   `query`.
+6. Record the source corpus path, Java translator status, `rh-cql` status,
+   expected ELM shape or result, and remediation issue in the fixture comment or
+   companion README when the context is not obvious from the CQL itself.
+7. After the implementation fix, re-run at least `just corpus-audit-smoke` and
+   the focused parser/semantic test. Run `just corpus-audit` when the change is
+   expected to move full-corpus counts.
+
+Reduced fixtures should be small enough to review directly. Prefer several
+single-purpose fixtures over one large copied external library.
+
 ## Near-Term Import Order
 
 1. Keep HL7 XML tests as the base row-per-test matrix.

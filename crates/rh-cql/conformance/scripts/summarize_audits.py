@@ -100,6 +100,16 @@ def build_summary_json(
         },
         "corpus_audit": {
             "row_count": corpus_summary.get("row_count", 0),
+            "java_pass_rh_fail_count": corpus_summary.get(
+                "java_pass_rh_fail_count", 0
+            ),
+            "java_non_pass_count": corpus_summary.get("java_non_pass_count", 0),
+            "java_pass_rh_fail_by_diagnostic_class": corpus_summary.get(
+                "java_pass_rh_fail_by_diagnostic_class", {}
+            ),
+            "java_non_pass_by_diagnostic_class": corpus_summary.get(
+                "java_non_pass_by_diagnostic_class", {}
+            ),
             "sources": corpus_summary.get("sources", []),
             "by_corpus": corpus_summary.get("by_corpus", {}),
         },

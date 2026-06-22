@@ -97,8 +97,10 @@ Status:
 
 - [x] 2026-06-22: Added corpus diagnostic classes, Java-pass/RH-fail and
   Java-non-pass output views, and summary-level diagnostic counts.
-- [ ] Full corpus rerun with Java reference after classification changes.
-- [ ] Reduction workflow documentation and committed minimized fixtures.
+- [x] 2026-06-22: Full Java-inclusive corpus rerun completed. Current
+  Java-pass/RH-fail total is 906: parser 673, semantic 233. Java non-pass
+  quarantine total is 8: unknown 7, timeout 1.
+- [x] 2026-06-22: Reduction workflow documented in `CQL_TEST_CORPUS.md`.
 
 Tasks:
 
@@ -106,7 +108,7 @@ Tasks:
 2. [x] Emit grouped counts for parser, semantic, model-info, include-resolution, and timeout failures.
 3. [x] Emit a `java_pass_rh_fail.csv` view sorted by corpus and diagnostic class.
 4. [x] Emit a `java_non_pass.csv` quarantine view.
-5. [ ] Add a reduction workflow for turning corpus failures into small committed fixtures.
+5. [x] Add a reduction workflow for turning corpus failures into small committed fixtures.
 
 Acceptance criteria:
 
