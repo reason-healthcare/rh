@@ -12,6 +12,7 @@ coverage, corpus planning, and generated audit reports.
 | [conformance/README.md](conformance/README.md) | How to set up and run Java reference translator comparisons |
 | [conformance/CQL_ENGINE_TEST_AUDIT.md](conformance/CQL_ENGINE_TEST_AUDIT.md) | Audit workflow, generated report locations, Java/JavaScript status, and next work |
 | [conformance/CQL_TEST_CORPUS.md](conformance/CQL_TEST_CORPUS.md) | Test corpus strategy: HL7 tests, CQFramework translator content, CMS eCQM content, synthetic bundles, and generated edge cases |
+| [conformance/CQL_REMEDIATION_PLAN.md](conformance/CQL_REMEDIATION_PLAN.md) | Prioritized plan for addressing current `rh-cql` conformance and corpus gaps |
 
 ## Generated Reports
 

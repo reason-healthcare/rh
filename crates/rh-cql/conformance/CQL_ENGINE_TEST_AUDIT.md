@@ -70,6 +70,9 @@ just audit-summary
 This writes date-stamped Markdown and JSON summaries under
 `crates/rh-cql/conformance/results/summaries/`.
 
+For the current remediation plan based on these summaries, see
+[`CQL_REMEDIATION_PLAN.md`](CQL_REMEDIATION_PLAN.md).
+
 For Java CQL-to-ELM comparison, run the one-time setup first:
 
 ```bash
