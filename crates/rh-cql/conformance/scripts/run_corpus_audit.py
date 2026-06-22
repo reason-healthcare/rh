@@ -180,11 +180,12 @@ def run_java_translate(path: Path, require: bool, timeout_seconds: int) -> dict[
                 "status": "timeout",
                 "notes": f"Java translator exceeded {timeout_seconds}s timeout",
             }
-    if proc.returncode == 0:
+    notes = first_non_empty(proc.stderr, proc.stdout, "")
+    if proc.returncode == 0 and java_translation_succeeded(notes):
         return {"status": "pass", "notes": "Java translator produced ELM"}
     return {
         "status": "compile_error",
-        "notes": truncate(first_non_empty(proc.stderr, proc.stdout, "Java translator failed")),
+        "notes": truncate(first_non_empty(notes, "Java translator failed")),
     }
 
 
@@ -356,6 +357,15 @@ def classify_diagnostic(status: str, notes: str) -> str:
     ):
         return "semantic"
     return "unknown"
+
+
+def java_translation_succeeded(notes: str) -> bool:
+    normalized = notes.lower()
+    if "translation failed" in normalized:
+        return False
+    if "syntax error" in normalized or "error:" in normalized:
+        return False
+    return "translation completed successfully" in normalized
 
 
 def first_non_empty(*values: str) -> str:

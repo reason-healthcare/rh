@@ -50,22 +50,22 @@ Interpretation:
 
 | Corpus | Files | RH Pass | RH Compile Err | Java Pass | Java Non-Pass |
 |---|---:|---:|---:|---:|---:|
-| Generated fixtures | 8 | 4 | 4 | 8 | 0 |
-| CQFramework jvmTest | 358 | 182 | 176 | 358 | 0 |
-| CQFramework examples | 34 | 1 | 33 | 34 | 0 |
-| Cooking with CQL | 732 | 132 | 600 | 725 | 7 |
-| CMS 2025 eCQM | 116 | 15 | 101 | 115 | 1 timeout |
-| **Total** | **1 248** | **334** | **914** | **1 240** | **8** |
+| Generated fixtures | 8 | 4 | 4 | 5 | 3 |
+| CQFramework jvmTest | 358 | 185 | 173 | 136 | 222 |
+| CQFramework examples | 34 | 1 | 33 | 6 | 28 |
+| Cooking with CQL | 732 | 132 | 600 | 175 | 557 |
+| CMS 2025 eCQM | 116 | 15 | 101 | 51 | 64 + 1 timeout |
+| **Total** | **1 248** | **337** | **911** | **373** | **874 + 1 timeout** |
 
 Java-pass/RH-fail rows are high-value remediation candidates:
 
 | Corpus | Java-pass/RH-fail |
 |---|---:|
-| Cooking with CQL | 593 |
-| CQFramework jvmTest | 176 |
-| CMS 2025 eCQM | 100 |
-| CQFramework examples | 33 |
 | Generated fixtures | 4 |
+| CQFramework jvmTest | 65 |
+| CQFramework examples | 6 |
+| Cooking with CQL | 87 |
+| CMS 2025 eCQM | 47 |
 
 ## Validity Policy
 
@@ -97,9 +97,10 @@ Status:
 
 - [x] 2026-06-22: Added corpus diagnostic classes, Java-pass/RH-fail and
   Java-non-pass output views, and summary-level diagnostic counts.
-- [x] 2026-06-22: Full Java-inclusive corpus rerun completed. Current
-  Java-pass/RH-fail total is 906: parser 673, semantic 233. Java non-pass
-  quarantine total is 8: unknown 7, timeout 1.
+- [x] 2026-06-22: Full Java-inclusive corpus rerun completed with hardened
+  Java status detection. Current Java-pass/RH-fail total is 209: parser 150,
+  semantic 59. Java non-pass quarantine total is 875: include-resolution 270,
+  semantic 183, parser 101, model-info 7, unknown 313, timeout 1.
 - [x] 2026-06-22: Reduction workflow documented in `CQL_TEST_CORPUS.md`.
 
 Tasks:
@@ -126,6 +127,13 @@ Status:
   `define private` expression/function forms. Generated
   `library-boundaries/HelperLibrary.cql` now advances from parser failure to a
   semantic function-parameter resolution failure.
+- [x] 2026-06-22: Classified omitted-colon define bodies as source-invalid for
+  remediation purposes. The pinned Java translator reports `Syntax error at 42`
+  and writes no ELM for the reduced case in
+  `conformance/corpus/invalid-or-ambiguous.md`.
+- [x] 2026-06-22: Hardened corpus Java status detection so translator output
+  containing `Translation failed` is classified as `compile_error` even when
+  the Java CLI process exits `0`.
 
 Observed patterns:
 
@@ -138,7 +146,7 @@ Observed patterns:
 Initial targets:
 
 1. [x] Support `define public` / `define private` forms in addition to current access parsing.
-2. Support omitted-colon define bodies where accepted by the Java translator, or explicitly classify source-invalid if not spec-valid.
+2. [x] Support omitted-colon define bodies where accepted by the Java translator, or explicitly classify source-invalid if not spec-valid.
 3. Expand retrieve parsing for measure-style `[Type: "Value Set"] Alias where ...`.
 4. Expand code, codesystem, valueset, and display parsing to match Java-passing corpus forms.
 5. Add date/time phrase parser coverage for `same or before`, `same or after`, `before`, `after`, and interval phrase variants.
