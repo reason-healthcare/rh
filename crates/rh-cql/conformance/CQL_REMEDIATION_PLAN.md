@@ -134,6 +134,11 @@ Status:
 - [x] 2026-06-22: Hardened corpus Java status detection so translator output
   containing `Translation failed` is classified as `compile_error` even when
   the Java CLI process exits `0`.
+- [x] 2026-06-22: Verified measure-style retrieve queries such as
+  `[Encounter: "Value Set"] E where ...` parse, and fixed explicit retrieve
+  code paths so `[Encounter: reason in "Asthma"] E where ...` emits
+  `codeProperty: "reason"` instead of falling back to the model primary code
+  path.
 
 Observed patterns:
 
@@ -147,7 +152,7 @@ Initial targets:
 
 1. [x] Support `define public` / `define private` forms in addition to current access parsing.
 2. [x] Support omitted-colon define bodies where accepted by the Java translator, or explicitly classify source-invalid if not spec-valid.
-3. Expand retrieve parsing for measure-style `[Type: "Value Set"] Alias where ...`.
+3. [x] Expand retrieve parsing for measure-style `[Type: "Value Set"] Alias where ...`.
 4. Expand code, codesystem, valueset, and display parsing to match Java-passing corpus forms.
 5. Add date/time phrase parser coverage for `same or before`, `same or after`, `before`, `after`, and interval phrase variants.
 
