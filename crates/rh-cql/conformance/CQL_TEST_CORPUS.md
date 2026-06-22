@@ -49,6 +49,8 @@ Generated outputs are written to `conformance/results/corpus/`:
 - `corpus_matrix.csv`
 - `corpus_matrix.json`
 - `corpus_summary.json`
+- `java_pass_rh_fail.csv`
+- `java_non_pass.csv`
 
 The audit currently records source-file compile/translation status for:
 

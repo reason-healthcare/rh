@@ -144,6 +144,10 @@ def build_summary_markdown(summary: dict[str, Any]) -> str:
     lines.append("## corpus-audit")
     corpus = summary["corpus_audit"]
     lines.append(f"- Corpus rows: `{corpus['row_count']}`")
+    lines.append(
+        f"- Java-pass/RH-fail rows: `{corpus.get('java_pass_rh_fail_count', 0)}`"
+    )
+    lines.append(f"- Java non-pass quarantine rows: `{corpus.get('java_non_pass_count', 0)}`")
     lines.append("")
     lines.append(
         "| Corpus | Files | RH Pass | RH Compile Error | RH Timeout | Java Pass | Java Compile Error | Java Timeout | Java Not Run |"
@@ -166,6 +170,24 @@ def build_summary_markdown(summary: dict[str, Any]) -> str:
             )
         )
     lines.append("")
+
+    diagnostic_counts = corpus.get("java_pass_rh_fail_by_diagnostic_class", {})
+    if diagnostic_counts:
+        lines.append("### Java-Pass/RH-Fail Diagnostics")
+        lines.append("| Diagnostic Class | Count |")
+        lines.append("|---|---:|")
+        for diagnostic_class, count in sorted(diagnostic_counts.items()):
+            lines.append(f"| `{diagnostic_class}` | {count} |")
+        lines.append("")
+
+    java_non_pass_counts = corpus.get("java_non_pass_by_diagnostic_class", {})
+    if java_non_pass_counts:
+        lines.append("### Java Non-Pass Quarantine Diagnostics")
+        lines.append("| Diagnostic Class | Count |")
+        lines.append("|---|---:|")
+        for diagnostic_class, count in sorted(java_non_pass_counts.items()):
+            lines.append(f"| `{diagnostic_class}` | {count} |")
+        lines.append("")
 
     unavailable = [
         source["corpus"]

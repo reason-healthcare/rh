@@ -93,13 +93,20 @@ Every new remediation issue should record:
 
 Goal: make corpus failures actionable instead of large undifferentiated counts.
 
+Status:
+
+- [x] 2026-06-22: Added corpus diagnostic classes, Java-pass/RH-fail and
+  Java-non-pass output views, and summary-level diagnostic counts.
+- [ ] Full corpus rerun with Java reference after classification changes.
+- [ ] Reduction workflow documentation and committed minimized fixtures.
+
 Tasks:
 
-1. Add diagnostic classification to `run_corpus_audit.py`.
-2. Emit grouped counts for parser, semantic, model-info, include-resolution, and timeout failures.
-3. Emit a `java_pass_rh_fail.csv` view sorted by corpus and diagnostic class.
-4. Emit a `java_non_pass.csv` quarantine view.
-5. Add a reduction workflow for turning corpus failures into small committed fixtures.
+1. [x] Add diagnostic classification to `run_corpus_audit.py`.
+2. [x] Emit grouped counts for parser, semantic, model-info, include-resolution, and timeout failures.
+3. [x] Emit a `java_pass_rh_fail.csv` view sorted by corpus and diagnostic class.
+4. [x] Emit a `java_non_pass.csv` quarantine view.
+5. [ ] Add a reduction workflow for turning corpus failures into small committed fixtures.
 
 Acceptance criteria:
 

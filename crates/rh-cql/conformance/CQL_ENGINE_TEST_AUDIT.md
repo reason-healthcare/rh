@@ -53,8 +53,9 @@ cd crates/rh-cql
 just corpus-audit-rh
 ```
 
-They write `corpus_matrix.csv`, `corpus_matrix.json`, and
-`corpus_summary.json` under `crates/rh-cql/conformance/results/corpus/`.
+They write `corpus_matrix.csv`, `corpus_matrix.json`, `corpus_summary.json`,
+`java_pass_rh_fail.csv`, and `java_non_pass.csv` under
+`crates/rh-cql/conformance/results/corpus/`.
 The current full RH-only corpus baseline is 1 248 files: 334 compile passes and
 914 compile errors across generated, CQFramework, Cooking with CQL, and CMS
 2025 eCQM sources.

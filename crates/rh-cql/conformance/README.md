@@ -89,6 +89,8 @@ This writes the fast RH-only baseline:
 - `conformance/results/corpus/corpus_matrix.csv`
 - `conformance/results/corpus/corpus_matrix.json`
 - `conformance/results/corpus/corpus_summary.json`
+- `conformance/results/corpus/java_pass_rh_fail.csv`
+- `conformance/results/corpus/java_non_pass.csv`
 
 Use `just corpus-audit` for the heavier Java-inclusive reference pass.
 

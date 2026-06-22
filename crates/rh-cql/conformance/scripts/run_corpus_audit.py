@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).parent
@@ -64,6 +65,8 @@ def main() -> int:
 
     write_csv(args.results_dir / "corpus_matrix.csv", rows)
     write_json(args.results_dir / "corpus_matrix.json", rows)
+    write_csv(args.results_dir / "java_pass_rh_fail.csv", java_pass_rh_fail_rows(rows))
+    write_csv(args.results_dir / "java_non_pass.csv", java_non_pass_rows(rows))
     write_summary(args.results_dir / "corpus_summary.json", rows, sources)
     print(f"Wrote corpus audit results to {args.results_dir}")
     return 0
@@ -112,12 +115,17 @@ def run_file(corpus_file: CorpusFile, args: argparse.Namespace) -> dict[str, str
             timeout_seconds=args.java_timeout_seconds,
         )
 
+    rh_diagnostic_class = classify_diagnostic(rh_result["status"], rh_result["notes"])
+    java_diagnostic_class = classify_diagnostic(java_result["status"], java_result["notes"])
+
     return {
         "corpus": corpus_file.corpus,
         "path": corpus_file.relative_path,
         "rh_cql_status": rh_result["status"],
+        "rh_cql_diagnostic_class": rh_diagnostic_class,
         "rh_cql_notes": rh_result["notes"],
         "java_elm_status": java_result["status"],
+        "java_elm_diagnostic_class": java_diagnostic_class,
         "java_elm_notes": java_result["notes"],
     }
 
@@ -185,8 +193,10 @@ def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         "corpus",
         "path",
         "rh_cql_status",
+        "rh_cql_diagnostic_class",
         "rh_cql_notes",
         "java_elm_status",
+        "java_elm_diagnostic_class",
         "java_elm_notes",
     ]
     with path.open("w", newline="") as handle:
@@ -195,12 +205,45 @@ def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
+def java_pass_rh_fail_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    filtered = [
+        row
+        for row in rows
+        if row["java_elm_status"] == "pass" and row["rh_cql_status"] != "pass"
+    ]
+    return sorted(
+        filtered,
+        key=lambda row: (
+            row["corpus"],
+            row["rh_cql_diagnostic_class"],
+            row["path"],
+        ),
+    )
+
+
+def java_non_pass_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    filtered = [
+        row
+        for row in rows
+        if row["java_elm_status"] not in {"pass", "not_run"}
+    ]
+    return sorted(
+        filtered,
+        key=lambda row: (
+            row["corpus"],
+            row["java_elm_status"],
+            row["java_elm_diagnostic_class"],
+            row["path"],
+        ),
+    )
+
+
 def write_json(path: Path, rows: list[dict[str, str]]) -> None:
     path.write_text(json.dumps({"rows": rows}, indent=2))
 
 
 def write_summary(path: Path, rows: list[dict[str, str]], sources: list[CorpusSource]) -> None:
-    payload = {
+    payload: dict[str, Any] = {
         "sources": [
             {
                 "corpus": source.corpus,
@@ -210,6 +253,10 @@ def write_summary(path: Path, rows: list[dict[str, str]], sources: list[CorpusSo
             for source in sources
         ],
         "row_count": len(rows),
+        "java_pass_rh_fail_count": 0,
+        "java_non_pass_count": 0,
+        "java_pass_rh_fail_by_diagnostic_class": {},
+        "java_non_pass_by_diagnostic_class": {},
         "by_corpus": {},
     }
     for row in rows:
@@ -219,17 +266,96 @@ def write_summary(path: Path, rows: list[dict[str, str]], sources: list[CorpusSo
             {
                 "row_count": 0,
                 "rh_cql_status": {},
+                "rh_cql_diagnostic_class": {},
                 "java_elm_status": {},
+                "java_elm_diagnostic_class": {},
+                "java_pass_rh_fail_by_diagnostic_class": {},
+                "java_non_pass_by_diagnostic_class": {},
             },
         )
         corpus_summary["row_count"] += 1
         increment(corpus_summary["rh_cql_status"], row["rh_cql_status"])
+        increment(
+            corpus_summary["rh_cql_diagnostic_class"],
+            row["rh_cql_diagnostic_class"],
+        )
         increment(corpus_summary["java_elm_status"], row["java_elm_status"])
+        increment(
+            corpus_summary["java_elm_diagnostic_class"],
+            row["java_elm_diagnostic_class"],
+        )
+
+        if row["java_elm_status"] == "pass" and row["rh_cql_status"] != "pass":
+            payload["java_pass_rh_fail_count"] += 1
+            diagnostic_class = row["rh_cql_diagnostic_class"]
+            increment(payload["java_pass_rh_fail_by_diagnostic_class"], diagnostic_class)
+            increment(
+                corpus_summary["java_pass_rh_fail_by_diagnostic_class"],
+                diagnostic_class,
+            )
+
+        if row["java_elm_status"] not in {"pass", "not_run"}:
+            payload["java_non_pass_count"] += 1
+            diagnostic_class = row["java_elm_diagnostic_class"]
+            increment(payload["java_non_pass_by_diagnostic_class"], diagnostic_class)
+            increment(
+                corpus_summary["java_non_pass_by_diagnostic_class"],
+                diagnostic_class,
+            )
     path.write_text(json.dumps(payload, indent=2))
 
 
 def increment(counts: dict[str, int], status: str) -> None:
     counts[status] = counts.get(status, 0) + 1
+
+
+def classify_diagnostic(status: str, notes: str) -> str:
+    if status == "pass":
+        return "none"
+    if status == "timeout":
+        return "timeout"
+    if status == "not_run":
+        if "not found" in notes.lower():
+            return "tooling"
+        return "not_run"
+
+    normalized = notes.lower()
+    if any(token in normalized for token in ("parse error", "syntax error", "unexpected")):
+        return "parser"
+    if any(
+        token in normalized
+        for token in (
+            "could not resolve library",
+            "library not found",
+            "include",
+            "included",
+        )
+    ):
+        return "include_resolution"
+    if any(
+        token in normalized
+        for token in (
+            "modelinfo",
+            "model info",
+            "could not resolve property",
+            "unknown property",
+            "no such property",
+        )
+    ):
+        return "model_info"
+    if any(
+        token in normalized
+        for token in (
+            "could not resolve",
+            "unknown identifier",
+            "ambiguous",
+            "no overload",
+            "type mismatch",
+            "cannot convert",
+        )
+    ):
+        return "semantic"
+    return "unknown"
 
 
 def first_non_empty(*values: str) -> str:

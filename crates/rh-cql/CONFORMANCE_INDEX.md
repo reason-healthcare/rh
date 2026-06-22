@@ -37,6 +37,8 @@ Then review:
 | `conformance/results/audit/eval_engine_tests.txt` | Captured evaluator/semantic test output |
 | `conformance/results/corpus/corpus_matrix.csv` | Expanded source-file corpus matrix across generated, CQFramework, Cooking with CQL, and CMS eCQM sources |
 | `conformance/results/corpus/corpus_summary.json` | Expanded corpus status counts by corpus |
+| `conformance/results/corpus/java_pass_rh_fail.csv` | Java-passing corpus rows where `rh-cql` does not pass, sorted for remediation |
+| `conformance/results/corpus/java_non_pass.csv` | Java non-pass corpus rows quarantined from remediation totals by default |
 | `conformance/results/summaries/<date>/summary.md` | Date-stamped summary of `audit-full` and corpus audit outputs |
 | `conformance/results/summaries/latest-summary.md` | Latest generated audit summary |
 
