@@ -309,12 +309,31 @@ Acceptance criteria:
 Goal: reduce JavaScript `cql-execution` failures where RH-generated ELM is
 valid CQL but not accepted or not interpreted equivalently by the JS runtime.
 
-Initial targets:
+Status:
 
-1. Separate JS failures into unsupported expected-output, RH compile failure,
-   JS runtime error, and value mismatch classes.
-2. For JavaScript value mismatches, diff RH ELM against Java ELM for the same expression.
-3. Prioritize ELM shape issues where Java ELM passes JavaScript and RH ELM does not.
+- [x] 2026-06-23: Added explicit JavaScript evaluation categories to the
+  reference matrix runner and summary. The regenerated matrix reports:
+  unsupported expected output 166, RH compile failure 89, JS runtime error
+  502, value mismatch 55, invalid accepted 13, invalid rejected 17, pass 584.
+- [x] 2026-06-23: Added `javascript_value_mismatches.json` / `.csv` report
+  generation for value mismatches. The report recompiles both RH and Java ELM,
+  records a bounded RH-vs-Java ELM diff sample, and evaluates Java ELM in
+  `cql-execution` to identify RH-only ELM shape priorities.
+- [x] 2026-06-23: Current value-mismatch priority review found 0 cases where
+  Java ELM passes JavaScript while RH ELM fails JavaScript; all 55 current
+  value mismatches also fail with Java ELM and are categorized for JavaScript
+  engine or expected-output review.
+- [x] 2026-06-23: Added a reduced representative date/time mismatch fixture:
+  `conformance/test-cases/javascript-interop/TimeComponentFromHour.cql`.
+
+Tasks:
+
+1. [x] Separate JS failures into unsupported expected-output, RH compile
+   failure, JS runtime error, and value mismatch classes.
+2. [x] For JavaScript value mismatches, diff RH ELM against Java ELM for the
+   same expression.
+3. [x] Prioritize ELM shape issues where Java ELM passes JavaScript and RH ELM
+   does not.
 
 Acceptance criteria:
 

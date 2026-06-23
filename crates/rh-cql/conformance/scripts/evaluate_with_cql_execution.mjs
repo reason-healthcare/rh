@@ -31,19 +31,23 @@ async function runCase(testCase) {
   const cqlPath = join(workDir, "HlTest.cql");
 
   try {
-    await writeFile(cqlPath, cqlSource);
-    const compile = await runProcess(rhCli, ["cql", "compile", cqlPath]);
-    if (compile.code !== 0) {
-      return {
-        id,
-        status: testCase.invalid ? "pass" : "compile_error",
-        notes: testCase.invalid
-          ? "invalid expression rejected by rh-cql before JavaScript evaluation"
-          : truncate(firstNonEmpty(compile.stderr, compile.stdout, "rh-cql compile failed"))
-      };
+    let elm = testCase.elm;
+    if (!elm) {
+      await writeFile(cqlPath, cqlSource);
+      const compile = await runProcess(rhCli, ["cql", "compile", cqlPath]);
+      if (compile.code !== 0) {
+        return {
+          id,
+          status: testCase.invalid ? "pass" : "compile_error",
+          category: testCase.invalid ? "invalid_rejected" : "rh_compile_failure",
+          notes: testCase.invalid
+            ? "invalid expression rejected by rh-cql before JavaScript evaluation"
+            : truncate(firstNonEmpty(compile.stderr, compile.stdout, "rh-cql compile failed"))
+        };
+      }
+      elm = JSON.parse(compile.stdout);
     }
 
-    const elm = JSON.parse(compile.stdout);
     const library = new cql.Library(elm);
     const executor = new cql.Executor(library);
     const patientSource = new cql.PatientSource([{ id: "1", recordType: "Patient" }]);
@@ -56,35 +60,50 @@ async function runCase(testCase) {
         return {
           id,
           status: "fail",
+          category: "invalid_accepted",
           notes: `invalid expression evaluated in JavaScript: ${summarize(actual)}`
         };
       }
 
       const expected = parseExpected(testCase.expected_output);
       if (expected.kind === "unsupported") {
-        return { id, status: "skip", notes: expected.reason };
+        return {
+          id,
+          status: "skip",
+          category: "unsupported_expected_output",
+          notes: expected.reason
+        };
       }
 
       if (valuesMatch(actual, expected.value)) {
-        return { id, status: "pass", notes: "" };
+        return { id, status: "pass", category: "pass", notes: "" };
       }
 
       return {
         id,
         status: "fail",
+        category: "value_mismatch",
+        expected: expected.value,
+        actual,
         notes: `expected ${summarize(expected.value)}; actual ${summarize(actual)}`
       };
     } catch (error) {
       return {
         id,
         status: testCase.invalid ? "pass" : "eval_error",
+        category: testCase.invalid ? "invalid_rejected" : "js_runtime_error",
         notes: testCase.invalid
           ? "invalid expression raised JavaScript evaluation error"
           : truncate(error?.stack ?? String(error))
       };
     }
   } catch (error) {
-    return { id, status: "error", notes: truncate(error?.stack ?? String(error)) };
+    return {
+      id,
+      status: "error",
+      category: "js_harness_error",
+      notes: truncate(error?.stack ?? String(error))
+    };
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
