@@ -96,6 +96,9 @@ def build_summary_json(
             "implementation_matrix": {
                 "row_count": matrix_summary.get("row_count", 0),
                 "implementations": matrix_summary.get("implementations", {}),
+                "javascript_eval_categories": matrix_summary.get(
+                    "javascript_eval_categories", {}
+                ),
             },
         },
         "corpus_audit": {
@@ -155,9 +158,24 @@ def build_summary_markdown(summary: dict[str, Any]) -> str:
     )
     lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     matrix = summary["audit_full"]["implementation_matrix"]
+    implementation_labels = {
+        "rh_cql_status": "rh-cql",
+        "java_elm_status": "Java CQL-to-ELM",
+        "javascript_eval_status": "JavaScript cql-execution",
+    }
     for implementation, counts in matrix["implementations"].items():
-        lines.append(status_table_row(implementation, matrix["row_count"], counts))
+        label = implementation_labels.get(implementation, implementation)
+        lines.append(status_table_row(label, matrix["row_count"], counts))
     lines.append("")
+
+    javascript_categories = matrix.get("javascript_eval_categories", {})
+    if javascript_categories:
+        lines.append("### JavaScript Evaluation Categories")
+        lines.append("| Category | Count |")
+        lines.append("|---|---:|")
+        for category, count in sorted(javascript_categories.items()):
+            lines.append(f"| `{category}` | {count} |")
+        lines.append("")
 
     lines.append("## corpus-audit")
     corpus = summary["corpus_audit"]

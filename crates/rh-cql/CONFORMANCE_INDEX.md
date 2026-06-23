@@ -7,10 +7,10 @@ coverage, corpus planning, and generated audit reports.
 
 | Document | Purpose |
 |---|---|
-| [CONFORMANCE.md](CONFORMANCE.md) | Current conformance state: HL7 eval totals, current gaps, ELM fidelity, parser status, and test suite summary |
+| [CONFORMANCE.md](CONFORMANCE.md) | Current single-page status: HL7 spec-facing results, Java comparison, JavaScript comparison, and expanded corpus summary |
 | [SPEC_COVERAGE.md](SPEC_COVERAGE.md) | Operator-by-operator and pipeline-stage coverage across parse, semantic analysis, ELM emit, and eval |
-| [conformance/README.md](conformance/README.md) | How to set up and run Java reference translator comparisons |
-| [conformance/CQL_ENGINE_TEST_AUDIT.md](conformance/CQL_ENGINE_TEST_AUDIT.md) | Audit workflow, generated report locations, Java/JavaScript status, and next work |
+| [conformance/README.md](conformance/README.md) | Runbook for regenerating and interpreting conformance artifacts |
+| [conformance/CQL_ENGINE_TEST_AUDIT.md](conformance/CQL_ENGINE_TEST_AUDIT.md) | Audit surfaces and generated report locations behind the top-level summary |
 | [conformance/CQL_TEST_CORPUS.md](conformance/CQL_TEST_CORPUS.md) | Test corpus strategy: HL7 tests, CQFramework translator content, CMS eCQM content, synthetic bundles, and generated edge cases |
 | [conformance/CQL_REMEDIATION_PLAN.md](conformance/CQL_REMEDIATION_PLAN.md) | Prioritized plan for addressing current `rh-cql` conformance and corpus gaps |
 

@@ -1,306 +1,151 @@
 # rh-cql Conformance
 
-**Last updated**: 2026-06-19
-**CQL specification**: 1.5.3 (https://cql.hl7.org)
-**Test suite source**: https://cql.hl7.org/tests.html (`tests.zip`)
+Last updated: 2026-06-23
 
-This document records the current conformance state for `rh-cql`: HL7 CQL
-evaluation results, ELM emission fidelity, parser coverage, and the active test
-surface. Historical wave deltas are intentionally omitted; generated audit
-artifacts under `conformance/results/audit/` are the current source of truth.
+This is the current high-level conformance summary for `rh-cql`. It answers
+three questions:
 
----
+1. How close are we to the CQL language tests?
+2. How do we compare with the Java CQL-to-ELM translator?
+3. How does our generated ELM behave in JavaScript `cql-execution`?
 
-## 1. HL7 Official Evaluation Test Suite
+Generated per-run artifacts live under `conformance/results/`. This document is
+the human-facing summary; [SPEC_COVERAGE.md](SPEC_COVERAGE.md) is the detailed
+operator-by-operator map.
 
-The HL7 CQL test suite is checked in under
-`tests/fixtures/hl7_cql_tests/`. The runner in `tests/hl7_eval_tests.rs` wraps
-each expression in a minimal CQL library, compiles through the main pipeline,
-evaluates the generated ELM, and compares the result to the expected XML output.
+## One-Page Status
 
-Run the current audit from the crate directory:
+The strongest spec-facing signal is the HL7 CQL expression test suite:
 
-```bash
-cd crates/rh-cql
-just audit
-```
-
-For regression-sensitive runs with current unimplemented-count ceilings:
-
-```bash
-cd crates/rh-cql
-just audit-strict
-```
-
-Generated audit artifacts are written to `conformance/results/audit/`:
-
-- `hl7_eval_tests.txt`
-- `hl7_eval_summary.json`
-- `hl7_eval_summary.md`
-- `implementation_matrix.json`
-- `implementation_matrix.csv`
-- `elm_production_tests.txt`
-- `eval_engine_tests.txt`
-
-### 1.1 Current Results
-
-| Metric | Count |
+| Signal | Result |
 |---|---:|
-| Pass | 765 |
-| **Fail (wrong answers)** | **0** |
-| Skip | 48 |
-| Compile err | 123 |
-| Eval err | 467 |
-| Invalid pass | 7 |
-| Invalid fail | 16 |
-| Unimplemented (`compile_err + eval_err + invalid_fail`) | 606 |
-| Total parsed cases | 1 426 |
+| HL7 parsed expression cases | 1 426 |
+| Correct evaluated results | 1 241 |
+| Invalid expressions correctly rejected | 28 |
+| Wrong answers | 0 |
+| Skipped expected-output/expression cases | 45 |
+| Compile errors | 89 |
+| Runtime eval errors | 23 |
+| Invalid expressions incorrectly accepted | 0 |
+| Remaining unimplemented outcomes | 112 |
 
-Policy:
+Interpretation:
 
-- Wrong-answer failures fail CI.
-- Compile errors, eval errors, skips, and invalid-expression successes are
-  counted as unimplemented coverage, not wrong answers.
-- `just audit-strict` locks the current ceilings: skip `48`, compile errors
-  `123`, eval errors `467`, invalid failures `16`, total unimplemented `606`.
-  Lower these ceilings as coverage improves.
+- `rh-cql` currently has no known wrong-answer failures in the HL7 suite.
+- The remaining spec-facing work is mostly compile coverage and eval coverage,
+  not incorrect evaluated answers.
+- Invalid-input enforcement is clean in this suite: invalid expressions are not
+  being accepted as successes.
 
-### 1.2 Fixture Coverage
+## Three-Engine Matrix
 
-All 15 XML fixture files are checked in and run.
+The same 1 426 HL7 rows are also used as an implementation comparison matrix.
 
-| HL7 Category | Fixture file | Status |
-|---|---|---|
-| Aggregate Functions | `CqlAggregateFunctionsTest.xml` | Current audit |
-| Aggregate Operator | `CqlAggregateTest.xml` | Current audit |
-| Arithmetic Functions | `CqlArithmeticFunctionsTest.xml` | Current audit |
-| Comparison Operators | `CqlComparisonOperatorsTest.xml` | Current audit |
-| Conditional Operators | `CqlConditionalOperatorsTest.xml` | Current audit |
-| Date/Time Operators | `CqlDateTimeOperatorsTest.xml` | Current audit |
-| Errors & Messaging | `CqlErrorsAndMessagingOperatorsTest.xml` | Current audit |
-| Interval Operators | `CqlIntervalOperatorsTest.xml` | Current audit |
-| List Operators | `CqlListOperatorsTest.xml` | Current audit |
-| Logical Operators | `CqlLogicalOperatorsTest.xml` | Current audit |
-| Nullological Operators | `CqlNullologicalOperatorsTest.xml` | Current audit |
-| String Operators | `CqlStringOperatorsTest.xml` | Current audit |
-| Type Operators | `CqlTypeOperatorsTest.xml` | Current audit |
-| Types | `CqlTypesTest.xml` | Current audit |
-| Value Literals & Selectors | `ValueLiteralsAndSelectors.xml` | Current audit |
+| Implementation | What It Measures | Pass | Compile Error | Eval Error | Fail | Skip |
+|---|---|---:|---:|---:|---:|---:|
+| `rh-cql` | Compile and evaluate with Reason Health | 1 269 | 89 | 23 | 0 | 45 |
+| Java CQL-to-ELM | Translate CQL to ELM with CQFramework Java | 1 410 | 16 | 0 | 0 | 0 |
+| JavaScript `cql-execution` | Execute `rh-cql` ELM in JS | 601 | 89 | 502 | 68 | 166 |
 
-### 1.3 Current Gap Summary
+Important distinction:
 
-Current unimplemented/error outcomes are concentrated in:
+- Java is used as the reference CQL-to-ELM translator.
+- JavaScript is used as an ELM consumer/interoperability check.
+- A JavaScript failure can mean an `rh-cql` ELM shape issue, a `cql-execution`
+  runtime limitation, or an expected-output mismatch. It is not automatically a
+  CQL source-validity finding.
 
-| Area | Current signal |
-|---|---|
-| Date/time operators | Largest eval-error group; duration/difference, precision, and temporal relationship behavior still need burn-down |
-| Interval operators | Timing relationships, boundary normalization, and invalid/open-bound cases remain a major gap |
-| String functions | Remaining string-function dispatch/evaluation gaps are still visible in the HL7 suite |
-| List/query behavior | Multi-source joins, query aggregate behavior, and some list edge cases remain incomplete |
-| Value literals/selectors | Tuple, concept, and related selector coverage still has compile errors |
-| Quantity/UCUM | Same-unit support exists in places; cross-unit conversion/comparison is intentionally skipped or incomplete |
-| Invalid input enforcement | Some `invalid="true"` expressions still evaluate instead of erroring and are counted as `invalid_fail` |
+### JavaScript Categories
 
-For operator-by-operator implementation state across parse, semantic analysis,
-emit, and eval, see [`SPEC_COVERAGE.md`](SPEC_COVERAGE.md).
+The JavaScript runner classifies every non-simple result so the failures are
+reviewable:
 
-### 1.4 Implementation Matrix
-
-`implementation_matrix.csv` / `.json` are generated with one row per HL7 test
-case and implementation status/notes columns for:
-
-- `rh-cql` evaluator.
-- Java ELM translator.
-- JavaScript evaluation.
-
-`just audit-strict` populates the `rh-cql` columns. `just audit-references`
-then runs the pinned Java CQL-to-ELM translator and JavaScript `cql-execution`
-against the same rows and rewrites the matrix with reference statuses.
-
-Current full-corpus reference counts:
-
-| Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented | Timeout |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| `rh-cql` | 772 | 123 | 467 | 0 | 48 | 16 | 0 |
-| Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 | 0 |
-| JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 | 0 |
-
-The JavaScript column evaluates `rh-cql`-generated ELM in `cql-execution`.
-Rows that fail there are interoperability findings about generated ELM and/or
-reference runtime behavior, not necessarily independent CQL compilation results.
-
-### 1.5 Expanded Source-File Corpus
-
-The HL7 matrix is row-per-expression-test. Larger source-file corpora are
-audited separately with:
-
-```bash
-cd crates/rh-cql
-just corpus-audit-rh
-```
-
-This discovers committed generated fixtures, CQFramework jvmTest CQL files,
-CQFramework examples, Cooking with CQL sources, and CMS 2025 FHIR eCQM content
-when the external checkout is present. Results are generated under
-`conformance/results/corpus/`.
-Use `just corpus-audit` for the heavier Java-inclusive reference pass.
-
-Current expanded corpus RH compile baseline:
-
-| Corpus | Files | Pass | Compile Err |
-|---|---:|---:|---:|
-| Generated fixtures | 8 | 4 | 4 |
-| CQFramework jvmTest | 358 | 182 | 176 |
-| CQFramework examples | 34 | 1 | 33 |
-| Cooking with CQL | 732 | 132 | 600 |
-| CMS 2025 eCQM | 116 | 15 | 101 |
-| **Total** | **1 248** | **334** | **914** |
-
----
-
-## 2. ELM Emission Fidelity
-
-The ELM emitter lives in `src/emit/`. Its output is compared against the pinned
-Java reference translator (`cqframework/clinical_quality_language` tag `v4.2.0`)
-via `conformance/scripts/compare_translators.py`.
-
-Set up the Java reference once:
-
-```bash
-cd crates/rh-cql/conformance
-./scripts/setup.sh
-```
-
-The setup writes `reference-version.json` with the Java translator repository,
-ref, and commit. To compare a checked-in corpus directory:
-
-```bash
-cd crates/rh-cql
-just elm-reference simple
-```
-
-### 2.1 Current Coverage
-
-`tests/pipeline_comparison_tests.rs` checks a small fixed corpus:
-
-| Corpus item | What is checked |
-|---|---|
-| `SimpleTest.cql` | Direct metadata diff against checked-in Java reference ELM (`conformance/test-cases/simple/SimpleTest.json`) |
-| `test-0-input` | Retrieve + temporal query structure preserved; translator metadata present |
-| `test-2-input` | Retrieve + `First` query structure preserved; translator metadata present |
-| `ArithmeticTests.cql` | Native arithmetic node emission (`Add`, `Divide`, `Power`) plus metadata presence |
-
-No high-priority emitter mismatches are currently tracked for this fixed corpus.
-The corpus is intentionally small and should be expanded using the strategy in
-[`conformance/CQL_TEST_CORPUS.md`](conformance/CQL_TEST_CORPUS.md).
-
-### 2.2 Known Intentional Differences
-
-| Item | Java | rh-cql | Notes |
-|---|---|---|---|
-| `localId` emission | Only with `--debug` | Always when annotations enabled | Verified by `simple_test_metadata_diff_matches_java_reference` |
-| Locator format | `"line:col-line:col"` range | `"line:col"` start only | Needs parser end-position tracking |
-| Empty arrays | Includes empty arrays such as `annotation: []` | Omits empty arrays | Verified by `simple_test_metadata_diff_matches_java_reference` |
-
----
-
-## 3. Parser Conformance
-
-The historical jvmTest parser baseline was 90/119 files passing on 2024-12-10.
-A current rerun is pending and should use the pinned Java translator setup.
-
-```bash
-cd crates/rh-cql/conformance
-./scripts/setup.sh
-python3 scripts/compare_translators.py --operator-tests --summary-only
-```
-
-Known parser stress areas remain:
-
-| Feature area | Notes |
-|---|---|
-| Complex QDM-specific syntax | Lower priority for FHIR-first work |
-| Multi-library CDS/CQM files | Important for realistic corpus expansion |
-| Timing expression edge cases | Still visible in realistic and HL7-derived content |
-
----
-
-## 4. Feature Implementation Status
-
-For the exhaustive operator/grammar inventory, see
-[`SPEC_COVERAGE.md`](SPEC_COVERAGE.md). Current high-level state:
-
-### 4.1 Compilation Pipeline
-
-| Feature | Status |
-|---|---|
-| CQL -> AST parsing (`nom` combinators) | Implemented |
-| Semantic analysis (type inference, scope, overload resolution) | Implemented |
-| Typed AST (`TypedLibrary`) | Implemented |
-| ELM JSON emission | Implemented |
-| Source-map generation (CQL span -> ELM node) | Implemented |
-| Unified diagnostic system (`Diagnostic` with severity, code, span) | Implemented |
-| ELM XML output | Not implemented |
-| Compile-to-FHIR-Library | Not implemented |
-
-### 4.2 Evaluation Engine
-
-| Feature | Status |
-|---|---|
-| Three-valued logic / null propagation | Implemented for covered operators |
-| Primitive values (`Integer`, `Decimal`, `String`, `Boolean`) | Implemented |
-| Date, DateTime, Time values and arithmetic | Partial |
-| Interval values and operations | Partial |
-| List values and operations | Partial |
-| Tuple values | Partial |
-| FHIR data access via `InMemoryDataProvider` | Implemented for local tests |
-| Terminology service (`InMemoryTerminologyProvider`) | Implemented for local tests |
-| Retrieve execution | Partial; local retrieve tests exist, realistic corpus pending |
-| Library includes in evaluation | Partial |
-| Query evaluation | Single-source support; multi-source and aggregate gaps remain |
-
----
-
-## 5. Test Suite Summary
-
-All tests run via `cargo test -p rh-cql`.
-
-| Test binary | Tests | Current result |
+| JavaScript category | Count | Meaning |
 |---|---:|---|
-| Unit tests (lib) | 788 | Passing |
-| `golden_elm_tests` | 3 | Passing |
-| `emit_conformance_tests` | 19 | Passing |
-| `pipeline_comparison_tests` | 13 | Passing |
-| `hl7_eval_tests` | 16 | 0 wrong-answer failures; 765 pass / 1 426 parsed cases; 606 unimplemented outcomes |
-| `semantic_tests` | 8 | Passing |
-| `eval_integration_tests` | 70 | Passing |
-| `clinical_age_operators_test` | 8 | Passing |
-| `ratio_message_tree_test` | 11 | Passing |
-| Doc tests | 51 | Passing |
+| `pass` | 584 | Expected value matched in JavaScript |
+| `invalid_rejected` | 17 | Invalid input was rejected during JS evaluation |
+| `unsupported_expected_output` | 166 | HL7 expected output is not yet parsed by the harness |
+| `rh_compile_failure` | 89 | `rh-cql` did not produce ELM for the row |
+| `js_runtime_error` | 502 | `cql-execution` raised at runtime |
+| `value_mismatch` | 55 | JavaScript ran but returned a different value |
+| `invalid_accepted` | 13 | Invalid input evaluated when it should not have |
 
-Recommended focused commands:
+Current value-mismatch triage found no rows where Java ELM passes JavaScript
+while `rh-cql` ELM fails JavaScript. The current 55 value mismatches also fail
+with Java ELM in JavaScript, so they are categorized for JavaScript engine or
+expected-output review rather than immediate `rh-cql` ELM-shape remediation.
+
+## Expanded Source Corpus
+
+The HL7 matrix is expression-level. The expanded corpus is source-file-level
+and is used to stress larger libraries, real-world authoring patterns, includes,
+FHIR/QI-Core paths, and CMS eCQM content.
+
+The latest fast RH-only corpus audit covers 1 249 CQL files:
+
+| Corpus | Files | RH Pass | RH Compile Error | Source Validity |
+|---|---:|---:|---:|---|
+| Generated fixtures | 8 | 7 | 1 | Java not run in RH-only audit |
+| Invalid/ambiguous register | 1 | 0 | 1 | Quarantined |
+| CQFramework jvmTest | 358 | 147 | 211 | Java not run in RH-only audit |
+| CQFramework examples | 34 | 5 | 29 | Java not run in RH-only audit |
+| Cooking with CQL | 732 | 126 | 606 | Java not run in RH-only audit |
+| CMS 2025 eCQM | 116 | 23 | 93 | Java not run in RH-only audit |
+| **Total** | **1 249** | **308** | **941** | **1 quarantined** |
+
+Corpus validity policy:
+
+- Java-passing source rows are remediation candidates.
+- Java-non-pass rows are quarantined until manually reviewed.
+- Explicit invalid/ambiguous fixtures are kept in
+  `conformance/corpus/invalid-or-ambiguous.md` and are not counted as RH
+  remediation failures.
+- The RH-only corpus audit intentionally marks Java status as `not_run`; run
+  `just corpus-audit` when Java-inclusive source validity is needed.
+
+## What Is Considered Current
+
+Use these generated files for exact row-level detail:
+
+| Artifact | Purpose |
+|---|---|
+| `conformance/results/summaries/latest-summary.md` | Single generated audit/corpus summary |
+| `conformance/results/audit/hl7_eval_summary.json` | HL7 suite totals and per-suite details |
+| `conformance/results/audit/implementation_matrix.csv` | Row-per-HL7-case `rh-cql`, Java, and JavaScript statuses |
+| `conformance/results/audit/implementation_matrix_summary.json` | Status and JavaScript category counts |
+| `conformance/results/corpus/corpus_summary.json` | Expanded source-file corpus counts |
+| `conformance/results/corpus/java_pass_rh_fail.csv` | Java-passing source files that `rh-cql` does not compile |
+| `conformance/results/corpus/java_non_pass.csv` | Quarantined Java-non-pass source files |
+
+## Reproduce The Summary
+
+From `crates/rh-cql`:
 
 ```bash
-cd crates/rh-cql
-just audit-strict
-just audit-references
+just audit-full
 just corpus-audit-rh
-just corpus-audit-smoke
-cargo clippy -p rh-cql --all-targets --all-features -- -D warnings
+just audit-summary
 ```
 
----
+Use the heavier Java-inclusive corpus pass selectively:
 
-## 6. Maintaining Test Fixtures
+```bash
+just corpus-audit
+```
 
-For source selection and import order, see
-[`conformance/CQL_TEST_CORPUS.md`](conformance/CQL_TEST_CORPUS.md).
+For the local commit gate:
 
-When a new CQL specification version ships:
+```bash
+just check
+```
 
-1. Download the new test fixtures from the CQL tests page.
-2. Replace `tests/fixtures/hl7_cql_tests/*.xml`.
-3. Run `cd crates/rh-cql && just audit-full`.
-4. Review generated `hl7_eval_summary.json`, `hl7_eval_summary.md`, and
-   `implementation_matrix.*`.
-5. Update this document with the current generated totals.
+## Remaining Work
+
+At a high level, the remaining conformance work is:
+
+- Reduce the 89 HL7 compile errors.
+- Reduce the 23 HL7 runtime eval errors.
+- Expand Java-inclusive corpus triage when source validity matters.
+- Add more FHIR bundle evaluation cases once retrieve/query semantics are ready.
+- Continue using JavaScript results as ELM interoperability evidence rather
+  than as standalone CQL source validation.

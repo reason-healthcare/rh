@@ -1,234 +1,108 @@
-# CQL-to-ELM Conformance Testing
+# rh-cql Conformance Runbook
 
-This directory contains infrastructure for comparing our Rust CQL-to-ELM translator against the reference Java implementation.
+Start with [../CONFORMANCE.md](../CONFORMANCE.md) for the current single-page
+summary. This directory contains the scripts, fixtures, generated reports, and
+external-tool setup used to produce that summary.
 
-For the full conformance/spec coverage map, start at
-[`../CONFORMANCE_INDEX.md`](../CONFORMANCE_INDEX.md).
+## What Each Signal Means
 
-## Directory Structure
+| Signal | Command | What It Answers |
+|---|---|---|
+| HL7 spec-facing audit | `just audit-strict` | Does `rh-cql` compile/evaluate the official HL7 expression cases without wrong answers? |
+| Three-engine matrix | `just audit-full` | How do `rh-cql`, Java CQL-to-ELM, and JavaScript `cql-execution` behave on the same HL7 rows? |
+| RH-only source corpus | `just corpus-audit-rh` | Which larger CQL source files compile with `rh-cql` today? |
+| Java-inclusive source corpus | `just corpus-audit` | Which source files are Java-passing remediation candidates vs Java-non-pass quarantine rows? |
+| Date-stamped rollup | `just audit-summary` | What is the single generated summary for the latest audit/corpus artifacts? |
 
-```
-conformance/
-├── README.md                 # This file
-├── CQL_ENGINE_TEST_AUDIT.md  # Audit workflow and generated report locations
-├── CQL_TEST_CORPUS.md        # Corpus/source strategy
-├── scripts/
-│   ├── setup.sh              # One-time setup script
-│   └── compare_translators.py # Comparison tool
-├── test-cases/               # CQL test files
-│   ├── simple/               # Basic tests
-│   ├── arithmetic/           # Arithmetic operator tests
-│   └── ...
-├── results/                  # Generated comparison results
-│   └── <test-name>/
-│       ├── <test>-java.json  # Java translator output
-│       ├── <test>-rust.json  # Rust translator output
-│       ├── comparison.json   # Structured differences
-│       └── summary.txt       # Human-readable summary
-└── tools/                    # External tools (git-ignored)
-    └── cql-java/             # Java translator repo
+## Recommended Refresh
+
+From `crates/rh-cql`:
+
+```bash
+just audit-full
+just corpus-audit-rh
+just audit-summary
 ```
 
-## Prerequisites
+Review:
 
-- Java 17+ (`java -version`)
-- Python 3.8+ (`python3 --version`)
-- Rust toolchain (`cargo --version`)
-- Node.js and npm for JavaScript `cql-execution` matrix checks
+- `conformance/results/summaries/latest-summary.md`
+- `conformance/results/audit/implementation_matrix_summary.json`
+- `conformance/results/corpus/corpus_summary.json`
 
-## Setup
+Use the Java-inclusive source corpus only when source validity matters:
 
-Run the setup script once to download and build the Java translator:
+```bash
+just corpus-audit
+```
+
+## External Reference Setup
+
+The Java and JavaScript comparison steps need local tools.
 
 ```bash
 cd crates/rh-cql/conformance
 ./scripts/setup.sh
 ```
 
-This will:
-1. Clone the cqframework/clinical_quality_language repository at the pinned reference `v4.2.0`
-2. Build the cql-to-elm-cli using Gradle
-3. Verify both translators work
-4. Write `reference-version.json` with the Java translator repository, ref, and commit
+The setup pins `cqframework/clinical_quality_language` to `v4.2.0` by default,
+builds the Java CQL-to-ELM CLI, installs JavaScript dependencies, and writes
+`reference-version.json`.
 
-To override the pinned reference for an experiment:
+To test another Java reference version for an experiment:
 
 ```bash
 CQL_JAVA_REF=v4.7.0 ./scripts/setup.sh
 ```
 
-## Running Comparisons
+## Generated Outputs
 
-### Populate the Three-Engine Implementation Matrix
+| Artifact | Purpose |
+|---|---|
+| `results/audit/hl7_eval_summary.md` / `.json` | HL7 expression-suite totals |
+| `results/audit/implementation_matrix.csv` / `.json` | Row-per-HL7-case `rh-cql`, Java, and JavaScript statuses |
+| `results/audit/implementation_matrix_summary.json` | Status counts and JavaScript evaluation categories |
+| `results/audit/javascript_value_mismatches.csv` / `.json` | JavaScript mismatch triage with RH-vs-Java ELM diff samples |
+| `results/corpus/corpus_matrix.csv` / `.json` | Source-file corpus compile/translation matrix |
+| `results/corpus/corpus_summary.json` | Source-file corpus counts by corpus and validity |
+| `results/corpus/java_pass_rh_fail.csv` | Java-passing rows that `rh-cql` should treat as remediation candidates |
+| `results/corpus/java_non_pass.csv` | Java-non-pass rows quarantined from remediation totals |
+| `results/summaries/latest-summary.md` / `.json` | Single generated rollup used by `CONFORMANCE.md` |
 
-```bash
-cd crates/rh-cql
-just audit-full
-```
+Generated reports are ignored by git. Regenerate them instead of hand-editing.
 
-This regenerates the Rust HL7 audit and then updates
-`conformance/results/audit/implementation_matrix.csv` / `.json` with Java ELM
-and JavaScript `cql-execution` status columns.
+## Source Validity Rules
 
-To run only the external-reference phase after `just audit-strict`:
+- Java-passing CQL is a high-value remediation target when `rh-cql` fails.
+- Java-non-pass CQL is quarantined until reviewed.
+- Explicit invalid/ambiguous examples live in
+  `corpus/invalid-or-ambiguous.md` and are not counted as RH remediation
+  failures.
+- Reduced fixtures are preferred over large copied external libraries.
 
-```bash
-cd crates/rh-cql
-just audit-references
-```
+## Adding Or Reducing Cases
 
-### Run Expanded Corpus Checks
+Use [CQL_TEST_CORPUS.md](CQL_TEST_CORPUS.md) for source selection and reduction
+rules. In short:
 
-```bash
-cd crates/rh-cql
-just corpus-audit-rh
-```
+1. Start from generated CSV output.
+2. Reduce the source to the smallest useful CQL.
+3. Check Java status before treating it as a remediation target.
+4. Commit reduced valid fixtures under `corpus/generated/<topic>/`.
+5. Commit invalid or ambiguous reduced fixtures under
+   `corpus/invalid-or-ambiguous/` and document them in the register.
 
-This writes the fast RH-only baseline:
+## Single-File Java ELM Comparison
 
-- `conformance/results/corpus/corpus_matrix.csv`
-- `conformance/results/corpus/corpus_matrix.json`
-- `conformance/results/corpus/corpus_summary.json`
-- `conformance/results/corpus/java_pass_rh_fail.csv`
-- `conformance/results/corpus/java_non_pass.csv`
-
-Use `just corpus-audit` for the heavier Java-inclusive reference pass.
-Corpus rows include `source_validity`, `remediation_target`, and
-`source_validity_notes` columns. Java-non-pass sources and entries from
-`conformance/corpus/invalid-or-ambiguous.md` are quarantined, so they are
-reported separately and not counted as RH remediation failures.
-
-For a fast smoke run:
-
-```bash
-cd crates/rh-cql
-just corpus-audit-smoke
-```
-
-Smoke output is written under `conformance/results/corpus-smoke/`.
-
-### Generate a Date-Stamped Summary
-
-```bash
-cd crates/rh-cql
-just audit-summary
-```
-
-This reads the generated `audit-full` and corpus audit JSON outputs and writes:
-
-- `conformance/results/summaries/<date>/summary.md`
-- `conformance/results/summaries/<date>/summary.json`
-- `conformance/results/summaries/latest-summary.md`
-- `conformance/results/summaries/latest-summary.json`
-
-### Compare a single CQL file
-
-```bash
-python3 scripts/compare_translators.py -f test-cases/simple/SimpleTest.cql
-```
-
-### Compare all files in a test directory
-
-```bash
-python3 scripts/compare_translators.py -t simple
-python3 scripts/compare_translators.py -t arithmetic
-```
-
-### Compare all test cases
-
-```bash
-python3 scripts/compare_translators.py -a
-```
-
-### With translator options
-
-```bash
-# Pass options to Java translator
-python3 scripts/compare_translators.py -f test.cql -j --annotations --locators
-
-# Pass options to Rust translator (when supported)
-python3 scripts/compare_translators.py -f test.cql -r --no-annotations
-```
-
-## Understanding Results
-
-Results are saved to `results/<test-name>/`:
-
-- `*-java.json` - Output from reference Java translator
-- `*-rust.json` - Output from our Rust translator
-- `comparison.json` - Structured list of differences
-- `summary.txt` - Human-readable summary
-
-Comparison reports include Java reference commit metadata when `tools/cql-java`
-has been set up.
-
-### Difference Types
-
-| Type | Description |
-|------|-------------|
-| `missing_in_rust` | Field present in Java output but missing in ours |
-| `extra_in_rust` | Field present in our output but not in Java |
-| `value_mismatch` | Same field, different value |
-| `type_mismatch` | Same path, different JSON types |
-| `array_length_mismatch` | Arrays have different lengths |
-
-## Adding Test Cases
-
-For source selection and corpus layering, see
-[`CQL_TEST_CORPUS.md`](CQL_TEST_CORPUS.md).
-
-1. Create a directory under `test-cases/`
-2. Add `.cql` files to the directory
-3. Run comparison to generate baseline
-
-```bash
-mkdir -p test-cases/my-test
-echo 'library MyTest version "1.0.0"
-
-define TestExpr: 1 + 1' > test-cases/my-test/MyTest.cql
-
-python3 scripts/compare_translators.py -t my-test
-```
-
-## Updating the Conformance Report
-
-After making changes to the translator, re-run comparisons and update the report:
-
-```bash
-# Run all tests
-python3 scripts/compare_translators.py -a
-
-# Review results
-cat results/*/summary.txt
-```
-
-## Known Differences
-
-See [`../CONFORMANCE.md`](../CONFORMANCE.md) for the current known intentional
-differences between our translator and the Java reference implementation.
-
-## Troubleshooting
-
-### Java translator not found
-
-```bash
-# Rebuild the Java translator
-cd tools/cql-java/Src/java
-./gradlew :cql-to-elm-cli:installDist
-```
-
-### Rust translator not built
-
-```bash
-# From workspace root
-cargo build --release
-```
-
-### Python script errors
-
-Ensure you're running from the conformance directory:
+After setup:
 
 ```bash
 cd crates/rh-cql/conformance
-python3 scripts/compare_translators.py --help
+python3 scripts/compare_translators.py -f test-cases/simple/SimpleTest.cql
+```
+
+Or from `crates/rh-cql`:
+
+```bash
+just elm-reference simple
 ```
