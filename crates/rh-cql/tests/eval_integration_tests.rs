@@ -41,6 +41,17 @@ fn eval_expr(cql: &str, expr_name: &str) -> Value {
     evaluate_elm(&result.library, expr_name, &ctx).expect("evaluation failed")
 }
 
+fn compile_or_eval_fails(cql: &str, expr_name: &str) -> bool {
+    let Ok(result) = compile_with_model(cql, None, None) else {
+        return true;
+    };
+    if !result.errors.is_empty() {
+        return true;
+    }
+    let ctx = default_ctx();
+    evaluate_elm(&result.library, expr_name, &ctx).is_err()
+}
+
 // ---------------------------------------------------------------------------
 // 9.23 — Arithmetic operators (end-to-end)
 // ---------------------------------------------------------------------------
@@ -968,6 +979,27 @@ fn eval_cross_unit_quantity_comparison() {
         eval_expr("library T define X: 1 'm' <= 10 'cm'", "X"),
         Value::Boolean(false)
     );
+}
+
+#[test]
+fn invalid_literals_and_conversions_fail() {
+    for cql in [
+        "library T define X: 2147483648",
+        "library T define X: -2147483649",
+        "library T define X: 0.000000001",
+        "library T define X: 10000000000000000000000000000.00000000",
+        "library T define X: @T24:59:59.999",
+        "library T define X: @T23:60:59.999",
+        "library T define X: @T23:59:60.999",
+        "library T define X: Interval[5, 3]",
+        "library T define X: Interval[5, 5)",
+        "library T define X: convert 'foo' to Integer",
+        "library T define X: convert '2014/01/01' to DateTime",
+        "library T define X: ToDateTime('2014/01/01T12:05:05.955Z')",
+        "library T define X: ToTime('T14-30-00.0')",
+    ] {
+        assert!(compile_or_eval_fails(cql, "X"), "{cql}");
+    }
 }
 
 // ---------------------------------------------------------------------------

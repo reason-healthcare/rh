@@ -504,8 +504,12 @@ pub fn long_literal(input: Span<'_>) -> IResult<Span<'_>, i64> {
 }
 
 /// Parse a decimal literal
+fn decimal_literal_text(input: Span<'_>) -> IResult<Span<'_>, Span<'_>> {
+    recognize(tuple((opt(char('-')), digit1, char('.'), digit1)))(input)
+}
+
 pub fn decimal_literal(input: Span<'_>) -> IResult<Span<'_>, f64> {
-    let (input, num_str) = recognize(tuple((opt(char('-')), digit1, char('.'), digit1)))(input)?;
+    let (input, num_str) = decimal_literal_text(input)?;
 
     let value: f64 = num_str.fragment().parse().unwrap_or(0.0);
     Ok((input, value))

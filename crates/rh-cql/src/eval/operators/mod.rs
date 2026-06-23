@@ -48,27 +48,51 @@ fn parse_time_value(s: &str) -> Result<Value, EvalError> {
     let hour = parts[0]
         .parse::<u8>()
         .map_err(|_| EvalError::General(format!("Invalid Time hour in '{s}'")))?;
-    let minute = parts[1].parse::<u8>().ok();
+    if hour > 23 {
+        return Err(EvalError::General(format!("Invalid Time hour in '{s}'")));
+    }
+    let minute = parts[1]
+        .parse::<u8>()
+        .map_err(|_| EvalError::General(format!("Invalid Time minute in '{s}'")))?;
+    if minute > 59 {
+        return Err(EvalError::General(format!("Invalid Time minute in '{s}'")));
+    }
     if parts.len() == 2 {
         return Ok(Value::Time(CqlTime {
             hour,
-            minute,
+            minute: Some(minute),
             second: None,
             millisecond: None,
         }));
     }
     // parts[2] is "SS" or "SS.mmm"
     let sec_ms: Vec<&str> = parts[2].splitn(2, '.').collect();
-    let second = sec_ms[0].parse::<u8>().ok();
+    let second = sec_ms[0]
+        .parse::<u8>()
+        .map_err(|_| EvalError::General(format!("Invalid Time second in '{s}'")))?;
+    if second > 59 {
+        return Err(EvalError::General(format!("Invalid Time second in '{s}'")));
+    }
     // Milliseconds: "9"→900ms, "99"→990ms, "999"→999ms (right-pad with zeros to 3 digits)
-    let millisecond = sec_ms.get(1).and_then(|ms_str| {
-        let padded = format!("{:0<3}", ms_str);
-        padded[..3].parse::<u32>().ok()
-    });
+    let millisecond = match sec_ms.get(1) {
+        Some(ms_str) => {
+            let padded = format!("{:0<3}", ms_str);
+            let value = padded[..3]
+                .parse::<u32>()
+                .map_err(|_| EvalError::General(format!("Invalid Time millisecond in '{s}'")))?;
+            if value > 999 {
+                return Err(EvalError::General(format!(
+                    "Invalid Time millisecond in '{s}'"
+                )));
+            }
+            Some(value)
+        }
+        None => None,
+    };
     Ok(Value::Time(CqlTime {
         hour,
-        minute,
-        second,
+        minute: Some(minute),
+        second: Some(second),
         millisecond,
     }))
 }
@@ -168,10 +192,7 @@ pub(crate) fn eval_literal(lit: &elm::Literal) -> Result<Value, EvalError> {
             .parse::<i128>()
             .map(Value::Long)
             .map_err(|_| EvalError::General(format!("Invalid Long literal: '{value_str}'"))),
-        "Decimal" => value_str
-            .parse::<f64>()
-            .map(Value::Decimal)
-            .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'"))),
+        "Decimal" => parse_decimal_value(value_str),
         "String" => Ok(Value::String(value_str.to_string())),
         "Date" => parse_date_value(value_str),
         "DateTime" => parse_datetime_value(value_str),
@@ -179,6 +200,33 @@ pub(crate) fn eval_literal(lit: &elm::Literal) -> Result<Value, EvalError> {
         "" if value_str.is_empty() => Ok(Value::Null),
         _ => Ok(Value::String(value_str.to_string())),
     }
+}
+
+fn parse_decimal_value(value_str: &str) -> Result<Value, EvalError> {
+    let value = value_str
+        .parse::<f64>()
+        .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'")))?;
+
+    if value.abs() >= 1e28 {
+        return Err(EvalError::General(format!(
+            "Invalid Decimal literal outside CQL Decimal range: '{value_str}'"
+        )));
+    }
+
+    let value_text = value_str.trim();
+    let significant_fractional_digits = value_text
+        .trim_start_matches('-')
+        .split_once('.')
+        .map(|(_, fractional)| fractional.trim_end_matches('0').len())
+        .unwrap_or(0);
+
+    if significant_fractional_digits > 8 || (value != 0.0 && value.abs() < 1e-8) {
+        return Err(EvalError::General(format!(
+            "Invalid Decimal literal exceeds CQL Decimal scale: '{value_str}'"
+        )));
+    }
+
+    Ok(Value::Decimal(value))
 }
 
 // ---------------------------------------------------------------------------

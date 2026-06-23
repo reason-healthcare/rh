@@ -17,25 +17,25 @@ The HL7 expression matrix remains the strongest specification-facing signal:
 | Parsed HL7 cases | 1 426 |
 | `rh-cql` pass | 1 241 |
 | Wrong-answer fail | 0 |
-| Skip | 47 |
-| Compile error | 94 |
-| Eval error | 21 |
-| Invalid input unexpectedly accepted | 16 |
-| Unimplemented total | 131 |
+| Skip | 45 |
+| Compile error | 89 |
+| Eval error | 23 |
+| Invalid input unexpectedly accepted | 0 |
+| Unimplemented total | 112 |
 
 Failure concentration:
 
 | Category | Main suites |
 |---|---|
-| Compile errors | intervals 35, date/time 33, value literals/selectors 21 |
-| Eval errors | date/time 12, arithmetic 6, intervals 2, type operators 1 |
-| Invalid input enforcement | value literals/selectors 7, type operators 4, types 3, intervals 2 |
+| Compile errors | intervals 35, date/time 33, value literals/selectors 17 |
+| Eval errors | date/time 12, arithmetic 6, intervals 2, value literals/selectors 2, type operators 1 |
+| Invalid input enforcement | none remaining |
 
 ### Three-Engine Matrix
 
 | Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented |
 |---|---:|---:|---:|---:|---:|---:|
-| `rh-cql` | 1 241 | 94 | 21 | 0 | 47 | 16 |
+| `rh-cql` | 1 241 | 89 | 23 | 0 | 45 | 0 |
 | Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 |
 | JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 |
 
@@ -277,6 +277,14 @@ Status:
   `just audit-strict` now gates at 1 241 pass / 0 wrong-answer fail /
   47 skip / 94 compile errors / 21 eval errors / 16 invalid failures, for
   131 unimplemented outcomes.
+- [x] 2026-06-23: Completed the invalid-enforcement slice. Added parser
+  enforcement for CQL Integer bounds, runtime enforcement for CQL Decimal
+  scale/range, runtime validation for time literal component bounds and
+  invalid interval bounds, and explicit errors for malformed `ToInteger`,
+  `ToDateTime`, and `ToTime` conversions. The HL7 audit now reports 0 invalid
+  failures. `just audit-strict` now gates at 1 241 pass / 0 wrong-answer fail
+  / 45 skip / 89 compile errors / 23 eval errors / 0 invalid failures, for
+  112 unimplemented outcomes.
 
 Priority order:
 

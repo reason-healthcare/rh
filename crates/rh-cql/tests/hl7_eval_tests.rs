@@ -890,7 +890,12 @@ fn run_test_case(tc: &HlTestCase) -> Outcome {
     // Compile.
     let compile_result = match compile_with_model(&cql, None, None) {
         Ok(r) => r,
-        Err(e) => return Outcome::CompileError(e.to_string()),
+        Err(e) => {
+            if tc.invalid {
+                return Outcome::InvalidPass;
+            }
+            return Outcome::CompileError(e.to_string());
+        }
     };
 
     if !compile_result.errors.is_empty() {

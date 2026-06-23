@@ -11,7 +11,7 @@ use crate::parser::span::Span;
 use nom::{
     branch::alt,
     character::complete::multispace1,
-    combinator::{map, value},
+    combinator::{map, map_res, value},
     IResult,
 };
 
@@ -39,8 +39,12 @@ pub(crate) fn parse_string_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Ex
 }
 
 pub(crate) fn parse_integer_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    map(integer_literal, |n| {
-        Expression::Literal(Literal::Integer(n))
+    map_res(integer_literal, |n| {
+        if (i32::MIN as i64..=i32::MAX as i64).contains(&n) {
+            Ok(Expression::Literal(Literal::Integer(n)))
+        } else {
+            Err("integer literal outside CQL Integer range")
+        }
     })(input)
 }
 

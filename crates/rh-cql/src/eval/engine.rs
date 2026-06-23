@@ -1888,6 +1888,22 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if (low_is_null || high_is_null) && !single_null_datetime_endpoint {
                     return Ok(Value::Null);
                 }
+                if let (Some(low_value), Some(high_value)) = (&low, &high) {
+                    match super::operators::cql_compare(low_value, high_value) {
+                        Some(std::cmp::Ordering::Greater) => {
+                            return Err(EvalError::General(
+                                "Interval: low bound must be less than or equal to high bound"
+                                    .to_string(),
+                            ));
+                        }
+                        Some(std::cmp::Ordering::Equal) if !(low_closed && high_closed) => {
+                            return Err(EvalError::General(
+                                "Interval: singleton interval must include both bounds".to_string(),
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
                 Ok(Value::Interval {
                     low: if low_is_null { None } else { low },
                     high: if high_is_null { None } else { high },
