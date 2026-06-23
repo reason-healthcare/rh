@@ -93,6 +93,10 @@ This writes the fast RH-only baseline:
 - `conformance/results/corpus/java_non_pass.csv`
 
 Use `just corpus-audit` for the heavier Java-inclusive reference pass.
+Corpus rows include `source_validity`, `remediation_target`, and
+`source_validity_notes` columns. Java-non-pass sources and entries from
+`conformance/corpus/invalid-or-ambiguous.md` are quarantined, so they are
+reported separately and not counted as RH remediation failures.
 
 For a fast smoke run:
 

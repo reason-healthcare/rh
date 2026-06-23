@@ -9,7 +9,13 @@ large external source file.
 
 Status: source-invalid for remediation purposes.
 
-Reduced CQL:
+Spec disposition:
+
+- Treat this as outside the accepted remediation grammar because expression
+  definitions require the expression body to follow `:`, and the Java
+  translator rejects the reduced source without producing ELM.
+
+Reduced CQL: `conformance/corpus/invalid-or-ambiguous/OmittedColon.cql`
 
 ```cql
 library OmittedColon version '0.1.0'
@@ -34,3 +40,5 @@ Disposition:
 - Do not implement omitted-colon define bodies as a Java-passing parser target.
 - Keep regular `define Name: expression` and access-modified forms as the
   remediation target for expression definitions.
+- Keep this case quarantined in corpus audit output; it is a source-validity
+  fixture, not a remediation target.

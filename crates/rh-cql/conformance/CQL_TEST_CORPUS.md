@@ -184,7 +184,9 @@ fixtures:
 3. Re-run Java translation after each reduction with `just corpus-audit` or a
    direct Java translator invocation. Keep the reduced source only when Java
    still passes; otherwise move the source issue to the invalid/ambiguous
-   review queue instead of treating it as a remediation target.
+   review queue instead of treating it as a remediation target. Corpus audit
+   rows with `source_validity=quarantined` or `remediation_target=no` are
+   review evidence, not implementation backlog.
 4. Re-run `rh cql compile <scratch-file>` and keep the `rh-cql` diagnostic in
    the remediation note. The reduced fixture should preserve the original
    diagnostic class unless the reduction intentionally isolates a narrower

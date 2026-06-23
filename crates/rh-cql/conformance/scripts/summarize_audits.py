@@ -104,6 +104,14 @@ def build_summary_json(
                 "java_pass_rh_fail_count", 0
             ),
             "java_non_pass_count": corpus_summary.get("java_non_pass_count", 0),
+            "quarantined_count": corpus_summary.get("quarantined_count", 0),
+            "remediation_target_count": corpus_summary.get(
+                "remediation_target_count", 0
+            ),
+            "rh_remediation_failure_count": corpus_summary.get(
+                "rh_remediation_failure_count", 0
+            ),
+            "source_validity": corpus_summary.get("source_validity", {}),
             "java_pass_rh_fail_by_diagnostic_class": corpus_summary.get(
                 "java_pass_rh_fail_by_diagnostic_class", {}
             ),
@@ -155,21 +163,37 @@ def build_summary_markdown(summary: dict[str, Any]) -> str:
     corpus = summary["corpus_audit"]
     lines.append(f"- Corpus rows: `{corpus['row_count']}`")
     lines.append(
+        f"- Remediation target rows: `{corpus.get('remediation_target_count', 0)}`"
+    )
+    lines.append(
+        f"- RH remediation failures: `{corpus.get('rh_remediation_failure_count', 0)}`"
+    )
+    lines.append(
         f"- Java-pass/RH-fail rows: `{corpus.get('java_pass_rh_fail_count', 0)}`"
     )
-    lines.append(f"- Java non-pass quarantine rows: `{corpus.get('java_non_pass_count', 0)}`")
+    lines.append(
+        f"- Java non-pass quarantine rows: `{corpus.get('java_non_pass_count', 0)}`"
+    )
+    lines.append(f"- Total quarantined rows: `{corpus.get('quarantined_count', 0)}`")
     lines.append("")
     lines.append(
-        "| Corpus | Files | RH Pass | RH Compile Error | RH Timeout | Java Pass | Java Compile Error | Java Timeout | Java Not Run |"
+        "| Corpus | Files | Targets | Quarantined | RH Remediation Fail | "
+        "RH Pass | RH Compile Error | RH Timeout | Java Pass | "
+        "Java Compile Error | Java Timeout | Java Not Run |"
     )
-    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for corpus_name, corpus_counts in corpus["by_corpus"].items():
         rh_counts = corpus_counts.get("rh_cql_status", {})
         java_counts = corpus_counts.get("java_elm_status", {})
         lines.append(
-            "| {name} | {rows} | {rh_pass} | {rh_compile} | {rh_timeout} | {java_pass} | {java_compile} | {java_timeout} | {java_not_run} |".format(
+            "| {name} | {rows} | {targets} | {quarantined} | "
+            "{rh_remediation_fail} | {rh_pass} | {rh_compile} | {rh_timeout} | "
+            "{java_pass} | {java_compile} | {java_timeout} | {java_not_run} |".format(
                 name=corpus_name,
                 rows=corpus_counts.get("row_count", 0),
+                targets=corpus_counts.get("remediation_target_count", 0),
+                quarantined=corpus_counts.get("quarantined_count", 0),
+                rh_remediation_fail=corpus_counts.get("rh_remediation_failure_count", 0),
                 rh_pass=rh_counts.get("pass", 0),
                 rh_compile=rh_counts.get("compile_error", 0),
                 rh_timeout=rh_counts.get("timeout", 0),

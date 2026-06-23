@@ -22,6 +22,13 @@ GENERATED_DIR = CONFORMANCE_DIR / "corpus/generated"
 RESULTS_DIR = CONFORMANCE_DIR / "results/corpus"
 DEFAULT_RH_CLI = WORKSPACE_ROOT / "target/release/rh"
 JAVA_CLI = TOOLS_DIR / "cql-java/Src/java/cql-to-elm-cli/build/install/cql-to-elm-cli/bin/cql-to-elm-cli"
+STATUS_PASS = "pass"
+STATUS_NOT_RUN = "not_run"
+VALIDITY_VALID = "valid"
+VALIDITY_UNVERIFIED = "unverified"
+VALIDITY_QUARANTINED = "quarantined"
+REMEDIATION_YES = "yes"
+REMEDIATION_NO = "no"
 
 
 @dataclass(frozen=True)
@@ -29,6 +36,7 @@ class CorpusSource:
     corpus: str
     root: Path
     pattern: str = "**/*.cql"
+    remediation_source: bool = True
 
 
 @dataclass(frozen=True)
@@ -36,6 +44,7 @@ class CorpusFile:
     corpus: str
     path: Path
     relative_path: str
+    remediation_source: bool
 
 
 def main() -> int:
@@ -76,6 +85,11 @@ def discover_sources() -> list[CorpusSource]:
     return [
         CorpusSource("generated", GENERATED_DIR),
         CorpusSource(
+            "invalid_or_ambiguous",
+            CONFORMANCE_DIR / "corpus/invalid-or-ambiguous",
+            remediation_source=False,
+        ),
+        CorpusSource(
             "cqframework_jvm_test",
             TOOLS_DIR / "cql-java/Src/java/cql-to-elm/src/jvmTest/resources",
         ),
@@ -99,6 +113,7 @@ def discover_files(sources: list[CorpusSource], limit: int | None) -> list[Corpu
                     corpus=source.corpus,
                     path=path,
                     relative_path=path.relative_to(source.root).as_posix(),
+                    remediation_source=source.remediation_source,
                 )
             )
     return files
@@ -117,10 +132,14 @@ def run_file(corpus_file: CorpusFile, args: argparse.Namespace) -> dict[str, str
 
     rh_diagnostic_class = classify_diagnostic(rh_result["status"], rh_result["notes"])
     java_diagnostic_class = classify_diagnostic(java_result["status"], java_result["notes"])
+    validity = source_validity(corpus_file, java_result)
 
     return {
         "corpus": corpus_file.corpus,
         "path": corpus_file.relative_path,
+        "source_validity": validity["status"],
+        "remediation_target": validity["remediation_target"],
+        "source_validity_notes": validity["notes"],
         "rh_cql_status": rh_result["status"],
         "rh_cql_diagnostic_class": rh_diagnostic_class,
         "rh_cql_notes": rh_result["notes"],
@@ -200,6 +219,9 @@ def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     fieldnames = [
         "corpus",
         "path",
+        "source_validity",
+        "remediation_target",
+        "source_validity_notes",
         "rh_cql_status",
         "rh_cql_diagnostic_class",
         "rh_cql_notes",
@@ -217,7 +239,7 @@ def java_pass_rh_fail_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     filtered = [
         row
         for row in rows
-        if row["java_elm_status"] == "pass" and row["rh_cql_status"] != "pass"
+        if is_remediation_failure(row)
     ]
     return sorted(
         filtered,
@@ -230,11 +252,7 @@ def java_pass_rh_fail_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
 
 
 def java_non_pass_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
-    filtered = [
-        row
-        for row in rows
-        if row["java_elm_status"] not in {"pass", "not_run"}
-    ]
+    filtered = [row for row in rows if is_java_non_pass(row)]
     return sorted(
         filtered,
         key=lambda row: (
@@ -257,64 +275,133 @@ def write_summary(path: Path, rows: list[dict[str, str]], sources: list[CorpusSo
                 "corpus": source.corpus,
                 "root": str(source.root),
                 "available": source.root.exists(),
+                "remediation_source": source.remediation_source,
             }
             for source in sources
         ],
         "row_count": len(rows),
         "java_pass_rh_fail_count": 0,
         "java_non_pass_count": 0,
+        "quarantined_count": 0,
+        "remediation_target_count": 0,
+        "rh_remediation_failure_count": 0,
         "java_pass_rh_fail_by_diagnostic_class": {},
         "java_non_pass_by_diagnostic_class": {},
+        "source_validity": {},
         "by_corpus": {},
     }
     for row in rows:
-        corpus = row["corpus"]
-        corpus_summary = payload["by_corpus"].setdefault(
-            corpus,
-            {
-                "row_count": 0,
-                "rh_cql_status": {},
-                "rh_cql_diagnostic_class": {},
-                "java_elm_status": {},
-                "java_elm_diagnostic_class": {},
-                "java_pass_rh_fail_by_diagnostic_class": {},
-                "java_non_pass_by_diagnostic_class": {},
-            },
-        )
-        corpus_summary["row_count"] += 1
-        increment(corpus_summary["rh_cql_status"], row["rh_cql_status"])
-        increment(
-            corpus_summary["rh_cql_diagnostic_class"],
-            row["rh_cql_diagnostic_class"],
-        )
-        increment(corpus_summary["java_elm_status"], row["java_elm_status"])
-        increment(
-            corpus_summary["java_elm_diagnostic_class"],
-            row["java_elm_diagnostic_class"],
-        )
-
-        if row["java_elm_status"] == "pass" and row["rh_cql_status"] != "pass":
-            payload["java_pass_rh_fail_count"] += 1
-            diagnostic_class = row["rh_cql_diagnostic_class"]
-            increment(payload["java_pass_rh_fail_by_diagnostic_class"], diagnostic_class)
-            increment(
-                corpus_summary["java_pass_rh_fail_by_diagnostic_class"],
-                diagnostic_class,
-            )
-
-        if row["java_elm_status"] not in {"pass", "not_run"}:
-            payload["java_non_pass_count"] += 1
-            diagnostic_class = row["java_elm_diagnostic_class"]
-            increment(payload["java_non_pass_by_diagnostic_class"], diagnostic_class)
-            increment(
-                corpus_summary["java_non_pass_by_diagnostic_class"],
-                diagnostic_class,
-            )
+        corpus_summary = corpus_summary_for(payload, row["corpus"])
+        update_summary_counts(payload, corpus_summary, row)
     path.write_text(json.dumps(payload, indent=2))
+
+
+def corpus_summary_for(payload: dict[str, Any], corpus: str) -> dict[str, Any]:
+    return payload["by_corpus"].setdefault(
+        corpus,
+        {
+            "row_count": 0,
+            "rh_cql_status": {},
+            "rh_cql_diagnostic_class": {},
+            "java_elm_status": {},
+            "java_elm_diagnostic_class": {},
+            "source_validity": {},
+            "quarantined_count": 0,
+            "remediation_target_count": 0,
+            "rh_remediation_failure_count": 0,
+            "java_pass_rh_fail_by_diagnostic_class": {},
+            "java_non_pass_by_diagnostic_class": {},
+        },
+    )
+
+
+def update_summary_counts(
+    payload: dict[str, Any],
+    corpus_summary: dict[str, Any],
+    row: dict[str, str],
+) -> None:
+    corpus_summary["row_count"] += 1
+    increment(corpus_summary["rh_cql_status"], row["rh_cql_status"])
+    increment(
+        corpus_summary["rh_cql_diagnostic_class"],
+        row["rh_cql_diagnostic_class"],
+    )
+    increment(corpus_summary["java_elm_status"], row["java_elm_status"])
+    increment(
+        corpus_summary["java_elm_diagnostic_class"],
+        row["java_elm_diagnostic_class"],
+    )
+    increment(payload["source_validity"], row["source_validity"])
+    increment(corpus_summary["source_validity"], row["source_validity"])
+
+    if row["source_validity"] == VALIDITY_QUARANTINED:
+        payload["quarantined_count"] += 1
+        corpus_summary["quarantined_count"] += 1
+
+    if row["remediation_target"] == REMEDIATION_YES:
+        payload["remediation_target_count"] += 1
+        corpus_summary["remediation_target_count"] += 1
+
+    if is_remediation_failure(row):
+        payload["java_pass_rh_fail_count"] += 1
+        payload["rh_remediation_failure_count"] += 1
+        corpus_summary["rh_remediation_failure_count"] += 1
+        diagnostic_class = row["rh_cql_diagnostic_class"]
+        increment(payload["java_pass_rh_fail_by_diagnostic_class"], diagnostic_class)
+        increment(
+            corpus_summary["java_pass_rh_fail_by_diagnostic_class"],
+            diagnostic_class,
+        )
+
+    if is_java_non_pass(row):
+        payload["java_non_pass_count"] += 1
+        diagnostic_class = row["java_elm_diagnostic_class"]
+        increment(payload["java_non_pass_by_diagnostic_class"], diagnostic_class)
+        increment(
+            corpus_summary["java_non_pass_by_diagnostic_class"],
+            diagnostic_class,
+        )
 
 
 def increment(counts: dict[str, int], status: str) -> None:
     counts[status] = counts.get(status, 0) + 1
+
+
+def source_validity(corpus_file: CorpusFile, java_result: dict[str, str]) -> dict[str, str]:
+    if not corpus_file.remediation_source:
+        return {
+            "status": VALIDITY_QUARANTINED,
+            "remediation_target": REMEDIATION_NO,
+            "notes": "listed in conformance/corpus/invalid-or-ambiguous.md",
+        }
+    if java_result["status"] not in {STATUS_PASS, STATUS_NOT_RUN}:
+        return {
+            "status": VALIDITY_QUARANTINED,
+            "remediation_target": REMEDIATION_NO,
+            "notes": f"Java translator {java_result['status']}: {java_result['notes']}",
+        }
+    if java_result["status"] == STATUS_NOT_RUN:
+        return {
+            "status": VALIDITY_UNVERIFIED,
+            "remediation_target": REMEDIATION_NO,
+            "notes": "Java translator was not run",
+        }
+    return {
+        "status": VALIDITY_VALID,
+        "remediation_target": REMEDIATION_YES,
+        "notes": "Java translator produced ELM",
+    }
+
+
+def is_remediation_failure(row: dict[str, str]) -> bool:
+    return (
+        row["remediation_target"] == REMEDIATION_YES
+        and row["rh_cql_status"] != STATUS_PASS
+    )
+
+
+def is_java_non_pass(row: dict[str, str]) -> bool:
+    return row["java_elm_status"] not in {STATUS_PASS, STATUS_NOT_RUN}
 
 
 def classify_diagnostic(status: str, notes: str) -> str:

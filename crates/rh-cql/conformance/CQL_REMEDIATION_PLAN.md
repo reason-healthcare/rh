@@ -344,12 +344,29 @@ Acceptance criteria:
 
 Goal: avoid enshrining invalid external CQL as requirements.
 
+Status:
+
+- [x] 2026-06-23: Added source-validity metadata to corpus audit rows:
+  `source_validity`, `remediation_target`, and `source_validity_notes`.
+- [x] 2026-06-23: Java-non-pass sources and explicit invalid/ambiguous
+  register entries are now quarantined and excluded from RH remediation failure
+  counts.
+- [x] 2026-06-23: Added remediation summary counters for quarantined rows,
+  remediation target rows, and RH remediation failures.
+- [x] 2026-06-23: Added a committed reduced source-validity fixture,
+  `conformance/corpus/invalid-or-ambiguous/OmittedColon.cql`, and documented
+  its disposition in `conformance/corpus/invalid-or-ambiguous.md`.
+- [x] 2026-06-23: Focused source-validity smoke audit produced one quarantined
+  row, zero remediation targets, and zero RH remediation failures.
+
 Tasks:
 
-1. For each Java-non-pass external file, record the Java diagnostic and mark it quarantined.
-2. For Java-pass but suspicious syntax, check the CQL grammar/spec section before implementation.
-3. Keep a small `conformance/corpus/invalid-or-ambiguous.md` register.
-4. Prefer reduced fixtures over large external files in unit tests.
+1. [x] For each Java-non-pass external file, record the Java diagnostic and
+   mark it quarantined.
+2. [x] For Java-pass but suspicious syntax, check the CQL grammar/spec section
+   before implementation.
+3. [x] Keep a small `conformance/corpus/invalid-or-ambiguous.md` register.
+4. [x] Prefer reduced fixtures over large external files in unit tests.
 
 Acceptance criteria:
 
