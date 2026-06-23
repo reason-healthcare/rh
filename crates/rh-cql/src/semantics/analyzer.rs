@@ -62,15 +62,82 @@ impl SemanticAnalyzer {
     pub fn register_included_library(&mut self, alias: &str, lib: &crate::elm::Library) {
         let alias_id = crate::library::LibraryIdentifier::unversioned(alias);
 
+        if let Some(params) = &lib.parameters {
+            for def in &params.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::Parameter,
+                        DataType::Unknown,
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(code_systems) = &lib.code_systems {
+            for def in &code_systems.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::CodeSystem,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(value_sets) = &lib.value_sets {
+            for def in &value_sets.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::ValueSet,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(codes) = &lib.codes {
+            for def in &codes.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::Code,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(concepts) = &lib.concepts {
+            for def in &concepts.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::Concept,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
         if let Some(stmts) = &lib.statements {
             for def in &stmts.defs {
                 match def {
                     crate::elm::StatementDef::Expression(e) => {
                         if let Some(name) = &e.name {
-                            let mut sym = Symbol::new(name.clone(), SymbolKind::Expression)
-                                .with_type(DataType::Unknown);
-                            sym.library = Some(alias_id.clone());
-                            self.scope_manager.register_symbol(sym);
+                            self.register_included_symbol(
+                                name,
+                                SymbolKind::Expression,
+                                DataType::Unknown,
+                                &alias_id,
+                            );
                         }
                     }
                     crate::elm::StatementDef::Function(f) => {
@@ -89,6 +156,18 @@ impl SemanticAnalyzer {
                 }
             }
         }
+    }
+
+    fn register_included_symbol(
+        &mut self,
+        name: &str,
+        kind: SymbolKind,
+        data_type: DataType,
+        alias_id: &crate::library::LibraryIdentifier,
+    ) {
+        let mut sym = Symbol::new(name.to_string(), kind).with_type(data_type);
+        sym.library = Some(alias_id.clone());
+        self.scope_manager.register_symbol(sym);
     }
 
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
@@ -189,6 +268,7 @@ impl SemanticAnalyzer {
 
         let meta = SemanticMeta {
             resolved_symbol,
+            symbol_kind: sym.map(|s| s.kind.clone()),
             ..Default::default()
         };
 
@@ -228,6 +308,19 @@ impl SemanticAnalyzer {
                     meta.implicit_conversions.push(format!("{:?}", conv));
                 }
             }
+        } else if let Some(library) = &e.library {
+            if let Some(funcs) = self
+                .scope_manager
+                .resolve_functions_qualified(library, &e.name)
+            {
+                if let Some(f) = funcs
+                    .iter()
+                    .find(|f| f.operand_types.len() == arg_types.len())
+                {
+                    dt = f.result_type.clone();
+                    meta.resolved_symbol = Some(format!("{library}.{}", e.name));
+                }
+            }
         } else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
             if let Some(f) = funcs
                 .iter()
@@ -249,6 +342,7 @@ impl SemanticAnalyzer {
             meta,
             inner: TypedExpression::FunctionInvocation(
                 crate::semantics::typed_ast::TypedFunctionInvocation {
+                    library: e.library.clone(),
                     function: e.name.clone(),
                     arguments,
                 },
@@ -607,7 +701,20 @@ impl SemanticAnalyzer {
                 }
                 ast::Statement::FunctionDef(fd) => {
                     let id = self.generate_node_id();
+                    self.scope_manager.push_scope();
+                    for param in &fd.parameters {
+                        let result_type = param
+                            .type_specifier
+                            .as_ref()
+                            .and_then(|spec| self.resolve_type_specifier(spec).ok())
+                            .unwrap_or_else(DataType::any);
+                        self.scope_manager.register_symbol(
+                            Symbol::new(param.name.clone(), SymbolKind::Parameter)
+                                .with_type(result_type),
+                        );
+                    }
                     let body = fd.body.as_ref().map(|b| self.analyze_expression(b));
+                    self.scope_manager.pop_scope();
                     let typed_stmt = TypedNode {
                         node_id: id,
                         data_type: DataType::any(),
@@ -1187,7 +1294,26 @@ impl SemanticAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::compile;
+    use crate::{compile, compile_with_libraries, LibraryIdentifier, MemoryLibrarySourceProvider};
+
+    fn expression_body<'a>(
+        library: &'a crate::elm::Library,
+        name: &str,
+    ) -> &'a crate::elm::Expression {
+        let stmts = library.statements.as_ref().expect("no statements");
+        stmts
+            .defs
+            .iter()
+            .find_map(|d| {
+                if let crate::elm::StatementDef::Expression(e) = d {
+                    if e.name.as_deref() == Some(name) {
+                        return e.expression.as_deref();
+                    }
+                }
+                None
+            })
+            .unwrap_or_else(|| panic!("{name} definition not found in ELM"))
+    }
 
     /// A `MemberInvocation` where the source identifier resolves to a library
     /// include alias must be reclassified as a `QualifiedIdentifierRef`, so the
@@ -1201,16 +1327,7 @@ mod tests {
         "#;
         let result = compile(src, None).expect("pipeline error");
         // The ELM must contain an ExpressionRef with library_name set.
-        let stmts = result.library.statements.as_ref().expect("no statements");
-        let foo_expr = stmts.defs.iter().find_map(|d| {
-            if let crate::elm::StatementDef::Expression(e) = d {
-                if e.name.as_deref() == Some("Foo") {
-                    return e.expression.as_deref();
-                }
-            }
-            None
-        });
-        let foo_expr = foo_expr.expect("Foo definition not found in ELM");
+        let foo_expr = expression_body(&result.library, "Foo");
         match foo_expr {
             crate::elm::Expression::ExpressionRef(r) => {
                 assert_eq!(r.library_name.as_deref(), Some("CaseLogic"));
@@ -1234,20 +1351,150 @@ mod tests {
             define PatName: Patient.name
         "#;
         let result = compile(src, None).expect("pipeline error");
-        let stmts = result.library.statements.as_ref().expect("no statements");
-        let pat_name_expr = stmts.defs.iter().find_map(|d| {
-            if let crate::elm::StatementDef::Expression(e) = d {
-                if e.name.as_deref() == Some("PatName") {
-                    return e.expression.as_deref();
-                }
-            }
-            None
-        });
-        let pat_name_expr = pat_name_expr.expect("PatName definition not found in ELM");
+        let pat_name_expr = expression_body(&result.library, "PatName");
         assert!(
             matches!(pat_name_expr, crate::elm::Expression::Property(_)),
             "expected Property node for Patient.name, got {:?}",
             std::mem::discriminant(pat_name_expr)
         );
+    }
+
+    #[test]
+    fn test_function_parameter_is_scoped_in_function_body() {
+        let src = r#"
+            library Test version '1.0'
+            define function AddOne(value Integer): value + 1
+        "#;
+        let result = compile(src, None).expect("pipeline error");
+        assert!(
+            result.is_success(),
+            "unexpected diagnostics: {:?}",
+            result.errors
+        );
+    }
+
+    #[test]
+    fn test_included_expression_and_function_resolve_by_alias() {
+        let helper = r#"
+            library HelperLibrary version '0.1.0'
+            define public PublicValue: 5
+            define function AddOne(value Integer): value + 1
+        "#;
+        let main = r#"
+            library MainLibrary version '0.1.0'
+            include HelperLibrary version '0.1.0' called Helper
+            define UsesIncludedExpression: Helper.PublicValue + 1
+            define UsesIncludedFunction: Helper.AddOne(4)
+        "#;
+
+        let provider = MemoryLibrarySourceProvider::new();
+        provider.register_source(
+            LibraryIdentifier::new("HelperLibrary", Some("0.1.0")),
+            helper.to_string(),
+        );
+
+        let result = compile_with_libraries(main, None, &provider).expect("pipeline error");
+        assert!(
+            result.result.is_success(),
+            "unexpected diagnostics: {:?}",
+            result.result.errors
+        );
+
+        match expression_body(&result.result.library, "UsesIncludedFunction") {
+            crate::elm::Expression::FunctionRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("AddOne"));
+            }
+            other => panic!(
+                "expected FunctionRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+    }
+
+    #[test]
+    fn test_included_parameters_and_terminology_resolve_by_alias() {
+        let helper = r#"
+            library HelperLibrary version '0.1.0'
+            codesystem "SNOMED-CT:2020": 'http://snomed.info/sct' version '2020'
+            valueset "Female Administrative Sex": '2.16.840.1.113883.3.560.100.2'
+            code "XYZ Code": 'XYZ' from "SNOMED-CT:2020" display 'XYZ Code'
+            concept "XYZ Concept": { "XYZ Code" } display 'XYZ Concept'
+            parameter "Test Parameter" Integer
+        "#;
+        let main = r#"
+            library MainLibrary version '0.1.0'
+            include HelperLibrary version '0.1.0' called Helper
+            define UsesIncludedParameter: Helper."Test Parameter"
+            define UsesIncludedCodeSystem: Helper."SNOMED-CT:2020"
+            define UsesIncludedValueSet: Helper."Female Administrative Sex"
+            define UsesIncludedCode: Helper."XYZ Code"
+            define UsesIncludedConcept: Helper."XYZ Concept"
+        "#;
+
+        let provider = MemoryLibrarySourceProvider::new();
+        provider.register_source(
+            LibraryIdentifier::new("HelperLibrary", Some("0.1.0")),
+            helper.to_string(),
+        );
+
+        let result = compile_with_libraries(main, None, &provider).expect("pipeline error");
+        assert!(
+            result.result.is_success(),
+            "unexpected diagnostics: {:?}",
+            result.result.errors
+        );
+
+        match expression_body(&result.result.library, "UsesIncludedParameter") {
+            crate::elm::Expression::ParameterRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("Test Parameter"));
+            }
+            other => panic!(
+                "expected ParameterRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedCodeSystem") {
+            crate::elm::Expression::CodeSystemRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("SNOMED-CT:2020"));
+            }
+            other => panic!(
+                "expected CodeSystemRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedValueSet") {
+            crate::elm::Expression::ValueSetRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("Female Administrative Sex"));
+            }
+            other => panic!(
+                "expected ValueSetRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedCode") {
+            crate::elm::Expression::CodeRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("XYZ Code"));
+            }
+            other => panic!("expected CodeRef, got {:?}", std::mem::discriminant(other)),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedConcept") {
+            crate::elm::Expression::ConceptRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("XYZ Concept"));
+            }
+            other => panic!(
+                "expected ConceptRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
     }
 }

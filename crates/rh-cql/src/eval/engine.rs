@@ -371,11 +371,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::ParameterRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
-                self.ctx
-                    .parameters
-                    .get(name)
-                    .cloned()
-                    .ok_or_else(|| EvalError::General(format!("Parameter '{name}' not found")))
+                if let Some(v) = self.ctx.parameters.get(name) {
+                    Ok(v.clone())
+                } else if self.is_library_parameter(name) {
+                    Ok(Value::Null)
+                } else {
+                    Err(EvalError::General(format!("Parameter '{name}' not found")))
+                }
             }
 
             // ----- Logical & null -----

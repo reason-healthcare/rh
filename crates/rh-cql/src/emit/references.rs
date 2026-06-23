@@ -14,37 +14,52 @@ pub fn emit_identifier_ref(
     node: &TypedNode<TypedExpression>,
     ctx: &mut ElmEmitter,
 ) -> elm::Expression {
-    use crate::semantics::scope::SymbolKind;
     let element = ctx.element_fields(node);
+    emit_named_ref(element, &id_ref.name, None, node.meta.symbol_kind.as_ref())
+}
+
+fn emit_named_ref(
+    element: elm::ElementFields,
+    name: &str,
+    library_name: Option<String>,
+    symbol_kind: Option<&crate::semantics::scope::SymbolKind>,
+) -> elm::Expression {
+    use crate::semantics::scope::SymbolKind;
+
     // Emit the correct ELM ref node based on the resolved symbol kind so that
     // evaluators (e.g. cql-execution) can look the name up in the right table
     // (library.codes vs library.expressions).
-    match &node.meta.symbol_kind {
+    match symbol_kind {
+        Some(SymbolKind::Parameter) => elm::Expression::ParameterRef(elm::ParameterRef {
+            element,
+            name: Some(name.to_string()),
+            library_name,
+        }),
         Some(SymbolKind::Code) => elm::Expression::CodeRef(elm::CodeRef {
             element,
-            name: Some(id_ref.name.clone()),
-            library_name: None,
+            name: Some(name.to_string()),
+            library_name,
         }),
         Some(SymbolKind::Concept) => elm::Expression::ConceptRef(elm::ConceptRef {
             element,
-            name: Some(id_ref.name.clone()),
-            library_name: None,
+            name: Some(name.to_string()),
+            library_name,
         }),
         Some(SymbolKind::ValueSet) => elm::Expression::ValueSetRef(elm::ValueSetRef {
             element,
-            name: Some(id_ref.name.clone()),
-            library_name: None,
+            name: Some(name.to_string()),
+            library_name,
             preserve: None,
         }),
         Some(SymbolKind::CodeSystem) => elm::Expression::CodeSystemRef(elm::CodeSystemRef {
             element,
-            name: Some(id_ref.name.clone()),
-            library_name: None,
+            name: Some(name.to_string()),
+            library_name,
         }),
         _ => elm::Expression::ExpressionRef(elm::ExpressionRef {
             element,
-            name: Some(id_ref.name.clone()),
-            library_name: None,
+            name: Some(name.to_string()),
+            library_name,
         }),
     }
 }
@@ -55,11 +70,12 @@ pub fn emit_qualified_identifier_ref(
     ctx: &mut ElmEmitter,
 ) -> elm::Expression {
     let element = ctx.element_fields(node);
-    elm::Expression::ExpressionRef(elm::ExpressionRef {
+    emit_named_ref(
         element,
-        name: Some(qid.name.clone()),
-        library_name: Some(qid.qualifier.clone()),
-    })
+        &qid.name,
+        Some(qid.qualifier.clone()),
+        node.meta.symbol_kind.as_ref(),
+    )
 }
 
 pub fn emit_function_invocation(
@@ -83,7 +99,7 @@ pub fn emit_function_invocation(
     elm::Expression::FunctionRef(elm::FunctionRef {
         element,
         name: Some(fi.function.clone()),
-        library_name: None,
+        library_name: fi.library.clone(),
         operand,
         signature: Vec::new(),
     })

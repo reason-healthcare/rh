@@ -51,6 +51,7 @@ pub struct TypedNode<T> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedFunctionInvocation {
+    pub library: Option<String>,
     pub function: String,
     pub arguments: Vec<TypedNode<TypedExpression>>,
 }

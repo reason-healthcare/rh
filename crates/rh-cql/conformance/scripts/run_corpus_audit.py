@@ -135,7 +135,14 @@ def run_rh_compile(path: Path, rh_cli: Path, timeout_seconds: int) -> dict[str, 
         return {"status": "not_run", "notes": f"rh CLI not found: {rh_cli}"}
     try:
         proc = subprocess.run(
-            [str(rh_cli), "cql", "compile", str(path)],
+            [
+                str(rh_cli),
+                "cql",
+                "compile",
+                "--lib-path",
+                str(path.parent),
+                str(path),
+            ],
             capture_output=True,
             text=True,
             timeout=timeout_seconds,

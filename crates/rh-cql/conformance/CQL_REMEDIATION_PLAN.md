@@ -1,6 +1,6 @@
 # CQL Remediation Plan
 
-Last updated: 2026-06-22
+Last updated: 2026-06-23
 
 This plan is based on `conformance/results/summaries/latest-summary.md`.
 It addresses current `rh-cql` gaps while avoiding the assumption that every
@@ -180,6 +180,30 @@ Acceptance criteria:
 
 Goal: handle Java-passing files that parse but fail semantic analysis.
 
+Status:
+
+- [x] 2026-06-23: Added function-parameter scoping during semantic analysis,
+  so helper library functions such as `AddOne(value Integer): value + 1`
+  compile without unresolved-identifier diagnostics.
+- [x] 2026-06-23: Made CLI compile/validate use the include-aware library
+  provider path, added `cql compile --lib-path`, and updated the corpus audit
+  to pass each file's directory as a library search path.
+- [x] 2026-06-23: Preserved library qualifiers on typed function invocations
+  so included calls such as `Helper.AddOne(4)` emit `FunctionRef` with
+  `libraryName: "Helper"`. The generated `library-boundaries/MainLibrary.cql`
+  fixture now compiles and validates through the CLI; generated RH-only audit
+  improves to 7 pass / 1 compile error.
+- [x] 2026-06-23: Registered included-library parameters, code systems, value
+  sets, codes, and concepts in addition to expressions/functions, and made
+  qualified references emit the correct ELM ref kind with the include alias.
+  Representative CQFramework files `ReferencingLibrary.cql`, `Issue641.cql`,
+  and `AccessModifierReferencing.cql` now compile; an RH-only jvmTest audit
+  reports 0 remaining rows with `Could not resolve qualified identifier`.
+- [x] 2026-06-23: Added package-provider namespace fallback for unqualified
+  standard FHIR support library includes. `FHIRHelpers`, `FHIRCommon`,
+  `FHIRModelInfo`, and `FHIR-ModelInfo` now resolve from the corresponding
+  `fhir.cqf.common` FHIR package when included without a CQL namespace.
+
 Observed patterns:
 
 - Qualified identifiers such as `Helper.PublicValue` and measure library aliases.
@@ -189,11 +213,11 @@ Observed patterns:
 
 Initial targets:
 
-1. Teach corpus audit to provide include search paths for files in the same corpus directory.
-2. Improve compile API/library provider use for multi-library corpora.
-3. Resolve qualified identifiers across included libraries consistently.
-4. Improve modelinfo-backed property resolution for FHIR/QI-Core fields.
-5. Add choice-type property handling for common eCQM patterns.
+1. [x] Teach corpus audit to provide include search paths for files in the same corpus directory.
+2. [x] Improve compile API/library provider use for multi-library corpora.
+3. [x] Resolve qualified identifiers across included libraries consistently.
+4. [ ] Improve modelinfo-backed property resolution for FHIR/QI-Core fields.
+5. [ ] Add choice-type property handling for common eCQM patterns.
 
 Acceptance criteria:
 
