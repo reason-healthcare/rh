@@ -828,6 +828,54 @@ fn eval_timing_expression_preserves_precision() {
     );
 }
 
+#[test]
+fn eval_interval_before_after_point_and_interval() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: Interval[1, 10] before Interval[11, 20]",
+            "X"
+        ),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 12 after Interval[1, 10]", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Interval[11, 20] after 12", "X"),
+        Value::Boolean(false)
+    );
+}
+
+#[test]
+fn eval_interval_proper_contains_respects_precision() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: Interval[@T12:00:00.001, @T21:59:59.999] properly includes second of @T12:00:00",
+            "X"
+        ),
+        Value::Boolean(false)
+    );
+    assert_eq!(
+        eval_expr(
+            "library T define X: @T12:00:00 properly included in millisecond of Interval[@T12:00:00.001, @T21:59:59.999]",
+            "X"
+        ),
+        Value::Null
+    );
+}
+
+#[test]
+fn eval_interval_included_in_respects_precision() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: Interval [@2017-09-01T00:00:00, @2017-09-01T00:00:00] included in day of Interval [@2017-09-01T00:00:00.000, @2017-12-30T23:59:59.999]",
+            "X"
+        ),
+        Value::Boolean(true)
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Wave-2 conformance gap coverage (CQL spec section coverage)
 // ---------------------------------------------------------------------------

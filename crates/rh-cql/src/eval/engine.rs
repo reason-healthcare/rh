@@ -1204,12 +1204,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Before(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
-                super::operators::before(&a, &b, tb.precision.as_deref())
+                if matches!(a, Value::Interval { .. }) || matches!(b, Value::Interval { .. }) {
+                    super::intervals::before(&a, &b)
+                } else {
+                    super::operators::before(&a, &b, tb.precision.as_deref())
+                }
             }
             Expression::After(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
-                super::operators::after(&a, &b, tb.precision.as_deref())
+                if matches!(a, Value::Interval { .. }) || matches!(b, Value::Interval { .. }) {
+                    super::intervals::after(&a, &b)
+                } else {
+                    super::operators::after(&a, &b, tb.precision.as_deref())
+                }
             }
             Expression::DurationBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
@@ -1971,7 +1979,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
                         super::lists::list_includes(&a, &b)
                     }
-                    _ => super::intervals::includes(&a, &b),
+                    _ => super::intervals::includes_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
                 }
             }
             Expression::IncludedIn(timed_bin) => {
@@ -1984,7 +1996,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
                         super::lists::list_included_in(&a, &b)
                     }
-                    _ => super::intervals::included_in(&a, &b),
+                    _ => super::intervals::included_in_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
                 }
             }
             Expression::Starts(timed_bin) => {
@@ -2056,9 +2072,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
                 let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
                 match (&a, &b) {
-                    (Value::Interval { .. }, _) | (_, Value::Interval { .. }) => {
+                    (Value::Interval { .. }, Value::Interval { .. }) => {
                         super::intervals::proper_includes(&a, &b)
                     }
+                    (Value::Interval { .. }, _) => super::intervals::proper_contains_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
+                    (_, Value::Interval { .. }) => Ok(Value::Boolean(false)),
                     // Null container = empty list, can't properly include anything
                     (Value::Null, _) => Ok(Value::Boolean(false)),
                     // List properly includes null (scalar element): check literal null membership
@@ -2085,9 +2107,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
                 let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
                 match (&a, &b) {
-                    (Value::Interval { .. }, _) | (_, Value::Interval { .. }) => {
+                    (Value::Interval { .. }, Value::Interval { .. }) => {
                         super::intervals::proper_included_in(&a, &b)
                     }
+                    (_, Value::Interval { .. }) => super::intervals::proper_in_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
+                    (Value::Interval { .. }, _) => Ok(Value::Boolean(false)),
                     // Null container = empty list, nothing is properly included in it
                     (_, Value::Null) => Ok(Value::Boolean(false)),
                     // Null element properly included in list: check literal null membership

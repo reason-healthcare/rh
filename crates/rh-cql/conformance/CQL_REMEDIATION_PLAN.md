@@ -15,27 +15,27 @@ The HL7 expression matrix remains the strongest specification-facing signal:
 | Metric | Count |
 |---|---:|
 | Parsed HL7 cases | 1 426 |
-| `rh-cql` pass | 1 109 |
+| `rh-cql` pass | 1 166 |
 | Wrong-answer fail | 0 |
 | Skip | 56 |
 | Compile error | 94 |
-| Eval error | 144 |
+| Eval error | 87 |
 | Invalid input unexpectedly accepted | 16 |
-| Unimplemented total | 254 |
+| Unimplemented total | 197 |
 
 Failure concentration:
 
 | Category | Main suites |
 |---|---|
 | Compile errors | intervals 35, date/time 33, value literals/selectors 21 |
-| Eval errors | intervals 59, strings 41, lists 25, date/time 12 |
+| Eval errors | strings 41, lists 25, date/time 12, intervals 2 |
 | Invalid input enforcement | value literals/selectors 7, type operators 4, types 3, intervals 2 |
 
 ### Three-Engine Matrix
 
 | Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented |
 |---|---:|---:|---:|---:|---:|---:|
-| `rh-cql` | 1 109 | 94 | 144 | 0 | 56 | 16 |
+| `rh-cql` | 1 166 | 94 | 87 | 0 | 56 | 16 |
 | Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 |
 | JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 |
 
@@ -245,6 +245,14 @@ Status:
   exposed by the constructor support. `just audit-strict` now gates at
   1 109 pass / 0 wrong-answer fail / 56 skip / 94 compile errors /
   144 eval errors / 16 invalid failures, for 254 unimplemented outcomes.
+- [x] 2026-06-23: Continued the interval runtime slice. Added interval-aware
+  `before`/`after` evaluation for interval-vs-interval and interval-vs-point
+  forms, routed scalar proper inclusion through interval point containment,
+  and made interval proper containment/inclusion honor temporal precision.
+  The HL7 interval suite now reports 308 pass / 0 wrong-answer fail /
+  35 compile errors / 2 eval errors / 2 invalid failures. `just audit-strict`
+  now gates at 1 166 pass / 0 wrong-answer fail / 56 skip / 94 compile errors /
+  87 eval errors / 16 invalid failures, for 197 unimplemented outcomes.
 
 Priority order:
 

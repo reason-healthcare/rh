@@ -9,7 +9,7 @@
 
 use super::context::EvalError;
 use super::operators::cql_compare;
-use super::value::Value;
+use super::value::{CqlDate, CqlDateTime, CqlTime, Value};
 use std::cmp::Ordering;
 
 // ---------------------------------------------------------------------------
@@ -160,10 +160,65 @@ pub fn in_interval(point: &Value, interval: &Value) -> Result<Value, EvalError> 
     contains(interval, point)
 }
 
-/// `Includes` — true if the first interval includes the second entirely.
-pub fn includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
+/// `Before` for interval and interval/point combinations.
+pub fn before(a: &Value, b: &Value) -> Result<Value, EvalError> {
     if matches!(a, Value::Null) || matches!(b, Value::Null) {
         return Ok(Value::Null);
+    }
+
+    let left = before_left_boundary(a)?;
+    let right = before_right_boundary(b)?;
+    match (left, right) {
+        (Some(left), Some(right)) => match cql_compare(left, right) {
+            Some(ord) => Ok(Value::Boolean(ord == Ordering::Less)),
+            None => Ok(Value::Null),
+        },
+        _ => Ok(Value::Null),
+    }
+}
+
+/// `After` for interval and interval/point combinations.
+pub fn after(a: &Value, b: &Value) -> Result<Value, EvalError> {
+    before(b, a)
+}
+
+fn before_left_boundary(value: &Value) -> Result<Option<&Value>, EvalError> {
+    match value {
+        Value::Interval { .. } => {
+            let (_, high, _, _) = unwrap_interval(value)?;
+            Ok(high)
+        }
+        _ => Ok(Some(value)),
+    }
+}
+
+fn before_right_boundary(value: &Value) -> Result<Option<&Value>, EvalError> {
+    match value {
+        Value::Interval { .. } => {
+            let (low, _, _, _) = unwrap_interval(value)?;
+            Ok(low)
+        }
+        _ => Ok(Some(value)),
+    }
+}
+
+/// `Includes` — true if the first interval includes the second entirely.
+pub fn includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
+    includes_at_precision(a, b, None)
+}
+
+pub fn includes_at_precision(
+    a: &Value,
+    b: &Value,
+    precision: Option<&str>,
+) -> Result<Value, EvalError> {
+    if matches!(a, Value::Null) || matches!(b, Value::Null) {
+        return Ok(Value::Null);
+    }
+    if let Some(precision) = precision {
+        let a = truncate_interval(a, precision)?;
+        let b = truncate_interval(b, precision)?;
+        return includes_at_precision(&a, &b, None);
     }
     let (a_low, a_high, a_lc, a_hc) = unwrap_interval(a)?;
     let (b_low, b_high, b_lc, b_hc) = unwrap_interval(b)?;
@@ -209,6 +264,14 @@ pub fn includes(a: &Value, b: &Value) -> Result<Value, EvalError> {
 /// `IncludedIn` — true if `a` is entirely included within `b`.
 pub fn included_in(a: &Value, b: &Value) -> Result<Value, EvalError> {
     includes(b, a)
+}
+
+pub fn included_in_at_precision(
+    a: &Value,
+    b: &Value,
+    precision: Option<&str>,
+) -> Result<Value, EvalError> {
+    includes_at_precision(b, a, precision)
 }
 
 // ---------------------------------------------------------------------------
@@ -624,8 +687,21 @@ fn is_leap_year(year: i32) -> bool {
 /// `ProperContains` (interval, point) — true if the interval contains the point
 /// strictly (point is not equal to a closed boundary).
 pub fn proper_contains(interval: &Value, point: &Value) -> Result<Value, EvalError> {
+    proper_contains_at_precision(interval, point, None)
+}
+
+pub fn proper_contains_at_precision(
+    interval: &Value,
+    point: &Value,
+    precision: Option<&str>,
+) -> Result<Value, EvalError> {
     if matches!(interval, Value::Null) || matches!(point, Value::Null) {
         return Ok(Value::Null);
+    }
+    if let Some(precision) = precision {
+        let interval = truncate_interval(interval, precision)?;
+        let point = truncate_temporal_value(point, precision);
+        return proper_contains_at_precision(&interval, &point, None);
     }
     match contains(interval, point)? {
         Value::Boolean(false) => return Ok(Value::Boolean(false)),
@@ -653,6 +729,114 @@ pub fn proper_contains(interval: &Value, point: &Value) -> Result<Value, EvalErr
 /// `ProperIn` — point is properly in the interval (reverse of `proper_contains`).
 pub fn proper_in(point: &Value, interval: &Value) -> Result<Value, EvalError> {
     proper_contains(interval, point)
+}
+
+pub fn proper_in_at_precision(
+    point: &Value,
+    interval: &Value,
+    precision: Option<&str>,
+) -> Result<Value, EvalError> {
+    proper_contains_at_precision(interval, point, precision)
+}
+
+fn truncate_interval(interval: &Value, precision: &str) -> Result<Value, EvalError> {
+    let (low, high, low_closed, high_closed) = unwrap_interval(interval)?;
+    Ok(Value::Interval {
+        low: low.map(|v| Box::new(truncate_temporal_value(v, precision))),
+        high: high.map(|v| Box::new(truncate_temporal_value(v, precision))),
+        low_closed,
+        high_closed,
+    })
+}
+
+fn truncate_temporal_value(value: &Value, precision: &str) -> Value {
+    match value {
+        Value::Date(d) => Value::Date(truncate_date(d, precision)),
+        Value::DateTime(dt) => Value::DateTime(truncate_datetime(dt, precision)),
+        Value::Time(t) => Value::Time(truncate_time(t, precision)),
+        _ => value.clone(),
+    }
+}
+
+fn truncate_date(date: &CqlDate, precision: &str) -> CqlDate {
+    match precision {
+        "year" => CqlDate {
+            year: date.year,
+            month: None,
+            day: None,
+        },
+        "month" => CqlDate {
+            day: None,
+            ..date.clone()
+        },
+        _ => date.clone(),
+    }
+}
+
+fn truncate_datetime(dt: &CqlDateTime, precision: &str) -> CqlDateTime {
+    match precision {
+        "year" => CqlDateTime {
+            month: None,
+            day: None,
+            hour: None,
+            minute: None,
+            second: None,
+            millisecond: None,
+            ..dt.clone()
+        },
+        "month" => CqlDateTime {
+            day: None,
+            hour: None,
+            minute: None,
+            second: None,
+            millisecond: None,
+            ..dt.clone()
+        },
+        "day" => CqlDateTime {
+            hour: None,
+            minute: None,
+            second: None,
+            millisecond: None,
+            ..dt.clone()
+        },
+        "hour" => CqlDateTime {
+            minute: None,
+            second: None,
+            millisecond: None,
+            ..dt.clone()
+        },
+        "minute" => CqlDateTime {
+            second: None,
+            millisecond: None,
+            ..dt.clone()
+        },
+        "second" => CqlDateTime {
+            millisecond: None,
+            ..dt.clone()
+        },
+        _ => dt.clone(),
+    }
+}
+
+fn truncate_time(time: &CqlTime, precision: &str) -> CqlTime {
+    match precision {
+        "hour" => CqlTime {
+            minute: None,
+            second: None,
+            millisecond: None,
+            ..time.clone()
+        },
+        "minute" => CqlTime {
+            second: None,
+            millisecond: None,
+            ..time.clone()
+        },
+        "second" => CqlTime {
+            millisecond: None,
+            ..time.clone()
+        },
+        _ => time.clone(),
+    }
 }
 
 /// `ProperIncludes` — `a` properly includes `b` (a includes b, and a ≠ b).
