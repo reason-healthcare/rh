@@ -20,6 +20,13 @@ use super::super::elm;
 use super::context::EvalError;
 use super::value::{CqlDate, CqlDateTime, CqlTime, Value};
 
+const CQL_DECIMAL_MAX_MAGNITUDE: f64 = 1e28;
+const CQL_DECIMAL_MIN_STEP: f64 = 1e-8;
+const CQL_DECIMAL_MAX_SCALE: usize = 8;
+const CQL_TIME_MAX_HOUR: u8 = 23;
+const CQL_TIME_MAX_MINUTE_OR_SECOND: u8 = 59;
+const CQL_TIME_MAX_MILLISECOND: u32 = 999;
+
 // ---------------------------------------------------------------------------
 // ELM namespace utilities (shared with the engine)
 // ---------------------------------------------------------------------------
@@ -45,18 +52,8 @@ fn parse_time_value(s: &str) -> Result<Value, EvalError> {
     if parts.len() < 2 {
         return Err(EvalError::General(format!("Invalid Time literal: '{s}'")));
     }
-    let hour = parts[0]
-        .parse::<u8>()
-        .map_err(|_| EvalError::General(format!("Invalid Time hour in '{s}'")))?;
-    if hour > 23 {
-        return Err(EvalError::General(format!("Invalid Time hour in '{s}'")));
-    }
-    let minute = parts[1]
-        .parse::<u8>()
-        .map_err(|_| EvalError::General(format!("Invalid Time minute in '{s}'")))?;
-    if minute > 59 {
-        return Err(EvalError::General(format!("Invalid Time minute in '{s}'")));
-    }
+    let hour = parse_time_component(parts[0], CQL_TIME_MAX_HOUR, "hour", s)?;
+    let minute = parse_time_component(parts[1], CQL_TIME_MAX_MINUTE_OR_SECOND, "minute", s)?;
     if parts.len() == 2 {
         return Ok(Value::Time(CqlTime {
             hour,
@@ -67,26 +64,12 @@ fn parse_time_value(s: &str) -> Result<Value, EvalError> {
     }
     // parts[2] is "SS" or "SS.mmm"
     let sec_ms: Vec<&str> = parts[2].splitn(2, '.').collect();
-    let second = sec_ms[0]
-        .parse::<u8>()
-        .map_err(|_| EvalError::General(format!("Invalid Time second in '{s}'")))?;
-    if second > 59 {
-        return Err(EvalError::General(format!("Invalid Time second in '{s}'")));
-    }
-    // Milliseconds: "9"→900ms, "99"→990ms, "999"→999ms (right-pad with zeros to 3 digits)
+    let second = parse_time_component(sec_ms[0], CQL_TIME_MAX_MINUTE_OR_SECOND, "second", s)?;
     let millisecond = match sec_ms.get(1) {
-        Some(ms_str) => {
-            let padded = format!("{:0<3}", ms_str);
-            let value = padded[..3]
-                .parse::<u32>()
-                .map_err(|_| EvalError::General(format!("Invalid Time millisecond in '{s}'")))?;
-            if value > 999 {
-                return Err(EvalError::General(format!(
-                    "Invalid Time millisecond in '{s}'"
-                )));
-            }
-            Some(value)
-        }
+        Some(ms_str) => Some(
+            parse_millisecond(ms_str)
+                .ok_or_else(|| EvalError::General(format!("Invalid Time millisecond in '{s}'")))?,
+        ),
         None => None,
     };
     Ok(Value::Time(CqlTime {
@@ -95,6 +78,43 @@ fn parse_time_value(s: &str) -> Result<Value, EvalError> {
         second: Some(second),
         millisecond,
     }))
+}
+
+fn parse_time_component(
+    raw: &str,
+    max: u8,
+    component_name: &str,
+    source: &str,
+) -> Result<u8, EvalError> {
+    let value = raw
+        .parse::<u8>()
+        .map_err(|_| EvalError::General(format!("Invalid Time {component_name} in '{source}'")))?;
+    if value > max {
+        return Err(EvalError::General(format!(
+            "Invalid Time {component_name} in '{source}'"
+        )));
+    }
+    Ok(value)
+}
+
+pub(super) fn parse_time_component_opt(raw: &str, max: u8) -> Option<u8> {
+    let value = raw.parse::<u8>().ok()?;
+    (value <= max).then_some(value)
+}
+
+pub(super) fn parse_hour(raw: &str) -> Option<u8> {
+    parse_time_component_opt(raw, CQL_TIME_MAX_HOUR)
+}
+
+pub(super) fn parse_minute_or_second(raw: &str) -> Option<u8> {
+    parse_time_component_opt(raw, CQL_TIME_MAX_MINUTE_OR_SECOND)
+}
+
+/// Parse a CQL time millisecond component, right-padding to three digits.
+pub(super) fn parse_millisecond(raw: &str) -> Option<u32> {
+    let padded = format!("{:0<3}", raw);
+    let value = padded.get(..3)?.parse::<u32>().ok()?;
+    (value <= CQL_TIME_MAX_MILLISECOND).then_some(value)
 }
 
 /// Parse a date string `"YYYY"`, `"YYYY-MM"`, or `"YYYY-MM-DD"` → `Value::Date`.
@@ -207,26 +227,30 @@ fn parse_decimal_value(value_str: &str) -> Result<Value, EvalError> {
         .parse::<f64>()
         .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'")))?;
 
-    if value.abs() >= 1e28 {
+    if value.abs() >= CQL_DECIMAL_MAX_MAGNITUDE {
         return Err(EvalError::General(format!(
             "Invalid Decimal literal outside CQL Decimal range: '{value_str}'"
         )));
     }
 
-    let value_text = value_str.trim();
-    let significant_fractional_digits = value_text
-        .trim_start_matches('-')
-        .split_once('.')
-        .map(|(_, fractional)| fractional.trim_end_matches('0').len())
-        .unwrap_or(0);
-
-    if significant_fractional_digits > 8 || (value != 0.0 && value.abs() < 1e-8) {
+    if decimal_scale(value_str) > CQL_DECIMAL_MAX_SCALE
+        || (value != 0.0 && value.abs() < CQL_DECIMAL_MIN_STEP)
+    {
         return Err(EvalError::General(format!(
             "Invalid Decimal literal exceeds CQL Decimal scale: '{value_str}'"
         )));
     }
 
     Ok(Value::Decimal(value))
+}
+
+fn decimal_scale(value_str: &str) -> usize {
+    value_str
+        .trim()
+        .trim_start_matches('-')
+        .split_once('.')
+        .map(|(_, fractional)| fractional.trim_end_matches('0').len())
+        .unwrap_or(0)
 }
 
 // ---------------------------------------------------------------------------

@@ -388,16 +388,9 @@ pub fn to_time(v: &Value) -> Result<Value, EvalError> {
 
 fn parse_time_str(s: &str) -> Option<CqlTime> {
     let parts: Vec<&str> = s.split(':').collect();
-    let hour = parts.first()?.parse::<u8>().ok()?;
-    if hour > 23 {
-        return None;
-    }
+    let hour = super::parse_hour(parts.first()?)?;
     let minute = if parts.len() >= 2 {
-        let minute = parts[1].parse::<u8>().ok()?;
-        if minute > 59 {
-            return None;
-        }
-        Some(minute)
+        Some(super::parse_minute_or_second(parts[1])?)
     } else {
         None
     };
@@ -408,22 +401,10 @@ fn parse_time_str(s: &str) -> Option<CqlTime> {
             if ms_raw.len() > 3 {
                 return None;
             }
-            // Right-pad to 3 digits: "9" → 900ms, "99" → 990ms, "999" → 999ms
-            let ms_val = {
-                let padded = format!("{:0<3}", ms_raw);
-                padded.get(..3).and_then(|p| p.parse::<u32>().ok())
-            };
-            let second = sec_str[..dot].parse::<u8>().ok()?;
-            if second > 59 || ms_val.is_some_and(|ms| ms > 999) {
-                return None;
-            }
-            (Some(second), ms_val)
+            let second = super::parse_minute_or_second(&sec_str[..dot])?;
+            (Some(second), super::parse_millisecond(ms_raw))
         } else {
-            let second = sec_str.parse::<u8>().ok()?;
-            if second > 59 {
-                return None;
-            }
-            (Some(second), None)
+            (Some(super::parse_minute_or_second(sec_str)?), None)
         }
     } else {
         (None, None)

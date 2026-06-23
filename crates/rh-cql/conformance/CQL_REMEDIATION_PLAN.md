@@ -285,6 +285,9 @@ Status:
   failures. `just audit-strict` now gates at 1 241 pass / 0 wrong-answer fail
   / 45 skip / 89 compile errors / 23 eval errors / 0 invalid failures, for
   112 unimplemented outcomes.
+- [x] 2026-06-23: Refactored the Workstream 4 invalid-enforcement helpers by
+  centralizing CQL Decimal bounds and Time component bounds in the operator
+  module, then reused the same time component helpers from conversion parsing.
 
 Priority order:
 
