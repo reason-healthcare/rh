@@ -12,11 +12,11 @@ use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
 use rh_cql::options::CompilerOption;
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_with_libraries, elm::AccessModifier,
-    evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile, explain_parse,
-    get_default_packages_dir, CompilationError, CompilerOptions, CqlDateTime, Diagnostic,
-    EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock, InMemoryDataProvider,
-    PackageLibrarySourceProvider, SignatureLevel, Value,
+    compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
+    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
+    explain_parse, get_default_packages_dir, CompilationError, CompilerOptions, CqlDateTime,
+    Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
+    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
 };
 
 #[derive(Serialize)]
@@ -468,11 +468,17 @@ fn compile_cql(
         opts
     };
 
-    // Run the pipeline once.  When a source map is requested we use
-    // compile_to_elm_with_sourcemap so that parse + analysis + emission happen
-    // only once.
+    // Run the pipeline once. Source-map compilation still uses the
+    // library-aware path so `--lib-path` and package-cache includes behave the
+    // same as ordinary ELM compilation.
     let (json, sm_json_opt) = if emit_source_map {
-        let result = match compile_to_elm_with_sourcemap(&source, Some(options), None) {
+        let result = match compile_with_search_dirs_and_sourcemap(
+            &source,
+            input,
+            lib_paths,
+            Some(options),
+            None,
+        ) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
@@ -734,17 +740,10 @@ fn warn_unresolved_includes(
 // Library-aware compile helper
 // ---------------------------------------------------------------------------
 
-/// Build the set of library search directories for an input file path plus
-/// any extra `--lib-path` values, then call `compile_with_libraries`.
-///
-/// Returns a clear, actionable error when a required include is not found,
-/// listing the searched directories so the user knows where to place the file.
-fn compile_with_search_dirs(
-    source: &str,
+fn build_library_provider(
     input: &str,
     lib_paths: &[PathBuf],
-    options: Option<CompilerOptions>,
-) -> Result<rh_cql::CompileOutputWithLibs> {
+) -> (rh_cql::CompositeLibrarySourceProvider, Vec<PathBuf>) {
     let mut search_dirs: Vec<PathBuf> = Vec::new();
     if input != "-" {
         if let Some(parent) = Path::new(input).parent() {
@@ -759,8 +758,7 @@ fn compile_with_search_dirs(
         }
     }
 
-    use rh_cql::CompositeLibrarySourceProvider;
-    let mut composite = CompositeLibrarySourceProvider::new();
+    let mut composite = rh_cql::CompositeLibrarySourceProvider::new();
     for dir in &search_dirs {
         composite = composite.add_provider(FileLibrarySourceProvider::new().with_path(dir));
     }
@@ -771,7 +769,14 @@ fn compile_with_search_dirs(
         composite = composite.add_provider(PackageLibrarySourceProvider::new(pkg_dir));
     }
 
-    compile_with_libraries(source, options, &composite).map_err(|e| match e {
+    (composite, search_dirs)
+}
+
+fn format_library_resolution_error(
+    error: CompilationError,
+    search_dirs: &[PathBuf],
+) -> anyhow::Error {
+    match error {
         CompilationError::LibraryNotFound {
             name,
             searched_paths,
@@ -796,7 +801,35 @@ fn compile_with_search_dirs(
             )
         }
         other => anyhow::anyhow!("{other}"),
-    })
+    }
+}
+
+/// Build the set of library search directories for an input file path plus
+/// any extra `--lib-path` values, then call `compile_with_libraries`.
+///
+/// Returns a clear, actionable error when a required include is not found,
+/// listing the searched directories so the user knows where to place the file.
+fn compile_with_search_dirs(
+    source: &str,
+    input: &str,
+    lib_paths: &[PathBuf],
+    options: Option<CompilerOptions>,
+) -> Result<rh_cql::CompileOutputWithLibs> {
+    let (provider, search_dirs) = build_library_provider(input, lib_paths);
+    compile_with_libraries(source, options, &provider)
+        .map_err(|e| format_library_resolution_error(e, &search_dirs))
+}
+
+fn compile_with_search_dirs_and_sourcemap(
+    source: &str,
+    input: &str,
+    lib_paths: &[PathBuf],
+    options: Option<CompilerOptions>,
+    library_uri: Option<&str>,
+) -> Result<rh_cql::SourceMapCompilationResult> {
+    let (provider, search_dirs) = build_library_provider(input, lib_paths);
+    compile_to_elm_with_sourcemap_and_libraries(source, options, library_uri, &provider)
+        .map_err(|e| format_library_resolution_error(e, &search_dirs))
 }
 
 // ---------------------------------------------------------------------------

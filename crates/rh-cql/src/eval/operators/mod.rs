@@ -46,13 +46,19 @@ pub(crate) fn strip_elm_namespace(raw: &str) -> &str {
 // Literal evaluation (shared with the engine)
 // ---------------------------------------------------------------------------
 
-/// Parse a time string `"HH:MM"`, `"HH:MM:SS"`, or `"HH:MM:SS.mmm"` → `Value::Time`.
+/// Parse a time string `"HH"`, `"HH:MM"`, `"HH:MM:SS"`, or `"HH:MM:SS.mmm"` → `Value::Time`.
 fn parse_time_value(s: &str) -> Result<Value, EvalError> {
     let parts: Vec<&str> = s.splitn(3, ':').collect();
-    if parts.len() < 2 {
-        return Err(EvalError::General(format!("Invalid Time literal: '{s}'")));
-    }
     let hour = parse_time_component(parts[0], CQL_TIME_MAX_HOUR, "hour", s)?;
+    if parts.len() == 1 {
+        return Ok(Value::Time(CqlTime {
+            hour,
+            minute: None,
+            second: None,
+            millisecond: None,
+        }));
+    }
+
     let minute = parse_time_component(parts[1], CQL_TIME_MAX_MINUTE_OR_SECOND, "minute", s)?;
     if parts.len() == 2 {
         return Ok(Value::Time(CqlTime {

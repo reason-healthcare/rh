@@ -654,6 +654,63 @@ pub fn compile_to_elm_with_sourcemap(
     })
 }
 
+/// Compile CQL to ELM with a source map while resolving `include`
+/// declarations through a [`LibrarySourceProvider`].
+///
+/// This is the source-map counterpart to [`compile_with_libraries`]. It uses
+/// the same dependency pre-compilation path so semantic analysis can resolve
+/// included library members before ELM emission records source mappings.
+pub fn compile_to_elm_with_sourcemap_and_libraries(
+    source: &str,
+    options: Option<CompilerOptions>,
+    library_uri: Option<&str>,
+    provider: &dyn crate::library::LibrarySourceProvider,
+) -> Result<SourceMapCompilationResult, CompilationError> {
+    let options = options.unwrap_or_default();
+    let parser = CqlParser::new();
+    let ast_for_includes = parser
+        .parse(source)
+        .map_err(|e| CompilationError::Parse(e.to_string()))?;
+
+    let model_provider = CompilationContext::new(options.clone(), None).resolve_provider();
+    let mut stack = Vec::new();
+    let pre_compiled_includes = resolve_includes_to_elm(
+        &ast_for_includes.includes,
+        provider,
+        &options,
+        &model_provider,
+        &mut stack,
+    )?;
+
+    let output = run_compile_pipeline(
+        source,
+        PipelineConfig {
+            context: CompilationContext::new(options.clone(), None),
+            emit_mode: PipelineEmitMode::ElmWithSourceMap {
+                library_uri: library_uri.map(str::to_owned),
+            },
+            pre_compiled_includes,
+        },
+    )?;
+
+    let library = output
+        .library
+        .expect("pipeline with ElmWithSourceMap mode must return a library");
+    let source_map = output
+        .source_map
+        .expect("pipeline with ElmWithSourceMap mode must return a source map");
+    let (errors, warnings, messages) = categorize_exceptions(&output.diagnostics, &options);
+
+    Ok(SourceMapCompilationResult {
+        library,
+        options,
+        source_map,
+        errors,
+        warnings,
+        messages,
+    })
+}
+
 // ---------------------------------------------------------------------------
 // compile_with_libraries
 // ---------------------------------------------------------------------------

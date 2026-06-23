@@ -81,6 +81,20 @@ fn eval_division_yields_decimal() {
 }
 
 #[test]
+fn eval_hour_precision_time_literal() {
+    let cql = "library T define X: @T14";
+    assert_eq!(
+        eval_expr(cql, "X"),
+        Value::Time(CqlTime {
+            hour: 14,
+            minute: None,
+            second: None,
+            millisecond: None,
+        })
+    );
+}
+
+#[test]
 fn eval_modulo() {
     let cql = "library T define X: 10 mod 3";
     assert_eq!(eval_expr(cql, "X"), Value::Integer(1));
