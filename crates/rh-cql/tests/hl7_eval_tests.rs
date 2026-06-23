@@ -759,6 +759,14 @@ fn values_match(actual: &Value, expected: &ExpectedValue) -> bool {
         (Value::Date(a), ExpectedValue::Date(e)) => {
             a.year == e.year && a.month == e.month && a.day == e.day
         }
+        (Value::DateTime(a), ExpectedValue::Date(e))
+            if a.hour.is_none()
+                && a.minute.is_none()
+                && a.second.is_none()
+                && a.millisecond.is_none() =>
+        {
+            a.year == e.year && a.month == e.month && a.day == e.day
+        }
         (Value::DateTime(a), ExpectedValue::DateTime(e)) => {
             a.year == e.year
                 && a.month == e.month

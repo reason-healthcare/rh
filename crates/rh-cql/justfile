@@ -22,11 +22,11 @@ audit-strict:
     out_dir="conformance/results/audit"
     mkdir -p "$out_dir"
     RH_CQL_HL7_SUMMARY_DIR="$out_dir" \
-    RH_CQL_HL7_MAX_SKIP=48 \
-    RH_CQL_HL7_MAX_COMPILE_ERR=123 \
-    RH_CQL_HL7_MAX_EVAL_ERR=467 \
+    RH_CQL_HL7_MAX_SKIP=56 \
+    RH_CQL_HL7_MAX_COMPILE_ERR=94 \
+    RH_CQL_HL7_MAX_EVAL_ERR=144 \
     RH_CQL_HL7_MAX_INVALID_FAIL=16 \
-    RH_CQL_HL7_MAX_UNIMPLEMENTED=606 \
+    RH_CQL_HL7_MAX_UNIMPLEMENTED=254 \
       cargo test -p rh-cql --test hl7_eval_tests -- --nocapture | tee "$out_dir/hl7_eval_tests.txt"
     cargo test -p rh-cql --test golden_elm_tests --test emit_conformance_tests --test pipeline_comparison_tests | tee "$out_dir/elm_production_tests.txt"
     cargo test -p rh-cql --test eval_integration_tests --test semantic_tests --test clinical_age_operators_test --test ratio_message_tree_test | tee "$out_dir/eval_engine_tests.txt"

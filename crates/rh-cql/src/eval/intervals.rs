@@ -303,9 +303,15 @@ pub fn overlaps_after(a: &Value, b: &Value) -> Result<Value, EvalError> {
 
 /// `Meets` — a ends immediately before b starts (or vice versa).
 pub fn meets(a: &Value, b: &Value) -> Result<Value, EvalError> {
-    Ok(Value::Boolean(
-        meets_before(a, b)? == Value::Boolean(true) || meets_after(a, b)? == Value::Boolean(true),
-    ))
+    let before = meets_before(a, b)?;
+    let after = meets_after(a, b)?;
+    if before == Value::Boolean(true) || after == Value::Boolean(true) {
+        return Ok(Value::Boolean(true));
+    }
+    if matches!(before, Value::Null) || matches!(after, Value::Null) {
+        return Ok(Value::Null);
+    }
+    Ok(Value::Boolean(false))
 }
 
 /// `MeetsBefore` — a ends immediately before b starts.
@@ -333,7 +339,7 @@ pub fn meets_before(a: &Value, b: &Value) -> Result<Value, EvalError> {
                 _ => false,
             }))
         }
-        _ => Ok(Value::Boolean(false)),
+        _ => Ok(Value::Null),
     }
 }
 
@@ -487,21 +493,128 @@ pub fn except_interval(a: &Value, b: &Value) -> Result<Value, EvalError> {
 
     if b_covers_a_high {
         // b covers right end: return left part [a.low, b.low)
+        let (high, high_closed) = open_lower_exclusion_bound(b_low, !b_lc);
         Ok(Value::Interval {
             low: a_low.map(|v| Box::new(v.clone())),
-            high: b_low.map(|v| Box::new(v.clone())),
+            high,
             low_closed: a_lc,
-            high_closed: !b_lc,
+            high_closed,
         })
     } else {
         // b covers left end: return right part (b.high, a.high]
+        let (low, low_closed) = open_upper_exclusion_bound(b_high, !b_hc);
         Ok(Value::Interval {
-            low: b_high.map(|v| Box::new(v.clone())),
+            low,
             high: a_high.map(|v| Box::new(v.clone())),
-            low_closed: !b_hc,
+            low_closed,
             high_closed: a_hc,
         })
     }
+}
+
+fn open_lower_exclusion_bound(
+    bound: Option<&Value>,
+    default_closed: bool,
+) -> (Option<Box<Value>>, bool) {
+    match bound.and_then(previous_discrete_value) {
+        Some(v) => (Some(Box::new(v)), true),
+        None => (bound.map(|v| Box::new(v.clone())), default_closed),
+    }
+}
+
+fn open_upper_exclusion_bound(
+    bound: Option<&Value>,
+    default_closed: bool,
+) -> (Option<Box<Value>>, bool) {
+    match bound.and_then(next_discrete_value) {
+        Some(v) => (Some(Box::new(v)), true),
+        None => (bound.map(|v| Box::new(v.clone())), default_closed),
+    }
+}
+
+fn previous_discrete_value(value: &Value) -> Option<Value> {
+    match value {
+        Value::Integer(n) => Some(Value::Integer(n - 1)),
+        Value::DateTime(dt) if is_day_precision_datetime(dt) => {
+            let (year, month, day) = previous_date(dt.year, dt.month?, dt.day?);
+            Some(Value::DateTime(super::value::CqlDateTime {
+                year,
+                month: Some(month),
+                day: Some(day),
+                hour: None,
+                minute: None,
+                second: None,
+                millisecond: None,
+                offset_seconds: dt.offset_seconds,
+            }))
+        }
+        _ => None,
+    }
+}
+
+fn next_discrete_value(value: &Value) -> Option<Value> {
+    match value {
+        Value::Integer(n) => Some(Value::Integer(n + 1)),
+        Value::DateTime(dt) if is_day_precision_datetime(dt) => {
+            let (year, month, day) = next_date(dt.year, dt.month?, dt.day?);
+            Some(Value::DateTime(super::value::CqlDateTime {
+                year,
+                month: Some(month),
+                day: Some(day),
+                hour: None,
+                minute: None,
+                second: None,
+                millisecond: None,
+                offset_seconds: dt.offset_seconds,
+            }))
+        }
+        _ => None,
+    }
+}
+
+fn is_day_precision_datetime(dt: &super::value::CqlDateTime) -> bool {
+    dt.month.is_some()
+        && dt.day.is_some()
+        && dt.hour.is_none()
+        && dt.minute.is_none()
+        && dt.second.is_none()
+        && dt.millisecond.is_none()
+}
+
+fn previous_date(year: i32, month: u8, day: u8) -> (i32, u8, u8) {
+    if day > 1 {
+        return (year, month, day - 1);
+    }
+    if month > 1 {
+        let prev_month = month - 1;
+        return (year, prev_month, days_in_month(year, prev_month));
+    }
+    (year - 1, 12, 31)
+}
+
+fn next_date(year: i32, month: u8, day: u8) -> (i32, u8, u8) {
+    let max_day = days_in_month(year, month);
+    if day < max_day {
+        return (year, month, day + 1);
+    }
+    if month < 12 {
+        return (year, month + 1, 1);
+    }
+    (year + 1, 1, 1)
+}
+
+fn days_in_month(year: i32, month: u8) -> u8 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap_year(year) => 29,
+        2 => 28,
+        _ => 31,
+    }
+}
+
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
 
 // ---------------------------------------------------------------------------

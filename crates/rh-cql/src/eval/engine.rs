@@ -1314,6 +1314,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if let Some(result) = self.eval_age_function(name, &args) {
                     return result;
                 }
+                // The parser currently represents CQL constructor and clock
+                // function forms (`DateTime(...)`, `Today()`) as FunctionRef.
+                // Evaluate them here because clock functions need the runtime
+                // context and constructor forms map directly to ELM operators.
+                if let Some(result) = self.eval_temporal_function(name, &args) {
+                    return result;
+                }
                 // Try builtin first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
                 // CQL system builtins so this works transparently.
@@ -1343,6 +1350,26 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 "evaluate_elm: unsupported ELM expression type: {:?}",
                 std::mem::discriminant(other)
             ))),
+        }
+    }
+
+    fn eval_temporal_function(
+        &self,
+        name: &str,
+        args: &[Value],
+    ) -> Option<Result<Value, EvalError>> {
+        match name {
+            "Date" => Some(eval_date_function_args(args)),
+            "DateTime" => Some(eval_datetime_function_args(args)),
+            "Time" => Some(eval_time_function_args(args)),
+            "Today" if args.is_empty() => Some(Ok(Value::Date(self.ctx.today()))),
+            "Now" if args.is_empty() => Some(Ok(Value::DateTime(self.ctx.now()))),
+            "TimeOfDay" if args.is_empty() => Some(Ok(Value::Time(self.ctx.time_of_day()))),
+            "Today" | "Now" | "TimeOfDay" => Some(Err(EvalError::General(format!(
+                "{name}: expected 0 arguments, got {}",
+                args.len()
+            )))),
+            _ => None,
         }
     }
 
@@ -1845,17 +1872,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // An unspecified bound (None) means unbounded (±∞), which is valid.
                 let low_is_null = low.as_ref().is_some_and(|v| matches!(**v, Value::Null));
                 let high_is_null = high.as_ref().is_some_and(|v| matches!(**v, Value::Null));
-                // Closed null bound always → null interval.
-                // Both bounds null (regardless of open/closed) → null interval.
-                let both_null = low_is_null && high_is_null;
-                let low_null = (low_closed && low_is_null) || both_null;
-                let high_null = (high_closed && high_is_null) || both_null;
-                if low_null || high_null {
+                if low_is_null && high_is_null {
+                    return Ok(Value::Null);
+                }
+                let single_null_datetime_endpoint = (low_is_null
+                    && high
+                        .as_ref()
+                        .is_some_and(|v| matches!(**v, Value::DateTime(_))))
+                    || (high_is_null
+                        && low
+                            .as_ref()
+                            .is_some_and(|v| matches!(**v, Value::DateTime(_))));
+                if (low_is_null || high_is_null) && !single_null_datetime_endpoint {
                     return Ok(Value::Null);
                 }
                 Ok(Value::Interval {
-                    low,
-                    high,
+                    low: if low_is_null { None } else { low },
+                    high: if high_is_null { None } else { high },
                     low_closed,
                     high_closed,
                 })
@@ -2488,6 +2521,48 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 // ---------------------------------------------------------------------------
 // Note: eval_literal, eval_builtin_function, and strip_elm_namespace live in
 // super::operators so they can be reused without depending on the Engine.
+
+fn eval_date_function_args(args: &[Value]) -> Result<Value, EvalError> {
+    if !(1..=3).contains(&args.len()) {
+        return Err(EvalError::General(format!(
+            "Date: expected 1 to 3 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    date_construct(&args[0], args.get(1), args.get(2))
+}
+
+fn eval_datetime_function_args(args: &[Value]) -> Result<Value, EvalError> {
+    if !(1..=8).contains(&args.len()) {
+        return Err(EvalError::General(format!(
+            "DateTime: expected 1 to 8 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    datetime_construct(
+        &args[0],
+        args.get(1),
+        args.get(2),
+        args.get(3),
+        args.get(4),
+        args.get(5),
+        args.get(6),
+        args.get(7),
+    )
+}
+
+fn eval_time_function_args(args: &[Value]) -> Result<Value, EvalError> {
+    if !(1..=4).contains(&args.len()) {
+        return Err(EvalError::General(format!(
+            "Time: expected 1 to 4 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    time_construct(&args[0], args.get(1), args.get(2), args.get(3))
+}
 
 // ---------------------------------------------------------------------------
 // Tests (Task 9.23 — integration tests)

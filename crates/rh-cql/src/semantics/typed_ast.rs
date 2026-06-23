@@ -208,6 +208,7 @@ pub enum TypedExpression {
         crate::parser::ast::BinaryOperator,
         Box<TypedNode<TypedExpression>>,
         Box<TypedNode<TypedExpression>>,
+        Option<crate::parser::ast::DateTimePrecision>,
     ),
     TernaryExpression(
         crate::parser::ast::TernaryOperator,

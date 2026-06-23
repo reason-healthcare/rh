@@ -36,28 +36,26 @@ pub fn cql_compare(a: &Value, b: &Value) -> Option<Ordering> {
 }
 
 pub(super) fn compare_dates(a: &CqlDate, b: &CqlDate) -> Option<Ordering> {
-    // Precisions must match for a well-defined comparison (per CQL spec).
+    let year = a.year.cmp(&b.year);
+    if year != Ordering::Equal {
+        return Some(year);
+    }
+
     match (a.month, b.month) {
-        (None, None) => a.year.partial_cmp(&b.year),
+        (None, None) => Some(Ordering::Equal),
         (Some(am), Some(bm)) => {
-            let yr = a.year.cmp(&b.year);
-            if yr != Ordering::Equal {
-                return Some(yr);
+            let month = am.cmp(&bm);
+            if month != Ordering::Equal {
+                return Some(month);
             }
+
             match (a.day, b.day) {
-                (None, None) => am.partial_cmp(&bm),
-                (Some(ad), Some(bd)) => {
-                    let mo = am.cmp(&bm);
-                    if mo != Ordering::Equal {
-                        Some(mo)
-                    } else {
-                        ad.partial_cmp(&bd)
-                    }
-                }
-                _ => None, // mismatched day precision → null
+                (None, None) => Some(Ordering::Equal),
+                (Some(ad), Some(bd)) => ad.partial_cmp(&bd),
+                _ => None,
             }
         }
-        _ => None, // mismatched month precision → null
+        _ => None,
     }
 }
 

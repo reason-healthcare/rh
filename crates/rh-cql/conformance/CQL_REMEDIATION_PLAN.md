@@ -15,27 +15,27 @@ The HL7 expression matrix remains the strongest specification-facing signal:
 | Metric | Count |
 |---|---:|
 | Parsed HL7 cases | 1 426 |
-| `rh-cql` pass | 772 |
+| `rh-cql` pass | 1 109 |
 | Wrong-answer fail | 0 |
-| Skip | 48 |
-| Compile error | 123 |
-| Eval error | 467 |
+| Skip | 56 |
+| Compile error | 94 |
+| Eval error | 144 |
 | Invalid input unexpectedly accepted | 16 |
-| Unimplemented total | 606 |
+| Unimplemented total | 254 |
 
 Failure concentration:
 
 | Category | Main suites |
 |---|---|
-| Compile errors | intervals 63, date/time 34, value literals/selectors 21 |
-| Eval errors | date/time 211, intervals 103, lists 56, strings 44, comparisons 33 |
+| Compile errors | intervals 35, date/time 33, value literals/selectors 21 |
+| Eval errors | intervals 59, strings 41, lists 25, date/time 12 |
 | Invalid input enforcement | value literals/selectors 7, type operators 4, types 3, intervals 2 |
 
 ### Three-Engine Matrix
 
 | Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented |
 |---|---:|---:|---:|---:|---:|---:|
-| `rh-cql` | 772 | 123 | 467 | 0 | 48 | 16 |
+| `rh-cql` | 1 109 | 94 | 144 | 0 | 56 | 16 |
 | Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 |
 | JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 |
 
@@ -234,6 +234,17 @@ Acceptance criteria:
 ## Workstream 4: HL7 Runtime Evaluation Burn-Down
 
 Goal: reduce the 606 HL7 unimplemented outcomes without introducing wrong answers.
+
+Status:
+
+- [x] 2026-06-23: Started the date/time runtime slice. Added engine
+  dispatch for `Date`, `DateTime`, `Time`, `Today`, `Now`, and `TimeOfDay`
+  FunctionRef calls; preserved DateTime component precision and timing/binary
+  temporal precision in emitted ELM; validated date/time constructor and
+  arithmetic bounds; and normalized day-precision DateTime interval edge cases
+  exposed by the constructor support. `just audit-strict` now gates at
+  1 109 pass / 0 wrong-answer fail / 56 skip / 94 compile errors /
+  144 eval errors / 16 invalid failures, for 254 unimplemented outcomes.
 
 Priority order:
 

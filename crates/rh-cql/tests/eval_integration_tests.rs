@@ -731,6 +731,103 @@ fn eval_timezone_offset_from() {
     assert_eq!(eval_expr(cql, "X"), Value::Decimal(1.0));
 }
 
+#[test]
+fn eval_datetime_constructor_function_ref() {
+    let cql = "library T define X: DateTime(2003, 10, 29, 20, 50, 33, 955, 1)";
+    assert_eq!(
+        eval_expr(cql, "X"),
+        Value::DateTime(CqlDateTime {
+            year: 2003,
+            month: Some(10),
+            day: Some(29),
+            hour: Some(20),
+            minute: Some(50),
+            second: Some(33),
+            millisecond: Some(955),
+            offset_seconds: Some(3600)
+        })
+    );
+}
+
+#[test]
+fn eval_partial_date_and_time_constructor_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: Date(2024, 6)", "X"),
+        Value::Date(CqlDate {
+            year: 2024,
+            month: Some(6),
+            day: None
+        })
+    );
+
+    assert_eq!(
+        eval_expr("library T define X: Time(14, 30)", "X"),
+        Value::Time(CqlTime {
+            hour: 14,
+            minute: Some(30),
+            second: None,
+            millisecond: None
+        })
+    );
+}
+
+#[test]
+fn eval_clock_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: Today()", "X"),
+        Value::Date(CqlDate {
+            year: 2024,
+            month: Some(6),
+            day: Some(15)
+        })
+    );
+    assert_eq!(
+        eval_expr("library T define X: Now()", "X"),
+        Value::DateTime(CqlDateTime {
+            year: 2024,
+            month: Some(6),
+            day: Some(15),
+            hour: Some(10),
+            minute: Some(30),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: None
+        })
+    );
+    assert_eq!(
+        eval_expr("library T define X: TimeOfDay()", "X"),
+        Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: None
+        })
+    );
+}
+
+#[test]
+fn eval_datetime_component_from_preserves_precision() {
+    assert_eq!(
+        eval_expr("library T define X: month from DateTime(2003, 10, 29)", "X"),
+        Value::Integer(10)
+    );
+    assert_eq!(
+        eval_expr("library T define X: day from DateTime(2003, 10, 29)", "X"),
+        Value::Integer(29)
+    );
+}
+
+#[test]
+fn eval_timing_expression_preserves_precision() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: DateTime(2004, 11, 10) after year of DateTime(2004, 10, 10)",
+            "X"
+        ),
+        Value::Boolean(false)
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Wave-2 conformance gap coverage (CQL spec section coverage)
 // ---------------------------------------------------------------------------

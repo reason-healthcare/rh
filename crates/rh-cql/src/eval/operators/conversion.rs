@@ -139,7 +139,7 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
                 .to_string(),
         )),
         Value::Date(d) => Ok(Value::String(d.to_string())),
-        Value::DateTime(dt) => Ok(Value::String(dt.to_string())),
+        Value::DateTime(dt) => Ok(Value::String(datetime_to_string_without_offset(dt))),
         Value::Time(t) => Ok(Value::String(t.to_string())),
         // HL7 suite (CqlStringOperatorsTest/QuantityToString) expects
         // `ToString(125 'cm')` to yield `'125cm'` — value directly followed
@@ -147,6 +147,29 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
         Value::Quantity(q) => Ok(Value::String(format!("{}{}", q.value, q.unit))),
         _ => Err(err("ToString", "cannot convert to String")),
     }
+}
+
+fn datetime_to_string_without_offset(dt: &super::super::value::CqlDateTime) -> String {
+    let mut s = format!("{:04}", dt.year);
+    if let Some(month) = dt.month {
+        s.push_str(&format!("-{month:02}"));
+        if let Some(day) = dt.day {
+            s.push_str(&format!("-{day:02}"));
+            if let Some(hour) = dt.hour {
+                s.push_str(&format!("T{hour:02}"));
+                if let Some(minute) = dt.minute {
+                    s.push_str(&format!(":{minute:02}"));
+                    if let Some(second) = dt.second {
+                        s.push_str(&format!(":{second:02}"));
+                        if let Some(millisecond) = dt.millisecond {
+                            s.push_str(&format!(".{millisecond:03}"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    s
 }
 
 /// `ToDate` — parses a String in `YYYY`, `YYYY-MM`, or `YYYY-MM-DD` format.

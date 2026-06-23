@@ -737,7 +737,12 @@ impl SemanticAnalyzer {
             data_type,
             span: SourceSpan::default(),
             meta,
-            inner: TypedExpression::BinaryExpression(e.operator, Box::new(left), Box::new(right)),
+            inner: TypedExpression::BinaryExpression(
+                e.operator,
+                Box::new(left),
+                Box::new(right),
+                e.precision,
+            ),
         }
     }
 
