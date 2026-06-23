@@ -24,8 +24,9 @@ use super::query::{
 };
 use super::retrieve::{parse_retrieve, parse_type_specifier};
 use super::selectors::{
-    parse_bare_list_selector, parse_case, parse_if_then_else, parse_inline_tuple_selector,
-    parse_instance_selector, parse_interval_selector, parse_list_selector, parse_tuple_selector,
+    parse_bare_list_selector, parse_case, parse_code_selector, parse_if_then_else,
+    parse_inline_tuple_selector, parse_instance_selector, parse_interval_selector,
+    parse_list_selector, parse_tuple_selector,
 };
 use crate::parser::ast::*;
 use crate::parser::lexer::{
@@ -1413,6 +1414,7 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_inline_tuple_selector,
             parse_bare_list_selector,
             parse_tuple_selector,
+            parse_code_selector,
             parse_instance_selector,
         )),
         // Group 3: Control flow

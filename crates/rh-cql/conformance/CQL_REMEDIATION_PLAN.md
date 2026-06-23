@@ -139,6 +139,15 @@ Status:
   code paths so `[Encounter: reason in "Asthma"] E where ...` emits
   `codeProperty: "reason"` instead of falling back to the model primary code
   path.
+- [x] 2026-06-23: Expanded terminology parsing for qualified code system
+  references in code/value set/concept declarations, and added `Code '...'
+  from ... display ...` expression selector parsing. Representative Java-pass
+  files now advance: `LibraryTests/Issue641.cql` reaches qualified-library
+  semantic errors, `CumulativeMedicationDuration.cql` reaches a later interval
+  aggregate parse gap, and `OperatorTests/TypeOperators.cql` compiles.
+- [x] 2026-06-23: `just corpus-audit-rh` improved the RH-only expanded corpus
+  baseline to 351 pass / 897 compile errors, from the prior 337 pass / 911
+  compile errors.
 
 Observed patterns:
 
@@ -153,7 +162,7 @@ Initial targets:
 1. [x] Support `define public` / `define private` forms in addition to current access parsing.
 2. [x] Support omitted-colon define bodies where accepted by the Java translator, or explicitly classify source-invalid if not spec-valid.
 3. [x] Expand retrieve parsing for measure-style `[Type: "Value Set"] Alias where ...`.
-4. Expand code, codesystem, valueset, and display parsing to match Java-passing corpus forms.
+4. [x] Expand code, codesystem, valueset, and display parsing to match Java-passing corpus forms.
 5. Add date/time phrase parser coverage for `same or before`, `same or after`, `before`, `after`, and interval phrase variants.
 
 Acceptance criteria:

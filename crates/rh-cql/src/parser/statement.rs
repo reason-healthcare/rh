@@ -8,7 +8,9 @@
 
 use super::ast::*;
 use super::expression::{expression, parse_type_specifier};
-use super::lexer::{any_identifier, keyword, skip_ws_and_comments, string_literal, ws};
+use super::lexer::{
+    any_identifier, keyword, qualified_identifier, skip_ws_and_comments, string_literal, ws,
+};
 use super::span::Span;
 use nom::{
     branch::alt,
@@ -152,12 +154,17 @@ pub fn parse_valueset_def(input: Span<'_>) -> IResult<Span<'_>, ValueSetDef> {
 }
 
 fn parse_codesystem_list(input: Span<'_>) -> IResult<Span<'_>, Vec<String>> {
-    let (input, first) = any_identifier(input)?;
-    let (input, rest) = many0(preceded(ws(char(',')), any_identifier))(input)?;
+    let (input, first) = parse_terminology_ref(input)?;
+    let (input, rest) = many0(preceded(ws(char(',')), parse_terminology_ref))(input)?;
 
     let mut list = vec![first];
     list.extend(rest);
     Ok((input, list))
+}
+
+fn parse_terminology_ref(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let (input, parts) = qualified_identifier(input)?;
+    Ok((input, parts.join(".")))
 }
 
 // ============================================================================
@@ -174,7 +181,7 @@ pub fn parse_code_def(input: Span<'_>) -> IResult<Span<'_>, CodeDef> {
     let (input, _) = ws(char(':'))(input)?;
     let (input, code) = string_literal(input)?;
     let (input, _) = ws(keyword("from"))(input)?;
-    let (input, codesystem) = any_identifier(input)?;
+    let (input, codesystem) = parse_terminology_ref(input)?;
     let (input, display) = opt(preceded(ws(keyword("display")), string_literal))(input)?;
 
     Ok((
@@ -618,6 +625,23 @@ mod tests {
         assert_eq!(vs.id, "http://example.org/vs/diabetes");
     }
 
+    #[test]
+    fn test_valueset_def_with_qualified_codesystems() {
+        let (_, vs) = parse_valueset_def(span(
+            "valueset \"Chlamydia Screening\": '2.16.840.1.113883.3.464.1003.110.12.1052'
+              codesystems { Base.\"SNOMED-CT:2014\", Base.\"ICD-9:2014\" }",
+        ))
+        .unwrap();
+        assert_eq!(vs.name, "Chlamydia Screening");
+        assert_eq!(
+            vs.codesystems,
+            vec![
+                "Base.SNOMED-CT:2014".to_string(),
+                "Base.ICD-9:2014".to_string()
+            ]
+        );
+    }
+
     // ========================================================================
     // Code Definition Tests
     // ========================================================================
@@ -634,6 +658,21 @@ mod tests {
         assert_eq!(
             code.display,
             Some("Glucose [Mass/volume] in Serum".to_string())
+        );
+    }
+
+    #[test]
+    fn test_code_def_with_qualified_codesystem_and_display() {
+        let (_, code) = parse_code_def(span(
+            "code \"Every eight hours (qualifier value)\": '307469008' from QICoreCommon.\"SNOMEDCT\" display 'Every eight hours (qualifier value)'",
+        ))
+        .unwrap();
+        assert_eq!(code.name, "Every eight hours (qualifier value)");
+        assert_eq!(code.code, "307469008");
+        assert_eq!(code.codesystem, "QICoreCommon.SNOMEDCT");
+        assert_eq!(
+            code.display,
+            Some("Every eight hours (qualifier value)".to_string())
         );
     }
 

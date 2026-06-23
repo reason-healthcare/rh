@@ -6,7 +6,9 @@
 use super::expression;
 use super::retrieve::parse_type_specifier;
 use crate::parser::ast::*;
-use crate::parser::lexer::{any_identifier, keyword, skip_ws_and_comments, ws};
+use crate::parser::lexer::{
+    any_identifier, keyword, qualified_identifier, skip_ws_and_comments, string_literal, ws,
+};
 use crate::parser::span::Span;
 use nom::{
     branch::alt,
@@ -163,6 +165,28 @@ pub(crate) fn parse_instance_selector(input: Span<'_>) -> IResult<Span<'_>, Expr
             location: None,
         }),
     ))
+}
+
+pub(crate) fn parse_code_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, _) = ws(keyword("Code"))(input)?;
+    let (input, code) = ws(string_literal)(input)?;
+    let (input, _) = ws(keyword("from"))(input)?;
+    let (input, system) = parse_terminology_ref(input)?;
+    let (input, display) = opt(tuple((ws(keyword("display")), ws(string_literal))))(input)?;
+
+    Ok((
+        input,
+        Expression::Literal(Literal::Code {
+            code,
+            system: Some(system),
+            display: display.map(|(_, value)| value),
+        }),
+    ))
+}
+
+fn parse_terminology_ref(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let (input, parts) = qualified_identifier(input)?;
+    Ok((input, parts.join(".")))
 }
 
 fn parse_instance_element(input: Span<'_>) -> IResult<Span<'_>, InstanceElement> {
