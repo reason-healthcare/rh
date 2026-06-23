@@ -150,7 +150,7 @@ impl ElmEmitter {
                 })
             }
 
-            TE::BinaryExpression(op, left, right) => {
+            TE::BinaryExpression(op, left, right, _) => {
                 operators::emit_binary_operator(op, left, right, node, self, |n, ctx| {
                     ctx.emit_expression(n)
                 })

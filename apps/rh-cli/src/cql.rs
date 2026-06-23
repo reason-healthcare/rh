@@ -12,11 +12,11 @@ use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
 use rh_cql::options::CompilerOption;
 use rh_cql::{
-    compile, compile_to_elm_with_sourcemap, compile_with_libraries, elm::AccessModifier,
-    evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile, explain_parse,
-    get_default_packages_dir, validate, CompilationError, CompilerOptions, CqlDateTime, Diagnostic,
-    EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock, InMemoryDataProvider,
-    PackageLibrarySourceProvider, SignatureLevel, Value,
+    compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
+    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
+    explain_parse, get_default_packages_dir, CompilationError, CompilerOptions, CqlDateTime,
+    Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
+    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
 };
 
 #[derive(Serialize)]
@@ -95,6 +95,12 @@ pub enum CqlCommands {
         /// Include all signatures in output
         #[clap(long)]
         signatures: bool,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times. The input file's directory is
+        /// always searched automatically.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
 
         /// Also emit a source-map sidecar file alongside the ELM output
         #[clap(long)]
@@ -183,6 +189,7 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             strict,
             result_types,
             signatures,
+            lib_path,
             source_map,
             source_map_output,
         } => {
@@ -194,6 +201,7 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
                 strict,
                 result_types,
                 signatures,
+                &lib_path,
                 source_map,
                 source_map_output.as_deref(),
                 ctx,
@@ -385,15 +393,9 @@ fn validate_cql_collect(
     verbose: bool,
 ) -> Result<CqlDiagnostic> {
     let source = read_source(input)?;
-    let (errors, _warnings, valid) = if lib_paths.is_empty() {
-        let result = validate(&source, None).context("Failed to validate CQL")?;
-        let valid = result.is_valid();
-        (result.errors, result.warnings, valid)
-    } else {
-        let out = compile_with_search_dirs(&source, input, lib_paths)?;
-        let valid = out.result.is_success();
-        (out.result.errors, out.result.warnings, valid)
-    };
+    let out = compile_with_search_dirs(&source, input, lib_paths, None)?;
+    let valid = out.result.is_success();
+    let (errors, _warnings) = (out.result.errors, out.result.warnings);
 
     Ok(CqlDiagnostic {
         file: input.to_string(),
@@ -432,6 +434,7 @@ fn compile_cql(
     strict: bool,
     result_types: bool,
     signatures: bool,
+    lib_paths: &[PathBuf],
     emit_source_map: bool,
     source_map_output: Option<&Path>,
     ctx: &OutputContext,
@@ -465,11 +468,17 @@ fn compile_cql(
         opts
     };
 
-    // Run the pipeline once.  When a source map is requested we use
-    // compile_to_elm_with_sourcemap so that parse + analysis + emission happen
-    // only once.
+    // Run the pipeline once. Source-map compilation still uses the
+    // library-aware path so `--lib-path` and package-cache includes behave the
+    // same as ordinary ELM compilation.
     let (json, sm_json_opt) = if emit_source_map {
-        let result = match compile_to_elm_with_sourcemap(&source, Some(options), None) {
+        let result = match compile_with_search_dirs_and_sourcemap(
+            &source,
+            input,
+            lib_paths,
+            Some(options),
+            None,
+        ) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
@@ -494,13 +503,14 @@ fn compile_cql(
             .context("Failed to serialize source map")?;
         (json, Some(sm_json))
     } else {
-        let result = match compile(&source, Some(options)) {
+        let result = match compile_with_search_dirs(&source, input, lib_paths, Some(options)) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("✗ {e}");
                 ExitCode::ParseError.exit();
             }
-        };
+        }
+        .result;
 
         if !result.is_success() {
             let err = report_compile_failure(&result.errors, &result.warnings);
@@ -730,16 +740,10 @@ fn warn_unresolved_includes(
 // Library-aware compile helper
 // ---------------------------------------------------------------------------
 
-/// Build the set of library search directories for an input file path plus
-/// any extra `--lib-path` values, then call `compile_with_libraries`.
-///
-/// Returns a clear, actionable error when a required include is not found,
-/// listing the searched directories so the user knows where to place the file.
-fn compile_with_search_dirs(
-    source: &str,
+fn build_library_provider(
     input: &str,
     lib_paths: &[PathBuf],
-) -> Result<rh_cql::CompileOutputWithLibs> {
+) -> (rh_cql::CompositeLibrarySourceProvider, Vec<PathBuf>) {
     let mut search_dirs: Vec<PathBuf> = Vec::new();
     if input != "-" {
         if let Some(parent) = Path::new(input).parent() {
@@ -748,10 +752,13 @@ fn compile_with_search_dirs(
             }
         }
     }
-    search_dirs.extend_from_slice(lib_paths);
+    for path in lib_paths {
+        if !search_dirs.iter().any(|existing| existing == path) {
+            search_dirs.push(path.clone());
+        }
+    }
 
-    use rh_cql::CompositeLibrarySourceProvider;
-    let mut composite = CompositeLibrarySourceProvider::new();
+    let mut composite = rh_cql::CompositeLibrarySourceProvider::new();
     for dir in &search_dirs {
         composite = composite.add_provider(FileLibrarySourceProvider::new().with_path(dir));
     }
@@ -762,7 +769,14 @@ fn compile_with_search_dirs(
         composite = composite.add_provider(PackageLibrarySourceProvider::new(pkg_dir));
     }
 
-    compile_with_libraries(source, None, &composite).map_err(|e| match e {
+    (composite, search_dirs)
+}
+
+fn format_library_resolution_error(
+    error: CompilationError,
+    search_dirs: &[PathBuf],
+) -> anyhow::Error {
+    match error {
         CompilationError::LibraryNotFound {
             name,
             searched_paths,
@@ -787,7 +801,35 @@ fn compile_with_search_dirs(
             )
         }
         other => anyhow::anyhow!("{other}"),
-    })
+    }
+}
+
+/// Build the set of library search directories for an input file path plus
+/// any extra `--lib-path` values, then call `compile_with_libraries`.
+///
+/// Returns a clear, actionable error when a required include is not found,
+/// listing the searched directories so the user knows where to place the file.
+fn compile_with_search_dirs(
+    source: &str,
+    input: &str,
+    lib_paths: &[PathBuf],
+    options: Option<CompilerOptions>,
+) -> Result<rh_cql::CompileOutputWithLibs> {
+    let (provider, search_dirs) = build_library_provider(input, lib_paths);
+    compile_with_libraries(source, options, &provider)
+        .map_err(|e| format_library_resolution_error(e, &search_dirs))
+}
+
+fn compile_with_search_dirs_and_sourcemap(
+    source: &str,
+    input: &str,
+    lib_paths: &[PathBuf],
+    options: Option<CompilerOptions>,
+    library_uri: Option<&str>,
+) -> Result<rh_cql::SourceMapCompilationResult> {
+    let (provider, search_dirs) = build_library_provider(input, lib_paths);
+    compile_to_elm_with_sourcemap_and_libraries(source, options, library_uri, &provider)
+        .map_err(|e| format_library_resolution_error(e, &search_dirs))
 }
 
 // ---------------------------------------------------------------------------
@@ -805,7 +847,7 @@ fn eval_cql(
     let source = read_source(input)?;
 
     // Compile to ELM, resolving any included libraries.
-    let output = compile_with_search_dirs(&source, input, lib_paths)?;
+    let output = compile_with_search_dirs(&source, input, lib_paths, None)?;
     if !output.result.is_success() {
         return Err(report_compile_failure(
             &output.result.errors,
@@ -1052,21 +1094,10 @@ fn add_fhir_resource(provider: &mut InMemoryDataProvider, resource: serde_json::
 fn validate_cql(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
     let source = read_source(input)?;
 
-    // Use the bundled validate() path (which includes FHIRHelpers and other
-    // standard FHIR support libraries) unless the caller explicitly provides
-    // --lib-path directories.  This matches the behavior of `rh cql compile`
-    // and avoids false "Could not resolve" errors for FHIR member access when
-    // FHIRHelpers.cql is not present on disk next to the input file.
-    let (errors, warnings, valid) = if lib_paths.is_empty() {
-        let result = validate(&source, None).context("Failed to validate CQL")?;
-        let valid = result.is_valid();
-        (result.errors, result.warnings, valid)
-    } else {
-        let out = compile_with_search_dirs(&source, input, lib_paths)?;
-        warn_unresolved_includes(&source, &out.included);
-        let valid = out.result.is_success();
-        (out.result.errors, out.result.warnings, valid)
-    };
+    let out = compile_with_search_dirs(&source, input, lib_paths, None)?;
+    warn_unresolved_includes(&source, &out.included);
+    let valid = out.result.is_success();
+    let (errors, warnings) = (out.result.errors, out.result.warnings);
 
     if valid {
         println!("✓ CQL is valid");

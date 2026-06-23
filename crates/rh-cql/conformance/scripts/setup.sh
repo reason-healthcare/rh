@@ -8,6 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFORMANCE_DIR="$(dirname "$SCRIPT_DIR")"
 TOOLS_DIR="$CONFORMANCE_DIR/tools"
 WORKSPACE_ROOT="$CONFORMANCE_DIR/../../.."
+CQL_JAVA_REF_REPO="${CQL_JAVA_REF_REPO:-https://github.com/cqframework/clinical_quality_language.git}"
+CQL_JAVA_REF="${CQL_JAVA_REF:-v4.2.0}"
 
 echo "=== CQL-to-ELM Conformance Test Setup ==="
 echo ""
@@ -45,13 +47,21 @@ echo ""
 mkdir -p "$TOOLS_DIR"
 cd "$TOOLS_DIR"
 
-# Clone Java translator if not present
+# Clone Java translator if not present, then pin it to the configured reference.
 if [ ! -d "cql-java" ]; then
-    echo "Cloning cqframework/clinical_quality_language..."
-    git clone --depth 1 https://github.com/cqframework/clinical_quality_language.git cql-java
+    echo "Cloning cqframework/clinical_quality_language at ${CQL_JAVA_REF}..."
+    git clone --depth 1 --branch "$CQL_JAVA_REF" "$CQL_JAVA_REF_REPO" cql-java
 else
     echo "✓ Java translator repo already cloned"
 fi
+
+echo "Pinning Java translator to ${CQL_JAVA_REF}..."
+cd "$TOOLS_DIR/cql-java"
+git fetch --depth 1 origin "$CQL_JAVA_REF"
+git checkout --detach FETCH_HEAD
+JAVA_REF_COMMIT=$(git rev-parse HEAD)
+echo "✓ Java translator pinned: ${CQL_JAVA_REF} (${JAVA_REF_COMMIT})"
+cd "$TOOLS_DIR"
 
 # Clone Cooking with CQL examples if not present
 if [ ! -d "cooking-with-cql" ]; then
@@ -86,7 +96,7 @@ fi
 echo ""
 echo "Building Rust translator..."
 cd "$WORKSPACE_ROOT"
-cargo build --release -p rh
+cargo build --release -p rh-cli
 
 RUST_CLI="$WORKSPACE_ROOT/target/release/rh"
 if [ -f "$RUST_CLI" ]; then
@@ -111,6 +121,17 @@ echo ""
 echo "Creating test directories..."
 mkdir -p "$CONFORMANCE_DIR/test-cases/simple"
 mkdir -p "$CONFORMANCE_DIR/results"
+
+cat > "$CONFORMANCE_DIR/reference-version.json" << EOF
+{
+  "java_translator": {
+    "repository": "$CQL_JAVA_REF_REPO",
+    "ref": "$CQL_JAVA_REF",
+    "commit": "$JAVA_REF_COMMIT"
+  }
+}
+EOF
+echo "✓ Wrote reference-version.json"
 
 # Create a simple test file if not present
 SIMPLE_TEST="$CONFORMANCE_DIR/test-cases/simple/SimpleTest.cql"

@@ -1,0 +1,8 @@
+{
+  "name": "rh-cql-conformance-javascript",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "cql-execution": "3.3.2"
+  }
+}

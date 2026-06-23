@@ -60,7 +60,7 @@ pulldown-cmark = "0.12"
 base64 = "0.22"
 
 # Arbitrary-precision decimal (preserves trailing zeros for FHIRPath precision)
-rust_decimal = { version = "1.42", features = ["serde", "maths"] }
+rust_decimal = { version = "1.42", default-features = false, features = ["std", "serde", "maths"] }
 
 # Synchronization primitives (poison-free locks)
 parking_lot = "0.12"

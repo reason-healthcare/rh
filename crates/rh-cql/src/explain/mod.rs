@@ -289,7 +289,7 @@ fn collect_semantic_events(node: &TypedNode<TypedExpression>, events: &mut Vec<S
         TypedExpression::UnaryExpression(_, child) => {
             collect_semantic_events(child, events);
         }
-        TypedExpression::BinaryExpression(_, l, r) => {
+        TypedExpression::BinaryExpression(_, l, r, _) => {
             collect_semantic_events(l, events);
             collect_semantic_events(r, events);
         }

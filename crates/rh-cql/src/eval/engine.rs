@@ -371,11 +371,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::ParameterRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
-                self.ctx
-                    .parameters
-                    .get(name)
-                    .cloned()
-                    .ok_or_else(|| EvalError::General(format!("Parameter '{name}' not found")))
+                if let Some(v) = self.ctx.parameters.get(name) {
+                    Ok(v.clone())
+                } else if self.is_library_parameter(name) {
+                    Ok(Value::Null)
+                } else {
+                    Err(EvalError::General(format!("Parameter '{name}' not found")))
+                }
             }
 
             // ----- Logical & null -----
@@ -1202,12 +1204,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Before(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
-                super::operators::before(&a, &b, tb.precision.as_deref())
+                if matches!(a, Value::Interval { .. }) || matches!(b, Value::Interval { .. }) {
+                    super::intervals::before(&a, &b)
+                } else {
+                    super::operators::before(&a, &b, tb.precision.as_deref())
+                }
             }
             Expression::After(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
-                super::operators::after(&a, &b, tb.precision.as_deref())
+                if matches!(a, Value::Interval { .. }) || matches!(b, Value::Interval { .. }) {
+                    super::intervals::after(&a, &b)
+                } else {
+                    super::operators::after(&a, &b, tb.precision.as_deref())
+                }
             }
             Expression::DurationBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
@@ -1312,6 +1322,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if let Some(result) = self.eval_age_function(name, &args) {
                     return result;
                 }
+                // The parser currently represents CQL constructor and clock
+                // function forms (`DateTime(...)`, `Today()`) as FunctionRef.
+                // Evaluate them here because clock functions need the runtime
+                // context and constructor forms map directly to ELM operators.
+                if let Some(result) = self.eval_temporal_function(name, &args) {
+                    return result;
+                }
                 // Try builtin first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
                 // CQL system builtins so this works transparently.
@@ -1341,6 +1358,26 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 "evaluate_elm: unsupported ELM expression type: {:?}",
                 std::mem::discriminant(other)
             ))),
+        }
+    }
+
+    fn eval_temporal_function(
+        &self,
+        name: &str,
+        args: &[Value],
+    ) -> Option<Result<Value, EvalError>> {
+        match name {
+            "Date" => Some(eval_date_function_args(args)),
+            "DateTime" => Some(eval_datetime_function_args(args)),
+            "Time" => Some(eval_time_function_args(args)),
+            "Today" if args.is_empty() => Some(Ok(Value::Date(self.ctx.today()))),
+            "Now" if args.is_empty() => Some(Ok(Value::DateTime(self.ctx.now()))),
+            "TimeOfDay" if args.is_empty() => Some(Ok(Value::Time(self.ctx.time_of_day()))),
+            "Today" | "Now" | "TimeOfDay" => Some(Err(EvalError::General(format!(
+                "{name}: expected 0 arguments, got {}",
+                args.len()
+            )))),
+            _ => None,
         }
     }
 
@@ -1681,13 +1718,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Indexer(bin) => {
                 let (list, idx) = self.eval_binary_args(bin)?;
                 match (&list, &idx) {
-                    (Value::List(items), Value::Integer(i)) => {
-                        if *i < 0 {
-                            return Ok(Value::Null);
-                        }
-                        let i = *i as usize; // 0-based
-                        Ok(items.get(i).cloned().unwrap_or(Value::Null))
-                    }
+                    (Value::List(_), _) => super::lists::indexer(&list, &idx),
                     (Value::String(_), Value::Integer(_)) => {
                         super::operators::indexer_str(&list, &idx)
                     }
@@ -1843,17 +1874,39 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // An unspecified bound (None) means unbounded (±∞), which is valid.
                 let low_is_null = low.as_ref().is_some_and(|v| matches!(**v, Value::Null));
                 let high_is_null = high.as_ref().is_some_and(|v| matches!(**v, Value::Null));
-                // Closed null bound always → null interval.
-                // Both bounds null (regardless of open/closed) → null interval.
-                let both_null = low_is_null && high_is_null;
-                let low_null = (low_closed && low_is_null) || both_null;
-                let high_null = (high_closed && high_is_null) || both_null;
-                if low_null || high_null {
+                if low_is_null && high_is_null {
                     return Ok(Value::Null);
                 }
+                let single_null_datetime_endpoint = (low_is_null
+                    && high
+                        .as_ref()
+                        .is_some_and(|v| matches!(**v, Value::DateTime(_))))
+                    || (high_is_null
+                        && low
+                            .as_ref()
+                            .is_some_and(|v| matches!(**v, Value::DateTime(_))));
+                if (low_is_null || high_is_null) && !single_null_datetime_endpoint {
+                    return Ok(Value::Null);
+                }
+                if let (Some(low_value), Some(high_value)) = (&low, &high) {
+                    match super::operators::cql_compare(low_value, high_value) {
+                        Some(std::cmp::Ordering::Greater) => {
+                            return Err(EvalError::General(
+                                "Interval: low bound must be less than or equal to high bound"
+                                    .to_string(),
+                            ));
+                        }
+                        Some(std::cmp::Ordering::Equal) if !(low_closed && high_closed) => {
+                            return Err(EvalError::General(
+                                "Interval: singleton interval must include both bounds".to_string(),
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
                 Ok(Value::Interval {
-                    low,
-                    high,
+                    low: if low_is_null { None } else { low },
+                    high: if high_is_null { None } else { high },
                     low_closed,
                     high_closed,
                 })
@@ -1932,11 +1985,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match (&a, &b) {
                     // Includes(list, null-element): null element propagation → Null
                     (Value::List(_), Value::Null) => Ok(Value::Null),
+                    (Value::List(_), _) if !matches!(b, Value::List(_)) => {
+                        super::lists::list_contains(&a, &b)
+                    }
                     // List includes (null container is treated as empty list)
                     (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
                         super::lists::list_includes(&a, &b)
                     }
-                    _ => super::intervals::includes(&a, &b),
+                    _ => super::intervals::includes_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
                 }
             }
             Expression::IncludedIn(timed_bin) => {
@@ -1945,11 +2005,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match (&a, &b) {
                     // IncludedIn(null-element, list): null element propagation → Null
                     (Value::Null, Value::List(_)) => Ok(Value::Null),
+                    (_, Value::List(_)) if !matches!(a, Value::List(_)) => {
+                        super::lists::in_list(&a, &b)
+                    }
                     // List included in (null container is treated as empty list)
                     (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
                         super::lists::list_included_in(&a, &b)
                     }
-                    _ => super::intervals::included_in(&a, &b),
+                    _ => super::intervals::included_in_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
                 }
             }
             Expression::Starts(timed_bin) => {
@@ -2021,9 +2088,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
                 let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
                 match (&a, &b) {
-                    (Value::Interval { .. }, _) | (_, Value::Interval { .. }) => {
+                    (Value::Interval { .. }, Value::Interval { .. }) => {
                         super::intervals::proper_includes(&a, &b)
                     }
+                    (Value::Interval { .. }, _) => super::intervals::proper_contains_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
+                    (_, Value::Interval { .. }) => Ok(Value::Boolean(false)),
                     // Null container = empty list, can't properly include anything
                     (Value::Null, _) => Ok(Value::Boolean(false)),
                     // List properly includes null (scalar element): check literal null membership
@@ -2050,9 +2123,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
                 let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
                 match (&a, &b) {
-                    (Value::Interval { .. }, _) | (_, Value::Interval { .. }) => {
+                    (Value::Interval { .. }, Value::Interval { .. }) => {
                         super::intervals::proper_included_in(&a, &b)
                     }
+                    (_, Value::Interval { .. }) => super::intervals::proper_in_at_precision(
+                        &a,
+                        &b,
+                        timed_bin.precision.as_deref(),
+                    ),
+                    (Value::Interval { .. }, _) => Ok(Value::Boolean(false)),
                     // Null container = empty list, nothing is properly included in it
                     (_, Value::Null) => Ok(Value::Boolean(false)),
                     // Null element properly included in list: check literal null membership
@@ -2486,6 +2565,48 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 // ---------------------------------------------------------------------------
 // Note: eval_literal, eval_builtin_function, and strip_elm_namespace live in
 // super::operators so they can be reused without depending on the Engine.
+
+fn eval_date_function_args(args: &[Value]) -> Result<Value, EvalError> {
+    if !(1..=3).contains(&args.len()) {
+        return Err(EvalError::General(format!(
+            "Date: expected 1 to 3 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    date_construct(&args[0], args.get(1), args.get(2))
+}
+
+fn eval_datetime_function_args(args: &[Value]) -> Result<Value, EvalError> {
+    if !(1..=8).contains(&args.len()) {
+        return Err(EvalError::General(format!(
+            "DateTime: expected 1 to 8 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    datetime_construct(
+        &args[0],
+        args.get(1),
+        args.get(2),
+        args.get(3),
+        args.get(4),
+        args.get(5),
+        args.get(6),
+        args.get(7),
+    )
+}
+
+fn eval_time_function_args(args: &[Value]) -> Result<Value, EvalError> {
+    if !(1..=4).contains(&args.len()) {
+        return Err(EvalError::General(format!(
+            "Time: expected 1 to 4 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    time_construct(&args[0], args.get(1), args.get(2), args.get(3))
+}
 
 // ---------------------------------------------------------------------------
 // Tests (Task 9.23 — integration tests)

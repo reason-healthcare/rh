@@ -89,6 +89,36 @@ mod tests {
         assert!(matches!(expr, Expression::Literal(Literal::String(s)) if s == "hello"));
     }
 
+    #[test]
+    fn test_code_selector_literal() {
+        let expr = parse_expr("Code 'ABC' from \"FAKECS\" display 'ABC'");
+        assert!(matches!(
+            expr,
+            Expression::Literal(Literal::Code {
+                code,
+                system: Some(system),
+                display: Some(display),
+            }) if code == "ABC" && system == "FAKECS" && display == "ABC"
+        ));
+    }
+
+    #[test]
+    fn test_code_selector_literal_with_qualified_codesystem() {
+        let expr = parse_expr(
+            "Code '307469008' from QICoreCommon.\"SNOMEDCT\" display 'Every eight hours'",
+        );
+        assert!(matches!(
+            expr,
+            Expression::Literal(Literal::Code {
+                code,
+                system: Some(system),
+                display: Some(display),
+            }) if code == "307469008"
+                && system == "QICoreCommon.SNOMEDCT"
+                && display == "Every eight hours"
+        ));
+    }
+
     // ========================================================================
     // Operator Tests
     // ========================================================================
@@ -421,6 +451,45 @@ mod tests {
         } else {
             panic!("Expected BinaryExpression with ProperlyIncludes");
         }
+    }
+
+    #[test]
+    fn test_same_or_after_hour_precision_time() {
+        let expr = parse_expr("@T10:30 same or after @T10");
+        assert!(matches!(
+            expr,
+            Expression::TimingExpression(TimingExpression {
+                timing: TimingPhrase::SameTiming {
+                    direction: SameDirection::OrAfter,
+                    ..
+                },
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_overlaps_before_prefers_compound_operator() {
+        let expr = parse_expr("Interval[1, 5] overlaps before Interval[5, 10]");
+        assert!(matches!(
+            expr,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::OverlapsBefore,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_meets_after_prefers_compound_operator() {
+        let expr = parse_expr("Interval[5, 10] meets after Interval[1, 5)");
+        assert!(matches!(
+            expr,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::MeetsAfter,
+                ..
+            })
+        ));
     }
 
     // ========================================================================

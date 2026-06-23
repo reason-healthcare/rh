@@ -6,7 +6,9 @@
 use super::expression;
 use super::retrieve::parse_type_specifier;
 use crate::parser::ast::*;
-use crate::parser::lexer::{any_identifier, keyword, skip_ws_and_comments, ws};
+use crate::parser::lexer::{
+    any_identifier, keyword, skip_ws_and_comments, string_literal, terminology_ref, ws,
+};
 use crate::parser::span::Span;
 use nom::{
     branch::alt,
@@ -161,6 +163,23 @@ pub(crate) fn parse_instance_selector(input: Span<'_>) -> IResult<Span<'_>, Expr
             class_type,
             elements,
             location: None,
+        }),
+    ))
+}
+
+pub(crate) fn parse_code_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, _) = ws(keyword("Code"))(input)?;
+    let (input, code) = ws(string_literal)(input)?;
+    let (input, _) = ws(keyword("from"))(input)?;
+    let (input, system) = terminology_ref(input)?;
+    let (input, display) = opt(tuple((ws(keyword("display")), ws(string_literal))))(input)?;
+
+    Ok((
+        input,
+        Expression::Literal(Literal::Code {
+            code,
+            system: Some(system),
+            display: display.map(|(_, value)| value),
         }),
     ))
 }

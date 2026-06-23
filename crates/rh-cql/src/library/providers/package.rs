@@ -17,9 +17,10 @@
 //!   installed package to use.
 //!
 //! - **Simple name** — `FHIRHelpers`:
-//!   All installed package directories are scanned for a matching
-//!   `Library-FHIRHelpers.json`. If `version` is given, only packages whose
-//!   version matches are considered.
+//!   Standard FHIR support libraries such as `FHIRHelpers` are first resolved
+//!   from the `fhir.cqf.common` package. Other simple names scan all installed
+//!   package directories for a matching `Library-FHIRHelpers.json`. If
+//!   `version` is given, only packages whose version matches are considered.
 //!
 //! # Example
 //!
@@ -85,6 +86,17 @@ impl PackageLibrarySourceProvider {
             }
         }
         (None, name)
+    }
+
+    /// Return the default package namespace for well-known unqualified FHIR
+    /// support libraries.
+    fn default_package_for_simple_name(lib_name: &str) -> Option<&'static str> {
+        match lib_name {
+            "FHIRHelpers" | "FHIRCommon" | "FHIRModelInfo" | "FHIR-ModelInfo" => {
+                Some("fhir.cqf.common")
+            }
+            _ => None,
+        }
     }
 
     /// Extract the CQL source string from a FHIR Library JSON file.
@@ -210,6 +222,17 @@ impl LibrarySourceProvider for PackageLibrarySourceProvider {
             }
             None
         } else {
+            // Standard FHIR libraries are commonly included without their CQL
+            // package namespace. Resolve those names from fhir.cqf.common
+            // before falling back to a broad package scan.
+            if let Some(pkg) = Self::default_package_for_simple_name(lib_name) {
+                for pkg_dir in self.matching_package_dirs(pkg, version) {
+                    if let Some(source) = self.find_in_package_dir(&pkg_dir, lib_name) {
+                        return Some(source);
+                    }
+                }
+            }
+
             // Simple name — scan all installed packages.
             self.find_in_any_package(lib_name, version)
         }
@@ -260,6 +283,8 @@ impl LibrarySourceProvider for PackageLibrarySourceProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn test_parse_name_qualified() {
@@ -276,6 +301,30 @@ mod tests {
     }
 
     #[test]
+    fn test_default_package_for_standard_fhir_libraries() {
+        assert_eq!(
+            PackageLibrarySourceProvider::default_package_for_simple_name("FHIRHelpers"),
+            Some("fhir.cqf.common")
+        );
+        assert_eq!(
+            PackageLibrarySourceProvider::default_package_for_simple_name("FHIRCommon"),
+            Some("fhir.cqf.common")
+        );
+        assert_eq!(
+            PackageLibrarySourceProvider::default_package_for_simple_name("FHIRModelInfo"),
+            Some("fhir.cqf.common")
+        );
+        assert_eq!(
+            PackageLibrarySourceProvider::default_package_for_simple_name("FHIR-ModelInfo"),
+            Some("fhir.cqf.common")
+        );
+        assert_eq!(
+            PackageLibrarySourceProvider::default_package_for_simple_name("OtherLibrary"),
+            None
+        );
+    }
+
+    #[test]
     fn test_parse_name_lowercase_last_segment_not_split() {
         // "some.package.name" — last segment is lowercase, treat as simple name
         let (pkg, lib) = PackageLibrarySourceProvider::parse_name("some.package.name");
@@ -288,5 +337,40 @@ mod tests {
         let provider = PackageLibrarySourceProvider::new("/nonexistent/packages");
         let id = LibraryIdentifier::new("FHIRHelpers", Some("4.0.1"));
         assert!(provider.get_source(&id).is_none());
+    }
+
+    #[test]
+    fn test_simple_fhir_helpers_resolves_from_fhir_cqf_common_package() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("rh-cql-package-provider-{unique}"));
+        let package_dir = root.join("fhir.cqf.common#4.0.1").join("package");
+        fs::create_dir_all(&package_dir).unwrap();
+        fs::write(
+            package_dir.join("Library-FHIRHelpers.json"),
+            r#"{
+              "resourceType": "Library",
+              "content": [{
+                "contentType": "text/cql",
+                "data": "bGlicmFyeSBGSElSSGVscGVycyB2ZXJzaW9uICc0LjAuMScKZGVmaW5lIFg6IDEK"
+              }]
+            }"#,
+        )
+        .unwrap();
+
+        let provider = PackageLibrarySourceProvider::new(&root);
+        let source = provider
+            .get_source(&LibraryIdentifier::new("FHIRHelpers", Some("4.0.1")))
+            .expect("FHIRHelpers should resolve from fhir.cqf.common");
+
+        assert_eq!(source.identifier.name, "FHIRHelpers");
+        assert_eq!(source.identifier.version.as_deref(), Some("4.0.1"));
+        assert!(source
+            .source
+            .contains("library FHIRHelpers version '4.0.1'"));
+
+        fs::remove_dir_all(root).unwrap();
     }
 }

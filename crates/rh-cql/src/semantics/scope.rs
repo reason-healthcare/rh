@@ -157,6 +157,28 @@ impl ScopeManager {
         }
         None
     }
+
+    pub fn resolve_functions_qualified(
+        &self,
+        library: &str,
+        name: &str,
+    ) -> Option<Vec<&FunctionSignature>> {
+        let mut matches = Vec::new();
+        for scope in self.scopes.iter().rev() {
+            if let Some(funcs) = scope.resolve_functions(name) {
+                matches.extend(
+                    funcs.iter().filter(|sig| {
+                        sig.library.as_ref().map(|l| l.name.as_str()) == Some(library)
+                    }),
+                );
+            }
+        }
+        if matches.is_empty() {
+            None
+        } else {
+            Some(matches)
+        }
+    }
 }
 
 impl ScopeManager {

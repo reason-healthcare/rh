@@ -22,6 +22,261 @@ pub struct SemanticAnalyzer {
     in_sort_context: bool,
 }
 
+struct ModelPropertyResolver<'a> {
+    model_provider: &'a dyn ModelInfoProvider,
+}
+
+impl<'a> ModelPropertyResolver<'a> {
+    fn new(model_provider: &'a dyn ModelInfoProvider) -> Self {
+        Self { model_provider }
+    }
+
+    fn resolve_property_type(&self, source_type: &DataType, name: &str) -> Option<DataType> {
+        match source_type {
+            DataType::Model {
+                namespace,
+                name: type_name,
+            } => self.resolve_model_property_type(namespace, type_name, name, &mut Vec::new()),
+            DataType::Tuple(elements) => elements
+                .iter()
+                .find(|element| element.name == name)
+                .map(|element| *element.element_type.clone()),
+            DataType::List(element_type) => self
+                .resolve_property_type(element_type, name)
+                .map(DataType::list),
+            DataType::Choice(types) => self.resolve_choice_property_type(types, name),
+            _ => None,
+        }
+    }
+
+    fn resolve_choice_property_type(&self, types: &[DataType], name: &str) -> Option<DataType> {
+        let mut unique = Vec::new();
+        for ty in types
+            .iter()
+            .filter_map(|ty| self.resolve_property_type(ty, name))
+        {
+            if !unique.contains(&ty) {
+                unique.push(ty);
+            }
+        }
+
+        match unique.as_slice() {
+            [] => None,
+            [only] => Some(only.clone()),
+            _ => Some(DataType::choice(unique)),
+        }
+    }
+
+    fn resolve_model_property_type(
+        &self,
+        namespace: &str,
+        type_name: &str,
+        property_name: &str,
+        visited: &mut Vec<String>,
+    ) -> Option<DataType> {
+        let visit_key = format!("{namespace}.{type_name}");
+        if visited.contains(&visit_key) {
+            return None;
+        }
+        visited.push(visit_key);
+
+        let class_info = self
+            .model_provider
+            .resolve_class(namespace, None, type_name)?;
+
+        if let Some(element_type) = class_info
+            .element
+            .iter()
+            .find(|element| element.name.as_deref() == Some(property_name))
+            .filter(|element| element.prohibited != Some(true))
+            .and_then(|element| self.resolve_class_element_type(element))
+        {
+            return Some(element_type);
+        }
+
+        self.resolve_base_class_property_type(&class_info, property_name, visited)
+    }
+
+    fn resolve_base_class_property_type(
+        &self,
+        class_info: &crate::modelinfo::ClassInfo,
+        property_name: &str,
+        visited: &mut Vec<String>,
+    ) -> Option<DataType> {
+        if let Some(base_type) = class_info.base_type.as_deref() {
+            if let Ok(DataType::Model { namespace, name }) = self.resolve_qualified_name(base_type)
+            {
+                return self.resolve_model_property_type(&namespace, &name, property_name, visited);
+            }
+        }
+
+        if let Some(DataType::Model { namespace, name }) = class_info
+            .base_type_specifier
+            .as_ref()
+            .and_then(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+        {
+            return self.resolve_model_property_type(&namespace, &name, property_name, visited);
+        }
+
+        None
+    }
+
+    fn resolve_class_element_type(
+        &self,
+        element: &crate::modelinfo::ClassInfoElement,
+    ) -> Option<DataType> {
+        element
+            .element_type_specifier
+            .as_ref()
+            .or(element.type_specifier.as_ref())
+            .and_then(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+            .or_else(|| {
+                element
+                    .element_type
+                    .as_deref()
+                    .or(element.type_name.as_deref())
+                    .and_then(|type_name| self.resolve_qualified_name(type_name).ok())
+            })
+    }
+
+    fn resolve_modelinfo_type_specifier(
+        &self,
+        specifier: &crate::modelinfo::TypeSpecifier,
+    ) -> Option<DataType> {
+        use crate::modelinfo::TypeSpecifier as ModelInfoTypeSpecifier;
+
+        match specifier {
+            ModelInfoTypeSpecifier::NamedTypeSpecifier(named) => {
+                let name = named.name.as_deref()?;
+                let namespace = named.namespace.as_deref().or(named.model_name.as_deref());
+                match namespace {
+                    Some("System") => self.resolve_qualified_name(name).ok(),
+                    Some(namespace) => Some(DataType::model(namespace, name)),
+                    None => self.resolve_qualified_name(name).ok(),
+                }
+            }
+            ModelInfoTypeSpecifier::ListTypeSpecifier(list) => self
+                .resolve_modelinfo_list_element_type(list)
+                .map(DataType::list),
+            ModelInfoTypeSpecifier::IntervalTypeSpecifier(interval) => self
+                .resolve_modelinfo_interval_point_type(interval)
+                .map(DataType::interval),
+            ModelInfoTypeSpecifier::TupleTypeSpecifier(tuple) => Some(DataType::tuple(
+                self.resolve_modelinfo_tuple_elements(tuple),
+            )),
+            ModelInfoTypeSpecifier::ChoiceTypeSpecifier(choice) => {
+                let types = self.resolve_modelinfo_choice_types(choice);
+                if types.is_empty() {
+                    None
+                } else {
+                    Some(DataType::choice(types))
+                }
+            }
+            ModelInfoTypeSpecifier::ParameterTypeSpecifier(parameter) => parameter
+                .parameter_name
+                .as_ref()
+                .map(|name| DataType::type_parameter(name.clone())),
+            ModelInfoTypeSpecifier::BoundParameterTypeSpecifier(bound) => bound
+                .bound_type_specifier
+                .as_deref()
+                .and_then(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+                .or_else(|| {
+                    bound
+                        .bound_type
+                        .as_deref()
+                        .and_then(|type_name| self.resolve_qualified_name(type_name).ok())
+                })
+                .or_else(|| {
+                    bound
+                        .parameter_name
+                        .as_ref()
+                        .map(|name| DataType::type_parameter(name.clone()))
+                }),
+        }
+    }
+
+    fn resolve_modelinfo_list_element_type(
+        &self,
+        list: &crate::modelinfo::ListTypeSpecifier,
+    ) -> Option<DataType> {
+        list.element_type_specifier
+            .as_deref()
+            .and_then(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+            .or_else(|| {
+                list.element_type
+                    .as_deref()
+                    .and_then(|type_name| self.resolve_qualified_name(type_name).ok())
+            })
+    }
+
+    fn resolve_modelinfo_interval_point_type(
+        &self,
+        interval: &crate::modelinfo::IntervalTypeSpecifier,
+    ) -> Option<DataType> {
+        interval
+            .point_type_specifier
+            .as_deref()
+            .and_then(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+            .or_else(|| {
+                interval
+                    .point_type
+                    .as_deref()
+                    .and_then(|type_name| self.resolve_qualified_name(type_name).ok())
+            })
+    }
+
+    fn resolve_modelinfo_tuple_elements(
+        &self,
+        tuple: &crate::modelinfo::TupleTypeSpecifier,
+    ) -> Vec<TupleElement> {
+        tuple
+            .element
+            .iter()
+            .filter_map(|element| {
+                let name = element.name.clone()?;
+                let element_type = element
+                    .element_type_specifier
+                    .as_deref()
+                    .and_then(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+                    .or_else(|| {
+                        element
+                            .element_type
+                            .as_deref()
+                            .or(element.type_name.as_deref())
+                            .and_then(|type_name| self.resolve_qualified_name(type_name).ok())
+                    })?;
+                Some(TupleElement {
+                    name,
+                    element_type: Box::new(element_type),
+                })
+            })
+            .collect()
+    }
+
+    fn resolve_modelinfo_choice_types(
+        &self,
+        choice: &crate::modelinfo::ChoiceTypeSpecifier,
+    ) -> Vec<DataType> {
+        let mut types: Vec<DataType> = choice
+            .choice
+            .iter()
+            .filter_map(|specifier| self.resolve_modelinfo_type_specifier(specifier))
+            .collect();
+        types.extend(
+            choice
+                .types
+                .iter()
+                .filter_map(|type_name| self.resolve_qualified_name(type_name).ok()),
+        );
+        types
+    }
+
+    fn resolve_qualified_name(&self, name: &str) -> Result<DataType, crate::types::TypeError> {
+        let resolver = crate::types::TypeResolver::with_model_provider(self.model_provider);
+        resolver.resolve_qualified_name(name)
+    }
+}
+
 impl SemanticAnalyzer {
     /// Construct a `SemanticAnalyzer` from an explicit model provider and
     /// options.
@@ -62,15 +317,82 @@ impl SemanticAnalyzer {
     pub fn register_included_library(&mut self, alias: &str, lib: &crate::elm::Library) {
         let alias_id = crate::library::LibraryIdentifier::unversioned(alias);
 
+        if let Some(params) = &lib.parameters {
+            for def in &params.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::Parameter,
+                        DataType::Unknown,
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(code_systems) = &lib.code_systems {
+            for def in &code_systems.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::CodeSystem,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(value_sets) = &lib.value_sets {
+            for def in &value_sets.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::ValueSet,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(codes) = &lib.codes {
+            for def in &codes.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::Code,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
+        if let Some(concepts) = &lib.concepts {
+            for def in &concepts.defs {
+                if let Some(name) = &def.name {
+                    self.register_included_symbol(
+                        name,
+                        SymbolKind::Concept,
+                        DataType::any(),
+                        &alias_id,
+                    );
+                }
+            }
+        }
+
         if let Some(stmts) = &lib.statements {
             for def in &stmts.defs {
                 match def {
                     crate::elm::StatementDef::Expression(e) => {
                         if let Some(name) = &e.name {
-                            let mut sym = Symbol::new(name.clone(), SymbolKind::Expression)
-                                .with_type(DataType::Unknown);
-                            sym.library = Some(alias_id.clone());
-                            self.scope_manager.register_symbol(sym);
+                            self.register_included_symbol(
+                                name,
+                                SymbolKind::Expression,
+                                DataType::Unknown,
+                                &alias_id,
+                            );
                         }
                     }
                     crate::elm::StatementDef::Function(f) => {
@@ -89,6 +411,18 @@ impl SemanticAnalyzer {
                 }
             }
         }
+    }
+
+    fn register_included_symbol(
+        &mut self,
+        name: &str,
+        kind: SymbolKind,
+        data_type: DataType,
+        alias_id: &crate::library::LibraryIdentifier,
+    ) {
+        let mut sym = Symbol::new(name.to_string(), kind).with_type(data_type);
+        sym.library = Some(alias_id.clone());
+        self.scope_manager.register_symbol(sym);
     }
 
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
@@ -189,6 +523,7 @@ impl SemanticAnalyzer {
 
         let meta = SemanticMeta {
             resolved_symbol,
+            symbol_kind: sym.map(|s| s.kind.clone()),
             ..Default::default()
         };
 
@@ -228,6 +563,19 @@ impl SemanticAnalyzer {
                     meta.implicit_conversions.push(format!("{:?}", conv));
                 }
             }
+        } else if let Some(library) = &e.library {
+            if let Some(funcs) = self
+                .scope_manager
+                .resolve_functions_qualified(library, &e.name)
+            {
+                if let Some(f) = funcs
+                    .iter()
+                    .find(|f| f.operand_types.len() == arg_types.len())
+                {
+                    dt = f.result_type.clone();
+                    meta.resolved_symbol = Some(format!("{library}.{}", e.name));
+                }
+            }
         } else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
             if let Some(f) = funcs
                 .iter()
@@ -249,6 +597,7 @@ impl SemanticAnalyzer {
             meta,
             inner: TypedExpression::FunctionInvocation(
                 crate::semantics::typed_ast::TypedFunctionInvocation {
+                    library: e.library.clone(),
                     function: e.name.clone(),
                     arguments,
                 },
@@ -278,53 +627,9 @@ impl SemanticAnalyzer {
             }
         }
 
-        let mut dt = DataType::Unknown;
-
-        match &source.data_type {
-            DataType::Model {
-                namespace,
-                name: mt_name,
-            } => {
-                if let Some(model_info) = self._model_provider.get_model(namespace, None) {
-                    for ti in &model_info.type_info {
-                        if let crate::modelinfo::TypeInfo::ClassInfo(ci) = ti {
-                            if ci.name.as_deref() == Some(mt_name) {
-                                for el in &ci.element {
-                                    if el.name.as_deref() == Some(&e.name) {
-                                        // TODO: support full modelinfo::TypeSpecifier
-                                        if let Some(type_str) = &el.element_type {
-                                            if let Ok(res_dt) =
-                                                self.resolve_qualified_name(type_str)
-                                            {
-                                                dt = res_dt;
-                                            }
-                                        } else if let Some(type_str) = &el.type_name {
-                                            if let Ok(res_dt) =
-                                                self.resolve_qualified_name(type_str)
-                                            {
-                                                dt = res_dt;
-                                            }
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            DataType::Tuple(tup) => {
-                for element in tup {
-                    if element.name == e.name {
-                        dt = *element.element_type.clone();
-                        break;
-                    }
-                }
-            }
-            _ => {
-                // If it's something else, can we resolve it? Maybe a system type property like String.length?
-            }
-        }
+        let dt = ModelPropertyResolver::new(self._model_provider.as_ref())
+            .resolve_property_type(&source.data_type, &e.name)
+            .unwrap_or(DataType::Unknown);
 
         TypedNode {
             node_id: self.generate_node_id(),
@@ -432,7 +737,12 @@ impl SemanticAnalyzer {
             data_type,
             span: SourceSpan::default(),
             meta,
-            inner: TypedExpression::BinaryExpression(e.operator, Box::new(left), Box::new(right)),
+            inner: TypedExpression::BinaryExpression(
+                e.operator,
+                Box::new(left),
+                Box::new(right),
+                e.precision,
+            ),
         }
     }
 
@@ -497,12 +807,6 @@ impl SemanticAnalyzer {
         resolver.resolve_type_specifier(spec)
     }
 
-    fn resolve_qualified_name(&self, name: &str) -> Result<DataType, crate::types::TypeError> {
-        let resolver =
-            crate::types::TypeResolver::with_model_provider(self._model_provider.as_ref());
-        resolver.resolve_qualified_name(name)
-    }
-
     pub fn analyze(mut self, library: ast::Library) -> (TypedLibrary, Vec<CqlCompilerException>) {
         for u in &library.usings {
             self.scope_manager.register_symbol(
@@ -558,8 +862,17 @@ impl SemanticAnalyzer {
         let mut statements = Vec::new();
 
         for ctx in &library.contexts {
+            let context_type = library
+                .usings
+                .iter()
+                .find_map(|using| {
+                    self._model_provider
+                        .resolve_class(&using.model_name, None, &ctx.name)
+                        .map(|_| DataType::model(using.model_name.clone(), ctx.name.clone()))
+                })
+                .unwrap_or_else(DataType::any);
             self.scope_manager.register_symbol(
-                Symbol::new(ctx.name.clone(), SymbolKind::Context).with_type(DataType::any()),
+                Symbol::new(ctx.name.clone(), SymbolKind::Context).with_type(context_type),
             );
         }
 
@@ -607,7 +920,20 @@ impl SemanticAnalyzer {
                 }
                 ast::Statement::FunctionDef(fd) => {
                     let id = self.generate_node_id();
+                    self.scope_manager.push_scope();
+                    for param in &fd.parameters {
+                        let result_type = param
+                            .type_specifier
+                            .as_ref()
+                            .and_then(|spec| self.resolve_type_specifier(spec).ok())
+                            .unwrap_or_else(DataType::any);
+                        self.scope_manager.register_symbol(
+                            Symbol::new(param.name.clone(), SymbolKind::Parameter)
+                                .with_type(result_type),
+                        );
+                    }
                     let body = fd.body.as_ref().map(|b| self.analyze_expression(b));
+                    self.scope_manager.pop_scope();
                     let typed_stmt = TypedNode {
                         node_id: id,
                         data_type: DataType::any(),
@@ -866,15 +1192,15 @@ impl SemanticAnalyzer {
             },
         };
 
-        // Look up the model's primaryCodePath for this type so `Retrieve.code_property`
-        // is populated correctly in the emitted ELM. Fall back to any explicit
-        // code path from the CQL source (e.g. `[Obs: path in codes]` form).
+        // Explicit retrieve paths such as `[Encounter: reason in codes]` must
+        // override the model's default primaryCodePath.
         let code_property: Option<String> = {
             let model_name = named_type.namespace.as_deref().unwrap_or("FHIR");
-            self._model_provider
-                .resolve_class(model_name, None, &named_type.name)
-                .and_then(|ci| ci.primary_code_path)
-                .or_else(|| e.code_path.as_ref().map(|p| p.to_string()))
+            e.code_path.as_ref().map(|p| p.to_string()).or_else(|| {
+                self._model_provider
+                    .resolve_class(model_name, None, &named_type.name)
+                    .and_then(|ci| ci.primary_code_path)
+            })
         };
 
         let inner = TypedExpression::Retrieve(crate::semantics::typed_ast::TypedRetrieve {
@@ -1187,7 +1513,29 @@ impl SemanticAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::compile;
+    use crate::{
+        compile, compile_with_libraries, CompilerOptions, LibraryIdentifier,
+        MemoryLibrarySourceProvider,
+    };
+
+    fn expression_body<'a>(
+        library: &'a crate::elm::Library,
+        name: &str,
+    ) -> &'a crate::elm::Expression {
+        let stmts = library.statements.as_ref().expect("no statements");
+        stmts
+            .defs
+            .iter()
+            .find_map(|d| {
+                if let crate::elm::StatementDef::Expression(e) = d {
+                    if e.name.as_deref() == Some(name) {
+                        return e.expression.as_deref();
+                    }
+                }
+                None
+            })
+            .unwrap_or_else(|| panic!("{name} definition not found in ELM"))
+    }
 
     /// A `MemberInvocation` where the source identifier resolves to a library
     /// include alias must be reclassified as a `QualifiedIdentifierRef`, so the
@@ -1201,16 +1549,7 @@ mod tests {
         "#;
         let result = compile(src, None).expect("pipeline error");
         // The ELM must contain an ExpressionRef with library_name set.
-        let stmts = result.library.statements.as_ref().expect("no statements");
-        let foo_expr = stmts.defs.iter().find_map(|d| {
-            if let crate::elm::StatementDef::Expression(e) = d {
-                if e.name.as_deref() == Some("Foo") {
-                    return e.expression.as_deref();
-                }
-            }
-            None
-        });
-        let foo_expr = foo_expr.expect("Foo definition not found in ELM");
+        let foo_expr = expression_body(&result.library, "Foo");
         match foo_expr {
             crate::elm::Expression::ExpressionRef(r) => {
                 assert_eq!(r.library_name.as_deref(), Some("CaseLogic"));
@@ -1234,20 +1573,255 @@ mod tests {
             define PatName: Patient.name
         "#;
         let result = compile(src, None).expect("pipeline error");
-        let stmts = result.library.statements.as_ref().expect("no statements");
-        let pat_name_expr = stmts.defs.iter().find_map(|d| {
-            if let crate::elm::StatementDef::Expression(e) = d {
-                if e.name.as_deref() == Some("PatName") {
-                    return e.expression.as_deref();
-                }
-            }
-            None
-        });
-        let pat_name_expr = pat_name_expr.expect("PatName definition not found in ELM");
+        let pat_name_expr = expression_body(&result.library, "PatName");
         assert!(
             matches!(pat_name_expr, crate::elm::Expression::Property(_)),
             "expected Property node for Patient.name, got {:?}",
             std::mem::discriminant(pat_name_expr)
         );
+    }
+
+    #[test]
+    fn test_model_member_resolves_inherited_fhir_property_type() {
+        let src = r#"
+            library Test version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define PatText: Patient.text
+        "#;
+        let result = compile(src, Some(CompilerOptions::debug())).expect("pipeline error");
+        let pat_text_expr = expression_body(&result.library, "PatText");
+        match pat_text_expr {
+            crate::elm::Expression::Property(property) => {
+                assert_eq!(
+                    property.element.result_type_name.as_deref(),
+                    Some("{FHIR}Narrative")
+                );
+            }
+            other => panic!(
+                "expected Property node, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+    }
+
+    #[test]
+    fn test_model_member_resolves_list_property_type_from_modelinfo_specifier() {
+        let src = r#"
+            library Test version '1.0'
+            using FHIR version '4.0.1'
+            context Patient
+            define Names: Patient.name
+        "#;
+        let result = compile(src, Some(CompilerOptions::debug())).expect("pipeline error");
+        let names_expr = expression_body(&result.library, "Names");
+        match names_expr {
+            crate::elm::Expression::Property(property) => {
+                let specifier = property
+                    .element
+                    .result_type_specifier
+                    .as_ref()
+                    .expect("list property should have a result type specifier");
+                match specifier {
+                    crate::elm::TypeSpecifier::List(list) => {
+                        let element_type = list.element_type.as_deref().expect("element type");
+                        match element_type {
+                            crate::elm::TypeSpecifier::Named(named) => {
+                                assert_eq!(named.name.as_str(), "{FHIR}HumanName");
+                            }
+                            other => panic!(
+                                "expected named element type, got {:?}",
+                                std::mem::discriminant(other)
+                            ),
+                        }
+                    }
+                    other => panic!(
+                        "expected list result type, got {:?}",
+                        std::mem::discriminant(other)
+                    ),
+                }
+            }
+            other => panic!(
+                "expected Property node, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+    }
+
+    #[test]
+    fn test_model_member_resolves_choice_property_type_from_modelinfo_specifier() {
+        let src = r#"
+            library Test version '1.0'
+            using FHIR version '4.0.1'
+            context Observation
+            define Value: Observation.value
+        "#;
+        let result = compile(src, Some(CompilerOptions::debug())).expect("pipeline error");
+        let value_expr = expression_body(&result.library, "Value");
+        match value_expr {
+            crate::elm::Expression::Property(property) => {
+                let specifier = property
+                    .element
+                    .result_type_specifier
+                    .as_ref()
+                    .expect("choice property should have a result type specifier");
+                match specifier {
+                    crate::elm::TypeSpecifier::Choice(choice) => {
+                        assert!(choice.choice.iter().any(|specifier| matches!(
+                            specifier,
+                            crate::elm::TypeSpecifier::Named(named)
+                                if named.name.as_str() == "{FHIR}Quantity"
+                        )));
+                    }
+                    other => panic!(
+                        "expected choice result type, got {:?}",
+                        std::mem::discriminant(other)
+                    ),
+                }
+            }
+            other => panic!(
+                "expected Property node, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+    }
+
+    #[test]
+    fn test_function_parameter_is_scoped_in_function_body() {
+        let src = r#"
+            library Test version '1.0'
+            define function AddOne(value Integer): value + 1
+        "#;
+        let result = compile(src, None).expect("pipeline error");
+        assert!(
+            result.is_success(),
+            "unexpected diagnostics: {:?}",
+            result.errors
+        );
+    }
+
+    #[test]
+    fn test_included_expression_and_function_resolve_by_alias() {
+        let helper = r#"
+            library HelperLibrary version '0.1.0'
+            define public PublicValue: 5
+            define function AddOne(value Integer): value + 1
+        "#;
+        let main = r#"
+            library MainLibrary version '0.1.0'
+            include HelperLibrary version '0.1.0' called Helper
+            define UsesIncludedExpression: Helper.PublicValue + 1
+            define UsesIncludedFunction: Helper.AddOne(4)
+        "#;
+
+        let provider = MemoryLibrarySourceProvider::new();
+        provider.register_source(
+            LibraryIdentifier::new("HelperLibrary", Some("0.1.0")),
+            helper.to_string(),
+        );
+
+        let result = compile_with_libraries(main, None, &provider).expect("pipeline error");
+        assert!(
+            result.result.is_success(),
+            "unexpected diagnostics: {:?}",
+            result.result.errors
+        );
+
+        match expression_body(&result.result.library, "UsesIncludedFunction") {
+            crate::elm::Expression::FunctionRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("AddOne"));
+            }
+            other => panic!(
+                "expected FunctionRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+    }
+
+    #[test]
+    fn test_included_parameters_and_terminology_resolve_by_alias() {
+        let helper = r#"
+            library HelperLibrary version '0.1.0'
+            codesystem "SNOMED-CT:2020": 'http://snomed.info/sct' version '2020'
+            valueset "Female Administrative Sex": '2.16.840.1.113883.3.560.100.2'
+            code "XYZ Code": 'XYZ' from "SNOMED-CT:2020" display 'XYZ Code'
+            concept "XYZ Concept": { "XYZ Code" } display 'XYZ Concept'
+            parameter "Test Parameter" Integer
+        "#;
+        let main = r#"
+            library MainLibrary version '0.1.0'
+            include HelperLibrary version '0.1.0' called Helper
+            define UsesIncludedParameter: Helper."Test Parameter"
+            define UsesIncludedCodeSystem: Helper."SNOMED-CT:2020"
+            define UsesIncludedValueSet: Helper."Female Administrative Sex"
+            define UsesIncludedCode: Helper."XYZ Code"
+            define UsesIncludedConcept: Helper."XYZ Concept"
+        "#;
+
+        let provider = MemoryLibrarySourceProvider::new();
+        provider.register_source(
+            LibraryIdentifier::new("HelperLibrary", Some("0.1.0")),
+            helper.to_string(),
+        );
+
+        let result = compile_with_libraries(main, None, &provider).expect("pipeline error");
+        assert!(
+            result.result.is_success(),
+            "unexpected diagnostics: {:?}",
+            result.result.errors
+        );
+
+        match expression_body(&result.result.library, "UsesIncludedParameter") {
+            crate::elm::Expression::ParameterRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("Test Parameter"));
+            }
+            other => panic!(
+                "expected ParameterRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedCodeSystem") {
+            crate::elm::Expression::CodeSystemRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("SNOMED-CT:2020"));
+            }
+            other => panic!(
+                "expected CodeSystemRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedValueSet") {
+            crate::elm::Expression::ValueSetRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("Female Administrative Sex"));
+            }
+            other => panic!(
+                "expected ValueSetRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedCode") {
+            crate::elm::Expression::CodeRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("XYZ Code"));
+            }
+            other => panic!("expected CodeRef, got {:?}", std::mem::discriminant(other)),
+        }
+
+        match expression_body(&result.result.library, "UsesIncludedConcept") {
+            crate::elm::Expression::ConceptRef(r) => {
+                assert_eq!(r.library_name.as_deref(), Some("Helper"));
+                assert_eq!(r.name.as_deref(), Some("XYZ Concept"));
+            }
+            other => panic!(
+                "expected ConceptRef, got {:?}",
+                std::mem::discriminant(other)
+            ),
+        }
     }
 }

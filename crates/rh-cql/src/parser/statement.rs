@@ -8,7 +8,9 @@
 
 use super::ast::*;
 use super::expression::{expression, parse_type_specifier};
-use super::lexer::{any_identifier, keyword, skip_ws_and_comments, string_literal, ws};
+use super::lexer::{
+    any_identifier, keyword, skip_ws_and_comments, string_literal, terminology_ref, ws,
+};
 use super::span::Span;
 use nom::{
     branch::alt,
@@ -152,8 +154,8 @@ pub fn parse_valueset_def(input: Span<'_>) -> IResult<Span<'_>, ValueSetDef> {
 }
 
 fn parse_codesystem_list(input: Span<'_>) -> IResult<Span<'_>, Vec<String>> {
-    let (input, first) = any_identifier(input)?;
-    let (input, rest) = many0(preceded(ws(char(',')), any_identifier))(input)?;
+    let (input, first) = terminology_ref(input)?;
+    let (input, rest) = many0(preceded(ws(char(',')), terminology_ref))(input)?;
 
     let mut list = vec![first];
     list.extend(rest);
@@ -174,7 +176,7 @@ pub fn parse_code_def(input: Span<'_>) -> IResult<Span<'_>, CodeDef> {
     let (input, _) = ws(char(':'))(input)?;
     let (input, code) = string_literal(input)?;
     let (input, _) = ws(keyword("from"))(input)?;
-    let (input, codesystem) = any_identifier(input)?;
+    let (input, codesystem) = terminology_ref(input)?;
     let (input, display) = opt(preceded(ws(keyword("display")), string_literal))(input)?;
 
     Ok((
@@ -273,12 +275,14 @@ pub fn parse_context_def(input: Span<'_>) -> IResult<Span<'_>, ContextDef> {
 pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef> {
     let (input, _) = skip_ws_and_comments(input)?;
     let start_loc = input.location();
-    let (input, access) = parse_access_modifier(input)?;
+    let (input, leading_access) = parse_optional_access_modifier(input)?;
     let (input, _) = keyword("define")(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
+    let (input, trailing_access) = parse_optional_access_modifier(input)?;
     let (input, name) = any_identifier(input)?;
     let (input, _) = ws(char(':'))(input)?;
     let (input, expr) = expression(input)?;
+    let access = trailing_access.or(leading_access).unwrap_or_default();
 
     Ok((
         input,
@@ -298,10 +302,11 @@ pub fn parse_expression_def(input: Span<'_>) -> IResult<Span<'_>, ExpressionDef>
 /// Parse function definition: `define [fluent] function Name(params) returns Type: body`
 pub fn parse_function_def(input: Span<'_>) -> IResult<Span<'_>, FunctionDef> {
     let (input, _) = skip_ws_and_comments(input)?;
-    let (input, access) = parse_access_modifier(input)?;
+    let (input, leading_access) = parse_optional_access_modifier(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, _) = keyword("define")(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
+    let (input, trailing_access) = parse_optional_access_modifier(input)?;
     let (input, fluent) = opt(keyword("fluent"))(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, _) = keyword("function")(input)?;
@@ -324,6 +329,7 @@ pub fn parse_function_def(input: Span<'_>) -> IResult<Span<'_>, FunctionDef> {
         ExternalOrBody::External => (true, None),
         ExternalOrBody::Body(e) => (false, Some(*e)),
     };
+    let access = trailing_access.or(leading_access).unwrap_or_default();
 
     Ok((
         input,
@@ -406,6 +412,11 @@ pub fn parse_statement(input: Span<'_>) -> IResult<Span<'_>, Statement> {
 // ============================================================================
 
 fn parse_access_modifier(input: Span<'_>) -> IResult<Span<'_>, AccessModifier> {
+    let (input, modifier) = parse_optional_access_modifier(input)?;
+    Ok((input, modifier.unwrap_or_default()))
+}
+
+fn parse_optional_access_modifier(input: Span<'_>) -> IResult<Span<'_>, Option<AccessModifier>> {
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, modifier) = opt(alt((
         value(AccessModifier::Public, keyword("public")),
@@ -414,7 +425,7 @@ fn parse_access_modifier(input: Span<'_>) -> IResult<Span<'_>, AccessModifier> {
     // Skip whitespace after the modifier
     let (input, _) = skip_ws_and_comments(input)?;
 
-    Ok((input, modifier.unwrap_or_default()))
+    Ok((input, modifier))
 }
 
 // ============================================================================
@@ -609,6 +620,23 @@ mod tests {
         assert_eq!(vs.id, "http://example.org/vs/diabetes");
     }
 
+    #[test]
+    fn test_valueset_def_with_qualified_codesystems() {
+        let (_, vs) = parse_valueset_def(span(
+            "valueset \"Chlamydia Screening\": '2.16.840.1.113883.3.464.1003.110.12.1052'
+              codesystems { Base.\"SNOMED-CT:2014\", Base.\"ICD-9:2014\" }",
+        ))
+        .unwrap();
+        assert_eq!(vs.name, "Chlamydia Screening");
+        assert_eq!(
+            vs.codesystems,
+            vec![
+                "Base.SNOMED-CT:2014".to_string(),
+                "Base.ICD-9:2014".to_string()
+            ]
+        );
+    }
+
     // ========================================================================
     // Code Definition Tests
     // ========================================================================
@@ -625,6 +653,21 @@ mod tests {
         assert_eq!(
             code.display,
             Some("Glucose [Mass/volume] in Serum".to_string())
+        );
+    }
+
+    #[test]
+    fn test_code_def_with_qualified_codesystem_and_display() {
+        let (_, code) = parse_code_def(span(
+            "code \"Every eight hours (qualifier value)\": '307469008' from QICoreCommon.\"SNOMEDCT\" display 'Every eight hours (qualifier value)'",
+        ))
+        .unwrap();
+        assert_eq!(code.name, "Every eight hours (qualifier value)");
+        assert_eq!(code.code, "307469008");
+        assert_eq!(code.codesystem, "QICoreCommon.SNOMEDCT");
+        assert_eq!(
+            code.display,
+            Some("Every eight hours (qualifier value)".to_string())
         );
     }
 
@@ -675,6 +718,20 @@ mod tests {
         assert_eq!(expr_def.access, AccessModifier::Private);
     }
 
+    #[test]
+    fn test_expression_def_define_public() {
+        let (_, expr_def) = parse_expression_def(span("define public PublicValue: 5")).unwrap();
+        assert_eq!(expr_def.name, "PublicValue");
+        assert_eq!(expr_def.access, AccessModifier::Public);
+    }
+
+    #[test]
+    fn test_expression_def_define_private() {
+        let (_, expr_def) = parse_expression_def(span("define private PrivateValue: 7")).unwrap();
+        assert_eq!(expr_def.name, "PrivateValue");
+        assert_eq!(expr_def.access, AccessModifier::Private);
+    }
+
     // ========================================================================
     // Function Definition Tests
     // ========================================================================
@@ -710,6 +767,28 @@ mod tests {
         .unwrap();
         assert_eq!(func.name, "toAge");
         assert!(func.fluent);
+    }
+
+    #[test]
+    fn test_function_def_define_public() {
+        let (_, func) = parse_function_def(span(
+            "define public function AddOne(value Integer): value + 1",
+        ))
+        .unwrap();
+        assert_eq!(func.name, "AddOne");
+        assert_eq!(func.access, AccessModifier::Public);
+        assert!(func.body.is_some());
+    }
+
+    #[test]
+    fn test_function_def_define_private() {
+        let (_, func) = parse_function_def(span(
+            "define private function AddOne(value Integer): value + 1",
+        ))
+        .unwrap();
+        assert_eq!(func.name, "AddOne");
+        assert_eq!(func.access, AccessModifier::Private);
+        assert!(func.body.is_some());
     }
 
     // ========================================================================

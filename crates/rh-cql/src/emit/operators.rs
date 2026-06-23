@@ -96,11 +96,18 @@ pub fn emit_binary_operator(
         signature: Vec::new(),
     };
 
+    let binary_precision = match &node.inner {
+        TypedExpression::BinaryExpression(_, _, _, precision) => {
+            precision.map(|p| datetime_precision_str(p).to_string())
+        }
+        _ => None,
+    };
+
     let time_binary = || elm::TimeBinaryExpression {
         element: element.clone(),
         operand: vec![left_expr.clone(), right_expr.clone()],
         signature: Vec::new(),
-        precision: None, // Filled by other paths if needed
+        precision: binary_precision.clone(),
     };
 
     let nary = || elm::NaryExpression {
@@ -481,10 +488,10 @@ pub fn emit_system_function(
         None
     }
 }
-/// Emit a timing expression as an `IncludedIn` placeholder.
+/// Emit simple precision-aware timing expressions.
 ///
-/// Full precision-aware timing dispatch is deferred; this placeholder
-/// preserves the two operands so round-trip tests can verify traversal.
+/// Offset and interval-boundary timing still falls back to the historical
+/// placeholder until those semantics are implemented end to end.
 pub fn emit_timing_expression(
     te: &TypedTimingExpression,
     node: &TypedNode<TypedExpression>,
@@ -494,6 +501,61 @@ pub fn emit_timing_expression(
     let element = ctx.element_fields(node);
     let left = emit_expr(&te.left, ctx);
     let right = emit_expr(&te.right, ctx);
+    let time_binary = |precision| elm::TimeBinaryExpression {
+        element: element.clone(),
+        operand: vec![left.clone(), right.clone()],
+        signature: Vec::new(),
+        precision,
+    };
+
+    match &te.timing {
+        crate::parser::ast::TimingPhrase::RelativeTiming {
+            left_boundary: None,
+            offset: None,
+            direction,
+            precision,
+            right_boundary: None,
+        } => {
+            let precision = precision.map(|p| datetime_precision_str(p).to_string());
+            match direction {
+                crate::parser::ast::TimingDirection::Before
+                | crate::parser::ast::TimingDirection::BeforeOrOn => {
+                    return elm::Expression::Before(time_binary(precision));
+                }
+                crate::parser::ast::TimingDirection::After
+                | crate::parser::ast::TimingDirection::AfterOrOn => {
+                    return elm::Expression::After(time_binary(precision));
+                }
+                crate::parser::ast::TimingDirection::OnOrBefore => {
+                    return elm::Expression::SameOrBefore(time_binary(precision));
+                }
+                crate::parser::ast::TimingDirection::OnOrAfter => {
+                    return elm::Expression::SameOrAfter(time_binary(precision));
+                }
+            }
+        }
+        crate::parser::ast::TimingPhrase::SameTiming {
+            left_boundary: None,
+            precision,
+            direction,
+            right_boundary: None,
+        } => {
+            let precision = precision.map(|p| datetime_precision_str(p).to_string());
+            match direction {
+                crate::parser::ast::SameDirection::As => {
+                    return elm::Expression::SameAs(time_binary(precision));
+                }
+                crate::parser::ast::SameDirection::OrBefore => {
+                    return elm::Expression::SameOrBefore(time_binary(precision));
+                }
+                crate::parser::ast::SameDirection::OrAfter => {
+                    return elm::Expression::SameOrAfter(time_binary(precision));
+                }
+            }
+        }
+        _ => {}
+    }
+
     elm::Expression::IncludedIn(elm::TimeBinaryExpression {
         element,
         operand: vec![left, right],
@@ -514,6 +576,6 @@ pub fn emit_datetime_component_from(
     elm::Expression::DateTimeComponentFrom(elm::DateTimeComponentFrom {
         element,
         operand,
-        precision: None,
+        precision: Some(datetime_precision_str(dtc.precision).to_string()),
     })
 }

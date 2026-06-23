@@ -6,7 +6,7 @@
 use std::cmp::Ordering;
 
 use super::super::context::EvalError;
-use super::super::value::{CqlDate, CqlDateTime, CqlTime, Value};
+use super::super::value::{comparable_quantity_values, CqlDate, CqlDateTime, CqlTime, Value};
 use super::utils::null2;
 
 // ---------------------------------------------------------------------------
@@ -25,8 +25,9 @@ pub fn cql_compare(a: &Value, b: &Value) -> Option<Ordering> {
         (Value::Integer(x), Value::Decimal(y)) => (*x as f64).partial_cmp(y),
         (Value::Decimal(x), Value::Integer(y)) => x.partial_cmp(&(*y as f64)),
         (Value::String(x), Value::String(y)) => Some(x.cmp(y)),
-        (Value::Quantity(x), Value::Quantity(y)) if x.unit == y.unit => {
-            x.value.partial_cmp(&y.value)
+        (Value::Quantity(x), Value::Quantity(y)) => {
+            let (x_value, y_value) = comparable_quantity_values(x, y)?;
+            x_value.partial_cmp(&y_value)
         }
         (Value::Date(x), Value::Date(y)) => compare_dates(x, y),
         (Value::DateTime(x), Value::DateTime(y)) => compare_datetimes(x, y),
@@ -36,28 +37,26 @@ pub fn cql_compare(a: &Value, b: &Value) -> Option<Ordering> {
 }
 
 pub(super) fn compare_dates(a: &CqlDate, b: &CqlDate) -> Option<Ordering> {
-    // Precisions must match for a well-defined comparison (per CQL spec).
+    let year = a.year.cmp(&b.year);
+    if year != Ordering::Equal {
+        return Some(year);
+    }
+
     match (a.month, b.month) {
-        (None, None) => a.year.partial_cmp(&b.year),
+        (None, None) => Some(Ordering::Equal),
         (Some(am), Some(bm)) => {
-            let yr = a.year.cmp(&b.year);
-            if yr != Ordering::Equal {
-                return Some(yr);
+            let month = am.cmp(&bm);
+            if month != Ordering::Equal {
+                return Some(month);
             }
+
             match (a.day, b.day) {
-                (None, None) => am.partial_cmp(&bm),
-                (Some(ad), Some(bd)) => {
-                    let mo = am.cmp(&bm);
-                    if mo != Ordering::Equal {
-                        Some(mo)
-                    } else {
-                        ad.partial_cmp(&bd)
-                    }
-                }
-                _ => None, // mismatched day precision → null
+                (None, None) => Some(Ordering::Equal),
+                (Some(ad), Some(bd)) => ad.partial_cmp(&bd),
+                _ => None,
             }
         }
-        _ => None, // mismatched month precision → null
+        _ => None,
     }
 }
 

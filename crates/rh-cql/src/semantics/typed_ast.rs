@@ -51,6 +51,7 @@ pub struct TypedNode<T> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedFunctionInvocation {
+    pub library: Option<String>,
     pub function: String,
     pub arguments: Vec<TypedNode<TypedExpression>>,
 }
@@ -207,6 +208,7 @@ pub enum TypedExpression {
         crate::parser::ast::BinaryOperator,
         Box<TypedNode<TypedExpression>>,
         Box<TypedNode<TypedExpression>>,
+        Option<crate::parser::ast::DateTimePrecision>,
     ),
     TernaryExpression(
         crate::parser::ast::TernaryOperator,

@@ -52,7 +52,7 @@ pub fn to_boolean(v: &Value) -> Result<Value, EvalError> {
 
 /// `ToInteger` — converts String, Long, Decimal, or Boolean to Integer.
 ///
-/// Returns `null` when the string is not a valid integer literal.
+/// Raises an evaluation error when a string is not a valid integer literal.
 pub fn to_integer(v: &Value) -> Result<Value, EvalError> {
     null1!(v);
     match v {
@@ -75,8 +75,7 @@ pub fn to_integer(v: &Value) -> Result<Value, EvalError> {
             .trim()
             .parse::<i64>()
             .map(Value::Integer)
-            .map_err(|_| err("ToInteger", "invalid integer string"))
-            .or(Ok(Value::Null)),
+            .map_err(|_| err("ToInteger", "invalid integer string")),
         Value::Boolean(b) => Ok(Value::Integer(if *b { 1 } else { 0 })),
         _ => Err(err("ToInteger", "cannot convert to Integer")),
     }
@@ -139,7 +138,7 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
                 .to_string(),
         )),
         Value::Date(d) => Ok(Value::String(d.to_string())),
-        Value::DateTime(dt) => Ok(Value::String(dt.to_string())),
+        Value::DateTime(dt) => Ok(Value::String(datetime_to_string_without_offset(dt))),
         Value::Time(t) => Ok(Value::String(t.to_string())),
         // HL7 suite (CqlStringOperatorsTest/QuantityToString) expects
         // `ToString(125 'cm')` to yield `'125cm'` — value directly followed
@@ -147,6 +146,29 @@ pub fn to_string(v: &Value) -> Result<Value, EvalError> {
         Value::Quantity(q) => Ok(Value::String(format!("{}{}", q.value, q.unit))),
         _ => Err(err("ToString", "cannot convert to String")),
     }
+}
+
+fn datetime_to_string_without_offset(dt: &super::super::value::CqlDateTime) -> String {
+    let mut s = format!("{:04}", dt.year);
+    if let Some(month) = dt.month {
+        s.push_str(&format!("-{month:02}"));
+        if let Some(day) = dt.day {
+            s.push_str(&format!("-{day:02}"));
+            if let Some(hour) = dt.hour {
+                s.push_str(&format!("T{hour:02}"));
+                if let Some(minute) = dt.minute {
+                    s.push_str(&format!(":{minute:02}"));
+                    if let Some(second) = dt.second {
+                        s.push_str(&format!(":{second:02}"));
+                        if let Some(millisecond) = dt.millisecond {
+                            s.push_str(&format!(".{millisecond:03}"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    s
 }
 
 /// `ToDate` — parses a String in `YYYY`, `YYYY-MM`, or `YYYY-MM-DD` format.
@@ -218,7 +240,8 @@ fn parse_date_str(s: &str) -> Option<CqlDate> {
 
 /// `ToDateTime` — parses a String to a CQL DateTime.
 ///
-/// Accepts ISO-8601 style date-time strings. Returns `null` on failure.
+/// Accepts ISO-8601 style date-time strings. Raises an evaluation error on
+/// malformed strings.
 pub fn to_datetime(v: &Value) -> Result<Value, EvalError> {
     null1!(v);
     match v {
@@ -238,7 +261,7 @@ pub fn to_datetime(v: &Value) -> Result<Value, EvalError> {
             if let Some(dt) = parse_datetime_str(s) {
                 Ok(Value::DateTime(dt))
             } else {
-                Ok(Value::Null)
+                Err(err("ToDateTime", "invalid datetime string"))
             }
         }
         _ => Err(err("ToDateTime", "cannot convert to DateTime")),
@@ -329,7 +352,7 @@ fn strip_timezone(s: &str) -> (&str, Option<i32>) {
 
 /// `ToTime` — parses a String in `Thh`, `Thh:mm`, `Thh:mm:ss[.ms]` format.
 ///
-/// Returns `null` on parse failure.
+/// Raises an evaluation error on malformed strings.
 pub fn to_time(v: &Value) -> Result<Value, EvalError> {
     null1!(v);
     match v {
@@ -356,7 +379,7 @@ pub fn to_time(v: &Value) -> Result<Value, EvalError> {
             if let Some(t) = parse_time_str(s) {
                 Ok(Value::Time(t))
             } else {
-                Ok(Value::Null)
+                Err(err("ToTime", "invalid time string"))
             }
         }
         _ => Err(err("ToTime", "cannot convert to Time")),
@@ -365,12 +388,9 @@ pub fn to_time(v: &Value) -> Result<Value, EvalError> {
 
 fn parse_time_str(s: &str) -> Option<CqlTime> {
     let parts: Vec<&str> = s.split(':').collect();
-    let hour = parts.first()?.parse::<u8>().ok()?;
-    if hour > 23 {
-        return None;
-    }
+    let hour = super::parse_hour(parts.first()?)?;
     let minute = if parts.len() >= 2 {
-        parts[1].parse::<u8>().ok()
+        Some(super::parse_minute_or_second(parts[1])?)
     } else {
         None
     };
@@ -378,14 +398,13 @@ fn parse_time_str(s: &str) -> Option<CqlTime> {
         let sec_str = parts[2];
         if let Some(dot) = sec_str.find('.') {
             let ms_raw = &sec_str[dot + 1..];
-            // Right-pad to 3 digits: "9" → 900ms, "99" → 990ms, "999" → 999ms
-            let ms_val = {
-                let padded = format!("{:0<3}", ms_raw);
-                padded.get(..3).and_then(|p| p.parse::<u32>().ok())
-            };
-            (sec_str[..dot].parse::<u8>().ok(), ms_val)
+            if ms_raw.len() > 3 {
+                return None;
+            }
+            let second = super::parse_minute_or_second(&sec_str[..dot])?;
+            (Some(second), super::parse_millisecond(ms_raw))
         } else {
-            (sec_str.parse::<u8>().ok(), None)
+            (Some(super::parse_minute_or_second(sec_str)?), None)
         }
     } else {
         (None, None)
@@ -623,6 +642,11 @@ mod tests {
             to_integer(&Value::String("42".into())).unwrap(),
             Value::Integer(42)
         );
+    }
+
+    #[test]
+    fn to_integer_from_invalid_string_errors() {
+        assert!(to_integer(&Value::String("garbage".into())).is_err());
     }
 
     #[test]
@@ -907,11 +931,8 @@ mod tests {
     }
 
     #[test]
-    fn to_datetime_from_string_invalid_yields_null() {
-        assert_eq!(
-            to_datetime(&Value::String("garbage".into())).unwrap(),
-            Value::Null
-        );
+    fn to_datetime_from_string_invalid_errors() {
+        assert!(to_datetime(&Value::String("garbage".into())).is_err());
     }
 
     #[test]
@@ -1000,6 +1021,11 @@ mod tests {
                 millisecond: None
             })
         );
+    }
+
+    #[test]
+    fn to_time_from_invalid_string_errors() {
+        assert!(to_time(&Value::String("T14-30-00.0".into())).is_err());
     }
 
     #[test]

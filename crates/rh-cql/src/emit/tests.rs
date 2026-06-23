@@ -545,7 +545,7 @@ fn test_emit_binary_add() {
         data_type: DataType::integer(),
         span: SourceSpan::default(),
         meta: SemanticMeta::default(),
-        inner: TypedExpression::BinaryExpression(BinaryOperator::Add, left, right),
+        inner: TypedExpression::BinaryExpression(BinaryOperator::Add, left, right, None),
     };
     let mut ctx = emitter();
     let expr = ctx.emit_expression(&node);
@@ -566,7 +566,7 @@ fn test_emit_binary_divide_promotes_integer_to_decimal() {
         data_type: DataType::System(SystemType::Decimal),
         span: SourceSpan::default(),
         meta: SemanticMeta::default(),
-        inner: TypedExpression::BinaryExpression(BinaryOperator::Divide, left, right),
+        inner: TypedExpression::BinaryExpression(BinaryOperator::Divide, left, right, None),
     };
     let mut ctx = emitter();
     let expr = ctx.emit_expression(&node);

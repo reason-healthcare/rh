@@ -1,7 +1,86 @@
-# Justfile for rh-cql WASM builds
+# Justfile for rh-cql workflows
 
 default:
     @just --list
+
+# Run focused CQL engine audit tests and save reviewable output.
+audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out_dir="conformance/results/audit"
+    mkdir -p "$out_dir"
+    RH_CQL_HL7_SUMMARY_DIR="$out_dir" cargo test -p rh-cql --test hl7_eval_tests -- --nocapture | tee "$out_dir/hl7_eval_tests.txt"
+    cargo test -p rh-cql --test golden_elm_tests --test emit_conformance_tests --test pipeline_comparison_tests | tee "$out_dir/elm_production_tests.txt"
+    cargo test -p rh-cql --test eval_integration_tests --test semantic_tests --test clinical_age_operators_test --test ratio_message_tree_test | tee "$out_dir/eval_engine_tests.txt"
+    echo "CQL audit output written to crates/rh-cql/$out_dir/"
+    echo "Audit report: crates/rh-cql/conformance/CQL_ENGINE_TEST_AUDIT.md"
+
+# Run the CQL audit with current HL7 unimplemented-count ceilings.
+audit-strict:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out_dir="conformance/results/audit"
+    mkdir -p "$out_dir"
+    RH_CQL_HL7_SUMMARY_DIR="$out_dir" \
+    RH_CQL_HL7_MAX_SKIP=45 \
+    RH_CQL_HL7_MAX_COMPILE_ERR=89 \
+    RH_CQL_HL7_MAX_EVAL_ERR=23 \
+    RH_CQL_HL7_MAX_INVALID_FAIL=0 \
+    RH_CQL_HL7_MAX_UNIMPLEMENTED=112 \
+      cargo test -p rh-cql --test hl7_eval_tests -- --nocapture | tee "$out_dir/hl7_eval_tests.txt"
+    cargo test -p rh-cql --test golden_elm_tests --test emit_conformance_tests --test pipeline_comparison_tests | tee "$out_dir/elm_production_tests.txt"
+    cargo test -p rh-cql --test eval_integration_tests --test semantic_tests --test clinical_age_operators_test --test ratio_message_tree_test | tee "$out_dir/eval_engine_tests.txt"
+    echo "Strict CQL audit output written to crates/rh-cql/$out_dir/"
+
+# Populate Java and JavaScript columns in the generated implementation matrix.
+audit-references:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd conformance && ./scripts/setup.sh)
+    python3 conformance/scripts/run_reference_matrix.py --setup-javascript --require-java --require-javascript
+
+# Run the strict Rust audit, then run Java and JavaScript reference matrix checks.
+audit-full: audit-strict audit-references
+
+# Download/pin external CQL corpus sources used by corpus-audit.
+corpus-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd conformance && bash scripts/setup_corpora.sh)
+
+# Run expanded source-file corpus compile/translation checks.
+corpus-audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd conformance && bash scripts/setup_corpora.sh)
+    python3 conformance/scripts/run_corpus_audit.py --require-java
+
+# Run expanded source-file corpus compile checks with rh-cql only.
+corpus-audit-rh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cargo build --release -p rh-cli
+    python3 conformance/scripts/run_corpus_audit.py --skip-java
+
+# Smoke-test the expanded corpus runner without traversing every external file.
+corpus-audit-smoke:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cargo build --release -p rh-cli
+    python3 conformance/scripts/run_corpus_audit.py --results-dir conformance/results/corpus-smoke --limit 3 --skip-java
+
+# Generate a date-stamped summary from audit-full and corpus-audit outputs.
+audit-summary:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 conformance/scripts/summarize_audits.py
+
+# Compare rh-cql ELM output against the Java reference translator for a conformance test case.
+elm-reference test_case="simple":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd conformance
+    python3 scripts/compare_translators.py -t "{{test_case}}"
 
 check-wasm-pack:
     #!/usr/bin/env bash

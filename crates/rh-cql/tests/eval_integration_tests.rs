@@ -41,6 +41,17 @@ fn eval_expr(cql: &str, expr_name: &str) -> Value {
     evaluate_elm(&result.library, expr_name, &ctx).expect("evaluation failed")
 }
 
+fn compile_or_eval_fails(cql: &str, expr_name: &str) -> bool {
+    let Ok(result) = compile_with_model(cql, None, None) else {
+        return true;
+    };
+    if !result.errors.is_empty() {
+        return true;
+    }
+    let ctx = default_ctx();
+    evaluate_elm(&result.library, expr_name, &ctx).is_err()
+}
+
 // ---------------------------------------------------------------------------
 // 9.23 — Arithmetic operators (end-to-end)
 // ---------------------------------------------------------------------------
@@ -67,6 +78,20 @@ fn eval_integer_multiplication() {
 fn eval_division_yields_decimal() {
     let cql = "library T define X: 7 / 2";
     assert_eq!(eval_expr(cql, "X"), Value::Decimal(3.5));
+}
+
+#[test]
+fn eval_hour_precision_time_literal() {
+    let cql = "library T define X: @T14";
+    assert_eq!(
+        eval_expr(cql, "X"),
+        Value::Time(CqlTime {
+            hour: 14,
+            minute: None,
+            second: None,
+            millisecond: None,
+        })
+    );
 }
 
 #[test]
@@ -729,6 +754,266 @@ fn eval_date_from_and_time_from() {
 fn eval_timezone_offset_from() {
     let cql = "library T define X: timezoneoffset from @2003-10-29T20:50:33.955+01:00";
     assert_eq!(eval_expr(cql, "X"), Value::Decimal(1.0));
+}
+
+#[test]
+fn eval_datetime_constructor_function_ref() {
+    let cql = "library T define X: DateTime(2003, 10, 29, 20, 50, 33, 955, 1)";
+    assert_eq!(
+        eval_expr(cql, "X"),
+        Value::DateTime(CqlDateTime {
+            year: 2003,
+            month: Some(10),
+            day: Some(29),
+            hour: Some(20),
+            minute: Some(50),
+            second: Some(33),
+            millisecond: Some(955),
+            offset_seconds: Some(3600)
+        })
+    );
+}
+
+#[test]
+fn eval_partial_date_and_time_constructor_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: Date(2024, 6)", "X"),
+        Value::Date(CqlDate {
+            year: 2024,
+            month: Some(6),
+            day: None
+        })
+    );
+
+    assert_eq!(
+        eval_expr("library T define X: Time(14, 30)", "X"),
+        Value::Time(CqlTime {
+            hour: 14,
+            minute: Some(30),
+            second: None,
+            millisecond: None
+        })
+    );
+}
+
+#[test]
+fn eval_clock_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: Today()", "X"),
+        Value::Date(CqlDate {
+            year: 2024,
+            month: Some(6),
+            day: Some(15)
+        })
+    );
+    assert_eq!(
+        eval_expr("library T define X: Now()", "X"),
+        Value::DateTime(CqlDateTime {
+            year: 2024,
+            month: Some(6),
+            day: Some(15),
+            hour: Some(10),
+            minute: Some(30),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: None
+        })
+    );
+    assert_eq!(
+        eval_expr("library T define X: TimeOfDay()", "X"),
+        Value::Time(CqlTime {
+            hour: 10,
+            minute: Some(30),
+            second: Some(0),
+            millisecond: None
+        })
+    );
+}
+
+#[test]
+fn eval_datetime_component_from_preserves_precision() {
+    assert_eq!(
+        eval_expr("library T define X: month from DateTime(2003, 10, 29)", "X"),
+        Value::Integer(10)
+    );
+    assert_eq!(
+        eval_expr("library T define X: day from DateTime(2003, 10, 29)", "X"),
+        Value::Integer(29)
+    );
+}
+
+#[test]
+fn eval_timing_expression_preserves_precision() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: DateTime(2004, 11, 10) after year of DateTime(2004, 10, 10)",
+            "X"
+        ),
+        Value::Boolean(false)
+    );
+}
+
+#[test]
+fn eval_interval_before_after_point_and_interval() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: Interval[1, 10] before Interval[11, 20]",
+            "X"
+        ),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 12 after Interval[1, 10]", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Interval[11, 20] after 12", "X"),
+        Value::Boolean(false)
+    );
+}
+
+#[test]
+fn eval_interval_proper_contains_respects_precision() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: Interval[@T12:00:00.001, @T21:59:59.999] properly includes second of @T12:00:00",
+            "X"
+        ),
+        Value::Boolean(false)
+    );
+    assert_eq!(
+        eval_expr(
+            "library T define X: @T12:00:00 properly included in millisecond of Interval[@T12:00:00.001, @T21:59:59.999]",
+            "X"
+        ),
+        Value::Null
+    );
+}
+
+#[test]
+fn eval_interval_included_in_respects_precision() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: Interval [@2017-09-01T00:00:00, @2017-09-01T00:00:00] included in day of Interval [@2017-09-01T00:00:00.000, @2017-12-30T23:59:59.999]",
+            "X"
+        ),
+        Value::Boolean(true)
+    );
+}
+
+#[test]
+fn eval_list_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: First({ null, 1 })", "X"),
+        Value::Null
+    );
+    assert_eq!(
+        eval_expr("library T define X: Last({ null, 1 })", "X"),
+        Value::Integer(1)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Length({ null, 1 })", "X"),
+        Value::Integer(2)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Except({}, {})", "X"),
+        Value::List(vec![])
+    );
+}
+
+#[test]
+fn eval_list_scalar_inclusion_dispatch() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: { @T02:29:15.156, @T15:59:59.999, @T20:59:59.999 } includes @T15:59:59.999",
+            "X"
+        ),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr(
+            "library T define X: @T16:59:59.999 included in { @T02:29:15.156, @T15:59:59.999, @T20:59:59.999 }",
+            "X"
+        ),
+        Value::Boolean(false)
+    );
+}
+
+#[test]
+fn eval_string_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: Concatenate('A', 'B')", "X"),
+        Value::String("AB".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: Upper('aB')", "X"),
+        Value::String("AB".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: Lower('aB')", "X"),
+        Value::String("ab".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: StartsWith('abc', 'ab')", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: EndsWith('abc', 'bc')", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Matches('123', '\\\\d+')", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Indexer('AB', 1)", "X"),
+        Value::String("B".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: Indexer({ 10, 20 }, 1)", "X"),
+        Value::Integer(20)
+    );
+}
+
+#[test]
+fn eval_cross_unit_quantity_comparison() {
+    assert_eq!(
+        eval_expr("library T define X: 1 'cm' = 0.01 'm'", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 1 'cm' ~ 0.01 'm'", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 1 'm' > 10 'cm'", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 1 'm' <= 10 'cm'", "X"),
+        Value::Boolean(false)
+    );
+}
+
+#[test]
+fn invalid_literals_and_conversions_fail() {
+    for cql in [
+        "library T define X: 2147483648",
+        "library T define X: -2147483649",
+        "library T define X: 0.000000001",
+        "library T define X: 10000000000000000000000000000.00000000",
+        "library T define X: @T24:59:59.999",
+        "library T define X: @T23:60:59.999",
+        "library T define X: @T23:59:60.999",
+        "library T define X: Interval[5, 3]",
+        "library T define X: Interval[5, 5)",
+        "library T define X: convert 'foo' to Integer",
+        "library T define X: convert '2014/01/01' to DateTime",
+        "library T define X: ToDateTime('2014/01/01T12:05:05.955Z')",
+        "library T define X: ToTime('T14-30-00.0')",
+    ] {
+        assert!(compile_or_eval_fails(cql, "X"), "{cql}");
+    }
 }
 
 // ---------------------------------------------------------------------------

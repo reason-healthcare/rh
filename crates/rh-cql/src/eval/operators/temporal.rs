@@ -834,9 +834,10 @@ pub fn date_construct(
     day: Option<&Value>,
 ) -> Result<Value, EvalError> {
     null1!(year);
-    let y = int_component(year, "Date", "year")? as i32;
+    let y = year_component(year, "Date")?;
     let m = opt_u8_component(month, "Date", "month")?;
     let d = opt_u8_component(day, "Date", "day")?;
+    validate_date_components("Date", y, m, d)?;
     Ok(Value::Date(CqlDate {
         year: y,
         month: m,
@@ -857,9 +858,11 @@ pub fn time_construct(
     let sec = opt_u8_component(second, "Time", "second")?;
     let ms = match millisecond {
         None | Some(Value::Null) => None,
-        Some(Value::Integer(v)) => Some(*v as u32),
+        Some(Value::Integer(v)) if (0..=999).contains(v) => Some(*v as u32),
+        Some(Value::Integer(_)) => return Err(err("Time", "millisecond out of range")),
         _ => return Err(err("Time", "millisecond must be Integer")),
     };
+    validate_time_components("Time", h, min, sec, ms)?;
     Ok(Value::Time(CqlTime {
         hour: h,
         minute: min,
@@ -868,9 +871,10 @@ pub fn time_construct(
     }))
 }
 
-/// Construct a `DateTime` from up to eight components plus an optional offset.
+/// Construct a `DateTime` from up to seven components plus an optional offset.
 ///
-/// `offset_seconds` is the UTC offset in seconds.
+/// The optional timezone offset argument is expressed in hours per CQL
+/// `DateTime(...)` constructor syntax and stored internally as seconds.
 #[allow(clippy::too_many_arguments)]
 pub fn datetime_construct(
     year: &Value,
@@ -880,10 +884,10 @@ pub fn datetime_construct(
     minute: Option<&Value>,
     second: Option<&Value>,
     millisecond: Option<&Value>,
-    offset_seconds: Option<&Value>,
+    timezone_offset_hours: Option<&Value>,
 ) -> Result<Value, EvalError> {
     null1!(year);
-    let y = int_component(year, "DateTime", "year")? as i32;
+    let y = year_component(year, "DateTime")?;
     let mo = opt_u8_component(month, "DateTime", "month")?;
     let d = opt_u8_component(day, "DateTime", "day")?;
     let h = opt_u8_component(hour, "DateTime", "hour")?;
@@ -891,15 +895,17 @@ pub fn datetime_construct(
     let sec = opt_u8_component(second, "DateTime", "second")?;
     let ms = match millisecond {
         None | Some(Value::Null) => None,
-        Some(Value::Integer(v)) => Some(*v as u32),
+        Some(Value::Integer(v)) if (0..=999).contains(v) => Some(*v as u32),
+        Some(Value::Integer(_)) => return Err(err("DateTime", "millisecond out of range")),
         _ => return Err(err("DateTime", "millisecond must be Integer")),
     };
-    let offset = match offset_seconds {
+    let offset = match timezone_offset_hours {
         None | Some(Value::Null) => None,
-        Some(Value::Integer(v)) => Some(*v as i32),
-        Some(Value::Decimal(v)) => Some(*v as i32),
+        Some(Value::Integer(v)) => Some((*v * 3600) as i32),
+        Some(Value::Decimal(v)) => Some((*v * 3600.0).round() as i32),
         _ => return Err(err("DateTime", "offset must be numeric")),
     };
+    validate_datetime_components("DateTime", y, mo, d, h, min, sec, ms, offset)?;
     Ok(Value::DateTime(CqlDateTime {
         year: y,
         month: mo,
@@ -981,8 +987,16 @@ pub fn date_time_add(value: &Value, quantity: &Value) -> Result<Value, EvalError
     })?;
     let amount = qty_val.round() as i64;
     match value {
-        Value::Date(d) => date_add_unit(d, amount, &unit).map(Value::Date),
-        Value::DateTime(dt) => datetime_add_unit(dt, amount, &unit).map(Value::DateTime),
+        Value::Date(d) => {
+            let result = date_add_unit(d, amount, &unit)?;
+            validate_date_value("DateTimeAdd", &result)?;
+            Ok(Value::Date(result))
+        }
+        Value::DateTime(dt) => {
+            let result = datetime_add_unit(dt, amount, &unit)?;
+            validate_datetime_value("DateTimeAdd", &result)?;
+            Ok(Value::DateTime(result))
+        }
         Value::Time(t) => time_add_unit(t, amount, &unit).map(Value::Time),
         _ => Err(err("DateTimeAdd", "expected Date, DateTime, or Time")),
     }
@@ -1103,12 +1117,116 @@ fn int_component(v: &Value, op: &str, field: &str) -> Result<i64, EvalError> {
     }
 }
 
+fn year_component(v: &Value, op: &str) -> Result<i32, EvalError> {
+    let year = int_component(v, op, "year")?;
+    if !(1..=9999).contains(&year) {
+        return Err(err(op, "year out of range"));
+    }
+    Ok(year as i32)
+}
+
 fn opt_u8_component(v: Option<&Value>, op: &str, field: &str) -> Result<Option<u8>, EvalError> {
     match v {
         None | Some(Value::Null) => Ok(None),
-        Some(Value::Integer(n)) => Ok(Some(*n as u8)),
+        Some(Value::Integer(n)) if (0..=u8::MAX as i64).contains(n) => Ok(Some(*n as u8)),
+        Some(Value::Integer(_)) => Err(err(op, &format!("{field} out of range"))),
         _ => Err(err(op, &format!("{field} must be Integer"))),
     }
+}
+
+fn validate_date_components(
+    op: &str,
+    year: i32,
+    month: Option<u8>,
+    day: Option<u8>,
+) -> Result<(), EvalError> {
+    if !(1..=9999).contains(&year) {
+        return Err(err(op, "year out of range"));
+    }
+    if let Some(month) = month {
+        if !(1..=12).contains(&month) {
+            return Err(err(op, "month out of range"));
+        }
+        if let Some(day) = day {
+            if day == 0 || day > days_in_month(year, month) {
+                return Err(err(op, "day out of range"));
+            }
+        }
+    } else if day.is_some() {
+        return Err(err(op, "day requires month"));
+    }
+    Ok(())
+}
+
+fn validate_time_components(
+    op: &str,
+    hour: u8,
+    minute: Option<u8>,
+    second: Option<u8>,
+    millisecond: Option<u32>,
+) -> Result<(), EvalError> {
+    if hour > 23 {
+        return Err(err(op, "hour out of range"));
+    }
+    if minute.is_some_and(|v| v > 59) {
+        return Err(err(op, "minute out of range"));
+    }
+    if second.is_some_and(|v| v > 59) {
+        return Err(err(op, "second out of range"));
+    }
+    if millisecond.is_some_and(|v| v > 999) {
+        return Err(err(op, "millisecond out of range"));
+    }
+    if minute.is_none() && (second.is_some() || millisecond.is_some()) {
+        return Err(err(op, "second or millisecond requires minute"));
+    }
+    if second.is_none() && millisecond.is_some() {
+        return Err(err(op, "millisecond requires second"));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_datetime_components(
+    op: &str,
+    year: i32,
+    month: Option<u8>,
+    day: Option<u8>,
+    hour: Option<u8>,
+    minute: Option<u8>,
+    second: Option<u8>,
+    millisecond: Option<u32>,
+    offset_seconds: Option<i32>,
+) -> Result<(), EvalError> {
+    validate_date_components(op, year, month, day)?;
+    if hour.is_none() && (minute.is_some() || second.is_some() || millisecond.is_some()) {
+        return Err(err(op, "time components require hour"));
+    }
+    if let Some(hour) = hour {
+        validate_time_components(op, hour, minute, second, millisecond)?;
+    }
+    if offset_seconds.is_some_and(|v| !(-14 * 3600..=14 * 3600).contains(&v)) {
+        return Err(err(op, "timezone offset out of range"));
+    }
+    Ok(())
+}
+
+fn validate_date_value(op: &str, date: &CqlDate) -> Result<(), EvalError> {
+    validate_date_components(op, date.year, date.month, date.day)
+}
+
+fn validate_datetime_value(op: &str, dt: &CqlDateTime) -> Result<(), EvalError> {
+    validate_datetime_components(
+        op,
+        dt.year,
+        dt.month,
+        dt.day,
+        dt.hour,
+        dt.minute,
+        dt.second,
+        dt.millisecond,
+        dt.offset_seconds,
+    )
 }
 
 // ---------------------------------------------------------------------------

@@ -505,6 +505,64 @@ define "HER2Obs": [Observation: "HER2"]
     );
 }
 
+#[test]
+fn test_retrieve_explicit_code_path_overrides_model_primary_code_path() {
+    let cql = r#"
+library RetrieveTest version '1.0'
+using FHIR version '4.0.1'
+include FHIRHelpers version '4.0.1'
+valueset "Asthma": 'urn:oid:1.2.3'
+context Patient
+define "Asthma Encounters":
+  [Encounter: reason in "Asthma"] E
+    where true
+"#;
+    let (typed_lib, diags) = analyze_fhir(cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let body = first_expr_body(&typed_lib);
+    let query = match &body.inner {
+        rh_cql::semantics::typed_ast::TypedExpression::Query(q) => q,
+        other => panic!("expected Query, got {other:?}"),
+    };
+    let retrieve = match &query.sources[0].expression.inner {
+        rh_cql::semantics::typed_ast::TypedExpression::Retrieve(r) => r,
+        other => panic!("expected Retrieve source, got {other:?}"),
+    };
+    assert_eq!(
+        retrieve.code_property.as_deref(),
+        Some("reason"),
+        "explicit retrieve code path should override model primaryCodePath"
+    );
+
+    let mut emitter = emitter_with_result_types();
+    let elm_lib = emitter.emit(typed_lib);
+    let stmts = elm_lib.statements.expect("statements").defs;
+    let expr_def = match stmts.first().expect("stmt") {
+        elm::StatementDef::Expression(e) => e,
+        other => panic!("expected ExpressionDef: {other:?}"),
+    };
+    let query_elm = match expr_def.expression.as_deref().expect("expression") {
+        elm::Expression::Query(q) => q,
+        other => panic!("expected Query in ELM: {other:?}"),
+    };
+    let retrieve_elm = match query_elm
+        .source
+        .first()
+        .expect("source")
+        .expression
+        .as_deref()
+    {
+        Some(elm::Expression::Retrieve(r)) => r,
+        other => panic!("expected Retrieve source in ELM: {other:?}"),
+    };
+    assert_eq!(
+        retrieve_elm.code_property.as_deref(),
+        Some("reason"),
+        "ELM Retrieve.code_property should preserve explicit code path"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Fix: IdentifierRef to a code def emits CodeRef, not ExpressionRef
 // ---------------------------------------------------------------------------

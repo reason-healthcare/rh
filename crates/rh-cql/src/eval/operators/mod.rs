@@ -20,6 +20,13 @@ use super::super::elm;
 use super::context::EvalError;
 use super::value::{CqlDate, CqlDateTime, CqlTime, Value};
 
+const CQL_DECIMAL_MAX_MAGNITUDE: f64 = 1e28;
+const CQL_DECIMAL_MIN_STEP: f64 = 1e-8;
+const CQL_DECIMAL_MAX_SCALE: usize = 8;
+const CQL_TIME_MAX_HOUR: u8 = 23;
+const CQL_TIME_MAX_MINUTE_OR_SECOND: u8 = 59;
+const CQL_TIME_MAX_MILLISECOND: u32 = 999;
+
 // ---------------------------------------------------------------------------
 // ELM namespace utilities (shared with the engine)
 // ---------------------------------------------------------------------------
@@ -39,38 +46,81 @@ pub(crate) fn strip_elm_namespace(raw: &str) -> &str {
 // Literal evaluation (shared with the engine)
 // ---------------------------------------------------------------------------
 
-/// Parse a time string `"HH:MM"`, `"HH:MM:SS"`, or `"HH:MM:SS.mmm"` → `Value::Time`.
+/// Parse a time string `"HH"`, `"HH:MM"`, `"HH:MM:SS"`, or `"HH:MM:SS.mmm"` → `Value::Time`.
 fn parse_time_value(s: &str) -> Result<Value, EvalError> {
     let parts: Vec<&str> = s.splitn(3, ':').collect();
-    if parts.len() < 2 {
-        return Err(EvalError::General(format!("Invalid Time literal: '{s}'")));
+    let hour = parse_time_component(parts[0], CQL_TIME_MAX_HOUR, "hour", s)?;
+    if parts.len() == 1 {
+        return Ok(Value::Time(CqlTime {
+            hour,
+            minute: None,
+            second: None,
+            millisecond: None,
+        }));
     }
-    let hour = parts[0]
-        .parse::<u8>()
-        .map_err(|_| EvalError::General(format!("Invalid Time hour in '{s}'")))?;
-    let minute = parts[1].parse::<u8>().ok();
+
+    let minute = parse_time_component(parts[1], CQL_TIME_MAX_MINUTE_OR_SECOND, "minute", s)?;
     if parts.len() == 2 {
         return Ok(Value::Time(CqlTime {
             hour,
-            minute,
+            minute: Some(minute),
             second: None,
             millisecond: None,
         }));
     }
     // parts[2] is "SS" or "SS.mmm"
     let sec_ms: Vec<&str> = parts[2].splitn(2, '.').collect();
-    let second = sec_ms[0].parse::<u8>().ok();
-    // Milliseconds: "9"→900ms, "99"→990ms, "999"→999ms (right-pad with zeros to 3 digits)
-    let millisecond = sec_ms.get(1).and_then(|ms_str| {
-        let padded = format!("{:0<3}", ms_str);
-        padded[..3].parse::<u32>().ok()
-    });
+    let second = parse_time_component(sec_ms[0], CQL_TIME_MAX_MINUTE_OR_SECOND, "second", s)?;
+    let millisecond = match sec_ms.get(1) {
+        Some(ms_str) => Some(
+            parse_millisecond(ms_str)
+                .ok_or_else(|| EvalError::General(format!("Invalid Time millisecond in '{s}'")))?,
+        ),
+        None => None,
+    };
     Ok(Value::Time(CqlTime {
         hour,
-        minute,
-        second,
+        minute: Some(minute),
+        second: Some(second),
         millisecond,
     }))
+}
+
+fn parse_time_component(
+    raw: &str,
+    max: u8,
+    component_name: &str,
+    source: &str,
+) -> Result<u8, EvalError> {
+    let value = raw
+        .parse::<u8>()
+        .map_err(|_| EvalError::General(format!("Invalid Time {component_name} in '{source}'")))?;
+    if value > max {
+        return Err(EvalError::General(format!(
+            "Invalid Time {component_name} in '{source}'"
+        )));
+    }
+    Ok(value)
+}
+
+pub(super) fn parse_time_component_opt(raw: &str, max: u8) -> Option<u8> {
+    let value = raw.parse::<u8>().ok()?;
+    (value <= max).then_some(value)
+}
+
+pub(super) fn parse_hour(raw: &str) -> Option<u8> {
+    parse_time_component_opt(raw, CQL_TIME_MAX_HOUR)
+}
+
+pub(super) fn parse_minute_or_second(raw: &str) -> Option<u8> {
+    parse_time_component_opt(raw, CQL_TIME_MAX_MINUTE_OR_SECOND)
+}
+
+/// Parse a CQL time millisecond component, right-padding to three digits.
+pub(super) fn parse_millisecond(raw: &str) -> Option<u32> {
+    let padded = format!("{:0<3}", raw);
+    let value = padded.get(..3)?.parse::<u32>().ok()?;
+    (value <= CQL_TIME_MAX_MILLISECOND).then_some(value)
 }
 
 /// Parse a date string `"YYYY"`, `"YYYY-MM"`, or `"YYYY-MM-DD"` → `Value::Date`.
@@ -168,10 +218,7 @@ pub(crate) fn eval_literal(lit: &elm::Literal) -> Result<Value, EvalError> {
             .parse::<i128>()
             .map(Value::Long)
             .map_err(|_| EvalError::General(format!("Invalid Long literal: '{value_str}'"))),
-        "Decimal" => value_str
-            .parse::<f64>()
-            .map(Value::Decimal)
-            .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'"))),
+        "Decimal" => parse_decimal_value(value_str),
         "String" => Ok(Value::String(value_str.to_string())),
         "Date" => parse_date_value(value_str),
         "DateTime" => parse_datetime_value(value_str),
@@ -179,6 +226,37 @@ pub(crate) fn eval_literal(lit: &elm::Literal) -> Result<Value, EvalError> {
         "" if value_str.is_empty() => Ok(Value::Null),
         _ => Ok(Value::String(value_str.to_string())),
     }
+}
+
+fn parse_decimal_value(value_str: &str) -> Result<Value, EvalError> {
+    let value = value_str
+        .parse::<f64>()
+        .map_err(|_| EvalError::General(format!("Invalid Decimal literal: '{value_str}'")))?;
+
+    if value.abs() >= CQL_DECIMAL_MAX_MAGNITUDE {
+        return Err(EvalError::General(format!(
+            "Invalid Decimal literal outside CQL Decimal range: '{value_str}'"
+        )));
+    }
+
+    if decimal_scale(value_str) > CQL_DECIMAL_MAX_SCALE
+        || (value != 0.0 && value.abs() < CQL_DECIMAL_MIN_STEP)
+    {
+        return Err(EvalError::General(format!(
+            "Invalid Decimal literal exceeds CQL Decimal scale: '{value_str}'"
+        )));
+    }
+
+    Ok(Value::Decimal(value))
+}
+
+fn decimal_scale(value_str: &str) -> usize {
+    value_str
+        .trim()
+        .trim_start_matches('-')
+        .split_once('.')
+        .map(|(_, fractional)| fractional.trim_end_matches('0').len())
+        .unwrap_or(0)
 }
 
 // ---------------------------------------------------------------------------
@@ -193,10 +271,15 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
     match (name, args.as_slice()) {
         // Aggregate
         ("Count", [list]) => super::lists::count(list),
+        ("Length", [Value::List(_) | Value::Null]) => super::lists::length(&args[0]),
+        ("Length", [Value::String(_)]) => length_str(&args[0]),
         ("Sum", [list]) => super::lists::sum(list),
         ("Min", [list]) => super::lists::min(list),
         ("Max", [list]) => super::lists::max(list),
         ("Avg", [list]) => super::lists::avg(list),
+        ("First", [list]) => super::lists::first(list),
+        ("Last", [list]) => super::lists::last(list),
+        ("Except", [a, b]) => super::lists::except_list(a, b),
         // Type conversions
         ("ToString", [v]) => to_string(v),
         ("ToInteger", [v]) => to_integer(v),
@@ -209,12 +292,26 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
         ("ToQuantity", [v]) => to_quantity(v),
         ("ToConcept", [v]) => to_concept(v),
         // String operators
+        ("Concatenate", [a, b]) => concatenate(a, b),
+        ("Upper", [s]) => upper(s),
+        ("Lower", [s]) => lower(s),
+        ("StartsWith", [s, prefix]) => starts_with(s, prefix),
+        ("EndsWith", [s, suffix]) => ends_with(s, suffix),
+        ("Matches", [s, pattern]) => matches_regex(s, pattern),
         ("SplitOnMatches", [s, pattern]) => split_on_matches(s, pattern),
         ("PositionOf", [pattern, s]) => position_of(pattern, s),
         ("LastPositionOf", [pattern, s]) => last_position_of(pattern, s),
         ("Substring", [s, start]) => substring(s, start, None),
         ("Substring", [s, start, len]) => substring(s, start, Some(len)),
         ("ReplaceMatches", [s, pattern, substitution]) => replace_matches(s, pattern, substitution),
+        ("Indexer", [source, index]) => match source {
+            Value::List(_) => super::lists::indexer(source, index),
+            Value::String(_) => indexer_str(source, index),
+            Value::Null => Ok(Value::Null),
+            _ => Err(EvalError::General(
+                "Indexer: unsupported operand types".to_string(),
+            )),
+        },
         ("IndexOf", [left, right]) => match left {
             Value::List(_) => super::lists::index_of(left, right),
             Value::String(_) => position_of(right, left),
@@ -243,6 +340,8 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
         // Tree navigation
         ("Children", [v]) => children(v),
         ("Descendants", [v]) => descendants(v),
+        ("Descendents", [v]) | ("descendents", [v]) => descendants(v),
+        ("Descendents", []) | ("descendents", []) => Ok(Value::Null),
         // Errors & messaging
         ("Message", [source, condition, code, severity, message]) => {
             eval_message(source, condition, code, severity, message)

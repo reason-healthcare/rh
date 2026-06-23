@@ -254,6 +254,54 @@ fn test_compile_source_map_to_stderr_when_no_output() {
         .stderr(predicate::str::contains("source map").or(predicate::str::contains("mappings")));
 }
 
+#[test]
+fn test_compile_source_map_resolves_lib_path_includes() {
+    let dir = TempDir::new().unwrap();
+    let lib_dir = dir.path().join("libs");
+    fs::create_dir(&lib_dir).unwrap();
+
+    let helper_path = lib_dir.join("Helper.cql");
+    fs::write(
+        &helper_path,
+        r#"library Helper version '1.0'
+
+define Answer: 41
+"#,
+    )
+    .unwrap();
+
+    let main_path = dir.path().join("main.cql");
+    let elm_path = dir.path().join("main.json");
+    fs::write(
+        &main_path,
+        r#"library Main version '1.0'
+
+include Helper version '1.0' called H
+
+define Result: H.Answer + 1
+"#,
+    )
+    .unwrap();
+
+    rh_cmd()
+        .args([
+            "cql",
+            "compile",
+            main_path.to_str().unwrap(),
+            "--output",
+            elm_path.to_str().unwrap(),
+            "--lib-path",
+            lib_dir.to_str().unwrap(),
+            "--source-map",
+        ])
+        .assert()
+        .success();
+
+    assert!(elm_path.exists(), "ELM output file should exist");
+    let sm_path = PathBuf::from(format!("{}.sourcemap.json", elm_path.display()));
+    assert!(sm_path.exists(), "Source map sidecar should exist");
+}
+
 // ---------------------------------------------------------------------------
 // Fixtures for exit-behavior tests
 // ---------------------------------------------------------------------------

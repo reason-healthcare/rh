@@ -261,6 +261,15 @@ pub fn qualified_identifier(input: Span<'_>) -> IResult<Span<'_>, Vec<String>> {
     Ok((input, parts))
 }
 
+/// Parse a qualified terminology reference as a dotted string.
+///
+/// CQL terminology declarations and code selectors use the same reference
+/// grammar, including quoted segments such as `Base."SNOMED-CT:2014"`.
+pub fn terminology_ref(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let (input, parts) = qualified_identifier(input)?;
+    Ok((input, parts.join(".")))
+}
+
 // ============================================================================
 // Keywords (case-insensitive matching)
 // ============================================================================
@@ -495,8 +504,12 @@ pub fn long_literal(input: Span<'_>) -> IResult<Span<'_>, i64> {
 }
 
 /// Parse a decimal literal
+fn decimal_literal_text(input: Span<'_>) -> IResult<Span<'_>, Span<'_>> {
+    recognize(tuple((opt(char('-')), digit1, char('.'), digit1)))(input)
+}
+
 pub fn decimal_literal(input: Span<'_>) -> IResult<Span<'_>, f64> {
-    let (input, num_str) = recognize(tuple((opt(char('-')), digit1, char('.'), digit1)))(input)?;
+    let (input, num_str) = decimal_literal_text(input)?;
 
     let value: f64 = num_str.fragment().parse().unwrap_or(0.0);
     Ok((input, value))
@@ -552,47 +565,41 @@ pub fn date_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
     Ok((input, date_str))
 }
 
-/// Parse a time literal (@T12:30:00)
+/// Parse a time literal (@T12, @T12:30, @T12:30:00)
 pub fn time_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, _) = char('@')(input)?;
     let (input, _) = char('T')(input)?;
     let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
-    let (input, _) = char(':')(input)?;
-    let (input, minute) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
 
-    // Optional seconds
-    let (input, seconds) = opt(preceded(
+    // Optional minutes, seconds, and milliseconds.
+    let (input, time_rest) = opt(tuple((
         char(':'),
         take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-    ))(input)?;
+        opt(tuple((
+            char(':'),
+            take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
+            opt(preceded(
+                char('.'),
+                take_while_m_n(1, 3, |c: char| c.is_ascii_digit()),
+            )),
+        ))),
+    )))(input)?;
 
-    // Optional milliseconds
-    let (input, millis) = opt(preceded(
-        char('.'),
-        take_while_m_n(1, 3, |c: char| c.is_ascii_digit()),
-    ))(input)?;
-
-    let time_str = match (seconds, millis) {
-        (Some(sec), Some(ms)) => {
+    let time_str = match time_rest {
+        Some((_, min, Some((_, sec, Some(ms))))) => {
             format!(
                 "{}:{}:{}.{}",
                 hour.fragment(),
-                minute.fragment(),
+                min.fragment(),
                 sec.fragment(),
                 ms.fragment()
             )
         }
-        (Some(sec), None) => {
-            format!(
-                "{}:{}:{}",
-                hour.fragment(),
-                minute.fragment(),
-                sec.fragment()
-            )
+        Some((_, min, Some((_, sec, None)))) => {
+            format!("{}:{}:{}", hour.fragment(), min.fragment(), sec.fragment())
         }
-        (None, _) => {
-            format!("{}:{}", hour.fragment(), minute.fragment())
-        }
+        Some((_, min, None)) => format!("{}:{}", hour.fragment(), min.fragment()),
+        None => hour.fragment().to_string(),
     };
 
     Ok((input, time_str))
@@ -870,6 +877,12 @@ mod tests {
         assert_eq!(parts, vec!["FHIR", "Patient Resource"]);
     }
 
+    #[test]
+    fn test_terminology_ref() {
+        let (_, reference) = terminology_ref(span("Base.\"SNOMED-CT:2014\"")).unwrap();
+        assert_eq!(reference, "Base.SNOMED-CT:2014");
+    }
+
     // ========================================================================
     // Operator Tests
     // ========================================================================
@@ -1072,6 +1085,9 @@ mod tests {
     fn test_time_literal() {
         let (_, t) = time_literal(span("@T14:30:00")).unwrap();
         assert_eq!(t, "14:30:00");
+
+        let (_, t) = time_literal(span("@T14")).unwrap();
+        assert_eq!(t, "14");
 
         let (_, t) = time_literal(span("@T14:30")).unwrap();
         assert_eq!(t, "14:30");

@@ -24,8 +24,9 @@ use super::query::{
 };
 use super::retrieve::{parse_retrieve, parse_type_specifier};
 use super::selectors::{
-    parse_bare_list_selector, parse_case, parse_if_then_else, parse_inline_tuple_selector,
-    parse_instance_selector, parse_interval_selector, parse_list_selector, parse_tuple_selector,
+    parse_bare_list_selector, parse_case, parse_code_selector, parse_if_then_else,
+    parse_inline_tuple_selector, parse_instance_selector, parse_interval_selector,
+    parse_list_selector, parse_tuple_selector,
 };
 use crate::parser::ast::*;
 use crate::parser::lexer::{
@@ -497,65 +498,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
                 }
                 (_, None) => {
                     // Fall back to simple operators
-                    let (remaining, op) = ws(alt((
-                        // "properly includes" / "properly included in" first (longer match)
-                        value(
-                            BinaryOperator::ProperlyIncludes,
-                            tuple((keyword("properly"), ws(keyword("includes")))),
-                        ),
-                        value(
-                            BinaryOperator::ProperlyIncludedIn,
-                            tuple((
-                                keyword("properly"),
-                                ws(keyword("included")),
-                                ws(keyword("in")),
-                            )),
-                        ),
-                        // Regular includes/included in
-                        value(BinaryOperator::Includes, keyword("includes")),
-                        value(
-                            BinaryOperator::IncludedIn,
-                            tuple((keyword("included"), ws(keyword("in")))),
-                        ),
-                        // Other interval operators
-                        value(BinaryOperator::During, keyword("during")),
-                        value(BinaryOperator::Overlaps, keyword("overlaps")),
-                        value(
-                            BinaryOperator::OverlapsBefore,
-                            tuple((keyword("overlaps"), ws(keyword("before")))),
-                        ),
-                        value(
-                            BinaryOperator::OverlapsAfter,
-                            tuple((keyword("overlaps"), ws(keyword("after")))),
-                        ),
-                        value(BinaryOperator::Meets, keyword("meets")),
-                        value(
-                            BinaryOperator::MeetsBefore,
-                            tuple((keyword("meets"), ws(keyword("before")))),
-                        ),
-                        value(
-                            BinaryOperator::MeetsAfter,
-                            tuple((keyword("meets"), ws(keyword("after")))),
-                        ),
-                        value(BinaryOperator::Starts, keyword("starts")),
-                        value(BinaryOperator::Ends, keyword("ends")),
-                        value(BinaryOperator::Before, keyword("before")),
-                        value(BinaryOperator::After, keyword("after")),
-                        value(
-                            BinaryOperator::SameAs,
-                            tuple((keyword("same"), ws(keyword("as")))),
-                        ),
-                        value(
-                            BinaryOperator::SameOrBefore,
-                            tuple((keyword("same"), ws(keyword("or")), ws(keyword("before")))),
-                        ),
-                        value(
-                            BinaryOperator::SameOrAfter,
-                            tuple((keyword("same"), ws(keyword("or")), ws(keyword("after")))),
-                        ),
-                        // Within
-                        value(BinaryOperator::Within, keyword("within")),
-                    )))(input)?;
+                    let (remaining, op) = parse_simple_interval_operator(input)?;
 
                     let (remaining, expr) = parse_union_expression(remaining)?;
                     Ok((remaining, (IntervalOp::Simple(op), expr)))
@@ -563,6 +506,65 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
             }
         }
     }
+}
+
+fn parse_simple_interval_operator(input: Span<'_>) -> IResult<Span<'_>, BinaryOperator> {
+    // Prefix-sensitive operators must precede their shorter forms.
+    ws(alt((
+        value(
+            BinaryOperator::ProperlyIncludes,
+            tuple((keyword("properly"), ws(keyword("includes")))),
+        ),
+        value(
+            BinaryOperator::ProperlyIncludedIn,
+            tuple((
+                keyword("properly"),
+                ws(keyword("included")),
+                ws(keyword("in")),
+            )),
+        ),
+        value(BinaryOperator::Includes, keyword("includes")),
+        value(
+            BinaryOperator::IncludedIn,
+            tuple((keyword("included"), ws(keyword("in")))),
+        ),
+        value(
+            BinaryOperator::OverlapsBefore,
+            tuple((keyword("overlaps"), ws(keyword("before")))),
+        ),
+        value(
+            BinaryOperator::OverlapsAfter,
+            tuple((keyword("overlaps"), ws(keyword("after")))),
+        ),
+        value(BinaryOperator::Overlaps, keyword("overlaps")),
+        value(
+            BinaryOperator::MeetsBefore,
+            tuple((keyword("meets"), ws(keyword("before")))),
+        ),
+        value(
+            BinaryOperator::MeetsAfter,
+            tuple((keyword("meets"), ws(keyword("after")))),
+        ),
+        value(BinaryOperator::Meets, keyword("meets")),
+        value(BinaryOperator::During, keyword("during")),
+        value(BinaryOperator::Starts, keyword("starts")),
+        value(BinaryOperator::Ends, keyword("ends")),
+        value(BinaryOperator::Before, keyword("before")),
+        value(BinaryOperator::After, keyword("after")),
+        value(
+            BinaryOperator::SameOrBefore,
+            tuple((keyword("same"), ws(keyword("or")), ws(keyword("before")))),
+        ),
+        value(
+            BinaryOperator::SameOrAfter,
+            tuple((keyword("same"), ws(keyword("or")), ws(keyword("after")))),
+        ),
+        value(
+            BinaryOperator::SameAs,
+            tuple((keyword("same"), ws(keyword("as")))),
+        ),
+        value(BinaryOperator::Within, keyword("within")),
+    )))(input)
 }
 
 /// Parse timing phrase with its right operand
@@ -1413,6 +1415,7 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_inline_tuple_selector,
             parse_bare_list_selector,
             parse_tuple_selector,
+            parse_code_selector,
             parse_instance_selector,
         )),
         // Group 3: Control flow
