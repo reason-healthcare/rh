@@ -10,8 +10,10 @@ three questions:
 3. How does our generated ELM behave in JavaScript `cql-execution`?
 
 Generated per-run artifacts live under `conformance/results/`. This document is
-the human-facing summary; [SPEC_COVERAGE.md](SPEC_COVERAGE.md) is the detailed
-operator-by-operator map.
+the canonical human-facing summary. [README.md](README.md) has the very short
+crate-level snapshot, [SPEC_COVERAGE.md](SPEC_COVERAGE.md) has the detailed
+operator-by-operator map, and [conformance/README.md](conformance/README.md)
+has the runbook for regenerating these numbers.
 
 ## One-Page Status
 

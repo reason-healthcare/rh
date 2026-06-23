@@ -1,8 +1,17 @@
 # rh-cql Conformance Runbook
 
-Start with [../CONFORMANCE.md](../CONFORMANCE.md) for the current single-page
-summary. This directory contains the scripts, fixtures, generated reports, and
-external-tool setup used to produce that summary.
+Start with [../CONFORMANCE.md](../CONFORMANCE.md) for the current status. This
+directory is the runbook and workspace for regenerating that status.
+
+The documentation split is intentionally small:
+
+| Document | Purpose |
+|---|---|
+| [../README.md](../README.md) | Crate overview and very-high-level conformance snapshot |
+| [../CONFORMANCE.md](../CONFORMANCE.md) | Canonical current conformance summary |
+| [../SPEC_COVERAGE.md](../SPEC_COVERAGE.md) | Detailed operator and pipeline-stage coverage |
+| [CQL_TEST_CORPUS.md](CQL_TEST_CORPUS.md) | Source corpus strategy and reduction workflow |
+| This file | Commands, generated artifacts, and external reference setup |
 
 ## What Each Signal Means
 

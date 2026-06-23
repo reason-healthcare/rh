@@ -20,8 +20,20 @@ This crate provides:
 ✅ **Core Complete** — Three-stage pipeline (Parse → Semantic Analysis → ELM Emit) implemented.
 Source maps, explain mode, and ELM evaluation engine are all functional.
 
-For conformance and specification coverage, start with
-[CONFORMANCE_INDEX.md](./CONFORMANCE_INDEX.md).
+### Conformance Snapshot
+
+Current `rh-cql` status is summarized in [CONFORMANCE.md](./CONFORMANCE.md).
+The short version:
+
+| Signal | Current State |
+|---|---|
+| HL7 CQL expression suite | 1 241 correct evaluated results, 0 wrong answers, 112 remaining unimplemented outcomes |
+| Java CQL-to-ELM comparison | Java translates 1 410 / 1 426 HL7 rows; `rh-cql` compiles/evaluates 1 269 / 1 426 rows in the same matrix |
+| JavaScript `cql-execution` interop | 601 / 1 426 rows pass with `rh-cql` ELM; failures are categorized as compile, runtime, value mismatch, invalid handling, or unsupported expected output |
+| Expanded source corpus | 308 / 1 249 larger source files compile in the fast RH-only audit; 1 invalid/ambiguous fixture is quarantined |
+
+Use [SPEC_COVERAGE.md](./SPEC_COVERAGE.md) for operator-by-operator coverage
+and [conformance/README.md](./conformance/README.md) for the audit runbook.
 
 ## Quick Start
 
