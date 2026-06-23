@@ -682,20 +682,6 @@ fn skip_reason_for_expression(expr: &str) -> Option<String> {
         return Some(format!("Long literal in expression: {expr}"));
     }
 
-    // Quantity comparison tests that require cross-unit conversion are not yet
-    // supported (e.g. 1'cm' = 0.01'm'). Simple quantity expressions parse fine.
-    // The failing patterns compare quantities with different units that need
-    // UCUM conversion (cm↔m, g↔kg, etc.).
-    let cross_unit_patterns = [
-        ("'cm'", "'m'"), // cm vs m comparisons
-        ("'g'", "'kg'"), // g vs kg comparisons
-    ];
-    for (unit_a, unit_b) in cross_unit_patterns {
-        if expr.contains(unit_a) && expr.contains(unit_b) {
-            return Some(format!("Cross-unit quantity comparison: {expr}"));
-        }
-    }
-
     // Log(x, 1): log base 1 is undefined (0/0 mathematically); our engine
     // returns Null while the HL7 spec expects 0.0 — skip as a known edge case.
     if expr.contains(", 1)") && expr.starts_with("Log(") {

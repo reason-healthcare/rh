@@ -22,7 +22,7 @@ audit-strict:
     out_dir="conformance/results/audit"
     mkdir -p "$out_dir"
     RH_CQL_HL7_SUMMARY_DIR="$out_dir" \
-    RH_CQL_HL7_MAX_SKIP=58 \
+    RH_CQL_HL7_MAX_SKIP=47 \
     RH_CQL_HL7_MAX_COMPILE_ERR=94 \
     RH_CQL_HL7_MAX_EVAL_ERR=21 \
     RH_CQL_HL7_MAX_INVALID_FAIL=16 \

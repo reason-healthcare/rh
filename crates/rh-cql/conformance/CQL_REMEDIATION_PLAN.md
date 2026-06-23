@@ -15,9 +15,9 @@ The HL7 expression matrix remains the strongest specification-facing signal:
 | Metric | Count |
 |---|---:|
 | Parsed HL7 cases | 1 426 |
-| `rh-cql` pass | 1 230 |
+| `rh-cql` pass | 1 241 |
 | Wrong-answer fail | 0 |
-| Skip | 58 |
+| Skip | 47 |
 | Compile error | 94 |
 | Eval error | 21 |
 | Invalid input unexpectedly accepted | 16 |
@@ -35,7 +35,7 @@ Failure concentration:
 
 | Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented |
 |---|---:|---:|---:|---:|---:|---:|
-| `rh-cql` | 1 230 | 94 | 21 | 0 | 58 | 16 |
+| `rh-cql` | 1 241 | 94 | 21 | 0 | 47 | 16 |
 | Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 |
 | JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 |
 
@@ -268,6 +268,14 @@ Status:
   0 wrong-answer fail / 0 compile errors / 0 eval errors. `just audit-strict`
   now gates at 1 230 pass / 0 wrong-answer fail / 58 skip /
   94 compile errors / 21 eval errors / 16 invalid failures, for
+  131 unimplemented outcomes.
+- [x] 2026-06-23: Completed the comparison/equivalence slice. Added
+  model-local UCUM normalization for compatible quantity comparisons and made
+  quantity equality/equivalence share the same normalization, then removed the
+  HL7 cross-unit comparison skip. The HL7 comparison suite now reports
+  183 pass / 0 wrong-answer fail / 0 skip / 0 compile errors / 0 eval errors.
+  `just audit-strict` now gates at 1 241 pass / 0 wrong-answer fail /
+  47 skip / 94 compile errors / 21 eval errors / 16 invalid failures, for
   131 unimplemented outcomes.
 
 Priority order:

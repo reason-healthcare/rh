@@ -950,6 +950,26 @@ fn eval_string_function_refs() {
     );
 }
 
+#[test]
+fn eval_cross_unit_quantity_comparison() {
+    assert_eq!(
+        eval_expr("library T define X: 1 'cm' = 0.01 'm'", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 1 'cm' ~ 0.01 'm'", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 1 'm' > 10 'cm'", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: 1 'm' <= 10 'cm'", "X"),
+        Value::Boolean(false)
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Wave-2 conformance gap coverage (CQL spec section coverage)
 // ---------------------------------------------------------------------------

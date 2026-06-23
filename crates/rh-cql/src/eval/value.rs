@@ -80,6 +80,37 @@ pub struct CqlQuantity {
     pub unit: String,
 }
 
+pub(crate) fn comparable_quantity_values(a: &CqlQuantity, b: &CqlQuantity) -> Option<(f64, f64)> {
+    if a.unit == b.unit {
+        return Some((a.value, b.value));
+    }
+    let (a_dimension, a_factor) = comparable_quantity_unit(&a.unit)?;
+    let (b_dimension, b_factor) = comparable_quantity_unit(&b.unit)?;
+    if a_dimension != b_dimension {
+        return None;
+    }
+    Some((a.value * a_factor, b.value * b_factor))
+}
+
+pub(crate) fn comparable_quantities_equal(a: &CqlQuantity, b: &CqlQuantity) -> Option<bool> {
+    let (a_value, b_value) = comparable_quantity_values(a, b)?;
+    let tolerance = 1e-12_f64 * a_value.abs().max(b_value.abs()).max(1.0);
+    Some((a_value - b_value).abs() <= tolerance)
+}
+
+fn comparable_quantity_unit(unit: &str) -> Option<(&'static str, f64)> {
+    match unit {
+        "mm" => Some(("length", 0.001)),
+        "cm" => Some(("length", 0.01)),
+        "m" => Some(("length", 1.0)),
+        "km" => Some(("length", 1000.0)),
+        "mg" => Some(("mass", 0.001)),
+        "g" => Some(("mass", 1.0)),
+        "kg" => Some(("mass", 1000.0)),
+        _ => None,
+    }
+}
+
 /// A single clinical code from a given code system.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CqlCode {
@@ -358,6 +389,12 @@ pub fn cql_equal(a: &Value, b: &Value) -> Value {
     match (a, b) {
         (Value::Decimal(x), Value::Integer(y)) => return Value::Boolean(*x == *y as f64),
         (Value::Integer(x), Value::Decimal(y)) => return Value::Boolean(*x as f64 == *y),
+        (Value::Quantity(x), Value::Quantity(y)) => {
+            if let Some(equal) = comparable_quantities_equal(x, y) {
+                return Value::Boolean(equal);
+            }
+            return Value::Boolean(false);
+        }
         // Time equality: different precision → Null (CQL §5.6).
         (Value::Time(at), Value::Time(bt)) => {
             if at.millisecond.is_some() != bt.millisecond.is_some()
@@ -435,6 +472,9 @@ pub fn cql_equivalent(a: &Value, b: &Value) -> bool {
         // Integer/Decimal cross-type: 1.0 ~ 1 → true
         (Value::Decimal(x), Value::Integer(y)) => *x == *y as f64,
         (Value::Integer(x), Value::Decimal(y)) => *x as f64 == *y,
+        (Value::Quantity(x), Value::Quantity(y)) => {
+            comparable_quantities_equal(x, y).unwrap_or(false)
+        }
         // Decimal: treat NaN as not equivalent; use total-order bitwise compare
         // to avoid surprises from IEEE 754 NaN behavior.
         (Value::Decimal(x), Value::Decimal(y)) => x.to_bits() == y.to_bits(),
