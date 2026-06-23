@@ -203,6 +203,12 @@ Status:
   standard FHIR support library includes. `FHIRHelpers`, `FHIRCommon`,
   `FHIRModelInfo`, and `FHIR-ModelInfo` now resolve from the corresponding
   `fhir.cqf.common` FHIR package when included without a CQL namespace.
+- [x] 2026-06-23: Improved modelinfo-backed property resolution for FHIR fields.
+  Member analysis now resolves class elements through modelinfo type specifiers,
+  inherited base classes, list-valued properties, and choice-valued properties.
+  The fallback FHIR R4 model now includes common complex datatypes and fields
+  such as `Patient.name`, `DomainResource.text`, `Observation.value`, and
+  `MedicationRequest.dosageInstruction`.
 
 Observed patterns:
 
@@ -216,8 +222,8 @@ Initial targets:
 1. [x] Teach corpus audit to provide include search paths for files in the same corpus directory.
 2. [x] Improve compile API/library provider use for multi-library corpora.
 3. [x] Resolve qualified identifiers across included libraries consistently.
-4. [ ] Improve modelinfo-backed property resolution for FHIR/QI-Core fields.
-5. [ ] Add choice-type property handling for common eCQM patterns.
+4. [x] Improve modelinfo-backed property resolution for FHIR/QI-Core fields.
+5. [x] Add choice-type property handling for common eCQM patterns.
 
 Acceptance criteria:
 

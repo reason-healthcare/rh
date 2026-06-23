@@ -276,13 +276,47 @@ impl ModelInfoProvider for MemoryModelInfoProvider {
     }
 }
 
+fn class_element(name: &str, element_type: &str) -> crate::modelinfo::ClassInfoElement {
+    crate::modelinfo::ClassInfoElement {
+        name: Some(name.to_string()),
+        element_type: Some(element_type.to_string()),
+        ..Default::default()
+    }
+}
+
+fn list_class_element(name: &str, element_type: &str) -> crate::modelinfo::ClassInfoElement {
+    crate::modelinfo::ClassInfoElement {
+        name: Some(name.to_string()),
+        element_type_specifier: Some(crate::modelinfo::TypeSpecifier::ListTypeSpecifier(
+            crate::modelinfo::ListTypeSpecifier {
+                element_type: Some(element_type.to_string()),
+                ..Default::default()
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+fn choice_class_element(name: &str, types: &[&str]) -> crate::modelinfo::ClassInfoElement {
+    crate::modelinfo::ClassInfoElement {
+        name: Some(name.to_string()),
+        element_type_specifier: Some(crate::modelinfo::TypeSpecifier::ChoiceTypeSpecifier(
+            crate::modelinfo::ChoiceTypeSpecifier {
+                types: types.iter().map(|ty| (*ty).to_string()).collect(),
+                ..Default::default()
+            },
+        )),
+        ..Default::default()
+    }
+}
+
 /// Pre-built FHIR R4 ModelInfo.
 ///
 /// This provides a basic ModelInfo for FHIR R4 with the core resource types.
 /// For full FHIR support, load the complete ModelInfo from the FHIR-ModelInfo
 /// specification.
 pub fn fhir_r4_model_info() -> ModelInfo {
-    use crate::modelinfo::{ClassInfo, ClassInfoElement, SimpleTypeInfo};
+    use crate::modelinfo::{ClassInfo, SimpleTypeInfo};
 
     ModelInfo {
         name: Some("FHIR".to_string()),
@@ -372,11 +406,7 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 name: Some("Element".to_string()),
                 base_type: Some("System.Any".to_string()),
                 retrievable: Some(false),
-                element: vec![ClassInfoElement {
-                    name: Some("id".to_string()),
-                    element_type: Some("System.String".to_string()),
-                    ..Default::default()
-                }],
+                element: vec![class_element("id", "System.String")],
                 ..Default::default()
             }),
             TypeInfo::ClassInfo(ClassInfo {
@@ -385,16 +415,8 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 base_type: Some("System.Any".to_string()),
                 retrievable: Some(true),
                 element: vec![
-                    ClassInfoElement {
-                        name: Some("id".to_string()),
-                        element_type: Some("System.String".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("meta".to_string()),
-                        element_type: Some("FHIR.Meta".to_string()),
-                        ..Default::default()
-                    },
+                    class_element("id", "System.String"),
+                    class_element("meta", "FHIR.Meta"),
                 ],
                 ..Default::default()
             }),
@@ -403,11 +425,151 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 name: Some("DomainResource".to_string()),
                 base_type: Some("FHIR.Resource".to_string()),
                 retrievable: Some(true),
-                element: vec![ClassInfoElement {
-                    name: Some("text".to_string()),
-                    element_type: Some("FHIR.Narrative".to_string()),
-                    ..Default::default()
-                }],
+                element: vec![class_element("text", "FHIR.Narrative")],
+                ..Default::default()
+            }),
+            // Common complex datatypes
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Meta".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![class_element("versionId", "System.String")],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Narrative".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("status", "System.String"),
+                    class_element("div", "System.String"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Period".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("start", "System.DateTime"),
+                    class_element("end", "System.DateTime"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Quantity".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("value", "System.Decimal"),
+                    class_element("comparator", "System.String"),
+                    class_element("unit", "System.String"),
+                    class_element("system", "System.String"),
+                    class_element("code", "System.String"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Reference".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("reference", "System.String"),
+                    class_element("type", "System.String"),
+                    class_element("identifier", "FHIR.Identifier"),
+                    class_element("display", "System.String"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Identifier".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("use", "System.String"),
+                    class_element("type", "FHIR.CodeableConcept"),
+                    class_element("system", "System.String"),
+                    class_element("value", "System.String"),
+                    class_element("period", "FHIR.Period"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Coding".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("system", "System.String"),
+                    class_element("version", "System.String"),
+                    class_element("code", "System.String"),
+                    class_element("display", "System.String"),
+                    class_element("userSelected", "System.Boolean"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("CodeableConcept".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    list_class_element("coding", "FHIR.Coding"),
+                    class_element("text", "System.String"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("HumanName".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("use", "System.String"),
+                    class_element("text", "System.String"),
+                    class_element("family", "System.String"),
+                    list_class_element("given", "System.String"),
+                    list_class_element("prefix", "System.String"),
+                    list_class_element("suffix", "System.String"),
+                    class_element("period", "FHIR.Period"),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Dosage".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("text", "System.String"),
+                    class_element("timing", "FHIR.Timing"),
+                    choice_class_element("dose", &["FHIR.Quantity", "FHIR.Range"]),
+                ],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Timing".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![class_element("code", "FHIR.CodeableConcept")],
+                ..Default::default()
+            }),
+            TypeInfo::ClassInfo(ClassInfo {
+                namespace: Some("FHIR".to_string()),
+                name: Some("Range".to_string()),
+                base_type: Some("FHIR.Element".to_string()),
+                retrievable: Some(false),
+                element: vec![
+                    class_element("low", "FHIR.Quantity"),
+                    class_element("high", "FHIR.Quantity"),
+                ],
                 ..Default::default()
             }),
             // Patient
@@ -419,31 +581,11 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 retrievable: Some(true),
                 primary_code_path: None,
                 element: vec![
-                    ClassInfoElement {
-                        name: Some("identifier".to_string()),
-                        element_type: Some("FHIR.Identifier".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("active".to_string()),
-                        element_type: Some("System.Boolean".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("name".to_string()),
-                        element_type: Some("FHIR.HumanName".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("gender".to_string()),
-                        element_type: Some("System.String".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("birthDate".to_string()),
-                        element_type: Some("System.Date".to_string()),
-                        ..Default::default()
-                    },
+                    list_class_element("identifier", "FHIR.Identifier"),
+                    class_element("active", "System.Boolean"),
+                    list_class_element("name", "FHIR.HumanName"),
+                    class_element("gender", "System.String"),
+                    class_element("birthDate", "System.Date"),
                 ],
                 ..Default::default()
             }),
@@ -456,26 +598,24 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 retrievable: Some(true),
                 primary_code_path: Some("code".to_string()),
                 element: vec![
-                    ClassInfoElement {
-                        name: Some("status".to_string()),
-                        element_type: Some("System.String".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("code".to_string()),
-                        element_type: Some("FHIR.CodeableConcept".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("subject".to_string()),
-                        element_type: Some("FHIR.Reference".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("value".to_string()),
-                        element_type: Some("System.Any".to_string()),
-                        ..Default::default()
-                    },
+                    class_element("status", "System.String"),
+                    class_element("code", "FHIR.CodeableConcept"),
+                    class_element("subject", "FHIR.Reference"),
+                    choice_class_element(
+                        "effective",
+                        &["System.DateTime", "FHIR.Period", "FHIR.Timing"],
+                    ),
+                    choice_class_element(
+                        "value",
+                        &[
+                            "FHIR.Quantity",
+                            "FHIR.CodeableConcept",
+                            "System.String",
+                            "System.Boolean",
+                            "System.Integer",
+                            "FHIR.Range",
+                        ],
+                    ),
                 ],
                 ..Default::default()
             }),
@@ -488,26 +628,14 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 retrievable: Some(true),
                 primary_code_path: Some("code".to_string()),
                 element: vec![
-                    ClassInfoElement {
-                        name: Some("clinicalStatus".to_string()),
-                        element_type: Some("FHIR.CodeableConcept".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("verificationStatus".to_string()),
-                        element_type: Some("FHIR.CodeableConcept".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("code".to_string()),
-                        element_type: Some("FHIR.CodeableConcept".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("subject".to_string()),
-                        element_type: Some("FHIR.Reference".to_string()),
-                        ..Default::default()
-                    },
+                    class_element("clinicalStatus", "FHIR.CodeableConcept"),
+                    class_element("verificationStatus", "FHIR.CodeableConcept"),
+                    class_element("code", "FHIR.CodeableConcept"),
+                    class_element("subject", "FHIR.Reference"),
+                    choice_class_element(
+                        "onset",
+                        &["System.DateTime", "FHIR.Period", "System.String"],
+                    ),
                 ],
                 ..Default::default()
             }),
@@ -520,31 +648,11 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 retrievable: Some(true),
                 primary_code_path: Some("type".to_string()),
                 element: vec![
-                    ClassInfoElement {
-                        name: Some("status".to_string()),
-                        element_type: Some("System.String".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("class".to_string()),
-                        element_type: Some("FHIR.Coding".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("type".to_string()),
-                        element_type: Some("FHIR.CodeableConcept".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("subject".to_string()),
-                        element_type: Some("FHIR.Reference".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("period".to_string()),
-                        element_type: Some("FHIR.Period".to_string()),
-                        ..Default::default()
-                    },
+                    class_element("status", "System.String"),
+                    class_element("class", "FHIR.Coding"),
+                    list_class_element("type", "FHIR.CodeableConcept"),
+                    class_element("subject", "FHIR.Reference"),
+                    class_element("period", "FHIR.Period"),
                 ],
                 ..Default::default()
             }),
@@ -559,26 +667,11 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                 retrievable: Some(true),
                 primary_code_path: Some("medication".to_string()),
                 element: vec![
-                    ClassInfoElement {
-                        name: Some("status".to_string()),
-                        element_type: Some("System.String".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("medication".to_string()),
-                        element_type: Some("System.Any".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("subject".to_string()),
-                        element_type: Some("FHIR.Reference".to_string()),
-                        ..Default::default()
-                    },
-                    ClassInfoElement {
-                        name: Some("authoredOn".to_string()),
-                        element_type: Some("System.DateTime".to_string()),
-                        ..Default::default()
-                    },
+                    class_element("status", "System.String"),
+                    choice_class_element("medication", &["FHIR.CodeableConcept", "FHIR.Reference"]),
+                    class_element("subject", "FHIR.Reference"),
+                    class_element("authoredOn", "System.DateTime"),
+                    list_class_element("dosageInstruction", "FHIR.Dosage"),
                 ],
                 ..Default::default()
             }),
