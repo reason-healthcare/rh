@@ -148,6 +148,11 @@ Status:
 - [x] 2026-06-23: `just corpus-audit-rh` improved the RH-only expanded corpus
   baseline to 351 pass / 897 compile errors, from the prior 337 pass / 911
   compile errors.
+- [x] 2026-06-23: Added parser coverage for hour-precision time literals
+  (`@T10`) and prefix-sensitive interval operators (`overlaps before`,
+  `meets after`). Generated `DateTimePrecision.cql` and
+  `IntervalBoundaries.cql` now compile, and `just corpus-audit-rh` improves the
+  RH-only expanded corpus baseline to 355 pass / 893 compile errors.
 
 Observed patterns:
 
@@ -163,7 +168,7 @@ Initial targets:
 2. [x] Support omitted-colon define bodies where accepted by the Java translator, or explicitly classify source-invalid if not spec-valid.
 3. [x] Expand retrieve parsing for measure-style `[Type: "Value Set"] Alias where ...`.
 4. [x] Expand code, codesystem, valueset, and display parsing to match Java-passing corpus forms.
-5. Add date/time phrase parser coverage for `same or before`, `same or after`, `before`, `after`, and interval phrase variants.
+5. [x] Add date/time phrase parser coverage for `same or before`, `same or after`, `before`, `after`, and interval phrase variants.
 
 Acceptance criteria:
 

@@ -281,7 +281,24 @@ pub fn overlaps_before(a: &Value, b: &Value) -> Result<Value, EvalError> {
 
 /// `OverlapsAfter` — a ends after b and overlaps b.
 pub fn overlaps_after(a: &Value, b: &Value) -> Result<Value, EvalError> {
-    overlaps_before(b, a)
+    if matches!(a, Value::Null) || matches!(b, Value::Null) {
+        return Ok(Value::Null);
+    }
+    let (_, a_high, _, _) = unwrap_interval(a)?;
+    let (_, b_high, _, _) = unwrap_interval(b)?;
+
+    let ends_after = match (a_high, b_high) {
+        (None, Some(_)) => Some(true),
+        (Some(_), None) => Some(false),
+        (None, None) => Some(false),
+        (Some(ah), Some(bh)) => cql_compare(ah, bh).map(|o| o == Ordering::Greater),
+    };
+    let ov = overlaps(a, b)?;
+    match (ends_after, ov) {
+        (Some(true), Value::Boolean(true)) => Ok(Value::Boolean(true)),
+        (Some(_), _) => Ok(Value::Boolean(false)),
+        _ => Ok(Value::Null),
+    }
 }
 
 /// `Meets` — a ends immediately before b starts (or vice versa).
@@ -876,6 +893,15 @@ mod tests {
         let b = int_interval(3, 8);
         assert_eq!(overlaps_before(&a, &b).unwrap(), Value::Boolean(true));
         assert_eq!(overlaps_before(&b, &a).unwrap(), Value::Boolean(false));
+    }
+
+    #[test]
+    fn overlaps_after_basic() {
+        let a = int_interval(5, 12);
+        let b = int_interval(1, 10);
+        let c = int_interval(4, 10);
+        assert_eq!(overlaps_after(&a, &b).unwrap(), Value::Boolean(true));
+        assert_eq!(overlaps_after(&c, &b).unwrap(), Value::Boolean(false));
     }
 
     #[test]

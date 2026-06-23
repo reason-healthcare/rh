@@ -453,6 +453,45 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_same_or_after_hour_precision_time() {
+        let expr = parse_expr("@T10:30 same or after @T10");
+        assert!(matches!(
+            expr,
+            Expression::TimingExpression(TimingExpression {
+                timing: TimingPhrase::SameTiming {
+                    direction: SameDirection::OrAfter,
+                    ..
+                },
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_overlaps_before_prefers_compound_operator() {
+        let expr = parse_expr("Interval[1, 5] overlaps before Interval[5, 10]");
+        assert!(matches!(
+            expr,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::OverlapsBefore,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_meets_after_prefers_compound_operator() {
+        let expr = parse_expr("Interval[5, 10] meets after Interval[1, 5)");
+        assert!(matches!(
+            expr,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::MeetsAfter,
+                ..
+            })
+        ));
+    }
+
     // ========================================================================
     // Section 6.9 Parser Conformance Tests
     // ========================================================================

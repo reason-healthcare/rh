@@ -9,7 +9,7 @@
 use super::ast::*;
 use super::expression::{expression, parse_type_specifier};
 use super::lexer::{
-    any_identifier, keyword, qualified_identifier, skip_ws_and_comments, string_literal, ws,
+    any_identifier, keyword, skip_ws_and_comments, string_literal, terminology_ref, ws,
 };
 use super::span::Span;
 use nom::{
@@ -154,17 +154,12 @@ pub fn parse_valueset_def(input: Span<'_>) -> IResult<Span<'_>, ValueSetDef> {
 }
 
 fn parse_codesystem_list(input: Span<'_>) -> IResult<Span<'_>, Vec<String>> {
-    let (input, first) = parse_terminology_ref(input)?;
-    let (input, rest) = many0(preceded(ws(char(',')), parse_terminology_ref))(input)?;
+    let (input, first) = terminology_ref(input)?;
+    let (input, rest) = many0(preceded(ws(char(',')), terminology_ref))(input)?;
 
     let mut list = vec![first];
     list.extend(rest);
     Ok((input, list))
-}
-
-fn parse_terminology_ref(input: Span<'_>) -> IResult<Span<'_>, String> {
-    let (input, parts) = qualified_identifier(input)?;
-    Ok((input, parts.join(".")))
 }
 
 // ============================================================================
@@ -181,7 +176,7 @@ pub fn parse_code_def(input: Span<'_>) -> IResult<Span<'_>, CodeDef> {
     let (input, _) = ws(char(':'))(input)?;
     let (input, code) = string_literal(input)?;
     let (input, _) = ws(keyword("from"))(input)?;
-    let (input, codesystem) = parse_terminology_ref(input)?;
+    let (input, codesystem) = terminology_ref(input)?;
     let (input, display) = opt(preceded(ws(keyword("display")), string_literal))(input)?;
 
     Ok((
