@@ -129,6 +129,12 @@ jobs:
           prerelease: true
           files: artifacts/*
           body: |
+            ## Changes
+
+            See the [CHANGELOG](https://github.com/reason-healthcare/rh/blob/${{ github.ref_name }}/CHANGELOG.md) for the release summary.
+
+            ---
+
             ## Install
 
             **macOS / Linux (Homebrew):**

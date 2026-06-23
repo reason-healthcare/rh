@@ -59,7 +59,7 @@ rh package pack my-package/output/
 Every command supports `--format human|json|ndjson`. Use `--format json` for scripting and automation:
 
 ```json
-{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.1", "command": "rh"}}
+{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.3", "command": "rh"}}
 ```
 
 | Exit code | Meaning |
@@ -137,7 +137,7 @@ at your option.
 
 ## Contributing & Development
 
-See [DEVELOPER.md](DEVELOPER.md) for build setup, testing, workspace structure, and release workflow. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+See [DEVELOPER.md](DEVELOPER.md) for build setup, testing, workspace structure, and release workflow. See [CHANGELOG.md](CHANGELOG.md) for release notes and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## Supported By
 

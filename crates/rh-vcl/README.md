@@ -30,7 +30,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rh-vcl = "0.2.1"
+rh-vcl = "0.2.3"
 ```
 
 ## Quick Start

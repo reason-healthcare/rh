@@ -222,7 +222,7 @@ parseable error envelope on stdout _and_ prints `error: <message>` on stderr:
 {
   "ok": false,
   "errors": [{ "code": "operational_error", "message": "..." }],
-  "meta": { "version": "0.2.1", "command": "rh" }
+  "meta": { "version": "0.2.3", "command": "rh" }
 }
 ```
 
