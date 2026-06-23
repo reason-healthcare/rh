@@ -193,10 +193,15 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
     match (name, args.as_slice()) {
         // Aggregate
         ("Count", [list]) => super::lists::count(list),
+        ("Length", [Value::List(_) | Value::Null]) => super::lists::length(&args[0]),
+        ("Length", [Value::String(_)]) => length_str(&args[0]),
         ("Sum", [list]) => super::lists::sum(list),
         ("Min", [list]) => super::lists::min(list),
         ("Max", [list]) => super::lists::max(list),
         ("Avg", [list]) => super::lists::avg(list),
+        ("First", [list]) => super::lists::first(list),
+        ("Last", [list]) => super::lists::last(list),
+        ("Except", [a, b]) => super::lists::except_list(a, b),
         // Type conversions
         ("ToString", [v]) => to_string(v),
         ("ToInteger", [v]) => to_integer(v),
@@ -243,6 +248,8 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
         // Tree navigation
         ("Children", [v]) => children(v),
         ("Descendants", [v]) => descendants(v),
+        ("Descendents", [v]) | ("descendents", [v]) => descendants(v),
+        ("Descendents", []) | ("descendents", []) => Ok(Value::Null),
         // Errors & messaging
         ("Message", [source, condition, code, severity, message]) => {
             eval_message(source, condition, code, severity, message)

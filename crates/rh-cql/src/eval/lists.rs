@@ -45,6 +45,15 @@ pub fn count(list: &Value) -> Result<Value, EvalError> {
     Ok(Value::Integer(n as i64))
 }
 
+/// `Length` — total number of list elements, including nulls.
+pub fn length(list: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) {
+        return Ok(Value::Integer(0));
+    }
+    let items = require_list("Length", list)?;
+    Ok(Value::Integer(items.len() as i64))
+}
+
 // ---------------------------------------------------------------------------
 // Aggregates
 // ---------------------------------------------------------------------------

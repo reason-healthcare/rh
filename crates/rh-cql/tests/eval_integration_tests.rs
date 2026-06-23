@@ -876,6 +876,44 @@ fn eval_interval_included_in_respects_precision() {
     );
 }
 
+#[test]
+fn eval_list_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: First({ null, 1 })", "X"),
+        Value::Null
+    );
+    assert_eq!(
+        eval_expr("library T define X: Last({ null, 1 })", "X"),
+        Value::Integer(1)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Length({ null, 1 })", "X"),
+        Value::Integer(2)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Except({}, {})", "X"),
+        Value::List(vec![])
+    );
+}
+
+#[test]
+fn eval_list_scalar_inclusion_dispatch() {
+    assert_eq!(
+        eval_expr(
+            "library T define X: { @T02:29:15.156, @T15:59:59.999, @T20:59:59.999 } includes @T15:59:59.999",
+            "X"
+        ),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr(
+            "library T define X: @T16:59:59.999 included in { @T02:29:15.156, @T15:59:59.999, @T20:59:59.999 }",
+            "X"
+        ),
+        Value::Boolean(false)
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Wave-2 conformance gap coverage (CQL spec section coverage)
 // ---------------------------------------------------------------------------

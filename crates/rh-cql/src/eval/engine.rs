@@ -1975,6 +1975,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match (&a, &b) {
                     // Includes(list, null-element): null element propagation → Null
                     (Value::List(_), Value::Null) => Ok(Value::Null),
+                    (Value::List(_), _) if !matches!(b, Value::List(_)) => {
+                        super::lists::list_contains(&a, &b)
+                    }
                     // List includes (null container is treated as empty list)
                     (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
                         super::lists::list_includes(&a, &b)
@@ -1992,6 +1995,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match (&a, &b) {
                     // IncludedIn(null-element, list): null element propagation → Null
                     (Value::Null, Value::List(_)) => Ok(Value::Null),
+                    (_, Value::List(_)) if !matches!(a, Value::List(_)) => {
+                        super::lists::in_list(&a, &b)
+                    }
                     // List included in (null container is treated as empty list)
                     (Value::List(_) | Value::Null, Value::List(_) | Value::Null) => {
                         super::lists::list_included_in(&a, &b)
