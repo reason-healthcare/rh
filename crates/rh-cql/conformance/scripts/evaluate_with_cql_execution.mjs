@@ -164,13 +164,26 @@ function parseExpected(raw) {
 }
 
 function decodeCqlString(value) {
-  return value
-    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\r")
-    .replace(/\\t/g, "\t")
-    .replace(/\\\\/g, "\\")
-    .replace(/\\'/g, "'");
+  let decoded = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (char !== "\\" || index + 1 >= value.length) {
+      decoded += char;
+      continue;
+    }
+
+    const escaped = value[index + 1];
+    if (escaped === "u" && /^[0-9a-fA-F]{4}$/.test(value.slice(index + 2, index + 6))) {
+      decoded += String.fromCharCode(Number.parseInt(value.slice(index + 2, index + 6), 16));
+      index += 5;
+      continue;
+    }
+
+    const escapes = { n: "\n", r: "\r", t: "\t", "\\": "\\", "'": "'" };
+    decoded += escapes[escaped] ?? escaped;
+    index += 1;
+  }
+  return decoded;
 }
 
 function valuesMatch(actual, expected) {
