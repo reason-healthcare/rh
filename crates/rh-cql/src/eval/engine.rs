@@ -1718,13 +1718,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             Expression::Indexer(bin) => {
                 let (list, idx) = self.eval_binary_args(bin)?;
                 match (&list, &idx) {
-                    (Value::List(items), Value::Integer(i)) => {
-                        if *i < 0 {
-                            return Ok(Value::Null);
-                        }
-                        let i = *i as usize; // 0-based
-                        Ok(items.get(i).cloned().unwrap_or(Value::Null))
-                    }
+                    (Value::List(_), _) => super::lists::indexer(&list, &idx),
                     (Value::String(_), Value::Integer(_)) => {
                         super::operators::indexer_str(&list, &idx)
                     }

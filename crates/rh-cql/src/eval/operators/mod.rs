@@ -214,12 +214,26 @@ pub(crate) fn eval_builtin_function(name: &str, args: Vec<Value>) -> Result<Valu
         ("ToQuantity", [v]) => to_quantity(v),
         ("ToConcept", [v]) => to_concept(v),
         // String operators
+        ("Concatenate", [a, b]) => concatenate(a, b),
+        ("Upper", [s]) => upper(s),
+        ("Lower", [s]) => lower(s),
+        ("StartsWith", [s, prefix]) => starts_with(s, prefix),
+        ("EndsWith", [s, suffix]) => ends_with(s, suffix),
+        ("Matches", [s, pattern]) => matches_regex(s, pattern),
         ("SplitOnMatches", [s, pattern]) => split_on_matches(s, pattern),
         ("PositionOf", [pattern, s]) => position_of(pattern, s),
         ("LastPositionOf", [pattern, s]) => last_position_of(pattern, s),
         ("Substring", [s, start]) => substring(s, start, None),
         ("Substring", [s, start, len]) => substring(s, start, Some(len)),
         ("ReplaceMatches", [s, pattern, substitution]) => replace_matches(s, pattern, substitution),
+        ("Indexer", [source, index]) => match source {
+            Value::List(_) => super::lists::indexer(source, index),
+            Value::String(_) => indexer_str(source, index),
+            Value::Null => Ok(Value::Null),
+            _ => Err(EvalError::General(
+                "Indexer: unsupported operand types".to_string(),
+            )),
+        },
         ("IndexOf", [left, right]) => match left {
             Value::List(_) => super::lists::index_of(left, right),
             Value::String(_) => position_of(right, left),

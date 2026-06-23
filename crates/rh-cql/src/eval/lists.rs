@@ -220,6 +220,21 @@ pub fn take(list: &Value, count: &Value) -> Result<Value, EvalError> {
     Ok(Value::List(items[..end].to_vec()))
 }
 
+pub fn indexer(list: &Value, index: &Value) -> Result<Value, EvalError> {
+    if matches!(list, Value::Null) || matches!(index, Value::Null) {
+        return Ok(Value::Null);
+    }
+    let items = require_list("Indexer", list)?;
+    let index = match index {
+        Value::Integer(v) => *v,
+        _ => return Err(err("Indexer", "expected Integer index")),
+    };
+    if index < 0 {
+        return Ok(Value::Null);
+    }
+    Ok(items.get(index as usize).cloned().unwrap_or(Value::Null))
+}
+
 pub fn slice(
     list: &Value,
     start_index: &Value,

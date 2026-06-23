@@ -914,6 +914,42 @@ fn eval_list_scalar_inclusion_dispatch() {
     );
 }
 
+#[test]
+fn eval_string_function_refs() {
+    assert_eq!(
+        eval_expr("library T define X: Concatenate('A', 'B')", "X"),
+        Value::String("AB".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: Upper('aB')", "X"),
+        Value::String("AB".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: Lower('aB')", "X"),
+        Value::String("ab".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: StartsWith('abc', 'ab')", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: EndsWith('abc', 'bc')", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Matches('123', '\\\\d+')", "X"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        eval_expr("library T define X: Indexer('AB', 1)", "X"),
+        Value::String("B".to_string())
+    );
+    assert_eq!(
+        eval_expr("library T define X: Indexer({ 10, 20 }, 1)", "X"),
+        Value::Integer(20)
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Wave-2 conformance gap coverage (CQL spec section coverage)
 // ---------------------------------------------------------------------------

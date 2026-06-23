@@ -15,27 +15,27 @@ The HL7 expression matrix remains the strongest specification-facing signal:
 | Metric | Count |
 |---|---:|
 | Parsed HL7 cases | 1 426 |
-| `rh-cql` pass | 1 193 |
+| `rh-cql` pass | 1 230 |
 | Wrong-answer fail | 0 |
 | Skip | 58 |
 | Compile error | 94 |
-| Eval error | 58 |
+| Eval error | 21 |
 | Invalid input unexpectedly accepted | 16 |
-| Unimplemented total | 168 |
+| Unimplemented total | 131 |
 
 Failure concentration:
 
 | Category | Main suites |
 |---|---|
 | Compile errors | intervals 35, date/time 33, value literals/selectors 21 |
-| Eval errors | strings 37, date/time 12, arithmetic 6, intervals 2 |
+| Eval errors | date/time 12, arithmetic 6, intervals 2, type operators 1 |
 | Invalid input enforcement | value literals/selectors 7, type operators 4, types 3, intervals 2 |
 
 ### Three-Engine Matrix
 
 | Implementation | Pass | Compile Err | Eval Err | Fail | Skip | Unimplemented |
 |---|---:|---:|---:|---:|---:|---:|
-| `rh-cql` | 1 193 | 94 | 58 | 0 | 58 | 16 |
+| `rh-cql` | 1 230 | 94 | 21 | 0 | 58 | 16 |
 | Java ELM | 1 410 | 16 | 0 | 0 | 0 | 0 |
 | JavaScript `cql-execution` | 594 | 118 | 467 | 81 | 166 | 0 |
 
@@ -261,6 +261,14 @@ Status:
   1 invalid failure. `just audit-strict` now gates at 1 193 pass /
   0 wrong-answer fail / 58 skip / 94 compile errors / 58 eval errors /
   16 invalid failures, for 168 unimplemented outcomes.
+- [x] 2026-06-23: Completed the string runtime slice. Added FunctionRef
+  dispatch for `Concatenate`, `Upper`, `Lower`, `StartsWith`, `EndsWith`,
+  `Matches`, and string/list `Indexer`, sharing the direct ELM operator
+  implementations. The HL7 string suite now reports 81 pass /
+  0 wrong-answer fail / 0 compile errors / 0 eval errors. `just audit-strict`
+  now gates at 1 230 pass / 0 wrong-answer fail / 58 skip /
+  94 compile errors / 21 eval errors / 16 invalid failures, for
+  131 unimplemented outcomes.
 
 Priority order:
 
