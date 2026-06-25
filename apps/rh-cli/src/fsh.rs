@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Subcommand;
-use rh_fsh::{compile_fsh_files, FshParser, FshTank};
+use rh_fsh::{compile_fsh_files_with_project_config, FshParser, FshTank};
 use serde::Serialize;
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -59,7 +59,7 @@ pub async fn handle_command(cmd: FshCommands, ctx: &OutputContext) -> Result<()>
             compact,
         } => {
             let paths: Vec<PathBuf> = inputs.iter().map(PathBuf::from).collect();
-            let package = compile_fsh_files(&paths)?;
+            let package = compile_fsh_files_with_project_config(&paths)?;
             if !package.errors.is_empty() {
                 for e in &package.errors {
                     warn!("{e}");

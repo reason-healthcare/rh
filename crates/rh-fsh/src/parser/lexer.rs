@@ -117,11 +117,15 @@ pub fn name_or_url(input: Span<'_>) -> IResult<Span<'_>, String> {
 
 /// Parse an FSH alias name: optional `$` prefix followed by an identifier
 pub fn alias_name(input: Span<'_>) -> IResult<Span<'_>, String> {
-    let (input, dollar) = opt(char('$'))(input)?;
-    let (input, id) = identifier(input)?;
-    if dollar.is_some() {
-        Ok((input, format!("${}", id)))
+    if input.fragment().starts_with('$') {
+        let (input, _) = char('$')(input)?;
+        let (input, id) =
+            take_while1(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.')(
+                input,
+            )?;
+        Ok((input, format!("${}", id.fragment())))
     } else {
+        let (input, id) = identifier(input)?;
         Ok((input, id))
     }
 }
@@ -589,11 +593,25 @@ pub fn meta_key_value<'a>(key: &'static str, input: Span<'a>) -> IResult<Span<'a
         quoted_string,
         map(
             take_while1(|c: char| c != '\n' && c != '\r'),
-            |s: Span<'_>| s.fragment().trim().to_string(),
+            |s: Span<'_>| strip_inline_comment(s.fragment()).trim().to_string(),
         ),
     ))(input)?;
     let (input, _) = opt(char('\n'))(input)?;
     Ok((input, val))
+}
+
+fn strip_inline_comment(value: &str) -> &str {
+    for (idx, _) in value.match_indices("//") {
+        if idx == 0
+            || value[..idx]
+                .chars()
+                .next_back()
+                .is_some_and(char::is_whitespace)
+        {
+            return &value[..idx];
+        }
+    }
+    value
 }
 
 /// Returns true if the input starts with an entity keyword

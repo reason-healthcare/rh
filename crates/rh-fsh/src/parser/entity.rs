@@ -225,7 +225,7 @@ fn parse_instance(input: Span<'_>) -> IResult<Span<'_>, (Instance, SourceLocatio
     let (input, _) = ws(input)?;
     let (input, _) = char(':')(input)?;
     let (input, _) = ws(input)?;
-    let (input, name) = identifier(input)?;
+    let (input, name) = instance_name(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
 
@@ -307,6 +307,14 @@ fn parse_instance_of(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
     Ok((input, val))
+}
+
+fn instance_name(input: Span<'_>) -> IResult<Span<'_>, String> {
+    let (input, name) =
+        take_while1(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.')(
+            input,
+        )?;
+    Ok((input, name.fragment().to_string()))
 }
 
 // ============================================================================
@@ -487,13 +495,79 @@ fn parse_invariant(input: Span<'_>) -> IResult<Span<'_>, (Invariant, SourceLocat
     let (input, _) = take_while(|c| c != '\n')(input)?;
     let (input, _) = opt(char('\n'))(input)?;
 
-    let (input, description) = opt_meta_kv("Description", input)?;
-    let (input, expression) = opt_meta_kv("Expression", input)?;
-    let (input, severity) = opt_meta_kv("Severity", input)?;
-    let (input, xpath) = opt_meta_kv("XPath", input)?;
+    let mut remaining = input;
+    let mut description = None;
+    let mut expression = None;
+    let mut severity = None;
+    let mut xpath = None;
+
+    loop {
+        let (peek, _) = trivia(remaining).unwrap_or((remaining, ()));
+        if peek.fragment().is_empty() || starts_with_entity_kw(peek.fragment()) {
+            remaining = peek;
+            break;
+        }
+
+        let mut matched = false;
+        if description.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Description", peek) {
+                if val.is_some() {
+                    description = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && expression.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Expression", peek) {
+                if val.is_some() {
+                    expression = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && severity.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("Severity", peek) {
+                if val.is_some() {
+                    severity = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && xpath.is_none() {
+            if let Ok((inp, val)) = opt_meta_kv("XPath", peek) {
+                if val.is_some() {
+                    xpath = val;
+                    remaining = inp;
+                    matched = true;
+                }
+            }
+        }
+        if !matched && peek.fragment().starts_with('*') {
+            if let Ok((inp, (field, value))) = parse_invariant_field_rule(peek) {
+                match field.as_str() {
+                    "description" if description.is_none() => description = Some(value),
+                    "expression" if expression.is_none() => expression = Some(value),
+                    "severity" if severity.is_none() => severity = Some(value),
+                    "xpath" if xpath.is_none() => xpath = Some(value),
+                    _ => {}
+                }
+                remaining = inp;
+                matched = true;
+            }
+        }
+
+        if !matched {
+            let (inp, _) = take_while(|c| c != '\n')(peek)?;
+            let (inp, _) = opt(char('\n'))(inp)?;
+            remaining = inp;
+        }
+    }
 
     Ok((
-        input,
+        remaining,
         (
             Invariant {
                 name,
@@ -505,6 +579,27 @@ fn parse_invariant(input: Span<'_>) -> IResult<Span<'_>, (Invariant, SourceLocat
             loc,
         ),
     ))
+}
+
+fn parse_invariant_field_rule(input: Span<'_>) -> IResult<Span<'_>, (String, String)> {
+    let (input, _) = trivia(input)?;
+    let (input, _) = char('*')(input)?;
+    let (input, _) = ws(input)?;
+    let (input, field) = identifier(input)?;
+    let (input, _) = ws(input)?;
+    let (input, _) = char('=')(input)?;
+    let (input, _) = ws(input)?;
+    let (input, value) = alt((
+        multiline_string,
+        quoted_string,
+        map(
+            take_while1(|c: char| c != '\n' && c != '\r'),
+            |s: Span<'_>| s.fragment().trim().to_string(),
+        ),
+    ))(input)?;
+    let (input, _) = take_while(|c| c != '\n')(input)?;
+    let (input, _) = opt(char('\n'))(input)?;
+    Ok((input, (field.to_ascii_lowercase(), value)))
 }
 
 // ============================================================================

@@ -9,6 +9,9 @@ pub mod value_set;
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::tank::FshTank;
+use crate::{
+    build_definition_index, load_dependency_structure_definitions, DependencyDefinitionSet,
+};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -26,6 +29,19 @@ impl FshExporter {
     pub fn export(tank: &FshTank, defs: Arc<FhirDefs>, config: &crate::FshConfig) -> FhirPackage {
         let mut resources = Vec::new();
         let mut errors = Vec::new();
+        let dependencies = match load_dependency_structure_definitions(config) {
+            Ok(dependencies) => dependencies,
+            Err(err) => {
+                errors.push(err);
+                DependencyDefinitionSet::default()
+            }
+        };
+        let definition_index = build_definition_index(tank, config, &dependencies);
+        errors.extend(definition_index.dependency_warnings.iter().map(|message| {
+            FshError::Export {
+                message: message.clone(),
+            }
+        }));
 
         // Pre-compute parent name → parent name chain for FHIR type resolution
         // (maps profile/extension name → its declared parent name)
@@ -57,7 +73,7 @@ impl FshExporter {
         );
         export_par(
             tank.instances.values(),
-            |i| instance::export_instance(i, defs.as_ref(), config, tank),
+            |i| instance::export_instance(i, defs.as_ref(), config, tank, &definition_index),
             &mut resources,
             &mut errors,
         );

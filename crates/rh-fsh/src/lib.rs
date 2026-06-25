@@ -2,18 +2,30 @@
 //!
 //! Transforms FSH source into FHIR R4 JSON packages.
 
+pub mod definition_index;
+pub mod dependencies;
 pub mod error;
 pub mod export;
 pub mod fhirdefs;
 pub mod parser;
 pub mod resolver;
+pub mod sushi_config;
 pub mod tank;
 
+pub use definition_index::{
+    build_definition_index, build_definition_index_with_default_dependencies, DefinitionIndex,
+    DefinitionSource, IndexedStructureDefinition, LocalDefinitionKind,
+};
+pub use dependencies::{
+    load_dependency_structure_definitions, load_dependency_structure_definitions_from_dir,
+    DependencyDefinitionSet, DependencyStructureDefinition,
+};
 pub use error::FshError;
 pub use export::{FhirPackage, FshExporter};
 pub use fhirdefs::FhirDefs;
 pub use parser::{FshDocument, FshParser, SourceLocation};
 pub use resolver::FshResolver;
+pub use sushi_config::{find_sushi_config_for_files, parse_sushi_config, read_sushi_config};
 pub use tank::FshTank;
 
 use std::path::PathBuf;
@@ -35,6 +47,21 @@ pub struct FshConfig {
     pub publisher: Option<String>,
     /// Package version string (e.g. "0.1.0")
     pub version: Option<String>,
+    /// Dependency packages declared by the project config.
+    pub dependencies: Vec<FshDependency>,
+}
+
+/// Dependency package declaration from project configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshDependency {
+    /// FHIR package id, e.g. `hl7.fhir.us.core`.
+    pub package_id: String,
+    /// Package version, e.g. `6.1.0`.
+    pub version: String,
+    /// Optional short id used by SUSHI/IG Publisher.
+    pub id: Option<String>,
+    /// Optional ImplementationGuide URI.
+    pub uri: Option<String>,
 }
 
 /// Compilation options
@@ -78,6 +105,14 @@ pub fn compile_fsh(input: &str, source_name: &str) -> Result<FhirPackage, FshErr
 
 /// Compile multiple FSH files into one package
 pub fn compile_fsh_files(paths: &[PathBuf]) -> Result<FhirPackage, FshError> {
+    compile_fsh_files_with_config(paths, FshConfig::default())
+}
+
+/// Compile multiple FSH files using an explicit project configuration.
+pub fn compile_fsh_files_with_config(
+    paths: &[PathBuf],
+    config: FshConfig,
+) -> Result<FhirPackage, FshError> {
     use std::fs;
     let mut tank = FshTank::new();
 
@@ -89,7 +124,16 @@ pub fn compile_fsh_files(paths: &[PathBuf]) -> Result<FhirPackage, FshError> {
         let doc = FshParser::parse(&content, source_name)?;
         tank.add_document(doc).map_err(first_error)?;
     }
-    run_pipeline(tank, &FshConfig::default())
+    run_pipeline(tank, &config)
+}
+
+/// Compile multiple FSH files, loading the nearest `sushi-config.yaml` if one exists.
+pub fn compile_fsh_files_with_project_config(paths: &[PathBuf]) -> Result<FhirPackage, FshError> {
+    let config = match find_sushi_config_for_files(paths) {
+        Some(path) => read_sushi_config(&path)?,
+        None => FshConfig::default(),
+    };
+    compile_fsh_files_with_config(paths, config)
 }
 
 /// Parse → resolve → export, returning the FHIR package.

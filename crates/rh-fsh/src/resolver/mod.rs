@@ -39,6 +39,11 @@ impl FshResolver {
     fn expand_aliases(tank: &mut FshTank) {
         let aliases = tank.aliases.clone();
 
+        expand_sd_metadata(&mut tank.profiles, &aliases, |e| &mut e.metadata);
+        expand_sd_metadata(&mut tank.extensions, &aliases, |e| &mut e.metadata);
+        expand_sd_metadata(&mut tank.logicals, &aliases, |e| &mut e.metadata);
+        expand_sd_metadata(&mut tank.resources, &aliases, |e| &mut e.metadata);
+
         expand_sd_rules_collection(&mut tank.profiles, &aliases, |e| &mut e.rules);
         expand_sd_rules_collection(&mut tank.extensions, &aliases, |e| &mut e.rules);
         expand_sd_rules_collection(&mut tank.logicals, &aliases, |e| &mut e.rules);
@@ -46,6 +51,9 @@ impl FshResolver {
 
         // Instances use instance rules (different rule type)
         for inst in tank.instances.values_mut() {
+            if let Some(resolved) = aliases.get(inst.metadata.instance_of.as_str()) {
+                inst.metadata.instance_of = resolved.clone();
+            }
             for rule in &mut inst.rules {
                 expand_instance_rule(&mut rule.value, &aliases);
             }
@@ -141,6 +149,24 @@ impl FshResolver {
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/// Expand StructureDefinition metadata aliases across every entity in an IndexMap.
+fn expand_sd_metadata<T, F>(
+    collection: &mut indexmap::IndexMap<String, T>,
+    aliases: &HashMap<String, String>,
+    get_metadata_mut: F,
+) where
+    F: Fn(&mut T) -> &mut SdMetadata,
+{
+    for entity in collection.values_mut() {
+        let metadata = get_metadata_mut(entity);
+        if let Some(parent) = &metadata.parent {
+            if let Some(resolved) = aliases.get(parent.as_str()) {
+                metadata.parent = Some(resolved.clone());
+            }
+        }
+    }
+}
 
 /// Expand SD-rule aliases across every entity in an IndexMap.
 fn expand_sd_rules_collection<T, F>(
