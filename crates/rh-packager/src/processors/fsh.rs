@@ -142,6 +142,7 @@ fn build_fsh_config(ctx: &PublishContext) -> rh_fsh::FshConfig {
             .version
             .clone()
             .or_else(|| Some(ctx.package_json.version.clone())),
+        ..Default::default()
     }
 }
 

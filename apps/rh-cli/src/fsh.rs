@@ -1,11 +1,32 @@
 use anyhow::Result;
 use clap::Subcommand;
-use rh_fsh::{compile_fsh_files, FshParser, FshTank};
+use rh_fsh::{compile_fsh_files_with_project_config, FshParser, FshTank};
 use serde::Serialize;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
-use crate::output::{Envelope, OutputContext, OutputFormat};
+use crate::output::{Envelope, EnvelopeError, OutputContext, OutputFormat};
+
+#[derive(Serialize)]
+struct FshCompileOutput {
+    resources: Vec<serde_json::Value>,
+    diagnostics: Vec<FshDiagnostic>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    output_files: Vec<WrittenResource>,
+}
+
+#[derive(Serialize)]
+struct FshDiagnostic {
+    severity: &'static str,
+    message: String,
+}
+
+#[derive(Serialize)]
+struct WrittenResource {
+    resource_type: String,
+    id: String,
+    file: String,
+}
 
 #[derive(Serialize)]
 struct TankSummary {
@@ -59,14 +80,24 @@ pub async fn handle_command(cmd: FshCommands, ctx: &OutputContext) -> Result<()>
             compact,
         } => {
             let paths: Vec<PathBuf> = inputs.iter().map(PathBuf::from).collect();
-            let package = compile_fsh_files(&paths)?;
-            if !package.errors.is_empty() {
-                for e in &package.errors {
-                    warn!("{e}");
+            let package = compile_fsh_files_with_project_config(&paths)?;
+            let diagnostics: Vec<FshDiagnostic> = package
+                .errors
+                .iter()
+                .map(|e| FshDiagnostic {
+                    severity: "warning",
+                    message: e.to_string(),
+                })
+                .collect();
+            if !diagnostics.is_empty() {
+                for e in &diagnostics {
+                    warn!("{}", e.message);
                 }
             }
+            let mut output_files = Vec::new();
             if let Some(dir) = &output {
                 std::fs::create_dir_all(dir)?;
+                let mut used_names = std::collections::HashMap::new();
                 for resource in &package.resources {
                     let id = resource
                         .get("id")
@@ -76,13 +107,19 @@ pub async fn handle_command(cmd: FshCommands, ctx: &OutputContext) -> Result<()>
                         .get("resourceType")
                         .and_then(|v| v.as_str())
                         .unwrap_or("Resource");
-                    let filename = dir.join(format!("{rt}-{id}.json"));
+                    let file_name = deterministic_resource_file_name(rt, id, &mut used_names);
+                    let filename = dir.join(&file_name);
                     let json = if compact {
                         serde_json::to_string(resource)?
                     } else {
                         serde_json::to_string_pretty(resource)?
                     };
                     std::fs::write(filename, json)?;
+                    output_files.push(WrittenResource {
+                        resource_type: rt.to_string(),
+                        id: id.to_string(),
+                        file: file_name,
+                    });
                 }
                 info!(
                     "Wrote {} resources to {}",
@@ -92,7 +129,22 @@ pub async fn handle_command(cmd: FshCommands, ctx: &OutputContext) -> Result<()>
             }
 
             if ctx.is_json() {
-                print_envelope(ctx, &Envelope::ok(package.resources, "fsh compile"))?;
+                print_envelope(
+                    ctx,
+                    &Envelope {
+                        ok: true,
+                        result: Some(FshCompileOutput {
+                            resources: package.resources,
+                            diagnostics,
+                            output_files,
+                        }),
+                        errors: Vec::<EnvelopeError>::new(),
+                        meta: crate::output::EnvelopeMeta {
+                            version: env!("CARGO_PKG_VERSION").to_string(),
+                            command: "fsh compile".to_string(),
+                        },
+                    },
+                )?;
             } else if output.is_none() {
                 for resource in &package.resources {
                     let json = if compact {
@@ -139,4 +191,61 @@ pub async fn handle_command(cmd: FshCommands, ctx: &OutputContext) -> Result<()>
         }
     }
     Ok(())
+}
+
+fn deterministic_resource_file_name(
+    resource_type: &str,
+    id: &str,
+    used_names: &mut std::collections::HashMap<String, usize>,
+) -> String {
+    let base = format!(
+        "{}-{}",
+        sanitize_file_component(resource_type),
+        sanitize_file_component(id)
+    );
+    let next = used_names.entry(base.clone()).or_insert(0);
+    *next += 1;
+    if *next == 1 {
+        format!("{base}.json")
+    } else {
+        format!("{base}-{next}.json")
+    }
+}
+
+fn sanitize_file_component(value: &str) -> String {
+    let sanitized: String = value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let trimmed = sanitized.trim_matches('_');
+    if trimmed.is_empty() {
+        "unknown".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn deterministic_file_names_are_sanitized_and_disambiguated() {
+        let mut used_names = HashMap::new();
+
+        let first =
+            deterministic_resource_file_name("http://example.org/Foo", "a/b", &mut used_names);
+        let second =
+            deterministic_resource_file_name("http://example.org/Foo", "a?b", &mut used_names);
+
+        assert_eq!(first, "http___example.org_Foo-a_b.json");
+        assert_eq!(second, "http___example.org_Foo-a_b-2.json");
+    }
 }

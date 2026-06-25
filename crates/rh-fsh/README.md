@@ -126,10 +126,16 @@ Key performance properties:
 
 ## Compatibility
 
-Passes 30/30 non-skipped [FSHOnline sushi compatibility tests](https://github.com/FHIR/FSHOnline-Examples).
+Compatibility is tracked in [CONFORMANCE.md](CONFORMANCE.md). `rh-fsh` has two
+SUSHI comparison paths:
+
+- Fixture-level compatibility tests in `tests/sushi_compat.rs`
+- Project-level comparisons against US Core, mCODE, and Da Vinci DTR in
+  `conformance/scripts/run_sushi_comparison.py`
 
 ```bash
 cargo test -p rh-fsh --test sushi_compat -- --include-ignored
+python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py
 ```
 
 ## Architecture

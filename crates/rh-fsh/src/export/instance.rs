@@ -1,5 +1,6 @@
 //! Export FSH Instance to FHIR JSON
 
+use crate::definition_index::DefinitionIndex;
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
@@ -7,32 +8,51 @@ use crate::tank::FshTank;
 use crate::FshConfig;
 use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType};
 
+struct InstanceExportContext<'a> {
+    defs: &'a FhirDefs,
+    config: &'a FshConfig,
+    tank: &'a FshTank,
+    definition_index: &'a DefinitionIndex,
+}
+
 pub fn export_instance(
     inst: &Instance,
     defs: &FhirDefs,
     config: &FshConfig,
     tank: &FshTank,
+    definition_index: &DefinitionIndex,
+) -> Result<serde_json::Value, FshError> {
+    let context = InstanceExportContext {
+        defs,
+        config,
+        tank,
+        definition_index,
+    };
+    export_instance_with_context(inst, &context)
+}
+
+fn export_instance_with_context(
+    inst: &Instance,
+    context: &InstanceExportContext<'_>,
 ) -> Result<serde_json::Value, FshError> {
     let instance_of = &inst.metadata.instance_of;
 
-    // Detect if this is an instance of a Logical model — if so, resourceType is the SD URL
-    let (resource_type_json, resource_type_for_metadata) =
-        if tank.logicals.contains_key(instance_of.as_str()) {
-            let url = if let Some(canonical) = &config.canonical {
-                format!("{canonical}/StructureDefinition/{instance_of}")
-            } else {
-                instance_of.clone()
-            };
-            (url.clone(), url)
+    let is_logical_instance = context.tank.logicals.contains_key(instance_of.as_str());
+    let resource_type_json = if is_logical_instance {
+        if let Some(canonical) = &context.config.canonical {
+            format!("{canonical}/StructureDefinition/{instance_of}")
         } else {
-            (instance_of.clone(), instance_of.clone())
-        };
-
-    let is_logical_instance = tank.logicals.contains_key(instance_of.as_str());
+            instance_of.clone()
+        }
+    } else {
+        resolve_instance_resource_type(instance_of, context.defs, context.definition_index)
+            .unwrap_or_else(|| instance_of.clone())
+    };
+    let resource_type_for_metadata = resource_type_json.clone();
 
     let mut resource = if is_logical_instance {
         // Logical model instances don't always have an id (depends on Characteristics: #can-be-target)
-        let logical = tank.logicals.get(instance_of.as_str()).unwrap();
+        let logical = context.tank.logicals.get(instance_of.as_str()).unwrap();
         let has_can_be_target = logical
             .metadata
             .characteristics
@@ -59,7 +79,7 @@ pub fn export_instance(
 
     let usage = inst.metadata.usage.as_deref().unwrap_or("");
     if usage == "#definition" || usage == "definition" {
-        if let Some(canonical) = &config.canonical {
+        if let Some(canonical) = &context.config.canonical {
             let url = format!("{canonical}/{instance_of}/{}", inst.metadata.name);
             resource["url"] = serde_json::Value::String(url);
         }
@@ -72,10 +92,8 @@ pub fn export_instance(
                     &mut resource,
                     &a.path,
                     &a.value,
-                    defs,
                     &resource_type_for_metadata,
-                    tank,
-                    config,
+                    context,
                 );
             }
             InstanceRule::Insert(_) => {}
@@ -90,21 +108,14 @@ fn apply_assignment(
     root: &mut serde_json::Value,
     path: &FshPath,
     value: &FshValue,
-    defs: &FhirDefs,
     resource_type: &str,
-    tank: &FshTank,
-    config: &FshConfig,
+    context: &InstanceExportContext<'_>,
 ) {
-    let json_val = fsh_value_to_json(value, tank, defs, config);
-    set_at_path(root, &path.segments, json_val, defs, resource_type);
+    let json_val = fsh_value_to_json(value, context);
+    set_at_path(root, &path.segments, json_val, context.defs, resource_type);
 }
 
-fn fsh_value_to_json(
-    value: &FshValue,
-    tank: &FshTank,
-    defs: &FhirDefs,
-    config: &FshConfig,
-) -> serde_json::Value {
+fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> serde_json::Value {
     match value {
         FshValue::Str(s) => serde_json::Value::String(s.clone()),
         FshValue::Bool(b) => serde_json::Value::Bool(*b),
@@ -121,7 +132,7 @@ fn fsh_value_to_json(
             }
             if let Some(s) = system {
                 // Resolve local CodeSystem name to its ^url if present in the tank
-                let resolved_system = resolve_code_system_url(s, tank);
+                let resolved_system = resolve_code_system_url(s, context.tank);
                 // Code with system → Coding object (embedded in CodeableConcept by caller if needed)
                 let mut obj = serde_json::json!({ "system": resolved_system, "code": code });
                 if let Some(d) = display {
@@ -139,20 +150,26 @@ fn fsh_value_to_json(
             denominator,
         } => {
             serde_json::json!({
-                "numerator": fsh_value_to_json(numerator, tank, defs, config),
-                "denominator": fsh_value_to_json(denominator, tank, defs, config),
+                "numerator": fsh_value_to_json(numerator, context),
+                "denominator": fsh_value_to_json(denominator, context),
             })
         }
         FshValue::Reference(r) => {
-            let resolved = resolve_reference(r, tank, config);
+            let resolved = resolve_reference(
+                r,
+                context.tank,
+                context.defs,
+                context.config,
+                context.definition_index,
+            );
             serde_json::json!({ "reference": resolved })
         }
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
         FshValue::InstanceRef(name) => {
             // Embed the referenced inline instance JSON (used for contained[+] = myInstance)
-            if let Some(inst) = tank.instances.get(name) {
-                export_instance(inst, defs, config, tank).unwrap_or(serde_json::Value::Null)
+            if let Some(inst) = context.tank.instances.get(name) {
+                export_instance_with_context(inst, context).unwrap_or(serde_json::Value::Null)
             } else {
                 serde_json::Value::Null
             }
@@ -208,23 +225,44 @@ fn resolve_code_system_url(system: &str, tank: &FshTank) -> String {
 }
 
 /// Resolve a bare instance id to `ResourceType/id` format using the tank.
-fn resolve_reference(id: &str, tank: &FshTank, config: &FshConfig) -> String {
+fn resolve_reference(
+    id: &str,
+    tank: &FshTank,
+    defs: &FhirDefs,
+    config: &FshConfig,
+    definition_index: &DefinitionIndex,
+) -> String {
     // If already qualified (contains '/') or is a special reference (starts with '#'), return as-is
     if id.contains('/') || id.starts_with('#') {
         return id.to_string();
     }
     // Look up instance in tank to get its resource type
     if let Some(inst) = tank.instances.get(id) {
-        let rt = &inst.metadata.instance_of;
+        let rt = resolve_instance_resource_type(&inst.metadata.instance_of, defs, definition_index)
+            .unwrap_or_else(|| inst.metadata.instance_of.clone());
         // If the instanceOf is a Logical model, references use the full canonical URL
-        if tank.logicals.contains_key(rt.as_str()) {
+        if tank
+            .logicals
+            .contains_key(inst.metadata.instance_of.as_str())
+        {
             if let Some(canonical) = &config.canonical {
-                return format!("{canonical}/StructureDefinition/{rt}/{id}");
+                return format!(
+                    "{canonical}/StructureDefinition/{}/{id}",
+                    inst.metadata.instance_of
+                );
             }
         }
         return format!("{rt}/{id}");
     }
     id.to_string()
+}
+
+fn resolve_instance_resource_type(
+    instance_of: &str,
+    defs: &FhirDefs,
+    definition_index: &DefinitionIndex,
+) -> Option<String> {
+    definition_index.resolve_base_type(instance_of, defs)
 }
 
 /// Returns the inner FHIR type name for a complex/backbone field type, if navigable.
@@ -481,5 +519,148 @@ fn handle_slice_segment(
     } else {
         let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
         set_at_path(child, &segments[1..], value, _defs, next_type);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dependencies::{DependencyDefinitionSet, DependencyStructureDefinition};
+    use crate::parser::ast::{Profile, SdMetadata};
+    use crate::{build_definition_index, FshConfig};
+    use std::path::PathBuf;
+
+    #[test]
+    fn exports_representative_profile_instances_with_base_resource_types() {
+        let mut tank = FshTank::new();
+        tank.profiles.insert(
+            "CancerPatient".to_string(),
+            Profile {
+                metadata: SdMetadata {
+                    name: "CancerPatient".to_string(),
+                    parent: Some("USCorePatientProfile".to_string()),
+                    id: Some("mcode-cancer-patient".to_string()),
+                    title: Some("Cancer Patient Profile".to_string()),
+                    description: None,
+                    characteristics: Vec::new(),
+                },
+                rules: Vec::new(),
+            },
+        );
+        let config = FshConfig::default();
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![
+                dependency_sd(
+                    "hl7.fhir.us.core",
+                    "6.1.0",
+                    "USCorePatientProfile",
+                    "us-core-patient",
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient",
+                    "Patient",
+                ),
+                dependency_sd(
+                    "hl7.fhir.us.core",
+                    "6.1.0",
+                    "USCorePractitionerProfile",
+                    "us-core-practitioner",
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-practitioner",
+                    "Practitioner",
+                ),
+                dependency_sd(
+                    "hl7.fhir.us.davinci-crd",
+                    "2.2.1",
+                    "CRDServiceRequest",
+                    "profile-servicerequest",
+                    "http://hl7.org/fhir/us/davinci-crd/StructureDefinition/profile-servicerequest",
+                    "ServiceRequest",
+                ),
+                dependency_sd(
+                    "hl7.fhir.us.davinci-crd",
+                    "2.2.1",
+                    "CRDCoverage",
+                    "profile-coverage",
+                    "http://hl7.org/fhir/us/davinci-crd/StructureDefinition/profile-coverage",
+                    "Coverage",
+                ),
+                dependency_sd(
+                    "hl7.fhir.uv.sdc",
+                    "4.0.0",
+                    "SDCQuestionnaireAdapt",
+                    "sdc-questionnaire-adapt",
+                    "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-adapt",
+                    "Questionnaire",
+                ),
+                dependency_sd(
+                    "hl7.fhir.uv.genomics-reporting",
+                    "2.0.0",
+                    "GenomicFinding",
+                    "finding",
+                    "http://hl7.org/fhir/uv/genomics-reporting/StructureDefinition/finding",
+                    "Observation",
+                ),
+                dependency_sd(
+                    "hl7.fhir.uv.genomics-reporting",
+                    "2.0.0",
+                    "GenomicsReport",
+                    "genomics-report",
+                    "http://hl7.org/fhir/uv/genomics-reporting/StructureDefinition/genomics-report",
+                    "DiagnosticReport",
+                ),
+            ],
+            warnings: Vec::new(),
+        };
+        let definition_index = build_definition_index(&tank, &config, &dependencies);
+        let defs = FhirDefs::r4();
+        let cases = [
+            ("USCorePatientProfile", "Patient"),
+            ("USCorePractitionerProfile", "Practitioner"),
+            ("CRDServiceRequest", "ServiceRequest"),
+            ("CRDCoverage", "Coverage"),
+            ("SDCQuestionnaireAdapt", "Questionnaire"),
+            ("GenomicFinding", "Observation"),
+            ("GenomicsReport", "DiagnosticReport"),
+            ("CancerPatient", "Patient"),
+        ];
+
+        for (instance_of, expected_resource_type) in cases {
+            let inst = Instance {
+                metadata: InstanceMetadata {
+                    name: format!("example-{expected_resource_type}"),
+                    instance_of: instance_of.to_string(),
+                    usage: Some("#example".to_string()),
+                    title: None,
+                    description: None,
+                },
+                rules: Vec::new(),
+            };
+
+            let resource = export_instance(&inst, defs.as_ref(), &config, &tank, &definition_index)
+                .expect("instance exports");
+
+            assert_eq!(resource["resourceType"], expected_resource_type);
+        }
+    }
+
+    fn dependency_sd(
+        package_id: &str,
+        version: &str,
+        name: &str,
+        id: &str,
+        url: &str,
+        type_: &str,
+    ) -> DependencyStructureDefinition {
+        DependencyStructureDefinition {
+            package_id: package_id.to_string(),
+            version: version.to_string(),
+            path: PathBuf::from(format!("StructureDefinition-{id}.json")),
+            id: Some(id.to_string()),
+            url: Some(url.to_string()),
+            name: Some(name.to_string()),
+            title: None,
+            kind: Some("resource".to_string()),
+            type_: Some(type_.to_string()),
+            base_definition: Some(format!("http://hl7.org/fhir/StructureDefinition/{type_}")),
+            derivation: Some("constraint".to_string()),
+        }
     }
 }

@@ -45,6 +45,22 @@ fn parses_profile_with_full_metadata() {
 }
 
 #[test]
+fn parses_metadata_values_with_inline_comments() {
+    let p = profile(
+        "Profile: MyObservation\nParent: Observation  // not US Core\nId: my-observation\n",
+    );
+    assert_eq!(p.metadata.parent.as_deref(), Some("Observation"));
+
+    let p = profile(
+        "Profile: UrlParent\nParent: http://example.org/StructureDefinition/base-profile\n",
+    );
+    assert_eq!(
+        p.metadata.parent.as_deref(),
+        Some("http://example.org/StructureDefinition/base-profile")
+    );
+}
+
+#[test]
 fn parses_extension_entity() {
     let e = match single_entity("Extension: MyExt\nId: my-ext\nTitle: \"E\"\n") {
         FshEntity::Extension(e) => e,
@@ -82,6 +98,18 @@ fn parses_instance_entity() {
     assert_eq!(i.metadata.name, "example");
     assert_eq!(i.metadata.instance_of, "Patient");
     assert_eq!(i.rules.len(), 1);
+}
+
+#[test]
+fn parses_uuid_instance_name() {
+    let i = match single_entity(
+        "Instance: 244ad7c3-beeb-41d1-8a2f-c76b8cf720ad\nInstanceOf: Patient\nUsage: #inline\n",
+    ) {
+        FshEntity::Instance(i) => i,
+        other => panic!("expected Instance, got {other:?}"),
+    };
+    assert_eq!(i.metadata.name, "244ad7c3-beeb-41d1-8a2f-c76b8cf720ad");
+    assert_eq!(i.metadata.instance_of, "Patient");
 }
 
 #[test]
@@ -128,6 +156,33 @@ fn parses_invariant_entity() {
 }
 
 #[test]
+fn parses_invariant_rule_fields() {
+    let inv = match single_entity(
+        "Invariant: inv-1\nDescription: \"Must have a name\"\n* severity = #error\n* expression = \"name.exists()\"\n",
+    ) {
+        FshEntity::Invariant(inv) => inv,
+        other => panic!("expected Invariant, got {other:?}"),
+    };
+    assert_eq!(inv.description.as_deref(), Some("Must have a name"));
+    assert_eq!(inv.severity.as_deref(), Some("#error"));
+    assert_eq!(inv.expression.as_deref(), Some("name.exists()"));
+}
+
+#[test]
+fn parses_invariant_multiline_expression_rule() {
+    let inv = match single_entity(
+        "Invariant: inv-1\n* expression = \"status.exists() and code.exists(\n  system = 'http://loinc.org')\"\n",
+    ) {
+        FshEntity::Invariant(inv) => inv,
+        other => panic!("expected Invariant, got {other:?}"),
+    };
+    assert_eq!(
+        inv.expression.as_deref(),
+        Some("status.exists() and code.exists(\n  system = 'http://loinc.org')")
+    );
+}
+
+#[test]
 fn parses_mapping_entity() {
     let m = match single_entity(
         "Mapping: MyMap\nSource: Patient\nTarget: \"http://hl7.org/v2\"\nId: v2-map\n* identifier -> \"PID-3\"\n",
@@ -168,6 +223,21 @@ fn parses_alias_entity() {
     };
     assert_eq!(a.name, "$sct");
     assert_eq!(a.value, "http://snomed.info/sct");
+}
+
+#[test]
+fn parses_oid_alias_entity() {
+    let a = match single_entity(
+        "Alias: $2.16.840.1.114222.4.11.1066 = http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.114222.4.11.1066|20240606\n",
+    ) {
+        FshEntity::Alias(a) => a,
+        other => panic!("expected Alias, got {other:?}"),
+    };
+    assert_eq!(a.name, "$2.16.840.1.114222.4.11.1066");
+    assert_eq!(
+        a.value,
+        "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.114222.4.11.1066|20240606"
+    );
 }
 
 #[test]

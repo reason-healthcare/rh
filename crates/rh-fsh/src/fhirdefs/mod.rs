@@ -39,12 +39,33 @@ impl FhirDefs {
             ("MedicationRequest", "resource"),
             ("DiagnosticReport", "resource"),
             ("AllergyIntolerance", "resource"),
+            ("Appointment", "resource"),
+            ("AppointmentResponse", "resource"),
+            ("AuditEvent", "resource"),
+            ("Basic", "resource"),
+            ("Binary", "resource"),
+            ("BiologicallyDerivedProduct", "resource"),
+            ("BodyStructure", "resource"),
             ("Immunization", "resource"),
             ("CarePlan", "resource"),
             ("CareTeam", "resource"),
+            ("CatalogEntry", "resource"),
+            ("ChargeItem", "resource"),
+            ("ChargeItemDefinition", "resource"),
+            ("ClinicalImpression", "resource"),
+            ("Communication", "resource"),
+            ("CommunicationRequest", "resource"),
+            ("CompartmentDefinition", "resource"),
+            ("Consent", "resource"),
+            ("Contract", "resource"),
             ("Goal", "resource"),
             ("Device", "resource"),
+            ("DeviceDefinition", "resource"),
+            ("DeviceMetric", "resource"),
+            ("DeviceRequest", "resource"),
+            ("DeviceUseStatement", "resource"),
             ("Organization", "resource"),
+            ("OrganizationAffiliation", "resource"),
             ("Practitioner", "resource"),
             ("PractitionerRole", "resource"),
             ("Location", "resource"),
@@ -54,6 +75,12 @@ impl FhirDefs {
             ("MedicationStatement", "resource"),
             ("Substance", "resource"),
             ("ServiceRequest", "resource"),
+            ("SupplyDelivery", "resource"),
+            ("SupplyRequest", "resource"),
+            ("Task", "resource"),
+            ("TerminologyCapabilities", "resource"),
+            ("TestReport", "resource"),
+            ("TestScript", "resource"),
             ("DocumentReference", "resource"),
             ("Composition", "resource"),
             ("Bundle", "resource"),
@@ -61,8 +88,60 @@ impl FhirDefs {
             ("RelatedPerson", "resource"),
             ("Person", "resource"),
             ("Coverage", "resource"),
+            ("CoverageEligibilityRequest", "resource"),
+            ("CoverageEligibilityResponse", "resource"),
             ("Claim", "resource"),
+            ("ClaimResponse", "resource"),
+            ("DetectedIssue", "resource"),
+            ("EnrollmentRequest", "resource"),
+            ("EnrollmentResponse", "resource"),
+            ("EpisodeOfCare", "resource"),
+            ("EventDefinition", "resource"),
             ("ExplanationOfBenefit", "resource"),
+            ("FamilyMemberHistory", "resource"),
+            ("Flag", "resource"),
+            ("GraphDefinition", "resource"),
+            ("Group", "resource"),
+            ("GuidanceResponse", "resource"),
+            ("HealthcareService", "resource"),
+            ("ImagingStudy", "resource"),
+            ("InsurancePlan", "resource"),
+            ("Invoice", "resource"),
+            ("Library", "resource"),
+            ("Linkage", "resource"),
+            ("Measure", "resource"),
+            ("MeasureReport", "resource"),
+            ("Media", "resource"),
+            ("MolecularSequence", "resource"),
+            ("NutritionOrder", "resource"),
+            ("ObservationDefinition", "resource"),
+            ("OperationOutcome", "resource"),
+            ("Parameters", "resource"),
+            ("PaymentNotice", "resource"),
+            ("PaymentReconciliation", "resource"),
+            ("PlanDefinition", "resource"),
+            ("Provenance", "resource"),
+            ("Questionnaire", "resource"),
+            ("QuestionnaireResponse", "resource"),
+            ("RequestGroup", "resource"),
+            ("ResearchDefinition", "resource"),
+            ("ResearchElementDefinition", "resource"),
+            ("ResearchStudy", "resource"),
+            ("ResearchSubject", "resource"),
+            ("RiskAssessment", "resource"),
+            ("Schedule", "resource"),
+            ("Slot", "resource"),
+            ("Specimen", "resource"),
+            ("SpecimenDefinition", "resource"),
+            ("Subscription", "resource"),
+            ("SubstanceNucleicAcid", "resource"),
+            ("SubstancePolymer", "resource"),
+            ("SubstanceProtein", "resource"),
+            ("SubstanceReferenceInformation", "resource"),
+            ("SubstanceSourceMaterial", "resource"),
+            ("SubstanceSpecification", "resource"),
+            ("VerificationResult", "resource"),
+            ("VisionPrescription", "resource"),
             ("StructureDefinition", "resource"),
             ("ValueSet", "resource"),
             ("CodeSystem", "resource"),
@@ -116,6 +195,47 @@ impl FhirDefs {
             sds_by_url.insert(url, summary2);
         }
 
+        for (id, name, base_type, kind) in [
+            (
+                "bodyheight",
+                "observation-bodyheight",
+                "Observation",
+                "resource",
+            ),
+            (
+                "bodyweight",
+                "observation-bodyweight",
+                "Observation",
+                "resource",
+            ),
+            (
+                "bodytemp",
+                "observation-bodytemp",
+                "Observation",
+                "resource",
+            ),
+        ] {
+            let url = format!("http://hl7.org/fhir/StructureDefinition/{id}");
+            sds_by_name.insert(
+                name.to_string(),
+                SdSummary {
+                    id: id.to_string(),
+                    url: url.clone(),
+                    base_type: base_type.to_string(),
+                    kind: kind.to_string(),
+                },
+            );
+            sds_by_url.insert(
+                url,
+                SdSummary {
+                    id: id.to_string(),
+                    url: format!("http://hl7.org/fhir/StructureDefinition/{id}"),
+                    base_type: base_type.to_string(),
+                    kind: kind.to_string(),
+                },
+            );
+        }
+
         Arc::new(Self {
             sds_by_name,
             sds_by_url,
@@ -145,5 +265,25 @@ impl FhirDefs {
             max: field.max,
             is_choice: field.is_choice_type,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolves_common_r4_observation_profile_urls() {
+        let defs = FhirDefs::r4();
+        let bodyheight = defs
+            .get_sd("http://hl7.org/fhir/StructureDefinition/bodyheight")
+            .expect("bodyheight profile is indexed");
+
+        assert_eq!(bodyheight.base_type, "Observation");
+        assert_eq!(
+            defs.get_sd("observation-bodyweight")
+                .map(|sd| sd.base_type.as_str()),
+            Some("Observation")
+        );
     }
 }

@@ -3,7 +3,7 @@
 use crate::error::FshError;
 use crate::parser::ast::*;
 use indexmap::IndexMap;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Container for all FSH entities, indexed by name
 pub struct FshTank {
@@ -19,8 +19,6 @@ pub struct FshTank {
     pub rule_sets: IndexMap<String, RuleSet>,
     pub param_rule_sets: IndexMap<String, ParamRuleSet>,
     pub aliases: HashMap<String, String>,
-    /// All known names (for duplicate detection)
-    known_names: HashSet<String>,
 }
 
 /// A reference to any FSH entity by name
@@ -53,7 +51,6 @@ impl FshTank {
             rule_sets: IndexMap::new(),
             param_rule_sets: IndexMap::new(),
             aliases: HashMap::new(),
-            known_names: HashSet::new(),
         }
     }
 
@@ -67,135 +64,47 @@ impl FshTank {
             match spanned.value {
                 FshEntity::Profile(p) => {
                     let name = p.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.profiles.insert(name, p);
-                    }
+                    insert_unique(&mut self.profiles, name, p, loc, &mut errors);
                 }
                 FshEntity::Extension(e) => {
                     let name = e.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.extensions.insert(name, e);
-                    }
+                    insert_unique(&mut self.extensions, name, e, loc, &mut errors);
                 }
                 FshEntity::Logical(l) => {
                     let name = l.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.logicals.insert(name, l);
-                    }
+                    insert_unique(&mut self.logicals, name, l, loc, &mut errors);
                 }
                 FshEntity::Resource(r) => {
                     let name = r.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.resources.insert(name, r);
-                    }
+                    insert_unique(&mut self.resources, name, r, loc, &mut errors);
                 }
                 FshEntity::Instance(i) => {
                     let name = i.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.instances.insert(name, i);
-                    }
+                    insert_unique(&mut self.instances, name, i, loc, &mut errors);
                 }
                 FshEntity::ValueSet(vs) => {
                     let name = vs.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.value_sets.insert(name, vs);
-                    }
+                    insert_unique(&mut self.value_sets, name, vs, loc, &mut errors);
                 }
                 FshEntity::CodeSystem(cs) => {
                     let name = cs.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.code_systems.insert(name, cs);
-                    }
+                    insert_unique(&mut self.code_systems, name, cs, loc, &mut errors);
                 }
                 FshEntity::Invariant(inv) => {
                     let name = inv.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.invariants.insert(name, inv);
-                    }
+                    insert_unique(&mut self.invariants, name, inv, loc, &mut errors);
                 }
                 FshEntity::Mapping(m) => {
                     let name = m.metadata.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.mappings.insert(name, m);
-                    }
+                    insert_unique(&mut self.mappings, name, m, loc, &mut errors);
                 }
                 FshEntity::RuleSet(rs) => {
                     let name = rs.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.rule_sets.insert(name, rs);
-                    }
+                    insert_unique(&mut self.rule_sets, name, rs, loc, &mut errors);
                 }
                 FshEntity::ParamRuleSet(prs) => {
                     let name = prs.name.clone();
-                    if self.known_names.contains(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.known_names.insert(name.clone());
-                        self.param_rule_sets.insert(name, prs);
-                    }
+                    insert_unique(&mut self.param_rule_sets, name, prs, loc, &mut errors);
                 }
                 FshEntity::Alias(a) => {
                     self.aliases.insert(a.name, a.value);
@@ -249,8 +158,70 @@ impl FshTank {
     }
 }
 
+fn insert_unique<T>(
+    map: &mut IndexMap<String, T>,
+    name: String,
+    value: T,
+    location: crate::parser::span::SourceLocation,
+    errors: &mut Vec<FshError>,
+) {
+    if map.contains_key(&name) {
+        errors.push(FshError::DuplicateEntity { name, location });
+    } else {
+        map.insert(name, value);
+    }
+}
+
 impl Default for FshTank {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::FshParser;
+
+    fn add(src: &str) -> Result<FshTank, Vec<FshError>> {
+        let doc = FshParser::parse(src, "test.fsh").expect("parse succeeds");
+        let mut tank = FshTank::new();
+        tank.add_document(doc)?;
+        Ok(tank)
+    }
+
+    #[test]
+    fn permits_duplicate_names_across_entity_kinds() {
+        let tank = add(r#"
+Profile: SameName
+Parent: Patient
+
+Instance: SameName
+InstanceOf: Patient
+Usage: #example
+"#)
+        .expect("cross-kind duplicate names are allowed");
+
+        assert!(tank.profiles.contains_key("SameName"));
+        assert!(tank.instances.contains_key("SameName"));
+    }
+
+    #[test]
+    fn rejects_duplicate_names_within_entity_kind() {
+        let result = add(r#"
+ValueSet: SameName
+* include codes from system http://example.org/one
+
+ValueSet: SameName
+* include codes from system http://example.org/two
+"#);
+        let errors = match result {
+            Ok(_) => panic!("same-kind duplicate names are rejected"),
+            Err(errors) => errors,
+        };
+
+        assert!(
+            matches!(errors[0], FshError::DuplicateEntity { ref name, .. } if name == "SameName")
+        );
     }
 }

@@ -1,0 +1,12 @@
+id: rh.fhir.fsh.profile-identity-smoke
+canonical: http://example.org/rh/fsh/profile-identity-smoke
+name: RHFSHProfileIdentitySmoke
+title: RH FSH Profile Identity Smoke
+status: draft
+version: 0.1.0
+fhirVersion: 4.0.1
+copyrightYear: 2026+
+releaseLabel: ci-build
+FSHOnly: true
+dependencies:
+  hl7.fhir.us.core: 6.1.0
