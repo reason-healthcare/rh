@@ -89,11 +89,91 @@ impl FshExporter {
             &mut resources,
             &mut errors,
         );
+        if let Some(implementation_guide) = export_implementation_guide(config, &resources) {
+            resources.push(implementation_guide);
+        }
 
         // Mappings do NOT produce standalone FHIR resources (H6)
 
         FhirPackage { resources, errors }
     }
+}
+
+fn export_implementation_guide(
+    config: &crate::FshConfig,
+    resources: &[serde_json::Value],
+) -> Option<serde_json::Value> {
+    let id = config.id.as_ref()?;
+    let canonical = config.canonical.as_ref()?;
+    let self_reference = format!("ImplementationGuide/{id}");
+    let mut definition_resources: Vec<serde_json::Value> = resources
+        .iter()
+        .filter_map(resource_reference)
+        .filter(|reference| reference != &self_reference)
+        .map(|reference| {
+            serde_json::json!({
+                "reference": {
+                    "reference": reference,
+                },
+            })
+        })
+        .collect();
+    if definition_resources.is_empty() {
+        definition_resources.push(serde_json::json!({
+            "reference": {
+                "reference": self_reference,
+            },
+        }));
+    }
+
+    let mut resource = serde_json::json!({
+        "resourceType": "ImplementationGuide",
+        "id": id,
+        "url": format!("{}/ImplementationGuide/{}", canonical.trim_end_matches('/'), id),
+        "name": config.name.as_deref().unwrap_or(id),
+        "status": config.status.as_deref().unwrap_or("active"),
+        "packageId": id,
+        "fhirVersion": [config.fhir_version.as_deref().unwrap_or("4.0.1")],
+        "definition": {
+            "resource": definition_resources
+        }
+    });
+
+    if let Some(version) = &config.version {
+        resource["version"] = serde_json::Value::String(version.clone());
+    }
+    if let Some(publisher) = &config.publisher {
+        resource["publisher"] = serde_json::Value::String(publisher.clone());
+    }
+    if !config.dependencies.is_empty() {
+        resource["dependsOn"] = serde_json::Value::Array(
+            config
+                .dependencies
+                .iter()
+                .map(|dependency| {
+                    let mut item = serde_json::json!({
+                        "packageId": dependency.package_id,
+                        "version": dependency.version,
+                    });
+                    if let Some(id) = &dependency.id {
+                        item["id"] = serde_json::Value::String(id.clone());
+                    }
+                    if let Some(uri) = &dependency.uri {
+                        item["uri"] = serde_json::Value::String(uri.clone());
+                    }
+                    item
+                })
+                .collect(),
+        );
+    }
+
+    Some(resource)
+}
+
+fn resource_reference(resource: &serde_json::Value) -> Option<String> {
+    let resource_type = resource.get("resourceType")?.as_str()?;
+    let id = resource.get("id").and_then(|v| v.as_str())?;
+    Some(format!("{resource_type}/{id}"))
 }
 
 /// Build a map of entity name → parent name for FHIR type resolution.
@@ -143,4 +223,51 @@ fn export_par<'a, T, F, I>(
     let items: Vec<&T> = iter.collect();
     let results: Vec<_> = items.into_par_iter().map(f).collect();
     collect_results(results, resources, errors);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{FshConfig, FshDependency};
+
+    #[test]
+    fn emits_implementation_guide_from_project_config() {
+        let mut package = FshExporter::export(
+            &FshTank::new(),
+            FhirDefs::r4(),
+            &FshConfig {
+                id: Some("example.fhir".to_string()),
+                canonical: Some("http://example.org/fhir".to_string()),
+                name: Some("ExampleIG".to_string()),
+                status: Some("draft".to_string()),
+                publisher: Some("Example Publisher".to_string()),
+                version: Some("1.2.3".to_string()),
+                fhir_version: Some("4.0.1".to_string()),
+                dependencies: vec![FshDependency {
+                    package_id: "hl7.fhir.us.core".to_string(),
+                    version: "6.1.0".to_string(),
+                    id: Some("uscore".to_string()),
+                    uri: Some(
+                        "http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core"
+                            .to_string(),
+                    ),
+                }],
+            },
+        );
+
+        let ig = package
+            .resources
+            .drain(..)
+            .find(|resource| {
+                resource.get("resourceType").and_then(|v| v.as_str()) == Some("ImplementationGuide")
+            })
+            .expect("ImplementationGuide exists");
+        assert_eq!(ig["id"], "example.fhir");
+        assert_eq!(
+            ig["url"],
+            "http://example.org/fhir/ImplementationGuide/example.fhir"
+        );
+        assert_eq!(ig["packageId"], "example.fhir");
+        assert_eq!(ig["dependsOn"][0]["packageId"], "hl7.fhir.us.core");
+    }
 }

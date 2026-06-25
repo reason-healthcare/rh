@@ -38,12 +38,12 @@ FIXTURE_PROJECTS = {
 }
 
 DEFAULT_THRESHOLDS = {
-    "carin-bb": {"missing": 23, "extra": 22, "mismatch": 111},
-    "mcode": {"missing": 1, "extra": 0, "mismatch": 328},
-    "davinci-crd": {"missing": 8, "extra": 8, "mismatch": 73},
-    "davinci-dtr": {"missing": 1, "extra": 5, "mismatch": 63},
-    "davinci-pas": {"missing": 15, "extra": 17, "mismatch": 141},
-    "fhir-ips": {"missing": 1, "extra": 97, "mismatch": 116},
+    "carin-bb": {"missing": 22, "extra": 22, "mismatch": 112},
+    "mcode": {"missing": 0, "extra": 0, "mismatch": 329},
+    "davinci-crd": {"missing": 7, "extra": 8, "mismatch": 74},
+    "davinci-dtr": {"missing": 0, "extra": 5, "mismatch": 64},
+    "davinci-pas": {"missing": 14, "extra": 17, "mismatch": 142},
+    "fhir-ips": {"missing": 0, "extra": 97, "mismatch": 117},
     "profile-identity-smoke": {"missing": 0, "extra": 0, "mismatch": 1},
 }
 
@@ -361,8 +361,12 @@ def run_rh_fsh_json(
         result.error = f"invalid rh JSON output: {exc}"
         return result, {}
 
+    payload = envelope.get("result", [])
+    if isinstance(payload, dict):
+        payload = payload.get("resources", [])
+
     resources: dict[str, Any] = {}
-    for value in envelope.get("result", []):
+    for value in payload:
         key = resource_key(value)
         if key:
             resources[key] = normalize_resource(value)

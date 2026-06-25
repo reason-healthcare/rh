@@ -57,6 +57,7 @@ pub fn export_code_system(
         .collect();
 
     if !concepts.is_empty() {
+        json["count"] = serde_json::json!(concepts.len());
         json["concept"] = serde_json::json!(concepts);
     }
 
@@ -90,5 +91,49 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
             "numerator": fsh_value_to_json_simple(numerator),
             "denominator": fsh_value_to_json_simple(denominator),
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::span::SourceLocation;
+
+    #[test]
+    fn emits_count_for_top_level_concepts() {
+        let code_system = CodeSystem {
+            metadata: CsMetadata {
+                name: "ExampleCodeSystem".to_string(),
+                id: Some("example-cs".to_string()),
+                title: None,
+                description: None,
+            },
+            concepts: vec![
+                Spanned::new(
+                    ConceptRule {
+                        code: "one".to_string(),
+                        display: None,
+                        definition: None,
+                        hierarchy: Vec::new(),
+                    },
+                    SourceLocation::default(),
+                ),
+                Spanned::new(
+                    ConceptRule {
+                        code: "two".to_string(),
+                        display: None,
+                        definition: None,
+                        hierarchy: Vec::new(),
+                    },
+                    SourceLocation::default(),
+                ),
+            ],
+            caret_rules: Vec::new(),
+        };
+
+        let json = export_code_system(&code_system, &crate::FshConfig::default())
+            .expect("CodeSystem exports");
+
+        assert_eq!(json["count"], 2);
     }
 }

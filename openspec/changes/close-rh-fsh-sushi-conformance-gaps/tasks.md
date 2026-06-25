@@ -35,17 +35,17 @@
 
 ## 5. Project Metadata, Terminology, and CLI Output
 
-- [ ] 5.1 Generate `ImplementationGuide/<id>` resources from normalized project configuration when compiling an IG project.
-- [ ] 5.2 Emit CodeSystem `count` values matching SUSHI for flat and hierarchical concept systems.
+- [x] 5.1 Generate `ImplementationGuide/<id>` resources from normalized project configuration when compiling an IG project.
+- [x] 5.2 Emit CodeSystem `count` values matching SUSHI for flat and hierarchical concept systems.
 - [ ] 5.3 Fix canonical `url`, `version`, `status`, `publisher`, `title`, and definition-instance metadata where SUSHI derives values from project config.
-- [ ] 5.4 Sanitize `rh fsh compile --output` filenames so resource ids or canonical URLs containing slashes cannot cause write failures.
-- [ ] 5.5 Include non-fatal compile/export diagnostics in `--format json` output so conformance runs can compare partial output with warnings.
-- [ ] 5.6 Add CLI tests for safe filename generation and stable JSON envelope output.
+- [x] 5.4 Sanitize `rh fsh compile --output` filenames so resource ids or canonical URLs containing slashes cannot cause write failures.
+- [x] 5.5 Include non-fatal compile/export diagnostics in `--format json` output so conformance runs can compare partial output with warnings.
+- [x] 5.6 Add CLI tests for safe filename generation and stable JSON envelope output.
 
 ## 6. Verification and Acceptance
 
-- [ ] 6.1 Run `cargo test -p rh-fsh` and targeted `rh-cli` FSH integration tests after each implementation wave.
-- [ ] 6.2 Run `python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --project davinci-dtr --timeout-seconds 600` until DTR reaches the configured interim threshold.
-- [ ] 6.3 Run full project comparison for all configured projects and update `CONFORMANCE.md` with latest results and remaining categorized gaps.
+- [x] 6.1 Run `cargo test -p rh-fsh` and targeted `rh-cli` FSH integration tests after each implementation wave.
+- [x] 6.2 Run `python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --project davinci-dtr --timeout-seconds 600` until DTR reaches the configured interim threshold.
+- [x] 6.3 Run full project comparison for all configured projects and update `CONFORMANCE.md` with latest results and remaining categorized gaps.
 - [ ] 6.4 Decide whether to add a non-blocking CI artifact upload for the project comparison report.
 - [ ] 6.5 Tighten thresholds only after DTR and mCODE results are deterministic across two consecutive local runs.
