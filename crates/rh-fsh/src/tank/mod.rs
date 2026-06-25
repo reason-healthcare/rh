@@ -64,124 +64,47 @@ impl FshTank {
             match spanned.value {
                 FshEntity::Profile(p) => {
                     let name = p.metadata.name.clone();
-                    if self.profiles.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.profiles.insert(name, p);
-                    }
+                    insert_unique(&mut self.profiles, name, p, loc, &mut errors);
                 }
                 FshEntity::Extension(e) => {
                     let name = e.metadata.name.clone();
-                    if self.extensions.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.extensions.insert(name, e);
-                    }
+                    insert_unique(&mut self.extensions, name, e, loc, &mut errors);
                 }
                 FshEntity::Logical(l) => {
                     let name = l.metadata.name.clone();
-                    if self.logicals.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.logicals.insert(name, l);
-                    }
+                    insert_unique(&mut self.logicals, name, l, loc, &mut errors);
                 }
                 FshEntity::Resource(r) => {
                     let name = r.metadata.name.clone();
-                    if self.resources.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.resources.insert(name, r);
-                    }
+                    insert_unique(&mut self.resources, name, r, loc, &mut errors);
                 }
                 FshEntity::Instance(i) => {
                     let name = i.metadata.name.clone();
-                    if self.instances.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.instances.insert(name, i);
-                    }
+                    insert_unique(&mut self.instances, name, i, loc, &mut errors);
                 }
                 FshEntity::ValueSet(vs) => {
                     let name = vs.metadata.name.clone();
-                    if self.value_sets.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.value_sets.insert(name, vs);
-                    }
+                    insert_unique(&mut self.value_sets, name, vs, loc, &mut errors);
                 }
                 FshEntity::CodeSystem(cs) => {
                     let name = cs.metadata.name.clone();
-                    if self.code_systems.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.code_systems.insert(name, cs);
-                    }
+                    insert_unique(&mut self.code_systems, name, cs, loc, &mut errors);
                 }
                 FshEntity::Invariant(inv) => {
                     let name = inv.name.clone();
-                    if self.invariants.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.invariants.insert(name, inv);
-                    }
+                    insert_unique(&mut self.invariants, name, inv, loc, &mut errors);
                 }
                 FshEntity::Mapping(m) => {
                     let name = m.metadata.name.clone();
-                    if self.mappings.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.mappings.insert(name, m);
-                    }
+                    insert_unique(&mut self.mappings, name, m, loc, &mut errors);
                 }
                 FshEntity::RuleSet(rs) => {
                     let name = rs.name.clone();
-                    if self.rule_sets.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.rule_sets.insert(name, rs);
-                    }
+                    insert_unique(&mut self.rule_sets, name, rs, loc, &mut errors);
                 }
                 FshEntity::ParamRuleSet(prs) => {
                     let name = prs.name.clone();
-                    if self.param_rule_sets.contains_key(&name) {
-                        errors.push(FshError::DuplicateEntity {
-                            name,
-                            location: loc,
-                        });
-                    } else {
-                        self.param_rule_sets.insert(name, prs);
-                    }
+                    insert_unique(&mut self.param_rule_sets, name, prs, loc, &mut errors);
                 }
                 FshEntity::Alias(a) => {
                     self.aliases.insert(a.name, a.value);
@@ -232,6 +155,20 @@ impl FshTank {
             return Some(FshEntityRef::ParamRuleSet(prs));
         }
         None
+    }
+}
+
+fn insert_unique<T>(
+    map: &mut IndexMap<String, T>,
+    name: String,
+    value: T,
+    location: crate::parser::span::SourceLocation,
+    errors: &mut Vec<FshError>,
+) {
+    if map.contains_key(&name) {
+        errors.push(FshError::DuplicateEntity { name, location });
+    } else {
+        map.insert(name, value);
     }
 }
 

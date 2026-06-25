@@ -114,14 +114,7 @@ fn load_package_structure_definitions(
             continue;
         }
 
-        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-            continue;
-        }
-        if !path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .is_some_and(|name| name.starts_with("StructureDefinition"))
-        {
+        if !is_structure_definition_json_file(&path) {
             continue;
         }
 
@@ -165,6 +158,14 @@ fn load_package_structure_definitions(
     }
 
     Ok(())
+}
+
+fn is_structure_definition_json_file(path: &Path) -> bool {
+    path.extension().and_then(|ext| ext.to_str()) == Some("json")
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("StructureDefinition"))
 }
 
 #[cfg(test)]

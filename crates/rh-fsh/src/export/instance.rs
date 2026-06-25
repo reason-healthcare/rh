@@ -8,6 +8,13 @@ use crate::tank::FshTank;
 use crate::FshConfig;
 use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType};
 
+struct InstanceExportContext<'a> {
+    defs: &'a FhirDefs,
+    config: &'a FshConfig,
+    tank: &'a FshTank,
+    definition_index: &'a DefinitionIndex,
+}
+
 pub fn export_instance(
     inst: &Instance,
     defs: &FhirDefs,
@@ -15,24 +22,37 @@ pub fn export_instance(
     tank: &FshTank,
     definition_index: &DefinitionIndex,
 ) -> Result<serde_json::Value, FshError> {
+    let context = InstanceExportContext {
+        defs,
+        config,
+        tank,
+        definition_index,
+    };
+    export_instance_with_context(inst, &context)
+}
+
+fn export_instance_with_context(
+    inst: &Instance,
+    context: &InstanceExportContext<'_>,
+) -> Result<serde_json::Value, FshError> {
     let instance_of = &inst.metadata.instance_of;
 
-    let is_logical_instance = tank.logicals.contains_key(instance_of.as_str());
+    let is_logical_instance = context.tank.logicals.contains_key(instance_of.as_str());
     let resource_type_json = if is_logical_instance {
-        if let Some(canonical) = &config.canonical {
+        if let Some(canonical) = &context.config.canonical {
             format!("{canonical}/StructureDefinition/{instance_of}")
         } else {
             instance_of.clone()
         }
     } else {
-        resolve_instance_resource_type(instance_of, defs, definition_index)
+        resolve_instance_resource_type(instance_of, context.defs, context.definition_index)
             .unwrap_or_else(|| instance_of.clone())
     };
     let resource_type_for_metadata = resource_type_json.clone();
 
     let mut resource = if is_logical_instance {
         // Logical model instances don't always have an id (depends on Characteristics: #can-be-target)
-        let logical = tank.logicals.get(instance_of.as_str()).unwrap();
+        let logical = context.tank.logicals.get(instance_of.as_str()).unwrap();
         let has_can_be_target = logical
             .metadata
             .characteristics
@@ -59,7 +79,7 @@ pub fn export_instance(
 
     let usage = inst.metadata.usage.as_deref().unwrap_or("");
     if usage == "#definition" || usage == "definition" {
-        if let Some(canonical) = &config.canonical {
+        if let Some(canonical) = &context.config.canonical {
             let url = format!("{canonical}/{instance_of}/{}", inst.metadata.name);
             resource["url"] = serde_json::Value::String(url);
         }
@@ -72,11 +92,8 @@ pub fn export_instance(
                     &mut resource,
                     &a.path,
                     &a.value,
-                    defs,
                     &resource_type_for_metadata,
-                    tank,
-                    config,
-                    definition_index,
+                    context,
                 );
             }
             InstanceRule::Insert(_) => {}
@@ -91,23 +108,14 @@ fn apply_assignment(
     root: &mut serde_json::Value,
     path: &FshPath,
     value: &FshValue,
-    defs: &FhirDefs,
     resource_type: &str,
-    tank: &FshTank,
-    config: &FshConfig,
-    definition_index: &DefinitionIndex,
+    context: &InstanceExportContext<'_>,
 ) {
-    let json_val = fsh_value_to_json(value, tank, defs, config, definition_index);
-    set_at_path(root, &path.segments, json_val, defs, resource_type);
+    let json_val = fsh_value_to_json(value, context);
+    set_at_path(root, &path.segments, json_val, context.defs, resource_type);
 }
 
-fn fsh_value_to_json(
-    value: &FshValue,
-    tank: &FshTank,
-    defs: &FhirDefs,
-    config: &FshConfig,
-    definition_index: &DefinitionIndex,
-) -> serde_json::Value {
+fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> serde_json::Value {
     match value {
         FshValue::Str(s) => serde_json::Value::String(s.clone()),
         FshValue::Bool(b) => serde_json::Value::Bool(*b),
@@ -124,7 +132,7 @@ fn fsh_value_to_json(
             }
             if let Some(s) = system {
                 // Resolve local CodeSystem name to its ^url if present in the tank
-                let resolved_system = resolve_code_system_url(s, tank);
+                let resolved_system = resolve_code_system_url(s, context.tank);
                 // Code with system → Coding object (embedded in CodeableConcept by caller if needed)
                 let mut obj = serde_json::json!({ "system": resolved_system, "code": code });
                 if let Some(d) = display {
@@ -142,21 +150,26 @@ fn fsh_value_to_json(
             denominator,
         } => {
             serde_json::json!({
-                "numerator": fsh_value_to_json(numerator, tank, defs, config, definition_index),
-                "denominator": fsh_value_to_json(denominator, tank, defs, config, definition_index),
+                "numerator": fsh_value_to_json(numerator, context),
+                "denominator": fsh_value_to_json(denominator, context),
             })
         }
         FshValue::Reference(r) => {
-            let resolved = resolve_reference(r, tank, defs, config, definition_index);
+            let resolved = resolve_reference(
+                r,
+                context.tank,
+                context.defs,
+                context.config,
+                context.definition_index,
+            );
             serde_json::json!({ "reference": resolved })
         }
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
         FshValue::InstanceRef(name) => {
             // Embed the referenced inline instance JSON (used for contained[+] = myInstance)
-            if let Some(inst) = tank.instances.get(name) {
-                export_instance(inst, defs, config, tank, definition_index)
-                    .unwrap_or(serde_json::Value::Null)
+            if let Some(inst) = context.tank.instances.get(name) {
+                export_instance_with_context(inst, context).unwrap_or(serde_json::Value::Null)
             } else {
                 serde_json::Value::Null
             }
