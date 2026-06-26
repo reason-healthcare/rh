@@ -1,6 +1,8 @@
 use anyhow::Result;
 use lru::LruCache;
-use rh_foundation::snapshot::StructureDefinition;
+use rh_foundation::snapshot::{ElementDefinition, StructureDefinition};
+use serde_json::Value;
+use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::sync::Mutex;
 
@@ -73,6 +75,14 @@ pub struct SliceDefinition {
     pub name: String,
     pub min: u32,
     pub max: String,
+    pub discriminator_constraints: Vec<DiscriminatorConstraint>,
+    pub target_profiles: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DiscriminatorConstraint {
+    pub path: String,
+    pub value: Value,
 }
 
 pub struct RuleCompiler {
@@ -198,6 +208,18 @@ impl RuleCompiler {
                     for slice_element in &snapshot_data.element {
                         if slice_element.path == element.path {
                             if let Some(slice_name) = &slice_element.slice_name {
+                                let discriminator_constraints = collect_discriminator_constraints(
+                                    &snapshot_data.element,
+                                    element,
+                                    slice_name,
+                                    &discriminators,
+                                );
+                                let target_profiles = collect_profile_constraints(
+                                    &snapshot_data.element,
+                                    element,
+                                    slice_name,
+                                    &discriminators,
+                                );
                                 slices.push(SliceDefinition {
                                     name: slice_name.clone(),
                                     min: slice_element.min.unwrap_or(0),
@@ -205,6 +227,8 @@ impl RuleCompiler {
                                         .max
                                         .clone()
                                         .unwrap_or_else(|| "*".to_string()),
+                                    discriminator_constraints,
+                                    target_profiles,
                                 });
                             }
                         }
@@ -273,6 +297,106 @@ impl RuleCompiler {
         *self.cache_hits.lock().unwrap() = 0;
         *self.cache_misses.lock().unwrap() = 0;
     }
+}
+
+fn collect_discriminator_constraints(
+    elements: &[ElementDefinition],
+    slicing_root: &ElementDefinition,
+    slice_name: &str,
+    discriminators: &[Discriminator],
+) -> Vec<DiscriminatorConstraint> {
+    let mut constraints = Vec::new();
+
+    for element in elements {
+        if element.slice_name.as_deref() != Some(slice_name) {
+            continue;
+        }
+
+        let Some(relative_path) = relative_slice_path(&element.path, &slicing_root.path) else {
+            continue;
+        };
+
+        for discriminator in discriminators {
+            if !path_matches_discriminator(relative_path, &discriminator.path) {
+                continue;
+            }
+
+            for value in fixed_or_pattern_values(&element.additional) {
+                constraints.push(DiscriminatorConstraint {
+                    path: relative_path.to_string(),
+                    value: value.clone(),
+                });
+            }
+        }
+    }
+
+    constraints
+}
+
+fn collect_profile_constraints(
+    elements: &[ElementDefinition],
+    slicing_root: &ElementDefinition,
+    slice_name: &str,
+    discriminators: &[Discriminator],
+) -> Vec<String> {
+    let mut profiles = Vec::new();
+
+    for element in elements {
+        if element.slice_name.as_deref() != Some(slice_name) {
+            continue;
+        }
+
+        let Some(relative_path) = relative_slice_path(&element.path, &slicing_root.path) else {
+            continue;
+        };
+
+        let is_profile_discriminator_path = discriminators.iter().any(|discriminator| {
+            discriminator.type_ == "profile"
+                && path_matches_discriminator(relative_path, &discriminator.path)
+        });
+        if !is_profile_discriminator_path {
+            continue;
+        }
+
+        if let Some(types) = &element.type_ {
+            for type_def in types {
+                if let Some(type_profiles) = &type_def.profile {
+                    profiles.extend(type_profiles.iter().cloned());
+                }
+                if let Some(type_profiles) = &type_def.target_profile {
+                    profiles.extend(type_profiles.iter().cloned());
+                }
+            }
+        }
+    }
+
+    profiles.sort();
+    profiles.dedup();
+    profiles
+}
+
+fn relative_slice_path<'a>(element_path: &'a str, slicing_path: &str) -> Option<&'a str> {
+    if element_path == slicing_path {
+        return Some("$this");
+    }
+
+    element_path
+        .strip_prefix(slicing_path)
+        .and_then(|suffix| suffix.strip_prefix('.'))
+}
+
+fn path_matches_discriminator(element_relative_path: &str, discriminator_path: &str) -> bool {
+    (discriminator_path == "$this" && element_relative_path == "$this")
+        || element_relative_path == discriminator_path
+        || discriminator_path.starts_with(&format!("{element_relative_path}."))
+        || element_relative_path.starts_with(&format!("{discriminator_path}."))
+}
+
+fn fixed_or_pattern_values(additional: &HashMap<String, Value>) -> impl Iterator<Item = &Value> {
+    additional
+        .iter()
+        .filter(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
+        .map(|(_, value)| value)
 }
 
 impl Default for RuleCompiler {

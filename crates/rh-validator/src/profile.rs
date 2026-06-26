@@ -87,7 +87,9 @@ impl ProfileRegistry {
     }
 
     pub fn get_snapshot(&self, profile_url: &str) -> Result<Option<StructureDefinition>> {
-        if let Some(cached) = self.snapshot_cache.write().unwrap().get(profile_url) {
+        let lookup_url = canonical_url_without_version(profile_url);
+
+        if let Some(cached) = self.snapshot_cache.write().unwrap().get(lookup_url) {
             *self.cache_hits.write().unwrap() += 1;
             return Ok(Some(cached.clone()));
         }
@@ -99,34 +101,34 @@ impl ProfileRegistry {
             .dynamic_profiles
             .read()
             .unwrap()
-            .get(profile_url)
+            .get(lookup_url)
             .cloned()
         {
             self.snapshot_cache
                 .write()
                 .unwrap()
-                .put(profile_url.to_string(), profile.clone());
+                .put(lookup_url.to_string(), profile.clone());
             return Ok(Some(profile));
         }
 
         // Then check statically loaded profiles
-        if !self.profiles.contains_key(profile_url) {
+        if !self.profiles.contains_key(lookup_url) {
             return Ok(None);
         }
 
         let snapshot = self
             .generator
-            .generate_snapshot(profile_url)
+            .generate_snapshot(lookup_url)
             .context("Failed to generate snapshot")?;
 
-        let profile = self.profiles.get(profile_url).unwrap().clone();
+        let profile = self.profiles.get(lookup_url).unwrap().clone();
         let mut profile_with_snapshot = profile;
         profile_with_snapshot.snapshot = Some(std::sync::Arc::unwrap_or_clone(snapshot));
 
         self.snapshot_cache
             .write()
             .unwrap()
-            .put(profile_url.to_string(), profile_with_snapshot.clone());
+            .put(lookup_url.to_string(), profile_with_snapshot.clone());
 
         Ok(Some(profile_with_snapshot))
     }
@@ -218,6 +220,10 @@ impl ProfileRegistry {
 
         urls
     }
+}
+
+fn canonical_url_without_version(url: &str) -> &str {
+    url.split('|').next().unwrap_or(url)
 }
 
 impl Default for ProfileRegistry {

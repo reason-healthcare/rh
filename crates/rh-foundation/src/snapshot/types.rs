@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructureDefinition {
@@ -48,6 +50,8 @@ pub struct ElementDefinition {
     pub slicing: Option<ElementSlicing>,
     #[serde(rename = "sliceName")]
     pub slice_name: Option<String>,
+    #[serde(flatten)]
+    pub additional: HashMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,6 +73,8 @@ pub struct ElementDiscriminator {
 pub struct ElementType {
     pub code: String,
     pub profile: Option<Vec<String>>,
+    #[serde(rename = "targetProfile")]
+    pub target_profile: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

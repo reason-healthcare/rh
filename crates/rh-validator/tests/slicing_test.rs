@@ -1,4 +1,4 @@
-use rh_validator::{FhirValidator, Severity};
+use rh_validator::{FhirValidator, FhirVersion, Severity};
 use serde_json::json;
 
 fn setup_validator_with_us_core() -> Option<FhirValidator> {
@@ -552,5 +552,211 @@ fn test_slicing_validation_basic() {
     assert!(
         actual_errors.is_empty(),
         "Expected no slicing errors, but got: {actual_errors:#?}"
+    );
+}
+
+#[test]
+fn test_versioned_profile_url_resolves_unversioned_registered_profile() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).expect("validator should initialize");
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/fhir/StructureDefinition/versioned-observation",
+        "name": "VersionedObservation",
+        "type": "Observation",
+        "snapshot": {
+            "element": [
+                {"id": "Observation", "path": "Observation", "min": 0, "max": "*"},
+                {"id": "Observation.status", "path": "Observation.status", "min": 1, "max": "1"}
+            ]
+        }
+    }));
+
+    let observation = json!({
+        "resourceType": "Observation"
+    });
+
+    let result = validator
+        .validate_with_profile(
+            &observation,
+            "http://example.org/fhir/StructureDefinition/versioned-observation|1.0.0",
+        )
+        .expect("validation should run");
+
+    assert!(
+        result
+            .issues
+            .iter()
+            .any(|issue| issue.message.contains("Observation.status")),
+        "versioned profile URL should resolve and apply profile rules: {:?}",
+        result.issues
+    );
+    assert!(
+        result
+            .issues
+            .iter()
+            .all(|issue| !issue.message.contains("could not be found")),
+        "versioned profile URL should not produce profile-not-found warning: {:?}",
+        result.issues
+    );
+}
+
+#[test]
+fn test_closed_value_slicing_uses_slice_patterns() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).expect("validator should initialize");
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/fhir/StructureDefinition/sliced-observation",
+        "name": "SlicedObservation",
+        "type": "Observation",
+        "snapshot": {
+            "element": [
+                {"id": "Observation", "path": "Observation", "min": 0, "max": "*"},
+                {
+                    "id": "Observation.component",
+                    "path": "Observation.component",
+                    "min": 0,
+                    "max": "*",
+                    "slicing": {
+                        "discriminator": [{"type": "value", "path": "code"}],
+                        "rules": "closed"
+                    }
+                },
+                {
+                    "id": "Observation.component:a",
+                    "path": "Observation.component",
+                    "sliceName": "a",
+                    "min": 1,
+                    "max": "1"
+                },
+                {
+                    "id": "Observation.component:a.code",
+                    "path": "Observation.component.code",
+                    "sliceName": "a",
+                    "patternCodeableConcept": {
+                        "coding": [{"system": "http://example.org/codes", "code": "a"}]
+                    }
+                },
+                {
+                    "id": "Observation.component:b",
+                    "path": "Observation.component",
+                    "sliceName": "b",
+                    "min": 1,
+                    "max": "1"
+                },
+                {
+                    "id": "Observation.component:b.code",
+                    "path": "Observation.component.code",
+                    "sliceName": "b",
+                    "patternCodeableConcept": {
+                        "coding": [{"system": "http://example.org/codes", "code": "b"}]
+                    }
+                }
+            ]
+        }
+    }));
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "component": [
+            {"code": {"coding": [{"system": "http://example.org/codes", "code": "a"}]}},
+            {"code": {"coding": [{"system": "http://example.org/codes", "code": "b"}]}}
+        ]
+    });
+
+    let result = validator
+        .validate_with_profile(
+            &observation,
+            "http://example.org/fhir/StructureDefinition/sliced-observation",
+        )
+        .expect("validation should run");
+
+    let slicing_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|issue| issue.severity == Severity::Error)
+        .filter(|issue| issue.message.contains("Slice"))
+        .collect();
+
+    assert!(
+        slicing_errors.is_empty(),
+        "components should match distinct slices by pattern: {slicing_errors:?}"
+    );
+}
+
+#[test]
+fn test_closed_profile_slicing_accepts_declared_meta_profile_with_version() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).expect("validator should initialize");
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/fhir/StructureDefinition/sliced-bundle",
+        "name": "SlicedBundle",
+        "type": "Bundle",
+        "snapshot": {
+            "element": [
+                {"id": "Bundle", "path": "Bundle", "min": 0, "max": "*"},
+                {
+                    "id": "Bundle.entry",
+                    "path": "Bundle.entry",
+                    "min": 0,
+                    "max": "*",
+                    "slicing": {
+                        "discriminator": [{"type": "profile", "path": "resource"}],
+                        "rules": "closed"
+                    }
+                },
+                {
+                    "id": "Bundle.entry:patient",
+                    "path": "Bundle.entry",
+                    "sliceName": "patient",
+                    "min": 1,
+                    "max": "1"
+                },
+                {
+                    "id": "Bundle.entry:patient.resource",
+                    "path": "Bundle.entry.resource",
+                    "sliceName": "patient",
+                    "min": 1,
+                    "max": "1",
+                    "type": [{
+                        "code": "Resource",
+                        "targetProfile": ["http://example.org/fhir/StructureDefinition/patient-profile|2.0.0"]
+                    }]
+                }
+            ]
+        }
+    }));
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "entry": [{
+            "resource": {
+                "resourceType": "Patient",
+                "meta": {
+                    "profile": ["http://example.org/fhir/StructureDefinition/patient-profile|2.1.0"]
+                }
+            }
+        }]
+    });
+
+    let result = validator
+        .validate_with_profile(
+            &bundle,
+            "http://example.org/fhir/StructureDefinition/sliced-bundle",
+        )
+        .expect("validation should run");
+
+    let closed_slicing_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|issue| issue.severity == Severity::Error)
+        .filter(|issue| issue.message.contains("does not match any slice"))
+        .collect();
+
+    assert!(
+        closed_slicing_errors.is_empty(),
+        "profile discriminator should match declared meta.profile ignoring canonical versions: {closed_slicing_errors:?}"
     );
 }
