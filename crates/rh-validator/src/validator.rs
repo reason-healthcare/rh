@@ -766,8 +766,18 @@ impl FhirValidator {
         collect_extension_urls(resource, resource_type, &mut extensions);
 
         for ext_info in extensions {
-            let url = &ext_info.url;
             let path = &ext_info.path;
+
+            let Some(url) = &ext_info.url else {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Required,
+                        "Extension is missing required field 'url'",
+                    )
+                    .with_path(path),
+                );
+                continue;
+            };
 
             // Skip sub-extension URLs within complex extensions (they don't start with http(s)://)
             // These are just identifiers like "code", "value", etc. within the parent extension
@@ -3953,7 +3963,7 @@ fn canonical_url_without_version(url: &str) -> &str {
 
 /// Information about a collected extension
 struct ExtensionInfo {
-    url: String,
+    url: Option<String>,
     path: String,
     is_modifier: bool,
 }
@@ -3963,48 +3973,42 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<Extens
         Value::Object(obj) => {
             if let Some(ext_array) = obj.get("extension").and_then(|v| v.as_array()) {
                 for (idx, ext) in ext_array.iter().enumerate() {
-                    if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
-                        let ext_path = format!("{path}.extension[{idx}]");
-                        extensions.push(ExtensionInfo {
-                            url: url.to_string(),
-                            path: ext_path.clone(),
-                            is_modifier: false,
-                        });
-                        collect_extension_urls(ext, &ext_path, extensions);
-                    }
+                    let ext_path = format!("{path}.extension[{idx}]");
+                    extensions.push(ExtensionInfo {
+                        url: ext.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                        path: ext_path.clone(),
+                        is_modifier: false,
+                    });
+                    collect_extension_urls(ext, &ext_path, extensions);
                 }
             }
             if let Some(ext_array) = obj.get("modifierExtension").and_then(|v| v.as_array()) {
                 for (idx, ext) in ext_array.iter().enumerate() {
-                    if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
-                        let ext_path = format!("{path}.modifierExtension[{idx}]");
-                        extensions.push(ExtensionInfo {
-                            url: url.to_string(),
-                            path: ext_path.clone(),
-                            is_modifier: true,
-                        });
-                        collect_extension_urls(ext, &ext_path, extensions);
-                    }
+                    let ext_path = format!("{path}.modifierExtension[{idx}]");
+                    extensions.push(ExtensionInfo {
+                        url: ext.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                        path: ext_path.clone(),
+                        is_modifier: true,
+                    });
+                    collect_extension_urls(ext, &ext_path, extensions);
                 }
             }
             for (key, val) in obj {
-                // Skip extension fields (handled above) and contained resources
-                // (contained resources are validated separately with their own extension validation)
-                if key == "extension" || key == "modifierExtension" || key == "contained" {
+                // Skip extension fields; they are handled above so we can classify
+                // regular vs modifier extension usage.
+                if key == "extension" || key == "modifierExtension" {
                     continue;
                 }
                 if let Some(base_field) = key.strip_prefix('_') {
                     if let Some(prim_ext_array) = val.get("extension").and_then(|v| v.as_array()) {
                         for (idx, ext) in prim_ext_array.iter().enumerate() {
-                            if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
-                                let ext_path = format!("{path}.{base_field}.extension[{idx}]");
-                                extensions.push(ExtensionInfo {
-                                    url: url.to_string(),
-                                    path: ext_path.clone(),
-                                    is_modifier: false,
-                                });
-                                collect_extension_urls(ext, &ext_path, extensions);
-                            }
+                            let ext_path = format!("{path}.{base_field}.extension[{idx}]");
+                            extensions.push(ExtensionInfo {
+                                url: ext.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                                path: ext_path.clone(),
+                                is_modifier: false,
+                            });
+                            collect_extension_urls(ext, &ext_path, extensions);
                         }
                     }
                     continue;
