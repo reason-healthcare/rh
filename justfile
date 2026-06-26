@@ -84,7 +84,7 @@ test-fhir-all:
     echo ""
     echo "⚠️  This will run ALL R4 test cases and may take several minutes..."
     echo ""
-    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_all -- --nocapture --ignored
+    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_all -- --nocapture --ignored --test-threads=1
 
 # Build all packages
 build:
