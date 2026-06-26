@@ -3,7 +3,7 @@ use flate2::read::GzDecoder;
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tar::Archive;
 
@@ -212,7 +212,7 @@ impl TestRunner {
         let expected_outcome = self.load_expected_outcome(test, validator_dir)?;
         let expected_valid = expected_outcome.is_valid();
 
-        let has_package_resources = has_local_package_archives(test, validator_dir);
+        let has_package_resources = has_resolvable_package_resources(test, validator_dir);
         let mut package_validator = if has_package_resources {
             Some(self.build_package_validator(test, validator_dir)?)
         } else {
@@ -387,18 +387,23 @@ impl TestRunner {
         fs::create_dir_all(&package_dir)
             .with_context(|| format!("Failed to create package dir {}", package_dir.display()))?;
 
-        let mut package_files = BTreeSet::new();
-        package_files.extend(test.packages.iter().cloned());
-        package_files.extend(test.package_map.values().cloned());
-
         let mut file_index = 0usize;
-        for package_file in package_files {
-            let package_path = validator_dir.join(&package_file);
-            if !package_path.is_file() {
-                continue;
+        for package_ref in package_resource_refs(test) {
+            match resolve_package_resource(&package_ref, validator_dir) {
+                Some(ResolvedPackageResource::LocalArchive(package_path)) => {
+                    file_index =
+                        extract_package_json_files(&package_path, &package_dir, file_index)
+                            .with_context(|| {
+                                format!("Failed to extract package {}", package_path.display())
+                            })?;
+                }
+                Some(ResolvedPackageResource::InstalledPackage(package_path)) => {
+                    let context = format!("Failed to copy package {}", package_path.display());
+                    file_index = copy_package_json_files(&package_path, &package_dir, file_index)
+                        .with_context(|| context)?;
+                }
+                None => {}
             }
-            file_index = extract_package_json_files(&package_path, &package_dir, file_index)
-                .with_context(|| format!("Failed to extract package {}", package_path.display()))?;
         }
 
         for supporting_path in test
@@ -679,11 +684,76 @@ fn extract_package_json_files(
     Ok(file_index)
 }
 
-fn has_local_package_archives(test: &TestCase, validator_dir: &Path) -> bool {
-    test.packages
-        .iter()
-        .chain(test.package_map.values())
-        .any(|package_file| validator_dir.join(package_file).is_file())
+fn copy_package_json_files(
+    package_dir: &Path,
+    output_dir: &Path,
+    mut file_index: usize,
+) -> Result<usize> {
+    for entry in fs::read_dir(package_dir)
+        .with_context(|| format!("Failed to read package dir {}", package_dir.display()))?
+    {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("json") {
+            continue;
+        }
+
+        let content = fs::read(&path)
+            .with_context(|| format!("Failed to read package file {}", path.display()))?;
+        if serde_json::from_slice::<serde_json::Value>(&content).is_err() {
+            continue;
+        }
+
+        let output_path = output_dir.join(format!("package-{file_index}.json"));
+        fs::write(&output_path, content)
+            .with_context(|| format!("Failed to write package file {}", output_path.display()))?;
+        file_index += 1;
+    }
+
+    Ok(file_index)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ResolvedPackageResource {
+    LocalArchive(PathBuf),
+    InstalledPackage(PathBuf),
+}
+
+fn has_resolvable_package_resources(test: &TestCase, validator_dir: &Path) -> bool {
+    package_resource_refs(test)
+        .into_iter()
+        .any(|package_ref| resolve_package_resource(&package_ref, validator_dir).is_some())
+}
+
+fn package_resource_refs(test: &TestCase) -> Vec<String> {
+    let mut package_refs = BTreeSet::new();
+    package_refs.extend(test.packages.iter().cloned());
+    package_refs.extend(test.package_map.keys().cloned());
+    package_refs.extend(test.package_map.values().cloned());
+    package_refs.into_iter().collect()
+}
+
+fn resolve_package_resource(
+    package_ref: &str,
+    validator_dir: &Path,
+) -> Option<ResolvedPackageResource> {
+    let package_path = validator_dir.join(package_ref);
+    if package_path.is_file() {
+        return Some(ResolvedPackageResource::LocalArchive(package_path));
+    }
+
+    installed_package_dir(package_ref)
+        .filter(|path| path.is_dir())
+        .map(ResolvedPackageResource::InstalledPackage)
+}
+
+fn installed_package_dir(package_ref: &str) -> Option<PathBuf> {
+    if !package_ref.contains('#') || package_ref.contains('/') || package_ref.contains('\\') {
+        return None;
+    }
+
+    let packages_dir = rh_foundation::loader::PackageLoader::get_default_packages_dir().ok()?;
+    Some(packages_dir.join(package_ref).join("package"))
 }
 
 fn sanitize_path_component(value: &str) -> String {
@@ -702,6 +772,109 @@ fn sanitize_path_component(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static TEMP_DIR_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    fn temp_test_dir() -> PathBuf {
+        let index = TEMP_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "rh-validator-runner-test-{}-{index}",
+            std::process::id()
+        ));
+        if dir.exists() {
+            fs::remove_dir_all(&dir).expect("remove stale temp dir");
+        }
+        fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    fn test_case_with_package(package_ref: &str) -> TestCase {
+        TestCase {
+            name: "package resolver".to_string(),
+            file: "patient.json".to_string(),
+            version: Some("4.0".to_string()),
+            module: None,
+            profiles: Vec::new(),
+            supporting: Vec::new(),
+            packages: vec![package_ref.to_string()],
+            package_map: HashMap::new(),
+            profile: None,
+            logical: None,
+            language: None,
+            questionnaire: None,
+            use_test: true,
+            java: None,
+            firely_sdk_current: None,
+            firely_sdk_wip: None,
+        }
+    }
+
+    #[test]
+    fn package_resource_refs_include_package_map_keys_and_values() {
+        let mut test = test_case_with_package("hl7.fhir.us.core#3.1.1");
+        test.package_map.insert(
+            "hl7.fhir.us.mcode#4.0.0".to_string(),
+            "package/mcode.tgz".to_string(),
+        );
+
+        assert_eq!(
+            package_resource_refs(&test),
+            vec![
+                "hl7.fhir.us.core#3.1.1",
+                "hl7.fhir.us.mcode#4.0.0",
+                "package/mcode.tgz",
+            ]
+        );
+    }
+
+    #[test]
+    fn missing_package_id_is_not_resolved() {
+        let temp = temp_test_dir();
+
+        assert_eq!(
+            resolve_package_resource("example.missing.package#0.0.0", &temp),
+            None
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
+
+    #[test]
+    fn local_archive_takes_precedence_over_package_id_cache() {
+        let temp = temp_test_dir();
+        let package_path = temp.join("hl7.fhir.us.core#3.1.1");
+        fs::write(&package_path, b"not a real archive").expect("write package placeholder");
+
+        assert_eq!(
+            resolve_package_resource("hl7.fhir.us.core#3.1.1", &temp),
+            Some(ResolvedPackageResource::LocalArchive(package_path))
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
+
+    #[test]
+    fn installed_package_id_is_resolved_when_cached() {
+        let temp = temp_test_dir();
+        let package_ref = "hl7.fhir.us.core#3.1.1";
+        let Some(package_dir) = installed_package_dir(package_ref) else {
+            fs::remove_dir_all(temp).expect("remove temp dir");
+            return;
+        };
+        if !package_dir.is_dir() {
+            fs::remove_dir_all(temp).expect("remove temp dir");
+            return;
+        }
+
+        assert_eq!(
+            resolve_package_resource(package_ref, &temp),
+            Some(ResolvedPackageResource::InstalledPackage(package_dir))
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
 
     #[test]
     #[cfg(feature = "fhir-test-cases")]

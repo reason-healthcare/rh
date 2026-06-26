@@ -8,7 +8,7 @@ validator while keeping exact conformance logs as the audit baseline.
 Latest full R4 log:
 
 ```text
-target/conformance-logs/r4-full-20260625-234157-package-versioning-final.log
+target/conformance-logs/r4-full-20260626-023515-package-id-resolution.log
 ```
 
 Current agreement from that run:
@@ -28,13 +28,16 @@ Completed:
    actionable issue details.
 3. Improve package-versioned profile selection before relaxing validation,
    covering both `*-good` false positives and `*-bad` false negatives.
-
-Next:
-
 4. Resolve manifest package IDs, not just local `.tgz` archives. Reuse installed
    package cache entries such as `~/.fhir/packages/<id>#<version>/package` when
    the R4 manifest lists package IDs in `packages` or `package-map`, while
-   keeping local archive materialization for test-owned packages.
+   keeping local archive materialization for test-owned packages. The exact
+   full R4 log for this iteration is
+   `target/conformance-logs/r4-full-20260626-023515-package-id-resolution.log`;
+   agreement remained 310/399 without terminology and 314/399 with terminology.
+
+Next:
+
 5. Add a conformance-only lenient JSON parser mode for validator fixtures that
    Java accepts but strict JSON rejects, without changing normal CLI validation
    behavior.
