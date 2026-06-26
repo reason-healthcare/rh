@@ -8,13 +8,13 @@ validator while keeping exact conformance logs as the audit baseline.
 Latest full R4 log:
 
 ```text
-target/conformance-logs/r4-full-20260626-074737-java-triage-final.log
+target/conformance-logs/r4-full-20260626-082311-validation-resource.log
 ```
 
 Current agreement from that run:
 
-- No terminology: 310/399 (77.7%)
-- With terminology: 314/399 (78.7%)
+- No terminology: 318/399 (79.7%)
+- With terminology: 322/399 (80.7%)
 
 ## Steps
 
@@ -49,19 +49,33 @@ Completed:
    The largest with-terminology clusters are validation-resource (22),
    reference-bundle-contained (19), invariant (11), and
    questionnaire-response (9).
+6. Improve validation-resource checks with a focused first slice: enforce
+   `CodeSystem.supplements` content, validate parameterized ValueSet
+   expressions, check known SearchParameter `derivedFrom` type/base
+   consistency, check known CapabilityStatement search parameter definition
+   types, and preserve Java-compatible `system|code` Coding filter values as
+   non-fatal. The exact full R4 log for this iteration is
+   `target/conformance-logs/r4-full-20260626-082311-validation-resource.log`;
+   agreement improved to 318/399 without terminology and 322/399 with
+   terminology. Triage artifacts:
+   `target/conformance-triage/r4-java-mismatches-1782476812-no-terminology.csv`
+   and
+   `target/conformance-triage/r4-java-mismatches-1782476977-with-terminology.csv`.
+   The with-terminology validation-resource cluster dropped from 22 to 14.
 
 Next:
 
-6. Improve validation-resource checks for `StructureDefinition`, `ValueSet`, and
-   `CodeSystem` cases, especially property/filter/ECL/status failures currently
-   reported valid by RH.
 7. Fix reference, Bundle, contained-resource, signature, and html-reference
-   semantics as a later structural cluster.
-8. Reduce false positives from core invariant and extension handling after
+   semantics. This is now the largest with-terminology cluster at 19
+   mismatches.
+8. Continue the remaining validation-resource cluster, especially SNOMED
+   ValueSet concept/filter/ECL checks, StructureDefinition invariant execution
+   gaps, and conformance resource status/jurisdiction rules.
+9. Reduce false positives from core invariant and extension handling after
    loading/recognizing core extension definitions more completely.
-9. Tighten `QuestionnaireResponse` agreement for answer value set resolution,
+10. Tighten `QuestionnaireResponse` agreement for answer value set resolution,
    async terminology expectations, and quantity min/max or unit compatibility.
-10. Add a conformance-only lenient JSON parser mode for validator fixtures that
+11. Add a conformance-only lenient JSON parser mode for validator fixtures that
     Java accepts but strict JSON rejects, without changing normal CLI validation
     behavior.
 

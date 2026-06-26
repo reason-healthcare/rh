@@ -951,6 +951,8 @@ impl FhirValidator {
         match resource_type_name {
             "CodeSystem" => self.validate_codesystem_concept_properties(resource),
             "ValueSet" => self.validate_valueset_filters(resource),
+            "SearchParameter" => self.validate_search_parameter_derivation(resource),
+            "CapabilityStatement" => self.validate_capability_statement_search_params(resource),
             _ => Vec::new(),
         }
     }
@@ -958,6 +960,21 @@ impl FhirValidator {
     fn validate_codesystem_concept_properties(&self, codesystem: &Value) -> Vec<ValidationIssue> {
         let property_types = codesystem_property_types(codesystem);
         let mut issues = Vec::new();
+
+        if codesystem
+            .get("supplements")
+            .and_then(|v| v.as_str())
+            .is_some()
+            && codesystem.get("content").and_then(|v| v.as_str()) != Some("supplement")
+        {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::BusinessRule,
+                    "CodeSystem supplements SHALL have a content value of 'supplement'",
+                )
+                .with_path("CodeSystem.content".to_string()),
+            );
+        }
 
         if let Some(concepts) = codesystem.get("concept").and_then(|v| v.as_array()) {
             self.validate_codesystem_concepts(
@@ -1069,12 +1086,15 @@ impl FhirValidator {
                     continue;
                 };
 
-                let Some(codesystem) = self.registered_codesystem(system) else {
-                    continue;
-                };
-
-                let property_types = codesystem_property_types(&codesystem);
-                let filter_codes = codesystem_filter_codes(&codesystem);
+                let registered_codesystem = self.registered_codesystem(system);
+                let property_types = registered_codesystem
+                    .as_ref()
+                    .map(codesystem_property_types)
+                    .unwrap_or_default();
+                let filter_codes = registered_codesystem
+                    .as_ref()
+                    .map(codesystem_filter_codes)
+                    .unwrap_or_default();
 
                 for (filter_idx, filter) in filters.iter().enumerate() {
                     let filter_path = format!(
@@ -1083,6 +1103,17 @@ impl FhirValidator {
                     let Some(property) = filter.get("property").and_then(|v| v.as_str()) else {
                         continue;
                     };
+
+                    self.validate_valueset_filter_parameter_expression(
+                        filter,
+                        &filter_path,
+                        valueset_parameter_names(valueset),
+                        &mut issues,
+                    );
+
+                    if registered_codesystem.is_none() {
+                        continue;
+                    }
 
                     if filter_codes.contains_key(property) {
                         continue;
@@ -1128,16 +1159,9 @@ impl FhirValidator {
             return;
         };
 
-        let Some((system_and_version, code)) = value.rsplit_once('#') else {
-            issues.push(
-                ValidationIssue::error(
-                    IssueCode::Invalid,
-                    format!(
-                        "The value for a filter based on property '{property}' must be in the format system(|version)#code, not '{value}'"
-                    ),
-                )
-                .with_path(filter_path.to_string()),
-            );
+        let Some((system_and_version, code)) =
+            split_coding_filter_value(value, property, filter_path, issues)
+        else {
             return;
         };
 
@@ -1170,6 +1194,182 @@ impl FhirValidator {
                 .with_path(filter_path.to_string()),
             );
         }
+    }
+
+    fn validate_valueset_filter_parameter_expression(
+        &self,
+        filter: &Value,
+        filter_path: &str,
+        parameter_names: Vec<&str>,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(value_expression) = filter
+            .get("_value")
+            .and_then(|v| v.get("extension"))
+            .and_then(|v| v.as_array())
+            .and_then(|extensions| {
+                extensions.iter().find_map(|extension| {
+                    if extension.get("url").and_then(|v| v.as_str())
+                        == Some("http://hl7.org/fhir/StructureDefinition/cqf-expression")
+                    {
+                        extension.get("valueExpression")
+                    } else {
+                        None
+                    }
+                })
+            })
+        else {
+            return;
+        };
+
+        let expression_path = format!("{filter_path}.extension[0].value.ofType(Expression)");
+        let language = value_expression
+            .get("language")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        if language != "text/fhirpath" {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "A ValueSet expression language must be 'text/fhirpath' not '{language}'"
+                    ),
+                )
+                .with_path(expression_path),
+            );
+            return;
+        }
+
+        let Some(expression) = value_expression.get("expression").and_then(|v| v.as_str()) else {
+            return;
+        };
+
+        if let Some(parameter) = unknown_valueset_parameter_reference(expression, &parameter_names)
+        {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Processing,
+                    format!(
+                        "The filter parameter expression '{expression}' refers to the unknown parameter '{parameter}'"
+                    ),
+                )
+                .with_path(expression_path),
+            );
+            return;
+        }
+
+        if FhirPathParser::new().parse(expression).is_err() {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Processing,
+                    format!("The value of the expression '{expression}' is not a valid FHIRPath"),
+                )
+                .with_path(expression_path),
+            );
+        }
+    }
+
+    fn validate_search_parameter_derivation(
+        &self,
+        search_parameter: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(derived_from) = search_parameter.get("derivedFrom").and_then(|v| v.as_str())
+        else {
+            return issues;
+        };
+        let Some(base_definition) = known_search_parameter_definition(derived_from) else {
+            return issues;
+        };
+
+        if search_parameter.get("type").and_then(|v| v.as_str()) != Some(base_definition.type_) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::BusinessRule,
+                    format!(
+                        "The type {} is different to the type {derived_from} in the derivedFrom SearchParameter",
+                        search_parameter
+                            .get("type")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                    ),
+                )
+                .with_path("SearchParameter".to_string()),
+            );
+        }
+
+        if let Some(bases) = search_parameter.get("base").and_then(|v| v.as_array()) {
+            for base in bases.iter().filter_map(|v| v.as_str()) {
+                if !base_definition.bases.contains(&base) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::BusinessRule,
+                            format!(
+                                "The resource type {base} is not listed as a base in the SearchParameter this is derived from ({derived_from})"
+                            ),
+                        )
+                        .with_path("SearchParameter".to_string()),
+                    );
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_capability_statement_search_params(
+        &self,
+        capability: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(rest_entries) = capability.get("rest").and_then(|v| v.as_array()) else {
+            return issues;
+        };
+
+        for (rest_idx, rest) in rest_entries.iter().enumerate() {
+            let Some(resources) = rest.get("resource").and_then(|v| v.as_array()) else {
+                continue;
+            };
+
+            for (resource_idx, resource) in resources.iter().enumerate() {
+                let Some(search_params) = resource.get("searchParam").and_then(|v| v.as_array())
+                else {
+                    continue;
+                };
+
+                for (search_idx, search_param) in search_params.iter().enumerate() {
+                    let Some(definition) = search_param.get("definition").and_then(|v| v.as_str())
+                    else {
+                        continue;
+                    };
+                    let Some(base_definition) = known_search_parameter_definition(definition)
+                    else {
+                        continue;
+                    };
+                    let Some(actual_type) = search_param.get("type").and_then(|v| v.as_str())
+                    else {
+                        continue;
+                    };
+
+                    if actual_type != base_definition.type_ {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                format!(
+                                    "Type mismatch - SearchParameter '{definition}|4.0.1' type is {}, but type here is {actual_type}",
+                                    base_definition.type_
+                                ),
+                            )
+                            .with_path(format!(
+                                "CapabilityStatement.rest[{rest_idx}].resource[{resource_idx}].searchParam[{search_idx}]"
+                            )),
+                        );
+                    }
+                }
+            }
+        }
+
+        issues
     }
 
     fn registered_codesystem(&self, system: &str) -> Option<Value> {
@@ -2666,6 +2866,99 @@ fn codesystem_filter_codes(codesystem: &Value) -> HashMap<String, ()> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn split_coding_filter_value<'a>(
+    value: &'a str,
+    property: &str,
+    filter_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) -> Option<(&'a str, &'a str)> {
+    if let Some((system_and_version, code)) = value.rsplit_once('#') {
+        return Some((system_and_version, code));
+    }
+
+    if let Some((system, code)) = value.rsplit_once('|') {
+        if is_absolute_url(system) && !code.is_empty() {
+            return Some((system, code));
+        }
+    }
+
+    issues.push(
+        ValidationIssue::error(
+            IssueCode::Invalid,
+            format!(
+                "The value for a filter based on property '{property}' must be in the format system(|version)#code, not '{value}'"
+            ),
+        )
+        .with_path(filter_path.to_string()),
+    );
+    None
+}
+
+fn valueset_parameter_names(valueset: &Value) -> Vec<&str> {
+    valueset
+        .get("extension")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+        .filter(|extension| {
+            extension.get("url").and_then(|v| v.as_str())
+                == Some("http://hl7.org/fhir/tools/StructureDefinition/valueset-parameter")
+        })
+        .filter_map(|extension| {
+            extension
+                .get("extension")
+                .and_then(|v| v.as_array())
+                .into_iter()
+                .flatten()
+                .find_map(|nested| {
+                    (nested.get("url").and_then(|v| v.as_str()) == Some("name"))
+                        .then(|| nested.get("valueCode").and_then(|v| v.as_str()))?
+                })
+        })
+        .collect()
+}
+
+fn unknown_valueset_parameter_reference(
+    expression: &str,
+    known_parameters: &[&str],
+) -> Option<String> {
+    expression.split('%').skip(1).find_map(|after_percent| {
+        let parameter = after_percent
+            .chars()
+            .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '-' || *ch == '_')
+            .collect::<String>();
+        if parameter.is_empty() || known_parameters.iter().any(|known| *known == parameter) {
+            None
+        } else {
+            Some(parameter)
+        }
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct KnownSearchParameterDefinition {
+    type_: &'static str,
+    bases: &'static [&'static str],
+}
+
+fn known_search_parameter_definition(url: &str) -> Option<KnownSearchParameterDefinition> {
+    match url.split_once('|').map(|(base, _)| base).unwrap_or(url) {
+        "http://hl7.org/fhir/SearchParameter/Organization-name" => {
+            Some(KnownSearchParameterDefinition {
+                type_: "string",
+                bases: &["Organization"],
+            })
+        }
+        "http://hl7.org/fhir/SearchParameter/AllergyIntolerance-clinical-status" => {
+            Some(KnownSearchParameterDefinition {
+                type_: "token",
+                bases: &["AllergyIntolerance"],
+            })
+        }
+        _ => None,
+    }
 }
 
 fn concepts_contain_code(concepts: &[Value], code: &str) -> bool {
