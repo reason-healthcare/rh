@@ -8,15 +8,17 @@ validator while keeping exact conformance logs as the audit baseline.
 Latest full R4 log:
 
 ```text
-target/conformance-logs/r4-full-20260625-224327.log
+target/conformance-logs/r4-full-20260625-234157-package-versioning-final.log
 ```
 
 Current agreement from that run:
 
-- No terminology: 299/386 (77.5%)
-- With terminology: 291/386 (75.4%)
+- No terminology: 310/399 (77.7%)
+- With terminology: 314/399 (78.7%)
 
 ## Steps
+
+Completed:
 
 1. Make full R4 conformance runs deterministic by forcing a single test thread
    for `test-fhir-all`, so no-terminology and terminology summaries do not
@@ -26,15 +28,29 @@ Current agreement from that run:
    actionable issue details.
 3. Improve package-versioned profile selection before relaxing validation,
    covering both `*-good` false positives and `*-bad` false negatives.
-4. Tighten derived extension and profile enforcement for invalid cases that
-   Java catches but RH currently reports valid.
-5. Fix reference, Bundle, and contained-resource resolution semantics as a
-   cluster, including versioned references and internal references.
-6. Address deterministic local terminology and binding gaps after structural
-   profile/reference behavior is stable.
-7. Generate a per-run triage artifact with test name, category, expected
-   result, RH result, Java result, error count, and warning count to track
-   agreement deltas by subsystem.
 
-After each implementation step, run `just check`, create a commit, and keep the
-full R4 conformance log for before/after comparison.
+Next:
+
+4. Resolve manifest package IDs, not just local `.tgz` archives. Reuse installed
+   package cache entries such as `~/.fhir/packages/<id>#<version>/package` when
+   the R4 manifest lists package IDs in `packages` or `package-map`, while
+   keeping local archive materialization for test-owned packages.
+5. Add a conformance-only lenient JSON parser mode for validator fixtures that
+   Java accepts but strict JSON rejects, without changing normal CLI validation
+   behavior.
+6. Improve validation-resource checks for `StructureDefinition`, `ValueSet`, and
+   `CodeSystem` cases, especially property/filter/ECL/status failures currently
+   reported valid by RH.
+7. Tighten `QuestionnaireResponse` agreement for answer value set resolution,
+   async terminology expectations, and quantity min/max or unit compatibility.
+8. Reduce false positives from core invariant and extension handling after
+   loading/recognizing core extension definitions more completely.
+9. Fix reference, Bundle, contained-resource, signature, and html-reference
+   semantics as a later structural cluster.
+10. Generate a per-run triage artifact with test name, category, expected
+    result, RH result, Java result, error count, and warning count to track
+    agreement deltas by subsystem.
+
+Create a commit for each step. After implementation work is done, run
+`just check`. Keep exact full R4 conformance logs for each validator behavior
+iteration.
