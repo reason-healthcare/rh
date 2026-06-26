@@ -55,7 +55,7 @@ test-fhir-module module:
     echo "║ FHIR Validation Test Suite - Module: {{module}}                   ║"
     echo "╚════════════════════════════════════════════════════════════════════╝"
     echo ""
-    cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_with_module_filter -- --nocapture
+    RH_FHIR_TEST_MODULE="{{module}}" cargo test --features fhir-test-cases -p rh-validator fhir_test_cases::runner::tests::test_runner_with_module_filter -- --nocapture
 
 # Run FHIR validation test suite with 50 tests
 test-fhir-50:

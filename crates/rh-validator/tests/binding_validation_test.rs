@@ -228,7 +228,7 @@ fn test_extract_codes_from_codeable_concept() {
 }
 
 #[test]
-fn test_intensional_valueset_skipped() {
+fn test_system_only_valueset_with_complete_codesystem_reports_invalid_code() {
     let packages_dir = dirs::home_dir()
         .unwrap()
         .join(".fhir/packages/hl7.fhir.r4.core#4.0.1/package");
@@ -238,8 +238,8 @@ fn test_intensional_valueset_skipped() {
         return;
     }
 
-    // Without a terminology service, intensional ValueSets (those defined only by compose
-    // rules without a pre-computed expansion) are skipped — no error even for invalid codes.
+    // Without a terminology service, system-only ValueSets can still be checked when the
+    // referenced CodeSystem is bundled locally and marked complete.
     let validator = FhirValidator::new(
         rh_validator::FhirVersion::R4,
         Some(packages_dir.to_str().unwrap()),
@@ -259,8 +259,8 @@ fn test_intensional_valueset_skipped() {
         .filter(|i| i.message.contains("not in required ValueSet"))
         .collect();
     assert!(
-        code_invalid_errors.is_empty(),
-        "Without a terminology service, intensional ValueSet errors should be suppressed; got: {code_invalid_errors:?}"
+        !code_invalid_errors.is_empty(),
+        "Complete local CodeSystems should make system-only ValueSet membership decidable"
     );
 }
 

@@ -27,6 +27,10 @@ pub struct TestCase {
     #[serde(default)]
     pub supporting: Vec<String>,
     #[serde(default)]
+    pub packages: Vec<String>,
+    #[serde(rename = "package-map", default)]
+    pub package_map: HashMap<String, String>,
+    #[serde(default)]
     pub profile: Option<ProfileTest>,
     #[serde(default)]
     pub logical: Option<LogicalTest>,

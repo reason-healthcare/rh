@@ -474,7 +474,22 @@ impl FhirValidator {
         resource: &Value,
         profile_url: &str,
     ) -> Result<ValidationResult> {
+        self.validate_profile_rules_inner(resource, profile_url, &mut Vec::new())
+    }
+
+    fn validate_profile_rules_inner(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+        visited_profiles: &mut Vec<String>,
+    ) -> Result<ValidationResult> {
         let mut result = ValidationResult::valid();
+        let lookup_url = canonical_url_without_version(profile_url);
+
+        if visited_profiles.iter().any(|url| url == lookup_url) {
+            return Ok(result);
+        }
+        visited_profiles.push(lookup_url.to_string());
 
         let snapshot = self
             .profile_registry
@@ -508,6 +523,22 @@ impl FhirValidator {
                 return Ok(result);
             }
         };
+
+        if let Some(base_profile_url) = snapshot
+            .base_definition
+            .as_deref()
+            .map(canonical_url_without_version)
+            .filter(|url| !is_core_fhir_profile_url(url))
+        {
+            let base_result =
+                self.validate_profile_rules_inner(resource, base_profile_url, visited_profiles)?;
+            for mut issue in base_result.issues {
+                if !issue.message.contains("Profile:") {
+                    issue.message = format!("[Profile: {base_profile_url}] {}", issue.message);
+                }
+                result = result.with_issue(issue);
+            }
+        }
 
         let rules = self
             .rule_compiler
@@ -3240,49 +3271,6 @@ impl FhirValidator {
             }
         }
 
-        // Check if ValueSet is extensional
-        let is_extensional = self
-            .valueset_loader
-            .is_extensional(&rule.value_set_url)
-            .unwrap_or(false);
-
-        if !is_extensional {
-            // For required bindings, fall back to the terminology service if one is configured
-            if rule.strength == "required" {
-                if let Some(ts) = self.terminology_service.as_ref() {
-                    for value in &values {
-                        let codes = extract_codes_from_value(value);
-                        for (system, code) in codes {
-                            match ts.validate_code_in_valueset(
-                                &rule.value_set_url,
-                                &system,
-                                &code,
-                                None,
-                            ) {
-                                Ok(result) => {
-                                    if !result.result {
-                                        issues.push(ValidationIssue::error(
-                                            IssueCode::CodeInvalid,
-                                            format!(
-                                                "Code '{}' from system '{}' is not in required ValueSet '{}'",
-                                                code,
-                                                if system.is_empty() { "(no system)" } else { &system },
-                                                rule.value_set_url
-                                            ),
-                                        ));
-                                    }
-                                }
-                                Err(_) => {
-                                    // ValueSet not supported by terminology service; skip gracefully
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return Ok(issues);
-        }
-
         for value in values {
             // Extract codes based on type
             let codes = extract_codes_from_value(value);
@@ -3317,7 +3305,36 @@ impl FhirValidator {
                         issues.push(issue);
                     }
                     CodeInValueSetResult::ValueSetNotFound => {
-                        // ValueSet couldn't be found - skip validation
+                        // ValueSet could not be resolved or is not locally decidable.
+                        // For required bindings, fall back to the terminology service
+                        // if one is configured; otherwise skip gracefully.
+                        if rule.strength == "required" {
+                            if let Some(ts) = self.terminology_service.as_ref() {
+                                match ts.validate_code_in_valueset(
+                                    &rule.value_set_url,
+                                    &system,
+                                    &code,
+                                    None,
+                                ) {
+                                    Ok(result) => {
+                                        if !result.result {
+                                            issues.push(ValidationIssue::error(
+                                                IssueCode::CodeInvalid,
+                                                format!(
+                                                    "Code '{}' from system '{}' is not in required ValueSet '{}'",
+                                                    code,
+                                                    if system.is_empty() { "(no system)" } else { &system },
+                                                    rule.value_set_url
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                    Err(_) => {
+                                        // ValueSet not supported by terminology service; skip gracefully
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3959,6 +3976,10 @@ fn resource_declares_profile(candidate: &Value, target_profile: &str) -> bool {
 
 fn canonical_url_without_version(url: &str) -> &str {
     url.split('|').next().unwrap_or(url)
+}
+
+fn is_core_fhir_profile_url(url: &str) -> bool {
+    url.starts_with("http://hl7.org/fhir/StructureDefinition/")
 }
 
 /// Information about a collected extension

@@ -41,14 +41,37 @@ pub struct ValueSetCompose {
 pub struct ValueSetInclude {
     pub system: Option<String>,
     pub concept: Option<Vec<ValueSetConcept>>,
+    pub filter: Option<Vec<ValueSetFilter>>,
     #[serde(rename = "valueSet")]
     pub value_set: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueSetFilter {
+    pub property: String,
+    pub op: String,
+    pub value: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueSetConcept {
     pub code: String,
     pub display: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystem {
+    #[serde(rename = "resourceType")]
+    pub resource_type: String,
+    pub url: String,
+    pub content: Option<String>,
+    pub concept: Option<Vec<CodeSystemConcept>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeSystemConcept {
+    pub code: String,
+    pub concept: Option<Vec<CodeSystemConcept>>,
 }
 
 /// Result of checking if a code is in a ValueSet
@@ -111,13 +134,16 @@ impl ValueSetLoader {
         code: &str,
     ) -> Result<CodeInValueSetResult> {
         if let Some(valueset) = self.load_valueset(url)? {
+            let mut can_determine_membership = false;
+
             // First check expansion (pre-expanded codes)
             if let Some(expansion) = &valueset.expansion {
                 if let Some(contains) = &expansion.contains {
+                    can_determine_membership = true;
                     for concept in contains {
                         if concept.code == code {
                             if let Some(concept_system) = &concept.system {
-                                if concept_system == system {
+                                if system.is_empty() || concept_system == system {
                                     return Ok(CodeInValueSetResult::Found);
                                 }
                             } else if system.is_empty() {
@@ -138,11 +164,19 @@ impl ValueSetLoader {
                             && !include_system.is_empty()
                             && include_system != system
                         {
+                            if include.concept.is_some()
+                                || (include.value_set.is_none()
+                                    && include.filter.is_none()
+                                    && !include_system.is_empty())
+                            {
+                                can_determine_membership = true;
+                            }
                             continue;
                         }
 
                         // Check enumerated concepts
                         if let Some(concepts) = &include.concept {
+                            can_determine_membership = true;
                             for concept in concepts {
                                 if concept.code == code {
                                     // If system matches (or either is empty), it's a match
@@ -154,11 +188,38 @@ impl ValueSetLoader {
                                     }
                                 }
                             }
+                        } else if include.value_set.is_none()
+                            && include.filter.is_none()
+                            && !include_system.is_empty()
+                        {
+                            can_determine_membership = true;
+                            if system.is_empty() {
+                                if let Some(found) =
+                                    self.codesystem_contains_code(include_system, code)?
+                                {
+                                    if found {
+                                        return Ok(CodeInValueSetResult::Found);
+                                    }
+                                    continue;
+                                }
+
+                                can_determine_membership = false;
+                                continue;
+                            }
+
+                            if include_system == system {
+                                return Ok(CodeInValueSetResult::Found);
+                            }
                         }
                     }
                 }
             }
-            Ok(CodeInValueSetResult::NotFound)
+
+            if can_determine_membership {
+                Ok(CodeInValueSetResult::NotFound)
+            } else {
+                Ok(CodeInValueSetResult::ValueSetNotFound)
+            }
         } else {
             Ok(CodeInValueSetResult::ValueSetNotFound)
         }
@@ -237,6 +298,46 @@ impl ValueSetLoader {
         false
     }
 
+    fn codesystem_contains_code(&self, system: &str, code: &str) -> Result<Option<bool>> {
+        for package_dir in &self.package_dirs {
+            if let Some(codesystem) = self.load_codesystem_from_directory(package_dir, system)? {
+                if let Some(concepts) = &codesystem.concept {
+                    if concepts_contain_code(concepts, code) {
+                        return Ok(Some(true));
+                    }
+                }
+
+                if codesystem.content.as_deref() == Some("complete") {
+                    return Ok(Some(false));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn load_codesystem_from_directory(&self, dir: &Path, url: &str) -> Result<Option<CodeSystem>> {
+        let entries = fs::read_dir(dir)
+            .with_context(|| format!("Failed to read directory: {}", dir.display()))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(codesystem) = serde_json::from_str::<CodeSystem>(&content) {
+                        if codesystem.resource_type == "CodeSystem"
+                            && Self::urls_match(&codesystem.url, url)
+                        {
+                            return Ok(Some(codesystem));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
     fn load_from_directory(&self, dir: &Path, url: &str) -> Result<Option<ValueSet>> {
         let entries = fs::read_dir(dir)
             .with_context(|| format!("Failed to read directory: {}", dir.display()))?;
@@ -277,6 +378,16 @@ impl ValueSetLoader {
         let cache = self.cache.lock().unwrap();
         (cache.len(), cache.cap().get())
     }
+}
+
+fn concepts_contain_code(concepts: &[CodeSystemConcept], code: &str) -> bool {
+    concepts.iter().any(|concept| {
+        concept.code == code
+            || concept
+                .concept
+                .as_deref()
+                .is_some_and(|children| concepts_contain_code(children, code))
+    })
 }
 
 impl Default for ValueSetLoader {

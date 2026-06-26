@@ -189,6 +189,8 @@ impl RuleCompiler {
                 }
             }
 
+            add_differential_binding_rules(snapshot, &mut binding_rules);
+
             let mut slicing_rules = Vec::new();
             for element in &snapshot_data.element {
                 if let Some(slicing) = &element.slicing {
@@ -261,6 +263,8 @@ impl RuleCompiler {
             return Ok(rules);
         }
 
+        add_differential_binding_rules(snapshot, &mut binding_rules);
+
         let rules = CompiledValidationRules {
             profile_url: profile_url.clone(),
             cardinality_rules,
@@ -296,6 +300,38 @@ impl RuleCompiler {
     pub fn reset_cache_metrics(&self) {
         *self.cache_hits.lock().unwrap() = 0;
         *self.cache_misses.lock().unwrap() = 0;
+    }
+}
+
+fn add_differential_binding_rules(
+    structure_definition: &StructureDefinition,
+    binding_rules: &mut Vec<BindingRule>,
+) {
+    let Some(differential) = &structure_definition.differential else {
+        return;
+    };
+
+    for element in &differential.element {
+        let Some(binding) = &element.binding else {
+            continue;
+        };
+        let Some(value_set_url) = &binding.value_set else {
+            continue;
+        };
+
+        if binding_rules.iter().any(|rule| {
+            rule.path == element.path
+                && rule.value_set_url == *value_set_url
+                && rule.strength == binding.strength
+        }) {
+            continue;
+        }
+
+        binding_rules.push(BindingRule {
+            path: element.path.clone(),
+            value_set_url: value_set_url.clone(),
+            strength: binding.strength.clone(),
+        });
     }
 }
 

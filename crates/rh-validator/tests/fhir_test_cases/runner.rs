@@ -1,6 +1,11 @@
 use anyhow::{Context, Result};
+use flate2::read::GzDecoder;
+use std::collections::BTreeSet;
+use std::fs;
+use std::io::Read;
 use std::path::Path;
 use std::time::Instant;
+use tar::Archive;
 
 use super::parser::{ExpectedOutcome, Manifest, TestCase};
 use rh_validator::{FhirValidator, TerminologyConfig, ValidationResult};
@@ -204,8 +209,21 @@ impl TestRunner {
             anyhow::bail!("Test file not found: {}", test_file_path.display());
         }
 
-        // Register supporting files from `supporting`, `profiles`, and `profile.supporting` fields
-        // Also include the profile source if present
+        let expected_outcome = self.load_expected_outcome(test, validator_dir)?;
+        let expected_valid = expected_outcome.is_valid();
+
+        let has_package_resources = has_local_package_archives(test, validator_dir);
+        let mut package_validator = if has_package_resources {
+            Some(self.build_package_validator(test, validator_dir)?)
+        } else {
+            None
+        };
+        let validator = package_validator.as_mut().unwrap_or(&mut self.validator);
+        let skip_dynamic_profiles = has_package_resources;
+
+        // Register supporting files from `supporting`, `profiles`, and `profile.supporting` fields.
+        // Package-backed tests load StructureDefinitions through the static package directory path
+        // so snapshots include package dependencies.
         let all_supporting = test.get_supporting_files(validator_dir);
 
         // Also add the profile source itself if present
@@ -217,21 +235,21 @@ impl TestRunner {
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
                         match json.get("resourceType").and_then(|v| v.as_str()) {
                             Some("Questionnaire") => {
-                                self.validator.register_questionnaire(&json);
+                                validator.register_questionnaire(&json);
                             }
                             Some("ValueSet") => {
-                                self.validator.register_valueset(&json);
+                                validator.register_valueset(&json);
                             }
-                            Some("StructureDefinition") => {
+                            Some("StructureDefinition") if !skip_dynamic_profiles => {
                                 if self.config.verbose {
                                     if let Some(url) = json.get("url").and_then(|u| u.as_str()) {
                                         println!("    Registering profile: {url}");
                                     }
                                 }
-                                self.validator.register_profile(&json);
+                                validator.register_profile(&json);
                             }
                             Some("CodeSystem") => {
-                                self.validator.register_codesystem(&json);
+                                validator.register_codesystem(&json);
                             }
                             _ => {}
                         }
@@ -239,9 +257,6 @@ impl TestRunner {
                 }
             }
         }
-
-        let expected_outcome = self.load_expected_outcome(test, validator_dir)?;
-        let expected_valid = expected_outcome.is_valid();
 
         let resource_json = std::fs::read_to_string(&test_file_path)
             .with_context(|| format!("Failed to read test file: {}", test_file_path.display()))?;
@@ -276,7 +291,7 @@ impl TestRunner {
             }
         };
 
-        let validation_result = self.validator.validate_auto(&resource)?;
+        let validation_result = validator.validate_auto(&resource)?;
 
         let duration = start.elapsed();
         let actual_valid = is_valid(&validation_result);
@@ -284,11 +299,34 @@ impl TestRunner {
         let actual_warning_count = count_warnings(&validation_result);
         let passed = expected_valid == actual_valid;
         let error = if !passed {
-            Some(format!(
+            let mut message = format!(
                 "Validation mismatch: expected {}, got {}",
                 if expected_valid { "VALID" } else { "INVALID" },
                 if actual_valid { "VALID" } else { "INVALID" }
-            ))
+            );
+            let diagnostics = validation_result
+                .issues
+                .iter()
+                .take(5)
+                .map(|issue| {
+                    format!(
+                        "{:?} {:?}{}: {}",
+                        issue.severity,
+                        issue.code,
+                        issue
+                            .path
+                            .as_ref()
+                            .map(|path| format!(" at {path}"))
+                            .unwrap_or_default(),
+                        issue.message
+                    )
+                })
+                .collect::<Vec<_>>();
+            if !diagnostics.is_empty() {
+                message.push_str("; first issues: ");
+                message.push_str(&diagnostics.join(" | "));
+            }
+            Some(message)
         } else {
             None
         };
@@ -311,6 +349,80 @@ impl TestRunner {
             firely_current_expected_valid,
             firely_wip_expected_valid,
         })
+    }
+
+    fn build_package_validator(
+        &self,
+        test: &TestCase,
+        validator_dir: &Path,
+    ) -> Result<FhirValidator> {
+        let package_dir = self.materialize_test_packages(test, validator_dir)?;
+        let terminology_config = if self.config.use_terminology {
+            Some(TerminologyConfig::mock())
+        } else {
+            None
+        };
+
+        FhirValidator::with_terminology(
+            rh_validator::FhirVersion::R4,
+            Some(&package_dir.to_string_lossy()),
+            terminology_config,
+        )
+        .context("Failed to create package-backed FhirValidator")
+    }
+
+    fn materialize_test_packages(
+        &self,
+        test: &TestCase,
+        validator_dir: &Path,
+    ) -> Result<std::path::PathBuf> {
+        let package_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/fhir-test-package-resources")
+            .join(sanitize_path_component(&test.name));
+        if package_dir.exists() {
+            fs::remove_dir_all(&package_dir).with_context(|| {
+                format!("Failed to clean package dir {}", package_dir.display())
+            })?;
+        }
+        fs::create_dir_all(&package_dir)
+            .with_context(|| format!("Failed to create package dir {}", package_dir.display()))?;
+
+        let mut package_files = BTreeSet::new();
+        package_files.extend(test.packages.iter().cloned());
+        package_files.extend(test.package_map.values().cloned());
+
+        let mut file_index = 0usize;
+        for package_file in package_files {
+            let package_path = validator_dir.join(&package_file);
+            if !package_path.is_file() {
+                continue;
+            }
+            file_index = extract_package_json_files(&package_path, &package_dir, file_index)
+                .with_context(|| format!("Failed to extract package {}", package_path.display()))?;
+        }
+
+        for supporting_path in test
+            .get_supporting_files(validator_dir)
+            .into_iter()
+            .chain(test.get_profile_source_path(validator_dir))
+        {
+            if supporting_path.extension().and_then(|s| s.to_str()) != Some("json") {
+                continue;
+            }
+            let content = fs::read_to_string(&supporting_path).with_context(|| {
+                format!(
+                    "Failed to read supporting file {}",
+                    supporting_path.display()
+                )
+            })?;
+            let output_path = package_dir.join(format!("supporting-{file_index}.json"));
+            fs::write(&output_path, content).with_context(|| {
+                format!("Failed to write supporting file {}", output_path.display())
+            })?;
+            file_index += 1;
+        }
+
+        Ok(package_dir)
     }
 
     fn load_expected_outcome(
@@ -531,6 +643,62 @@ fn is_valid(result: &ValidationResult) -> bool {
     count_errors(result) == 0
 }
 
+fn extract_package_json_files(
+    package_path: &Path,
+    output_dir: &Path,
+    mut file_index: usize,
+) -> Result<usize> {
+    let package_file = fs::File::open(package_path)
+        .with_context(|| format!("Failed to open package {}", package_path.display()))?;
+    let decoder = GzDecoder::new(package_file);
+    let mut archive = Archive::new(decoder);
+
+    for entry in archive.entries()? {
+        let mut entry = entry?;
+        let path = entry.path()?;
+        if path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .is_none_or(|s| !s.ends_with(".json"))
+        {
+            continue;
+        }
+
+        let mut content = Vec::new();
+        entry.read_to_end(&mut content)?;
+        if serde_json::from_slice::<serde_json::Value>(&content).is_err() {
+            continue;
+        }
+
+        let output_path = output_dir.join(format!("package-{file_index}.json"));
+        fs::write(&output_path, content)
+            .with_context(|| format!("Failed to write package file {}", output_path.display()))?;
+        file_index += 1;
+    }
+
+    Ok(file_index)
+}
+
+fn has_local_package_archives(test: &TestCase, validator_dir: &Path) -> bool {
+    test.packages
+        .iter()
+        .chain(test.package_map.values())
+        .any(|package_file| validator_dir.join(package_file).is_file())
+}
+
+fn sanitize_path_component(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -575,9 +743,17 @@ mod tests {
 
         let manifest = load_manifest(&validator_dir).expect("Failed to load manifest");
 
+        let requested_module = std::env::var("RH_FHIR_TEST_MODULE").ok();
+        let module = requested_module
+            .clone()
+            .unwrap_or_else(|| "general".to_string());
         let config = TestRunConfig {
-            max_tests: Some(3),
-            module_filter: Some("general".to_string()),
+            max_tests: if requested_module.is_some() {
+                None
+            } else {
+                Some(3)
+            },
+            module_filter: Some(module),
             verbose: true,
             use_terminology: false,
         };
