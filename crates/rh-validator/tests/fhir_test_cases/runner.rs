@@ -169,7 +169,7 @@ impl TestRunner {
                         error: Some(format!("{e:#}")),
                         expected_valid: false,
                         actual_valid: false,
-                        actual_error_count: 0,
+                        actual_error_count: 1,
                         actual_warning_count: 0,
                         duration_ms: 0,
                         java_expected_valid: None,
@@ -240,21 +240,48 @@ impl TestRunner {
             }
         }
 
+        let expected_outcome = self.load_expected_outcome(test, validator_dir)?;
+        let expected_valid = expected_outcome.is_valid();
+
         let resource_json = std::fs::read_to_string(&test_file_path)
             .with_context(|| format!("Failed to read test file: {}", test_file_path.display()))?;
 
-        let resource: serde_json::Value = serde_json::from_str(&resource_json)
-            .with_context(|| format!("Failed to parse JSON: {}", test_file_path.display()))?;
+        let resource: serde_json::Value = match serde_json::from_str(&resource_json) {
+            Ok(resource) => resource,
+            Err(error) => {
+                let duration = start.elapsed();
+                let actual_valid = false;
+                let passed = expected_valid == actual_valid;
+                let error = Some(format!(
+                    "JSON parse error: {} at {}",
+                    error,
+                    test_file_path.display()
+                ));
+
+                return Ok(TestRunResult {
+                    test_name: test.name.clone(),
+                    module: test.module.clone(),
+                    passed,
+                    error,
+                    expected_valid,
+                    actual_valid,
+                    actual_error_count: 1,
+                    actual_warning_count: 0,
+                    duration_ms: duration.as_millis(),
+                    java_expected_valid: test.get_java_expected_valid(validator_dir),
+                    firely_current_expected_valid: test
+                        .get_firely_current_expected_valid(validator_dir),
+                    firely_wip_expected_valid: test.get_firely_wip_expected_valid(validator_dir),
+                });
+            }
+        };
 
         let validation_result = self.validator.validate_auto(&resource)?;
 
-        let expected_outcome = self.load_expected_outcome(test, validator_dir)?;
-
         let duration = start.elapsed();
-
-        let expected_valid = expected_outcome.is_valid();
         let actual_valid = is_valid(&validation_result);
-
+        let actual_error_count = count_errors(&validation_result);
+        let actual_warning_count = count_warnings(&validation_result);
         let passed = expected_valid == actual_valid;
         let error = if !passed {
             Some(format!(
@@ -277,8 +304,8 @@ impl TestRunner {
             error,
             expected_valid,
             actual_valid,
-            actual_error_count: count_errors(&validation_result),
-            actual_warning_count: count_warnings(&validation_result),
+            actual_error_count,
+            actual_warning_count,
             duration_ms: duration.as_millis(),
             java_expected_valid,
             firely_current_expected_valid,
@@ -383,6 +410,9 @@ impl TestRunner {
                         "  - {test_name}: Expected {expected_status}, got {actual_status} ({}E/{}W)",
                         result.actual_error_count, result.actual_warning_count
                     );
+                    if let Some(error) = &result.error {
+                        println!("    {error}");
+                    }
                 }
             }
         }
