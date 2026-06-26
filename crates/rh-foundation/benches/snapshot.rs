@@ -29,6 +29,7 @@ fn element(path: &str, min: u32, max: &str) -> ElementDefinition {
         is_modifier_reason: None,
         slicing: None,
         slice_name: None,
+        additional: std::collections::HashMap::new(),
     }
 }
 

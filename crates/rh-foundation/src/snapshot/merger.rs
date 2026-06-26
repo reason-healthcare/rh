@@ -214,8 +214,18 @@ impl ElementMerger {
                 .or_else(|| base.is_modifier_reason.clone()),
             slicing: diff.slicing.clone().or_else(|| base.slicing.clone()),
             slice_name: diff.slice_name.clone().or_else(|| base.slice_name.clone()),
+            additional: merge_additional_fields(&base.additional, &diff.additional),
         })
     }
+}
+
+fn merge_additional_fields(
+    base: &std::collections::HashMap<String, serde_json::Value>,
+    diff: &std::collections::HashMap<String, serde_json::Value>,
+) -> std::collections::HashMap<String, serde_json::Value> {
+    let mut merged = base.clone();
+    merged.extend(diff.clone());
+    merged
 }
 
 #[cfg(test)]
@@ -241,6 +251,7 @@ mod tests {
             is_modifier_reason: None,
             slicing: None,
             slice_name: slice_name.map(|slice| slice.to_string()),
+            additional: std::collections::HashMap::new(),
         }
     }
 

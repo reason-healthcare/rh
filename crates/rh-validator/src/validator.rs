@@ -3804,11 +3804,28 @@ fn navigate_to_array<'a>(resource: &'a Value, parts: &[&str]) -> Option<&'a Vec<
 
 fn matches_slice(
     element: &Value,
-    _slice: &crate::rules::SliceDefinition,
+    slice: &crate::rules::SliceDefinition,
     discriminators: &[crate::rules::Discriminator],
 ) -> bool {
     if discriminators.is_empty() {
         return true;
+    }
+
+    if !slice.discriminator_constraints.is_empty() {
+        return slice
+            .discriminator_constraints
+            .iter()
+            .all(|constraint| discriminator_constraint_matches(element, constraint));
+    }
+
+    if !slice.target_profiles.is_empty()
+        && discriminators
+            .iter()
+            .any(|discriminator| discriminator.type_ == "profile")
+    {
+        return slice.target_profiles.iter().any(|profile| {
+            element_matches_profile_discriminator(element, profile, discriminators)
+        });
     }
 
     discriminators
@@ -3819,11 +3836,16 @@ fn matches_slice(
             "exists" => navigate_to_discriminator_value(element, &discriminator.path).is_some(),
             "type" => navigate_to_discriminator_value(element, &discriminator.path)
                 .is_some_and(|v| v.is_object()),
+            "profile" => true,
             _ => false,
         })
 }
 
 fn navigate_to_discriminator_value<'a>(element: &'a Value, path: &str) -> Option<&'a Value> {
+    if path == "$this" {
+        return Some(element);
+    }
+
     let parts: Vec<&str> = path.split('.').collect();
     let mut current = element;
 
@@ -3835,6 +3857,98 @@ fn navigate_to_discriminator_value<'a>(element: &'a Value, path: &str) -> Option
     }
 
     Some(current)
+}
+
+fn discriminator_constraint_matches(
+    element: &Value,
+    constraint: &crate::rules::DiscriminatorConstraint,
+) -> bool {
+    if constraint.path == "$this" {
+        return value_matches_pattern(element, &constraint.value);
+    }
+
+    discriminator_values_at_path(element, &constraint.path)
+        .iter()
+        .any(|actual| value_matches_pattern(actual, &constraint.value))
+}
+
+fn discriminator_values_at_path<'a>(value: &'a Value, path: &str) -> Vec<&'a Value> {
+    if path == "$this" {
+        return vec![value];
+    }
+
+    let parts: Vec<&str> = path.split('.').collect();
+    discriminator_values_at_parts(value, &parts)
+}
+
+fn discriminator_values_at_parts<'a>(value: &'a Value, parts: &[&str]) -> Vec<&'a Value> {
+    if parts.is_empty() {
+        return vec![value];
+    }
+
+    match value {
+        Value::Array(items) => items
+            .iter()
+            .flat_map(|item| discriminator_values_at_parts(item, parts))
+            .collect(),
+        Value::Object(object) => object
+            .get(parts[0])
+            .map(|child| discriminator_values_at_parts(child, &parts[1..]))
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    }
+}
+
+fn value_matches_pattern(actual: &Value, expected: &Value) -> bool {
+    match (actual, expected) {
+        (Value::Object(actual_obj), Value::Object(expected_obj)) => {
+            expected_obj.iter().all(|(key, expected_value)| {
+                actual_obj
+                    .get(key)
+                    .is_some_and(|actual_value| value_matches_pattern(actual_value, expected_value))
+            })
+        }
+        (Value::Array(actual_items), Value::Array(expected_items)) => {
+            expected_items.iter().all(|expected_item| {
+                actual_items
+                    .iter()
+                    .any(|actual_item| value_matches_pattern(actual_item, expected_item))
+            })
+        }
+        _ => actual == expected,
+    }
+}
+
+fn element_matches_profile_discriminator(
+    element: &Value,
+    target_profile: &str,
+    discriminators: &[crate::rules::Discriminator],
+) -> bool {
+    discriminators
+        .iter()
+        .filter(|discriminator| discriminator.type_ == "profile")
+        .flat_map(|discriminator| discriminator_values_at_path(element, &discriminator.path))
+        .any(|candidate| resource_declares_profile(candidate, target_profile))
+}
+
+fn resource_declares_profile(candidate: &Value, target_profile: &str) -> bool {
+    candidate
+        .get("meta")
+        .and_then(|meta| meta.get("profile"))
+        .and_then(|profile| profile.as_array())
+        .is_some_and(|profiles| {
+            profiles
+                .iter()
+                .filter_map(|profile| profile.as_str())
+                .any(|profile| {
+                    canonical_url_without_version(profile)
+                        == canonical_url_without_version(target_profile)
+                })
+        })
+}
+
+fn canonical_url_without_version(url: &str) -> &str {
+    url.split('|').next().unwrap_or(url)
 }
 
 /// Information about a collected extension
