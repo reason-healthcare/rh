@@ -1326,19 +1326,17 @@ fn validate_fhir_string_lengths(value: &Value, current_path: &str) -> Vec<Valida
                 issues.extend(validate_fhir_string_lengths(item, &child_path));
             }
         }
-        Value::String(s) => {
-            if s.len() > MAX_FHIR_STRING_BYTES {
-                issues.push(
-                    ValidationIssue::error(
-                        IssueCode::TooLong,
-                        format!(
-                            "String value at '{current_path}' exceeds the FHIR maximum length of 1 MB ({} bytes)",
-                            s.len()
-                        ),
-                    )
-                    .with_path(current_path),
-                );
-            }
+        Value::String(s) if s.len() > MAX_FHIR_STRING_BYTES => {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::TooLong,
+                    format!(
+                        "String value at '{current_path}' exceeds the FHIR maximum length of 1 MB ({} bytes)",
+                        s.len()
+                    ),
+                )
+                .with_path(current_path),
+            );
         }
         _ => {}
     }
