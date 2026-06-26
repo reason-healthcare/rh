@@ -40,6 +40,24 @@ fn test_basic_validation_valid_structure() {
 }
 
 #[test]
+fn test_basic_validation_rejects_oversized_strings() {
+    let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
+    let oversized = "a".repeat(1024 * 1024 + 1);
+    let resource = json!({
+        "resourceType": "Location",
+        "id": "example",
+        "description": oversized
+    });
+
+    let result = validator.validate(&resource).unwrap();
+    assert!(!result.valid);
+    assert!(result.issues.iter().any(|issue| {
+        issue.path.as_deref() == Some("Location.description")
+            || issue.message.contains("Location.description")
+    }));
+}
+
+#[test]
 fn test_basic_validation_not_json_object() {
     let validator = FhirValidator::new(rh_validator::FhirVersion::R4, None).unwrap();
     let resource = json!("not an object");

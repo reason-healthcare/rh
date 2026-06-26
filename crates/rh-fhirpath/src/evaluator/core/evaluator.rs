@@ -919,10 +919,10 @@ impl FhirPathEvaluator {
             target.clone()
         };
 
-        // Log the value to stderr for diagnostic purposes (backward compatibility)
-        eprintln!("[TRACE:{name}] {value_to_log:?}");
+        if std::env::var_os("RH_FHIRPATH_TRACE_STDERR").is_some() {
+            eprintln!("[TRACE:{name}] {value_to_log:?}");
+        }
 
-        // Also add to context trace logs for programmatic access
         context.add_trace_log(name, format!("{value_to_log:?}"));
 
         // Return the original input unchanged

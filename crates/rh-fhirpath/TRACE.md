@@ -21,9 +21,8 @@ The `trace()` function adds a String representation of the input collection to a
 
 1. **Logs diagnostic information** to help debug expression evaluation
 2. **Returns input unchanged** - never modifies the data flowing through the expression
-3. **Outputs to two destinations**:
-   - `stderr` via `eprintln!` for immediate visibility
-   - `EvaluationContext.trace_logs` for programmatic access
+3. **Captures trace output** in `EvaluationContext.trace_logs` for programmatic access
+4. **Can also write to stderr** when `RH_FHIRPATH_TRACE_STDERR` is set
 
 ## Usage Examples
 
