@@ -8,7 +8,7 @@ validator while keeping exact conformance logs as the audit baseline.
 Latest full R4 log:
 
 ```text
-target/conformance-logs/r4-full-20260626-023515-package-id-resolution.log
+target/conformance-logs/r4-full-20260626-074737-java-triage-final.log
 ```
 
 Current agreement from that run:
@@ -35,24 +35,35 @@ Completed:
    full R4 log for this iteration is
    `target/conformance-logs/r4-full-20260626-023515-package-id-resolution.log`;
    agreement remained 310/399 without terminology and 314/399 with terminology.
+5. Generate a per-run Java mismatch triage artifact with test name, category,
+   expected result, RH result, Java result, error count, and warning count. Use
+   this artifact to pick subsequent validator behavior work by largest
+   mismatch cluster rather than by intuition. The exact full R4 log for this
+   iteration is
+   `target/conformance-logs/r4-full-20260626-074737-java-triage-final.log`;
+   agreement remained 310/399 without terminology and 314/399 with terminology.
+   Triage artifacts:
+   `target/conformance-triage/r4-java-mismatches-1782474630-no-terminology.csv`
+   and
+   `target/conformance-triage/r4-java-mismatches-1782474794-with-terminology.csv`.
+   The largest with-terminology clusters are validation-resource (22),
+   reference-bundle-contained (19), invariant (11), and
+   questionnaire-response (9).
 
 Next:
 
-5. Add a conformance-only lenient JSON parser mode for validator fixtures that
-   Java accepts but strict JSON rejects, without changing normal CLI validation
-   behavior.
 6. Improve validation-resource checks for `StructureDefinition`, `ValueSet`, and
    `CodeSystem` cases, especially property/filter/ECL/status failures currently
    reported valid by RH.
-7. Tighten `QuestionnaireResponse` agreement for answer value set resolution,
-   async terminology expectations, and quantity min/max or unit compatibility.
+7. Fix reference, Bundle, contained-resource, signature, and html-reference
+   semantics as a later structural cluster.
 8. Reduce false positives from core invariant and extension handling after
    loading/recognizing core extension definitions more completely.
-9. Fix reference, Bundle, contained-resource, signature, and html-reference
-   semantics as a later structural cluster.
-10. Generate a per-run triage artifact with test name, category, expected
-    result, RH result, Java result, error count, and warning count to track
-    agreement deltas by subsystem.
+9. Tighten `QuestionnaireResponse` agreement for answer value set resolution,
+   async terminology expectations, and quantity min/max or unit compatibility.
+10. Add a conformance-only lenient JSON parser mode for validator fixtures that
+    Java accepts but strict JSON rejects, without changing normal CLI validation
+    behavior.
 
 Create a commit for each step. After implementation work is done, run
 `just check`. Keep exact full R4 conformance logs for each validator behavior

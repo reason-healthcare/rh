@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use flate2::read::GzDecoder;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tar::Archive;
 
 use super::parser::{ExpectedOutcome, Manifest, TestCase};
@@ -626,6 +626,170 @@ impl TestRunner {
 
         println!("{}", "=".repeat(90));
     }
+
+    pub fn write_java_mismatch_triage(
+        &self,
+        summary: &TestRunSummary,
+        label: &str,
+    ) -> Result<Option<PathBuf>> {
+        write_java_mismatch_triage(summary, label)
+    }
+}
+
+fn write_java_mismatch_triage(summary: &TestRunSummary, label: &str) -> Result<Option<PathBuf>> {
+    let mismatches = summary
+        .results
+        .iter()
+        .filter(|result| {
+            result
+                .java_expected_valid
+                .is_some_and(|java_valid| java_valid != result.actual_valid)
+        })
+        .collect::<Vec<_>>();
+
+    if mismatches.is_empty() {
+        return Ok(None);
+    }
+
+    let output_dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/conformance-triage");
+    fs::create_dir_all(&output_dir)
+        .with_context(|| format!("Failed to create triage dir {}", output_dir.display()))?;
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .context("System clock is before Unix epoch")?
+        .as_secs();
+    let output_path = output_dir.join(format!(
+        "r4-java-mismatches-{timestamp}-{}.csv",
+        sanitize_path_component(label)
+    ));
+
+    let mut category_counts = BTreeMap::<&'static str, usize>::new();
+    let mut rows = Vec::with_capacity(mismatches.len() + 1);
+    rows.push(csv_row(&[
+        "category",
+        "test_name",
+        "module",
+        "expected_valid",
+        "actual_valid",
+        "java_expected_valid",
+        "actual_error_count",
+        "actual_warning_count",
+        "error",
+    ]));
+
+    for result in mismatches {
+        let category = categorize_java_mismatch(result);
+        *category_counts.entry(category).or_default() += 1;
+        rows.push(csv_row(&[
+            category,
+            &result.test_name,
+            result.module.as_deref().unwrap_or(""),
+            bool_cell(result.expected_valid),
+            bool_cell(result.actual_valid),
+            bool_cell(result.java_expected_valid.unwrap_or(false)),
+            &result.actual_error_count.to_string(),
+            &result.actual_warning_count.to_string(),
+            result.error.as_deref().unwrap_or(""),
+        ]));
+    }
+
+    fs::write(&output_path, rows.join("\n") + "\n")
+        .with_context(|| format!("Failed to write triage file {}", output_path.display()))?;
+
+    println!("\nJava mismatch triage: {}", output_path.display());
+    println!("Category counts:");
+    for (category, count) in category_counts {
+        println!("  - {category}: {count}");
+    }
+
+    Ok(Some(output_path))
+}
+
+fn categorize_java_mismatch(result: &TestRunResult) -> &'static str {
+    let haystack = format!(
+        "{} {} {}",
+        result.test_name,
+        result.module.as_deref().unwrap_or_default(),
+        result.error.as_deref().unwrap_or_default()
+    )
+    .to_ascii_lowercase();
+
+    if haystack.contains("json parse")
+        || result.test_name.starts_with("json-")
+        || result.test_name.starts_with("bad-json")
+    {
+        "json-parser"
+    } else if haystack.contains("questionnaire")
+        || haystack.contains("questionnaireresponse")
+        || result.test_name.ends_with("-qr")
+        || result.test_name.starts_with("qr-")
+        || result.test_name.starts_with("q_")
+    {
+        "questionnaire-response"
+    } else if haystack.contains("extension") {
+        "extension"
+    } else if haystack.contains("bundle")
+        || haystack.contains("contained")
+        || haystack.contains("reference")
+        || haystack.contains("htmlrefs")
+        || haystack.contains("signature")
+        || haystack.contains("fullurl")
+    {
+        "reference-bundle-contained"
+    } else if haystack.contains("valueset")
+        || haystack.contains("codesystem")
+        || haystack.contains("structuredefinition")
+        || haystack.contains("searchparameter")
+        || haystack.contains("capabilitystatement")
+        || haystack.contains("operationdefinition")
+    {
+        "validation-resource"
+    } else if haystack.contains("profile")
+        || haystack.contains("slicing")
+        || haystack.contains("slice")
+    {
+        "profile-slicing"
+    } else if haystack.contains("terminology")
+        || haystack.contains("ucum")
+        || haystack.contains("codeinvalid")
+        || haystack.contains("wrong display")
+        || haystack.contains("valuequantity")
+    {
+        "terminology"
+    } else if haystack.contains("invariant")
+        || haystack.contains("dom-")
+        || haystack.contains("sdf-")
+    {
+        "invariant"
+    } else {
+        "other"
+    }
+}
+
+fn csv_row(fields: &[&str]) -> String {
+    fields
+        .iter()
+        .map(|field| csv_escape(field))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn csv_escape(value: &str) -> String {
+    if value.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_string()
+    }
+}
+
+fn bool_cell(value: bool) -> &'static str {
+    if value {
+        "true"
+    } else {
+        "false"
+    }
 }
 
 fn count_errors(result: &ValidationResult) -> usize {
@@ -809,6 +973,56 @@ mod tests {
             firely_sdk_current: None,
             firely_sdk_wip: None,
         }
+    }
+
+    fn test_result(name: &str, error: &str) -> TestRunResult {
+        TestRunResult {
+            test_name: name.to_string(),
+            module: None,
+            passed: false,
+            error: Some(error.to_string()),
+            expected_valid: true,
+            actual_valid: false,
+            actual_error_count: 1,
+            actual_warning_count: 0,
+            duration_ms: 0,
+            java_expected_valid: Some(true),
+            firely_current_expected_valid: None,
+            firely_wip_expected_valid: None,
+        }
+    }
+
+    #[test]
+    fn csv_escape_quotes_fields_when_needed() {
+        assert_eq!(csv_escape("plain"), "plain");
+        assert_eq!(csv_escape("with,comma"), "\"with,comma\"");
+        assert_eq!(csv_escape("with \"quote\""), "\"with \"\"quote\"\"\"");
+    }
+
+    #[test]
+    fn categorize_java_mismatch_uses_subsystem_hints() {
+        assert_eq!(
+            categorize_java_mismatch(&test_result("json-comments-1-yes", "JSON parse error")),
+            "json-parser"
+        );
+        assert_eq!(
+            categorize_java_mismatch(&test_result(
+                "choice-answer-option-qr",
+                "QuestionnaireResponse answer invalid"
+            )),
+            "questionnaire-response"
+        );
+        assert_eq!(
+            categorize_java_mismatch(&test_result(
+                "bundle-document-versioned-references-good",
+                "Duplicate Bundle.entry.fullUrl"
+            )),
+            "reference-bundle-contained"
+        );
+        assert_eq!(
+            categorize_java_mismatch(&test_result("vs-bad-props", "ValueSet property failure")),
+            "validation-resource"
+        );
     }
 
     #[test]
@@ -1031,6 +1245,9 @@ mod tests {
 
         runner.print_summary(&summary);
         runner.print_validator_comparison(&summary);
+        runner
+            .write_java_mismatch_triage(&summary, "no-terminology")
+            .expect("Failed to write Java mismatch triage");
 
         assert!(summary.total > 0, "Should have run some tests");
         println!("\nRan {} tests, {} passed", summary.total, summary.passed);
@@ -1062,6 +1279,9 @@ mod tests {
 
         runner.print_summary(&summary);
         runner.print_validator_comparison(&summary);
+        runner
+            .write_java_mismatch_triage(&summary, "with-terminology")
+            .expect("Failed to write Java mismatch triage");
 
         assert!(summary.total > 0, "Should have run some tests");
         println!(
