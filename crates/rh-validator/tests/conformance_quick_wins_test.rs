@@ -161,3 +161,205 @@ fn ucum_skip_note_not_present_with_terminology_service() {
             .contains("UCUM/unit quick-win validation was skipped because no terminology service")
     }));
 }
+
+#[test]
+fn registered_codesystem_validates_coding_property_codes() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_codesystem(&json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/CodeSystem/property-target",
+        "status": "active",
+        "content": "complete",
+        "concept": [
+            { "code": "valid-code" }
+        ]
+    }));
+
+    let codesystem = json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/CodeSystem/source",
+        "status": "active",
+        "content": "complete",
+        "property": [
+            { "code": "related", "type": "Coding" }
+        ],
+        "concept": [
+            {
+                "code": "source-code",
+                "property": [
+                    {
+                        "code": "related",
+                        "valueCoding": {
+                            "system": "http://example.org/CodeSystem/property-target",
+                            "code": "missing-code"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate(&codesystem).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains("Unknown code 'missing-code'")
+            && i.path.as_deref() == Some("CodeSystem.concept[0].property[0].valueCoding.code")
+    }));
+}
+
+#[test]
+fn registered_codesystem_validates_valueset_coding_filter_values() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_codesystem(&json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/CodeSystem/filter-source",
+        "status": "active",
+        "content": "complete",
+        "property": [
+            { "code": "related", "type": "Coding" }
+        ],
+        "filter": [
+            { "code": "text-filter", "operator": ["="], "value": "text" }
+        ],
+        "concept": [
+            { "code": "source-code" }
+        ]
+    }));
+
+    validator.register_codesystem(&json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/CodeSystem/property-target",
+        "status": "active",
+        "content": "complete",
+        "concept": [
+            { "code": "valid-code" }
+        ]
+    }));
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/filter",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://example.org/CodeSystem/filter-source",
+                    "filter": [
+                        {
+                            "property": "related",
+                            "op": "=",
+                            "value": "http://example.org/CodeSystem/property-target#missing-code"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains("filter based on property 'related'")
+            && i.message.contains("Unknown code 'missing-code'")
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].filter[0]")
+    }));
+}
+
+#[test]
+fn valueset_coding_filter_requires_system_hash_code_format() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_codesystem(&json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/CodeSystem/filter-source",
+        "status": "active",
+        "content": "complete",
+        "property": [
+            { "code": "related", "type": "Coding" }
+        ],
+        "concept": [
+            { "code": "source-code" }
+        ]
+    }));
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/filter",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://example.org/CodeSystem/filter-source",
+                    "filter": [
+                        {
+                            "property": "related",
+                            "op": "=",
+                            "value": "missing-code"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("must be in the format system(|version)#code")
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].filter[0]")
+    }));
+}
+
+#[test]
+fn valueset_filter_code_is_allowed_when_defined_by_codesystem_filter() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_codesystem(&json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/CodeSystem/filter-source",
+        "status": "active",
+        "content": "complete",
+        "property": [
+            { "code": "related", "type": "Coding" }
+        ],
+        "filter": [
+            { "code": "defined-filter", "operator": ["="], "value": "text" }
+        ],
+        "concept": [
+            { "code": "source-code" }
+        ]
+    }));
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/filter",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://example.org/CodeSystem/filter-source",
+                    "filter": [
+                        {
+                            "property": "defined-filter",
+                            "op": "=",
+                            "value": "anything"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].filter[0].property")
+    }));
+}
