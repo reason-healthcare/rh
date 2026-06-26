@@ -331,6 +331,11 @@ impl FhirValidator {
             }
         }
 
+        let structural_issues = validate_fhir_string_lengths(resource, resource_type_name);
+        for issue in structural_issues {
+            result = result.with_issue(issue);
+        }
+
         // Validate JSON structure (empty arrays are invalid in FHIR)
         let empty_array_issues = validate_json_structure(resource, resource_type_name);
         for issue in empty_array_issues {
@@ -1296,6 +1301,49 @@ fn validate_id_format(id: &str, path: &str) -> Option<ValidationIssue> {
         }
     }
     None
+}
+
+const MAX_FHIR_STRING_BYTES: usize = 1024 * 1024;
+
+fn validate_fhir_string_lengths(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match value {
+        Value::Object(obj) => {
+            for (key, v) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+
+                issues.extend(validate_fhir_string_lengths(v, &child_path));
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                issues.extend(validate_fhir_string_lengths(item, &child_path));
+            }
+        }
+        Value::String(s) => {
+            if s.len() > MAX_FHIR_STRING_BYTES {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::TooLong,
+                        format!(
+                            "String value at '{current_path}' exceeds the FHIR maximum length of 1 MB ({} bytes)",
+                            s.len()
+                        ),
+                    )
+                    .with_path(current_path),
+                );
+            }
+        }
+        _ => {}
+    }
+
+    issues
 }
 
 fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
