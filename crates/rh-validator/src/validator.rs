@@ -42,6 +42,7 @@
 
 use anyhow::{Context, Result};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -122,7 +123,9 @@ pub struct FhirValidator {
     terminology_service: Option<Arc<dyn TerminologyService>>,
     options: ValidationOptions,
     /// CodeSystem supplements: supplement_url -> base_codesystem_url
-    supplements: std::sync::RwLock<std::collections::HashMap<String, String>>,
+    supplements: std::sync::RwLock<HashMap<String, String>>,
+    /// Registered CodeSystem resources keyed by canonical URL.
+    codesystems: std::sync::RwLock<HashMap<String, Value>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -245,7 +248,8 @@ impl FhirValidator {
             fhirpath_evaluator: FhirPathEvaluator::new(),
             terminology_service,
             options,
-            supplements: std::sync::RwLock::new(std::collections::HashMap::new()),
+            supplements: std::sync::RwLock::new(HashMap::new()),
+            codesystems: std::sync::RwLock::new(HashMap::new()),
             fhir_version,
         })
     }
@@ -380,6 +384,12 @@ impl FhirValidator {
         // Validate canonical URLs for conformance resources
         let canonical_issues = validate_canonical_urls(resource, resource_type_name);
         for issue in canonical_issues {
+            result = result.with_issue(issue);
+        }
+
+        let terminology_definition_issues =
+            self.validate_terminology_definition_references(resource, resource_type_name);
+        for issue in terminology_definition_issues {
             result = result.with_issue(issue);
         }
 
@@ -872,6 +882,13 @@ impl FhirValidator {
     /// validation can detect when a supplement URL is incorrectly used in Coding.system.
     pub fn register_codesystem(&self, codesystem: &Value) {
         if codesystem.get("resourceType").and_then(|v| v.as_str()) == Some("CodeSystem") {
+            if let Some(url) = codesystem.get("url").and_then(|v| v.as_str()) {
+                self.codesystems
+                    .write()
+                    .unwrap()
+                    .insert(url.to_string(), codesystem.clone());
+            }
+
             // Check if this CodeSystem is a supplement
             if let (Some(url), Some(supplements)) = (
                 codesystem.get("url").and_then(|v| v.as_str()),
@@ -883,6 +900,245 @@ impl FhirValidator {
                     .insert(url.to_string(), supplements.to_string());
             }
         }
+    }
+
+    fn validate_terminology_definition_references(
+        &self,
+        resource: &Value,
+        resource_type_name: &str,
+    ) -> Vec<ValidationIssue> {
+        match resource_type_name {
+            "CodeSystem" => self.validate_codesystem_concept_properties(resource),
+            "ValueSet" => self.validate_valueset_filters(resource),
+            _ => Vec::new(),
+        }
+    }
+
+    fn validate_codesystem_concept_properties(&self, codesystem: &Value) -> Vec<ValidationIssue> {
+        let property_types = codesystem_property_types(codesystem);
+        let mut issues = Vec::new();
+
+        if let Some(concepts) = codesystem.get("concept").and_then(|v| v.as_array()) {
+            self.validate_codesystem_concepts(
+                concepts,
+                "CodeSystem.concept",
+                &property_types,
+                &mut issues,
+            );
+        }
+
+        issues
+    }
+
+    fn validate_codesystem_concepts(
+        &self,
+        concepts: &[Value],
+        path: &str,
+        property_types: &HashMap<String, String>,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        for (concept_idx, concept) in concepts.iter().enumerate() {
+            let concept_path = format!("{path}[{concept_idx}]");
+
+            if let Some(properties) = concept.get("property").and_then(|v| v.as_array()) {
+                for (property_idx, property) in properties.iter().enumerate() {
+                    let Some(code) = property.get("code").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+
+                    let property_path = format!("{concept_path}.property[{property_idx}]");
+                    let Some(property_type) = property_types.get(code).map(String::as_str) else {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                format!(
+                                    "CodeSystem concept property '{code}' is not defined by CodeSystem.property"
+                                ),
+                            )
+                            .with_path(format!("{property_path}.code")),
+                        );
+                        continue;
+                    };
+
+                    if property_type == "Coding" {
+                        self.validate_coding_property_value(
+                            property,
+                            &format!("{property_path}.valueCoding"),
+                            issues,
+                        );
+                    }
+                }
+            }
+
+            if let Some(nested) = concept.get("concept").and_then(|v| v.as_array()) {
+                self.validate_codesystem_concepts(
+                    nested,
+                    &format!("{concept_path}.concept"),
+                    property_types,
+                    issues,
+                );
+            }
+        }
+    }
+
+    fn validate_coding_property_value(
+        &self,
+        property: &Value,
+        value_path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(value_coding) = property.get("valueCoding") else {
+            return;
+        };
+        let Some(system) = value_coding.get("system").and_then(|v| v.as_str()) else {
+            return;
+        };
+        let Some(code) = value_coding.get("code").and_then(|v| v.as_str()) else {
+            return;
+        };
+
+        if self.registered_codesystem_contains_code(system, code) == Some(false) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::CodeInvalid,
+                    format!("Unknown code '{code}' in the CodeSystem '{system}'"),
+                )
+                .with_path(format!("{value_path}.code")),
+            );
+        }
+    }
+
+    fn validate_valueset_filters(&self, valueset: &Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+
+        let Some(compose) = valueset.get("compose") else {
+            return issues;
+        };
+
+        for include_name in ["include", "exclude"] {
+            let Some(includes) = compose.get(include_name).and_then(|v| v.as_array()) else {
+                continue;
+            };
+
+            for (include_idx, include) in includes.iter().enumerate() {
+                let Some(system) = include.get("system").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                let Some(filters) = include.get("filter").and_then(|v| v.as_array()) else {
+                    continue;
+                };
+
+                let Some(codesystem) = self.registered_codesystem(system) else {
+                    continue;
+                };
+
+                let property_types = codesystem_property_types(&codesystem);
+                let filter_codes = codesystem_filter_codes(&codesystem);
+
+                for (filter_idx, filter) in filters.iter().enumerate() {
+                    let filter_path = format!(
+                        "ValueSet.compose.{include_name}[{include_idx}].filter[{filter_idx}]"
+                    );
+                    let Some(property) = filter.get("property").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+
+                    if filter_codes.contains_key(property) {
+                        continue;
+                    }
+
+                    let Some(property_type) = property_types.get(property).map(String::as_str)
+                    else {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                format!(
+                                    "ValueSet filter property '{property}' is not defined as a property or filter in CodeSystem '{system}'"
+                                ),
+                            )
+                            .with_path(format!("{filter_path}.property")),
+                        );
+                        continue;
+                    };
+
+                    if property_type == "Coding" {
+                        self.validate_valueset_coding_filter_value(
+                            filter,
+                            property,
+                            &filter_path,
+                            &mut issues,
+                        );
+                    }
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_valueset_coding_filter_value(
+        &self,
+        filter: &Value,
+        property: &str,
+        filter_path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(value) = filter.get("value").and_then(|v| v.as_str()) else {
+            return;
+        };
+
+        let Some((system_and_version, code)) = value.rsplit_once('#') else {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property '{property}' must be in the format system(|version)#code, not '{value}'"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            );
+            return;
+        };
+
+        let system = system_and_version
+            .split_once('|')
+            .map(|(system, _version)| system)
+            .unwrap_or(system_and_version);
+
+        if system.is_empty() || code.is_empty() {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property '{property}' must be in the format system(|version)#code, not '{value}'"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            );
+            return;
+        }
+
+        if self.registered_codesystem_contains_code(system, code) == Some(false) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property '{property}' is '{value}' which is not a valid code (Unknown code '{code}' in the CodeSystem '{system}')"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            );
+        }
+    }
+
+    fn registered_codesystem(&self, system: &str) -> Option<Value> {
+        self.codesystems.read().unwrap().get(system).cloned()
+    }
+
+    fn registered_codesystem_contains_code(&self, system: &str, code: &str) -> Option<bool> {
+        let codesystem = self.registered_codesystem(system)?;
+        let concepts = codesystem.get("concept").and_then(|v| v.as_array())?;
+        Some(concepts_contain_code(concepts, code))
     }
 
     pub fn cache_stats(&self) -> ((usize, usize), (usize, usize)) {
@@ -2336,6 +2592,49 @@ fn validate_codesystem_canonical_urls(codesystem: &Value) -> Vec<ValidationIssue
     }
 
     issues
+}
+
+fn codesystem_property_types(codesystem: &Value) -> HashMap<String, String> {
+    codesystem
+        .get("property")
+        .and_then(|v| v.as_array())
+        .map(|properties| {
+            properties
+                .iter()
+                .filter_map(|property| {
+                    let code = property.get("code").and_then(|v| v.as_str())?;
+                    let property_type = property.get("type").and_then(|v| v.as_str())?;
+                    Some((code.to_string(), property_type.to_string()))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn codesystem_filter_codes(codesystem: &Value) -> HashMap<String, ()> {
+    codesystem
+        .get("filter")
+        .and_then(|v| v.as_array())
+        .map(|filters| {
+            filters
+                .iter()
+                .filter_map(|filter| {
+                    let code = filter.get("code").and_then(|v| v.as_str())?;
+                    Some((code.to_string(), ()))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn concepts_contain_code(concepts: &[Value], code: &str) -> bool {
+    concepts.iter().any(|concept| {
+        concept.get("code").and_then(|v| v.as_str()) == Some(code)
+            || concept
+                .get("concept")
+                .and_then(|v| v.as_array())
+                .is_some_and(|nested| concepts_contain_code(nested, code))
+    })
 }
 
 fn is_canonical_url(url: &str) -> bool {
