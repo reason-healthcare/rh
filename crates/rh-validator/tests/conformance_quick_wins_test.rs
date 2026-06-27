@@ -331,8 +331,9 @@ fn transaction_bundle_relative_reference_requires_entry_fullurl() {
     assert!(result.issues.iter().any(|i| {
         i.severity == Severity::Error
             && i.code == IssueCode::Structure
-            && i.message
-                .contains("Relative Reference appears inside Bundle whose entry is missing a fullUrl")
+            && i.message.contains(
+                "Relative Reference appears inside Bundle whose entry is missing a fullUrl",
+            )
             && i.path.as_deref() == Some("Bundle.entry[0].resource/*Observation*/.subject")
     }));
 }
@@ -381,7 +382,8 @@ fn narrative_href_fragment_accepts_local_anchor() {
     assert!(!result.issues.iter().any(|i| {
         i.severity == Severity::Error
             && i.code == IssueCode::Invalid
-            && i.message.contains("Unable to resolve narrative fragment reference")
+            && i.message
+                .contains("Unable to resolve narrative fragment reference")
     }));
 }
 
