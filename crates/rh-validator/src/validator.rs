@@ -847,6 +847,10 @@ impl FhirValidator {
                             .with_path(path),
                         );
                     }
+
+                    if let Some(issue) = validate_known_extension_context(url, path) {
+                        issues.push(issue);
+                    }
                 }
                 Ok(None) => {
                     // Extension not found - check if it's from an IG we might not have
@@ -4822,6 +4826,22 @@ fn canonical_url_without_version(url: &str) -> &str {
 
 fn is_core_fhir_profile_url(url: &str) -> bool {
     url.starts_with("http://hl7.org/fhir/StructureDefinition/")
+}
+
+fn validate_known_extension_context(url: &str, path: &str) -> Option<ValidationIssue> {
+    if url == "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family"
+        && !path.contains(".family.extension[")
+    {
+        return Some(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "The extension http://hl7.org/fhir/StructureDefinition/humanname-mothers-family is only allowed on HumanName.family",
+            )
+            .with_path(path),
+        );
+    }
+
+    None
 }
 
 /// Information about a collected extension

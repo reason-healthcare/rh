@@ -586,6 +586,67 @@ fn period_invariant_accepts_ordered_same_precision_start_end() {
 }
 
 #[test]
+fn humanname_mothers_family_extension_rejects_name_level_usage() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "name": [
+            {
+                "family": "Family",
+                "given": ["Names"],
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family",
+                        "valueString": "Mothers family"
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate_auto(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("humanname-mothers-family")
+            && i.path.as_deref() == Some("Patient.name[0].extension[0]")
+    }));
+}
+
+#[test]
+fn humanname_mothers_family_extension_allows_family_usage() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "name": [
+            {
+                "family": "Family",
+                "_family": {
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family",
+                            "valueString": "Mothers family"
+                        }
+                    ]
+                },
+                "given": ["Names"]
+            }
+        ]
+    });
+
+    let result = validator.validate_auto(&patient).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("humanname-mothers-family")
+    }));
+}
+
+#[test]
 fn valueset_coding_filter_requires_system_hash_code_format() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
