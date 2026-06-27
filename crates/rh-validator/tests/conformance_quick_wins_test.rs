@@ -303,6 +303,41 @@ fn bundle_duplicate_resource_identity_is_reported() {
 }
 
 #[test]
+fn transaction_bundle_relative_reference_requires_entry_fullurl() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "o1",
+                    "status": "final",
+                    "code": {
+                        "text": "Example"
+                    },
+                    "subject": {
+                        "reference": "Patient/p1"
+                    }
+                }
+            }
+        ]
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message
+                .contains("Relative Reference appears inside Bundle whose entry is missing a fullUrl")
+            && i.path.as_deref() == Some("Bundle.entry[0].resource/*Observation*/.subject")
+    }));
+}
+
+#[test]
 fn ucum_skip_note_present_without_terminology_service() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

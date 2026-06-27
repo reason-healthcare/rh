@@ -2667,30 +2667,29 @@ fn validate_bundle_references(
                         !matches!(context.bundle_type, "transaction" | "batch");
                     let is_absolute = is_absolute_url(reference_target);
 
+                    if !context.entry_has_full_url && !is_absolute {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Relative Reference appears inside Bundle whose entry is missing a fullUrl: '{ref_value}'"),
+                            )
+                            .with_path(current_path.to_string()),
+                        );
+                        return;
+                    }
+
                     // Absolute references are only validated if the full URL exists in the bundle;
                     // otherwise they are assumed to be external.
                     let is_internal_reference = !is_absolute || resolved;
 
                     if requires_resolution && !resolved && is_internal_reference {
-                        if !context.entry_has_full_url && !is_absolute {
-                            issues.push(
-                                ValidationIssue::error(
-                                    IssueCode::Structure,
-                                    format!("Relative Reference appears inside Bundle whose entry is missing a fullUrl: '{ref_value}'"),
-                                )
-                                .with_path(current_path.to_string()),
-                            );
-                        } else {
-                            issues.push(
-                                ValidationIssue::error(
-                                    IssueCode::Structure,
-                                    format!(
-                                        "Unable to resolve resource with reference '{ref_value}'"
-                                    ),
-                                )
-                                .with_path(current_path.to_string()),
-                            );
-                        }
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Unable to resolve resource with reference '{ref_value}'"),
+                            )
+                            .with_path(current_path.to_string()),
+                        );
                     }
                 }
             }
