@@ -12,6 +12,7 @@ pub struct CompiledValidationRules {
     pub cardinality_rules: Vec<CardinalityRule>,
     pub type_rules: Vec<TypeRule>,
     pub binding_rules: Vec<BindingRule>,
+    pub fixed_pattern_rules: Vec<FixedPatternRule>,
     pub invariant_rules: Vec<InvariantRule>,
     pub extension_rules: Vec<ExtensionRule>,
     pub slicing_rules: Vec<SlicingRule>,
@@ -35,6 +36,13 @@ pub struct BindingRule {
     pub path: String,
     pub value_set_url: String,
     pub strength: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct FixedPatternRule {
+    pub path: String,
+    pub value: Value,
+    pub is_fixed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -114,6 +122,7 @@ impl RuleCompiler {
         let mut cardinality_rules = Vec::new();
         let mut type_rules = Vec::new();
         let mut binding_rules = Vec::new();
+        let mut fixed_pattern_rules = Vec::new();
         let mut invariant_rules = Vec::new();
         let mut extension_rules = Vec::new();
 
@@ -147,6 +156,14 @@ impl RuleCompiler {
                             strength: binding.strength.clone(),
                         });
                     }
+                }
+
+                for (key, value) in fixed_or_pattern_entries(&element.additional) {
+                    fixed_pattern_rules.push(FixedPatternRule {
+                        path: path.clone(),
+                        value: value.clone(),
+                        is_fixed: key.starts_with("fixed"),
+                    });
                 }
 
                 if let Some(constraints) = &element.constraint {
@@ -253,6 +270,7 @@ impl RuleCompiler {
                 cardinality_rules,
                 type_rules,
                 binding_rules,
+                fixed_pattern_rules,
                 invariant_rules,
                 extension_rules,
                 slicing_rules,
@@ -270,6 +288,7 @@ impl RuleCompiler {
             cardinality_rules,
             type_rules,
             binding_rules,
+            fixed_pattern_rules,
             invariant_rules,
             extension_rules,
             slicing_rules: Vec::new(),
@@ -429,10 +448,15 @@ fn path_matches_discriminator(element_relative_path: &str, discriminator_path: &
 }
 
 fn fixed_or_pattern_values(additional: &HashMap<String, Value>) -> impl Iterator<Item = &Value> {
+    fixed_or_pattern_entries(additional).map(|(_, value)| value)
+}
+
+fn fixed_or_pattern_entries(
+    additional: &HashMap<String, Value>,
+) -> impl Iterator<Item = (&String, &Value)> {
     additional
         .iter()
         .filter(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
-        .map(|(_, value)| value)
 }
 
 impl Default for RuleCompiler {

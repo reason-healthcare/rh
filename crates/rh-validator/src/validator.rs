@@ -49,7 +49,7 @@ use std::sync::Arc;
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
 use crate::profile::ProfileRegistry;
-use crate::rules::{InvariantRule, RuleCompiler, TypeRule};
+use crate::rules::{FixedPatternRule, InvariantRule, RuleCompiler, TypeRule};
 use crate::terminology::{TerminologyConfig, TerminologyService};
 use crate::types::{IssueCode, ValidationIssue, ValidationResult};
 use crate::valueset::ValueSetLoader;
@@ -561,6 +561,14 @@ impl FhirValidator {
             }
 
             let violations = validate_type_at_path(resource, &rule.path, &rule.types);
+
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
+        }
+
+        for rule in &rules.fixed_pattern_rules {
+            let violations = validate_fixed_pattern_at_path(resource, rule);
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
@@ -1835,6 +1843,35 @@ fn validate_type_at_path(
                     break;
                 }
             }
+        }
+    }
+
+    issues
+}
+
+fn validate_fixed_pattern_at_path(
+    resource: &Value,
+    rule: &FixedPatternRule,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let values = get_values_at_path(resource, &rule.path);
+
+    for value in values {
+        let matches = if rule.is_fixed {
+            value == &rule.value
+        } else {
+            value_matches_pattern(value, &rule.value)
+        };
+
+        if !matches {
+            let kind = if rule.is_fixed { "fixed" } else { "pattern" };
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!(
+                    "Element does not match required {kind} value at '{}'",
+                    rule.path
+                ),
+            ));
         }
     }
 
@@ -3779,16 +3816,33 @@ fn get_values_at_path<'a>(resource: &'a Value, path: &str) -> Vec<&'a Value> {
         let mut next = Vec::new();
 
         for value in current {
-            match value.get(part) {
-                Some(Value::Array(arr)) => {
-                    for item in arr {
-                        next.push(item);
+            if let Some(choice_prefix) = part.strip_suffix("[x]") {
+                if let Some(object) = value.as_object() {
+                    for (key, choice_value) in object {
+                        if key.starts_with(choice_prefix) && key.len() > choice_prefix.len() {
+                            match choice_value {
+                                Value::Array(arr) => {
+                                    for item in arr {
+                                        next.push(item);
+                                    }
+                                }
+                                other => next.push(other),
+                            }
+                        }
                     }
                 }
-                Some(other) => {
-                    next.push(other);
+            } else {
+                match value.get(part) {
+                    Some(Value::Array(arr)) => {
+                        for item in arr {
+                            next.push(item);
+                        }
+                    }
+                    Some(other) => {
+                        next.push(other);
+                    }
+                    None => {}
                 }
-                None => {}
             }
         }
 
@@ -4111,6 +4165,14 @@ impl FhirValidator {
 
         // Skip preferred and example bindings
         if rule.strength == "preferred" || rule.strength == "example" {
+            return Ok(issues);
+        }
+
+        if rule.path.contains("[x]")
+            && !rule
+                .value_set_url
+                .starts_with("http://hl7.org/fhir/ValueSet/")
+        {
             return Ok(issues);
         }
 
