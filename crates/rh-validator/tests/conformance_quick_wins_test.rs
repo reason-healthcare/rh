@@ -682,6 +682,96 @@ fn humanname_mothers_family_extension_allows_family_usage() {
 }
 
 #[test]
+fn questionnaire_multiple_enable_when_requires_enable_behavior() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let questionnaire = json!({
+        "resourceType": "Questionnaire",
+        "status": "draft",
+        "item": [
+            {
+                "linkId": "q1",
+                "type": "integer"
+            },
+            {
+                "linkId": "q2",
+                "type": "integer"
+            },
+            {
+                "linkId": "q3",
+                "type": "integer",
+                "enableWhen": [
+                    {
+                        "question": "q1",
+                        "operator": "=",
+                        "answerInteger": 1
+                    },
+                    {
+                        "question": "q2",
+                        "operator": "=",
+                        "answerInteger": 1
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate(&questionnaire).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invariant
+            && i.message.contains("qst-2")
+            && i.path.as_deref() == Some("Questionnaire.item[2]")
+    }));
+}
+
+#[test]
+fn questionnaire_multiple_enable_when_accepts_enable_behavior() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let questionnaire = json!({
+        "resourceType": "Questionnaire",
+        "status": "draft",
+        "item": [
+            {
+                "linkId": "q1",
+                "type": "integer"
+            },
+            {
+                "linkId": "q2",
+                "type": "integer"
+            },
+            {
+                "linkId": "q3",
+                "type": "integer",
+                "enableBehavior": "all",
+                "enableWhen": [
+                    {
+                        "question": "q1",
+                        "operator": "=",
+                        "answerInteger": 1
+                    },
+                    {
+                        "question": "q2",
+                        "operator": "=",
+                        "answerInteger": 1
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate(&questionnaire).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invariant
+            && i.message.contains("qst-2")
+    }));
+}
+
+#[test]
 fn valueset_coding_filter_requires_system_hash_code_format() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

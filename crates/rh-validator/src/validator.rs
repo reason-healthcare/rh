@@ -359,6 +359,12 @@ impl FhirValidator {
             }
         }
 
+        if resource_type_name == "Questionnaire" {
+            for issue in validate_questionnaire_enable_behavior(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
         // Validate strings for HTML-like content (security check)
         let string_security_issues =
             validate_string_security(resource, resource_type_name, self.options.security_checks);
@@ -2816,6 +2822,48 @@ fn validate_parameters_resource_references(
             }
         }
         _ => {}
+    }
+}
+
+fn validate_questionnaire_enable_behavior(questionnaire: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(items) = questionnaire.get("item").and_then(|value| value.as_array()) {
+        validate_questionnaire_item_enable_behavior(items, "Questionnaire.item", &mut issues);
+    }
+
+    issues
+}
+
+fn validate_questionnaire_item_enable_behavior(
+    items: &[Value],
+    path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    for (idx, item) in items.iter().enumerate() {
+        let item_path = format!("{path}[{idx}]");
+        let enable_when_count = item
+            .get("enableWhen")
+            .and_then(|value| value.as_array())
+            .map_or(0, Vec::len);
+
+        if enable_when_count > 1 && item.get("enableBehavior").is_none() {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invariant,
+                    "qst-2: Questionnaire.item with multiple enableWhen conditions must specify enableBehavior".to_string(),
+                )
+                .with_path(item_path.clone()),
+            );
+        }
+
+        if let Some(children) = item.get("item").and_then(|value| value.as_array()) {
+            validate_questionnaire_item_enable_behavior(
+                children,
+                &format!("{item_path}.item"),
+                issues,
+            );
+        }
     }
 }
 
