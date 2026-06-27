@@ -940,7 +940,7 @@ impl FhirValidator {
     ) -> Vec<ValidationIssue> {
         match resource_type_name {
             "CodeSystem" => self.validate_codesystem_concept_properties(resource),
-            "ValueSet" => self.validate_valueset_filters(resource),
+            "ValueSet" => self.validate_valueset_compose(resource),
             "SearchParameter" => self.validate_search_parameter_derivation(resource),
             "CapabilityStatement" => self.validate_capability_statement_search_params(resource),
             _ => Vec::new(),
@@ -1056,7 +1056,7 @@ impl FhirValidator {
         }
     }
 
-    fn validate_valueset_filters(&self, valueset: &Value) -> Vec<ValidationIssue> {
+    fn validate_valueset_compose(&self, valueset: &Value) -> Vec<ValidationIssue> {
         let mut issues = Vec::new();
 
         let Some(compose) = valueset.get("compose") else {
@@ -1072,9 +1072,15 @@ impl FhirValidator {
                 let Some(system) = include.get("system").and_then(|v| v.as_str()) else {
                     continue;
                 };
-                let Some(filters) = include.get("filter").and_then(|v| v.as_array()) else {
-                    continue;
-                };
+
+                if let Some(concepts) = include.get("concept").and_then(|v| v.as_array()) {
+                    self.validate_valueset_concepts(
+                        system,
+                        concepts,
+                        &format!("ValueSet.compose.{include_name}[{include_idx}].concept"),
+                        &mut issues,
+                    );
+                }
 
                 let registered_codesystem = self.registered_codesystem(system);
                 let property_types = registered_codesystem
@@ -1085,6 +1091,10 @@ impl FhirValidator {
                     .as_ref()
                     .map(codesystem_filter_codes)
                     .unwrap_or_default();
+
+                let Some(filters) = include.get("filter").and_then(|v| v.as_array()) else {
+                    continue;
+                };
 
                 for (filter_idx, filter) in filters.iter().enumerate() {
                     let filter_path = format!(
@@ -1136,6 +1146,54 @@ impl FhirValidator {
         }
 
         issues
+    }
+
+    fn validate_valueset_concepts(
+        &self,
+        system: &str,
+        concepts: &[Value],
+        concept_path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(terminology_service) = self.terminology_service.as_ref() else {
+            return;
+        };
+
+        if !terminology_service.supports_code_system(system) {
+            return;
+        }
+
+        for (concept_idx, concept) in concepts.iter().enumerate() {
+            let Some(code) = concept.get("code").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            match terminology_service.validate_code_in_codesystem(system, code, None) {
+                Ok(result) if !result.result => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::BusinessRule,
+                            result.message.unwrap_or_else(|| {
+                                format!("The code '{code}' is not valid in the system {system}")
+                            }),
+                        )
+                        .with_path(format!("{concept_path}[{concept_idx}]")),
+                    );
+                }
+                Err(err) => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::BusinessRule,
+                            format!(
+                                "The code '{code}' is not valid in the system {system} ({err})"
+                            ),
+                        )
+                        .with_path(format!("{concept_path}[{concept_idx}]")),
+                    );
+                }
+                _ => {}
+            }
+        }
     }
 
     fn validate_valueset_coding_filter_value(
@@ -2202,12 +2260,12 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
             validate_bundle_references(
                 resource,
                 &resource_path,
-                &available_resources,
-                &resource_counts,
-                bundle_type,
-                has_full_url,
-                &local_fragment_ids,
-                &global_fragment_counts,
+                &BundleReferenceContext {
+                    available_resources: &available_resources,
+                    resource_counts: &resource_counts,
+                    bundle_type,
+                    entry_has_full_url: has_full_url,
+                },
                 &mut issues,
             );
 
@@ -2544,15 +2602,17 @@ fn is_absolute_url(url: &str) -> bool {
         || url.starts_with("uin:")
 }
 
+struct BundleReferenceContext<'a> {
+    available_resources: &'a std::collections::HashSet<String>,
+    resource_counts: &'a std::collections::HashMap<String, usize>,
+    bundle_type: &'a str,
+    entry_has_full_url: bool,
+}
+
 fn validate_bundle_references(
     value: &Value,
     current_path: &str,
-    available_resources: &std::collections::HashSet<String>,
-    resource_counts: &std::collections::HashMap<String, usize>,
-    bundle_type: &str,
-    entry_has_full_url: bool,
-    _local_fragment_ids: &std::collections::HashSet<String>,
-    _global_fragment_counts: &std::collections::HashMap<String, usize>,
+    context: &BundleReferenceContext<'_>,
     issues: &mut Vec<ValidationIssue>,
 ) {
     match value {
@@ -2570,13 +2630,13 @@ fn validate_bundle_references(
                         .next()
                         .unwrap_or(reference_target);
 
-                    let resolved = available_resources.contains(reference_target)
-                        || available_resources.contains(ref_value)
-                        || available_resources.contains(ref_without_history);
+                    let resolved = context.available_resources.contains(reference_target)
+                        || context.available_resources.contains(ref_value)
+                        || context.available_resources.contains(ref_without_history);
 
                     // Check for multiple matches - only for relative identity references
                     if !has_version && !is_absolute_url(reference_target) {
-                        if let Some(&count) = resource_counts.get(ref_without_history) {
+                        if let Some(&count) = context.resource_counts.get(ref_without_history) {
                             if count > 1 {
                                 issues.push(
                                     ValidationIssue::error(
@@ -2591,7 +2651,8 @@ fn validate_bundle_references(
                         }
                     }
 
-                    let requires_resolution = !matches!(bundle_type, "transaction" | "batch");
+                    let requires_resolution =
+                        !matches!(context.bundle_type, "transaction" | "batch");
                     let is_absolute = is_absolute_url(reference_target);
 
                     // Absolute references are only validated if the full URL exists in the bundle;
@@ -2599,7 +2660,7 @@ fn validate_bundle_references(
                     let is_internal_reference = !is_absolute || resolved;
 
                     if requires_resolution && !resolved && is_internal_reference {
-                        if !entry_has_full_url && !is_absolute {
+                        if !context.entry_has_full_url && !is_absolute {
                             issues.push(
                                 ValidationIssue::error(
                                     IssueCode::Structure,
@@ -2625,33 +2686,13 @@ fn validate_bundle_references(
             // Recurse into child objects
             for (key, v) in obj {
                 let child_path = format!("{current_path}.{key}");
-                validate_bundle_references(
-                    v,
-                    &child_path,
-                    available_resources,
-                    resource_counts,
-                    bundle_type,
-                    entry_has_full_url,
-                    _local_fragment_ids,
-                    _global_fragment_counts,
-                    issues,
-                );
+                validate_bundle_references(v, &child_path, context, issues);
             }
         }
         Value::Array(arr) => {
             for (idx, item) in arr.iter().enumerate() {
                 let child_path = format!("{current_path}[{idx}]");
-                validate_bundle_references(
-                    item,
-                    &child_path,
-                    available_resources,
-                    resource_counts,
-                    bundle_type,
-                    entry_has_full_url,
-                    _local_fragment_ids,
-                    _global_fragment_counts,
-                    issues,
-                );
+                validate_bundle_references(item, &child_path, context, issues);
             }
         }
         _ => {}

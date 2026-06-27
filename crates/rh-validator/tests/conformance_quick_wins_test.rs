@@ -464,6 +464,71 @@ fn registered_codesystem_validates_valueset_coding_filter_values() {
 }
 
 #[test]
+fn valueset_compose_concepts_validate_against_supported_terminology() {
+    let validator =
+        FhirValidator::with_terminology(FhirVersion::R4, None, Some(TerminologyConfig::mock()))
+            .unwrap();
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/bad-snomed-concepts",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://snomed.info/sct",
+                    "concept": [
+                        {
+                            "code": "1"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains("Code '1' not found")
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].concept[0]")
+    }));
+}
+
+#[test]
+fn valueset_compose_concepts_accept_known_supported_terminology_code() {
+    let validator =
+        FhirValidator::with_terminology(FhirVersion::R4, None, Some(TerminologyConfig::mock()))
+            .unwrap();
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/good-snomed-concepts",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://snomed.info/sct",
+                    "concept": [
+                        {
+                            "code": "386661006"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].concept[0]")
+    }));
+}
+
+#[test]
 fn valueset_coding_filter_requires_system_hash_code_format() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
