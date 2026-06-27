@@ -38,6 +38,8 @@ pub struct TestCase {
     pub language: Option<String>,
     #[serde(default)]
     pub questionnaire: Option<String>,
+    #[serde(rename = "validateContains", default)]
+    pub validate_contains: Option<String>,
     #[serde(rename = "use-test", default = "default_true")]
     pub use_test: bool,
     #[serde(default)]

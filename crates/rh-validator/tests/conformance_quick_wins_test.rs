@@ -244,6 +244,56 @@ fn valueset_system_extension_satisfies_contained_dom3() {
 }
 
 #[test]
+fn questionnaire_response_questionnaire_satisfies_contained_dom3() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let response = json!({
+        "resourceType": "QuestionnaireResponse",
+        "status": "completed",
+        "questionnaire": "#q1",
+        "contained": [
+            {
+                "resourceType": "Questionnaire",
+                "id": "q1",
+                "status": "draft"
+            }
+        ]
+    });
+
+    let result = validator.validate(&response).unwrap();
+
+    assert!(!result.issues.iter().any(|i| i.message.contains("dom-3")));
+}
+
+#[test]
+fn questionnaire_answer_valueset_satisfies_contained_dom3() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let questionnaire = json!({
+        "resourceType": "Questionnaire",
+        "status": "draft",
+        "item": [
+            {
+                "linkId": "q1",
+                "type": "choice",
+                "answerValueSet": "#options"
+            }
+        ],
+        "contained": [
+            {
+                "resourceType": "ValueSet",
+                "id": "options",
+                "status": "draft"
+            }
+        ]
+    });
+
+    let result = validator.validate(&questionnaire).unwrap();
+
+    assert!(!result.issues.iter().any(|i| i.message.contains("dom-3")));
+}
+
+#[test]
 fn bundle_fullurl_accepts_uin_uuid_scheme() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

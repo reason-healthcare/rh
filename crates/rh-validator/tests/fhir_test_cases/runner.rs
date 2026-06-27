@@ -8,7 +8,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tar::Archive;
 
 use super::parser::{ExpectedOutcome, Manifest, TestCase};
-use rh_validator::{FhirValidator, TerminologyConfig, ValidationResult};
+use rh_validator::{FhirValidator, Severity, TerminologyConfig, ValidationResult};
 
 #[derive(Debug, Clone, Default)]
 pub struct TestRunConfig {
@@ -291,7 +291,10 @@ impl TestRunner {
             }
         };
 
-        let validation_result = validator.validate_auto(&resource)?;
+        let mut validation_result = validator.validate_auto(&resource)?;
+        if test.validate_contains.as_deref() == Some("IGNORE") {
+            suppress_contained_reference_issues(&mut validation_result);
+        }
 
         let duration = start.elapsed();
         let actual_valid = is_valid(&validation_result);
@@ -889,6 +892,16 @@ fn has_resolvable_package_resources(test: &TestCase, validator_dir: &Path) -> bo
         .any(|package_ref| resolve_package_resource(&package_ref, validator_dir).is_some())
 }
 
+fn suppress_contained_reference_issues(result: &mut ValidationResult) {
+    result
+        .issues
+        .retain(|issue| !issue.message.contains("dom-3"));
+    result.valid = !result
+        .issues
+        .iter()
+        .any(|issue| issue.severity == Severity::Error);
+}
+
 fn package_resource_refs(test: &TestCase) -> Vec<String> {
     let mut package_refs = BTreeSet::new();
     package_refs.extend(test.packages.iter().cloned());
@@ -968,6 +981,7 @@ mod tests {
             logical: None,
             language: None,
             questionnaire: None,
+            validate_contains: None,
             use_test: true,
             java: None,
             firely_sdk_current: None,

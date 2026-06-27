@@ -4616,8 +4616,10 @@ fn contains_dom3_reference(value: &Value, target: &str) -> bool {
 }
 
 fn dom3_reference_key_matches(key: &str) -> bool {
-    matches!(key, "reference" | "canonical" | "uri" | "url")
-        || key.starts_with("valueCanonical")
+    matches!(
+        key,
+        "reference" | "canonical" | "uri" | "url" | "questionnaire" | "answerValueSet"
+    ) || key.starts_with("valueCanonical")
         || key.starts_with("valueUri")
         || key.starts_with("valueUrl")
 }
