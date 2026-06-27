@@ -388,6 +388,61 @@ fn narrative_href_fragment_accepts_local_anchor() {
 }
 
 #[test]
+fn contained_resource_id_rejects_invalid_characters() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let location = json!({
+        "resourceType": "Location",
+        "id": "loc1",
+        "managingOrganization": {
+            "reference": "#org_1"
+        },
+        "contained": [
+            {
+                "resourceType": "Organization",
+                "id": "org_1"
+            }
+        ]
+    });
+
+    let result = validator.validate(&location).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message.contains("Invalid Resource id")
+            && i.path.as_deref() == Some("Location.contained[0]/*Organization*/.id")
+    }));
+}
+
+#[test]
+fn contained_resource_id_length_remains_lenient() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    let long_id = "a".repeat(65);
+
+    let condition = json!({
+        "resourceType": "Condition",
+        "id": "c1",
+        "contained": [
+            {
+                "resourceType": "Observation",
+                "id": long_id
+            }
+        ]
+    });
+
+    let result = validator.validate(&condition).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains("value exceeds 64 characters")
+            && i.path
+                .as_deref()
+                .is_some_and(|path| path.contains(".contained[0]"))
+    }));
+}
+
+#[test]
 fn ucum_skip_note_present_without_terminology_service() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

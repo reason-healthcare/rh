@@ -320,6 +320,10 @@ impl FhirValidator {
             }
         }
 
+        for issue in validate_contained_resource_id_formats(resource, resource_type_name) {
+            result = result.with_issue(issue);
+        }
+
         let structural_issues = validate_fhir_string_lengths(resource, resource_type_name);
         for issue in structural_issues {
             result = result.with_issue(issue);
@@ -1907,6 +1911,75 @@ fn validate_id_format(id: &str, path: &str) -> Option<ValidationIssue> {
             ));
         }
     }
+    None
+}
+
+fn validate_contained_resource_id_formats(
+    resource: &Value,
+    root_type: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_contained_resource_id_formats_recursive(resource, root_type, &mut issues);
+    issues
+}
+
+fn validate_contained_resource_id_formats_recursive(
+    value: &Value,
+    current_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let Some(object) = value.as_object() else {
+        return;
+    };
+
+    if let Some(contained) = object.get("contained").and_then(|value| value.as_array()) {
+        for (idx, contained_resource) in contained.iter().enumerate() {
+            let resource_type = contained_resource
+                .get("resourceType")
+                .and_then(|value| value.as_str())
+                .unwrap_or("Resource");
+            let contained_path = format!("{current_path}.contained[{idx}]/*{resource_type}*/");
+
+            if let Some(id) = contained_resource
+                .get("id")
+                .and_then(|value| value.as_str())
+            {
+                if let Some(issue) =
+                    validate_contained_id_format_without_length(id, &format!("{contained_path}.id"))
+                {
+                    issues.push(issue);
+                }
+            }
+
+            validate_contained_resource_id_formats_recursive(
+                contained_resource,
+                &contained_path,
+                issues,
+            );
+        }
+    }
+}
+
+fn validate_contained_id_format_without_length(id: &str, path: &str) -> Option<ValidationIssue> {
+    if id.is_empty() {
+        return Some(ValidationIssue::error(
+            IssueCode::Value,
+            format!("Invalid id at '{path}': value cannot be empty"),
+        ));
+    }
+
+    for c in id.chars() {
+        if !c.is_ascii_alphanumeric() && c != '-' && c != '.' {
+            return Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Invalid Resource id: Invalid Characters ('{id}')"),
+                )
+                .with_path(path.to_string()),
+            );
+        }
+    }
+
     None
 }
 
