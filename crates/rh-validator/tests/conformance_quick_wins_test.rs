@@ -338,6 +338,54 @@ fn transaction_bundle_relative_reference_requires_entry_fullurl() {
 }
 
 #[test]
+fn narrative_href_fragment_must_resolve_within_div() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let list = json!({
+        "resourceType": "List",
+        "status": "current",
+        "mode": "snapshot",
+        "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"present\"> </a><a href=\"#missing\">Missing</a></div>"
+        }
+    });
+
+    let result = validator.validate(&list).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message
+                .contains("Unable to resolve narrative fragment reference '#missing'")
+            && i.path.as_deref() == Some("List.text.div")
+    }));
+}
+
+#[test]
+fn narrative_href_fragment_accepts_local_anchor() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let list = json!({
+        "resourceType": "List",
+        "status": "current",
+        "mode": "snapshot",
+        "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"present\"> </a><a href=\"#present\">Present</a></div>"
+        }
+    });
+
+    let result = validator.validate(&list).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message.contains("Unable to resolve narrative fragment reference")
+    }));
+}
+
+#[test]
 fn ucum_skip_note_present_without_terminology_service() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

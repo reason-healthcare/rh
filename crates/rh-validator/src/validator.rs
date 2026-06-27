@@ -2040,6 +2040,19 @@ fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssu
         }
     }
 
+    let local_fragments = collect_html_fragment_ids(div_content);
+    for fragment in collect_html_fragment_links(div_content) {
+        if !local_fragments.contains(&fragment) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Unable to resolve narrative fragment reference '#{fragment}'"),
+                )
+                .with_path(path.to_string()),
+            );
+        }
+    }
+
     issues
 }
 
@@ -2386,6 +2399,37 @@ fn collect_html_fragment_ids(div_content: &str) -> std::collections::HashSet<Str
     }
 
     ids
+}
+
+fn collect_html_fragment_links(div_content: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let tag_re = match regex::Regex::new(r#"(?is)<[^>]*>"#) {
+        Ok(v) => v,
+        Err(_) => return links,
+    };
+    let href_re = match regex::Regex::new(
+        r##"(?i)\bhref\s*=\s*(?:"\#([^"]*)"|'\#([^']*)'|\#([^\s"'>]+))"##,
+    ) {
+        Ok(v) => v,
+        Err(_) => return links,
+    };
+
+    for tag in tag_re.find_iter(div_content) {
+        for captures in href_re.captures_iter(tag.as_str()) {
+            let fragment = captures
+                .get(1)
+                .or_else(|| captures.get(2))
+                .or_else(|| captures.get(3))
+                .map(|value| value.as_str().trim().to_string());
+            if let Some(fragment) = fragment {
+                if !fragment.is_empty() {
+                    links.push(fragment);
+                }
+            }
+        }
+    }
+
+    links
 }
 
 fn validate_html_fragment_references(
