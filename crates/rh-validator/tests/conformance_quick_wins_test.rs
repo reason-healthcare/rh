@@ -160,6 +160,45 @@ fn bundle_signature_accepts_who_uri() {
 }
 
 #[test]
+fn searchset_signature_payload_is_not_fatal() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "entry": [
+            {
+                "fullUrl": "http://example.org/Patient/p1",
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": "p1"
+                }
+            }
+        ],
+        "signature": {
+            "type": [
+                {
+                    "system": "urn:iso-astm:E1762-95:2013",
+                    "code": "1.2.840.10065.1.12.1.5"
+                }
+            ],
+            "when": "2024-01-01T00:00:00Z",
+            "who": {
+                "display": "Example Signer"
+            },
+            "sigFormat": "application/jose",
+            "data": "payload"
+        }
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.message.contains("detached signature with no payload") && i.severity == Severity::Error
+    }));
+}
+
+#[test]
 fn bundle_fullurl_accepts_uin_uuid_scheme() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

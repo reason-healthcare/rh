@@ -2894,19 +2894,23 @@ fn validate_attachment_size_recursive(
 
 fn validate_signature_placeholders(value: &Value) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
-    validate_signature_placeholders_recursive(value, "", &mut issues);
+    let root_is_document_bundle = value.get("resourceType").and_then(Value::as_str)
+        == Some("Bundle")
+        && value.get("type").and_then(Value::as_str) == Some("document");
+    validate_signature_placeholders_recursive(value, "", root_is_document_bundle, &mut issues);
     issues
 }
 
 fn validate_signature_placeholders_recursive(
     value: &Value,
     current_path: &str,
+    root_is_document_bundle: bool,
     issues: &mut Vec<ValidationIssue>,
 ) {
     match value {
         Value::Object(obj) => {
             if is_signature_object(obj) {
-                validate_signature_object(obj, current_path, issues);
+                validate_signature_object(obj, current_path, root_is_document_bundle, issues);
             }
 
             for (key, value) in obj {
@@ -2915,7 +2919,12 @@ fn validate_signature_placeholders_recursive(
                 } else {
                     format!("{current_path}.{key}")
                 };
-                validate_signature_placeholders_recursive(value, &child_path, issues);
+                validate_signature_placeholders_recursive(
+                    value,
+                    &child_path,
+                    root_is_document_bundle,
+                    issues,
+                );
             }
         }
         Value::Array(arr) => {
@@ -2923,6 +2932,7 @@ fn validate_signature_placeholders_recursive(
                 validate_signature_placeholders_recursive(
                     item,
                     &format!("{current_path}[{idx}]"),
+                    root_is_document_bundle,
                     issues,
                 );
             }
@@ -2965,6 +2975,7 @@ fn is_verification_signature(signature: &serde_json::Map<String, Value>) -> bool
 fn validate_signature_object(
     signature: &serde_json::Map<String, Value>,
     current_path: &str,
+    root_is_document_bundle: bool,
     issues: &mut Vec<ValidationIssue>,
 ) {
     let validation_path = if current_path.is_empty() {
@@ -3006,6 +3017,7 @@ fn validate_signature_object(
     if signature.get("sigFormat").and_then(Value::as_str) == Some("application/jose")
         && is_verification_signature(signature)
         && signature.contains_key("data")
+        && root_is_document_bundle
     {
         issues.push(
             ValidationIssue::error(

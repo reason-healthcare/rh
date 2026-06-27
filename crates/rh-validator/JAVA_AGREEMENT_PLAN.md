@@ -8,13 +8,13 @@ validator while keeping exact conformance logs as the audit baseline.
 Latest full R4 log:
 
 ```text
-target/conformance-logs/r4-full-20260626-082311-validation-resource.log
+target/conformance-logs/r4-full-20260627-065927-reference-bundle-contained.log
 ```
 
 Current agreement from that run:
 
-- No terminology: 318/399 (79.7%)
-- With terminology: 322/399 (80.7%)
+- No terminology: 324/399 (81.2%)
+- With terminology: 328/399 (82.2%)
 
 ## Steps
 
@@ -62,36 +62,48 @@ Completed:
    and
    `target/conformance-triage/r4-java-mismatches-1782476977-with-terminology.csv`.
    The with-terminology validation-resource cluster dropped from 22 to 14.
+7. Improve reference, Bundle, contained-resource, signature, html-reference, and
+   UCUM-display agreement. Fix document bundle duplicate handling for versioned
+   references, accept `uin:uuid:` fullUrls, make contained resource IDs align
+   with Java's leniency, enforce selected Bundle/reference/html/signature false
+   negatives, and stop treating UCUM display-name differences as fatal in the
+   mock terminology pass. The exact full R4 log for this iteration is
+   `target/conformance-logs/r4-full-20260627-065927-reference-bundle-contained.log`;
+   agreement improved to 324/399 without terminology and 328/399 with
+   terminology. Triage artifacts:
+   `target/conformance-triage/r4-java-mismatches-1782558183-no-terminology.csv`
+   and
+   `target/conformance-triage/r4-java-mismatches-1782558347-with-terminology.csv`.
+   The reference-bundle-contained cluster dropped to 14 without terminology and
+   13 with terminology. A follow-up targeted `dsig` module run fixed the
+   `signatures-example-1` false positive while preserving
+   `signatures-example-2` invalid agreement; a full R4 rerun is still needed to
+   snapshot that follow-up.
 
 Next:
 
-7. Resolve the `reference-bundle-contained` cluster (currently 19 with
-   terminology / 21 without). Prioritize the 9 expected-valid got-invalid
-   failures first.
-   - High-priority false positives: `bundle-document-versioned-references-good`,
-     `obs-temp`, `vs-canonical-good`, `contained-resource-bad-id-ignore`,
-     `obs-fio2`, `obs-vital-signs-mdc`, `ref-policy-default-r4`,
-     `ref-policy-default-apply-r5`, `bnd-slicing-cgm`.
-   - High-priority false negatives: `practitioner-role-example`,
-     `dr-example-org`, `dr-eh`, `mr-covid-bnd1`, `obs-hgvs-bad`,
-     `bundle-conformsto`, `bundle-ea-testcase`, `ips-htmlrefs-backwards`,
-     `ips-htmlrefs-forwards`, `signatures-example-2`.
+8. Continue the remaining `reference-bundle-contained` mismatches. Based on
+   `r4-java-mismatches-1782558347-with-terminology.csv`, prioritize:
+   - False positives: `vs-canonical-good`, `contained-resource-bad-id-ignore`.
+   - False negatives: `practitioner-role-example`, `dr-example-org`,
+     `mr-covid-bnd1`, `dr-eh`, `obs-temp-bad`, `obs-hgvs-bad`,
+     `bundle-conformsto`, `bundle-ea-testcase`, `obs-vs-1`, `obs-vs-2`.
    - Deliverable: full alignment on all `reference-bundle-contained` mismatches in
      a new full-R4 iteration and updated triage file.
-8. Continue `validation-resource` false negatives (14 currently): fix remaining
+9. Continue `validation-resource` false negatives (14 currently): fix remaining
    SNOMED/ValueSet concept/filter/ECL issues, fix conformance resource status
    and jurisdiction constraints, and enforce invariant execution where currently
    warning-only or no-op.
-9. Fix `invariant` and `extension` false positives by loading/recognizing core
+10. Fix `invariant` and `extension` false positives by loading/recognizing core
    extension definitions in canonical order and treating unresolved canonical
    extension references consistently with Java warning/error semantics.
-10. Continue `questionnaire-response` alignment (9 mismatches): tighten
+11. Continue `questionnaire-response` alignment (9 mismatches): tighten
     async-terminology behavior, answer value-set resolution, and quantity/min-max
     unit validation.
-11. Add a conformance-only lenient JSON parser mode for fixtures that Java
+12. Add a conformance-only lenient JSON parser mode for fixtures that Java
     accepts but strict JSON rejects (`json-parser` mismatch cluster), without
     affecting normal CLI validation mode.
-12. Re-run full-R4 conformance with one-threaded execution, snapshot the full
+13. Re-run full-R4 conformance with one-threaded execution, snapshot the full
     logs and triage CSV, then report delta agreement per category and decide the
     next highest-priority cluster.
 
