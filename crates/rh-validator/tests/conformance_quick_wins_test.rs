@@ -199,6 +199,51 @@ fn searchset_signature_payload_is_not_fatal() {
 }
 
 #[test]
+fn valueset_system_extension_satisfies_contained_dom3() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "id": "vs-canonical-good",
+        "url": "http://hl7.org/fhir/test/ValueSet/vs-canonical-good",
+        "status": "active",
+        "contained": [
+            {
+                "resourceType": "CodeSystem",
+                "id": "c1",
+                "url": "http://hl7.org/fhir/CodeSystem/c1",
+                "status": "active",
+                "content": "complete",
+                "concept": [
+                    {
+                        "code": "c1"
+                    }
+                ]
+            }
+        ],
+        "compose": {
+            "include": [
+                {
+                    "system": "http://hl7.org/fhir/CodeSystem/c1",
+                    "_system": {
+                        "extension": [
+                            {
+                                "url": "http://hl7.org/fhir/StructureDefinition/valueset-system",
+                                "valueCanonical": "#c1"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(!result.issues.iter().any(|i| i.message.contains("dom-3")));
+}
+
+#[test]
 fn bundle_fullurl_accepts_uin_uuid_scheme() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

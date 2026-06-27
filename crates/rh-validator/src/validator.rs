@@ -4073,6 +4073,10 @@ impl FhirValidator {
     ) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
 
+        if rule.key == "dom-3" && contained_resources_are_referenced(resource) {
+            return Ok(issues);
+        }
+
         let normalized_expression = normalize_invariant_expression(&rule.expression);
 
         // Parse the FHIRPath expression
@@ -4271,6 +4275,52 @@ fn extract_codes_from_value(value: &Value) -> Vec<(String, String)> {
     }
 
     codes
+}
+
+fn contained_resources_are_referenced(resource: &Value) -> bool {
+    let contained = match resource.get("contained").and_then(Value::as_array) {
+        Some(contained) if !contained.is_empty() => contained,
+        _ => return false,
+    };
+
+    contained.iter().all(|contained_resource| {
+        let id = match contained_resource.get("id").and_then(Value::as_str) {
+            Some(id) => id,
+            None => return false,
+        };
+        contains_dom3_reference(resource, &format!("#{id}"))
+            || contains_dom3_reference(contained_resource, "#")
+    })
+}
+
+fn contains_dom3_reference(value: &Value, target: &str) -> bool {
+    match value {
+        Value::Object(obj) => {
+            for (key, child) in obj {
+                if dom3_reference_key_matches(key)
+                    && child.as_str().is_some_and(|value| value == target)
+                {
+                    return true;
+                }
+
+                if contains_dom3_reference(child, target) {
+                    return true;
+                }
+            }
+            false
+        }
+        Value::Array(items) => items
+            .iter()
+            .any(|item| contains_dom3_reference(item, target)),
+        _ => false,
+    }
+}
+
+fn dom3_reference_key_matches(key: &str) -> bool {
+    matches!(key, "reference" | "canonical" | "uri" | "url")
+        || key.starts_with("valueCanonical")
+        || key.starts_with("valueUri")
+        || key.starts_with("valueUrl")
 }
 
 fn normalize_invariant_expression(expression: &str) -> String {
