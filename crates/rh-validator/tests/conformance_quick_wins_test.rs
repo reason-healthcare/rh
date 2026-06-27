@@ -1,4 +1,6 @@
-use rh_validator::{FhirValidator, FhirVersion, Severity, TerminologyConfig, ValidationOptions};
+use rh_validator::{
+    FhirValidator, FhirVersion, IssueCode, Severity, TerminologyConfig, ValidationOptions,
+};
 use serde_json::json;
 
 #[test]
@@ -72,6 +74,114 @@ fn document_bundle_duplicate_fullurl_is_reported() {
     assert!(result.issues.iter().any(|i| {
         i.path.as_deref() == Some("Bundle.entry[0].fullUrl")
             || i.path.as_deref() == Some("Bundle.entry[1].fullUrl")
+    }));
+}
+
+#[test]
+fn document_bundle_versioned_reference_allows_duplicate_identity() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "document",
+        "entry": [
+            {
+                "fullUrl": "http://example.org/Composition/c1",
+                "resource": {
+                    "resourceType": "Composition",
+                    "id": "c1",
+                    "section": [
+                        {
+                            "entry": [
+                                {
+                                    "reference": "Observation/o1/_history/1"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "fullUrl": "http://example.org/Observation/o1",
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "o1"
+                }
+            },
+            {
+                "fullUrl": "http://example.org/Observation/o1",
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "o1"
+                }
+            }
+        ]
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(!result.issues.iter().any(|i| i.code == IssueCode::Duplicate));
+}
+
+#[test]
+fn bundle_signature_accepts_who_uri() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "document",
+        "entry": [
+            {
+                "fullUrl": "http://example.org/Composition/c1",
+                "resource": {
+                    "resourceType": "Composition",
+                    "id": "c1"
+                }
+            }
+        ],
+        "signature": {
+            "type": [
+                {
+                    "system": "urn:iso-astm:E1762-95:2013",
+                    "code": "1.2.840.10065.1.12.1.5"
+                }
+            ],
+            "when": "2024-01-01T00:00:00Z",
+            "whoUri": "urn:uuid:12345678-1234-1234-1234-123456789abc"
+        }
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.message
+            .contains("Signature element missing required field 'who' or 'whoUri'")
+    }));
+}
+
+#[test]
+fn bundle_fullurl_accepts_uin_uuid_scheme() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [
+            {
+                "fullUrl": "uin:uuid:cd7f9309-2530-4adf-9b94-e44548361e8a",
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": "p1"
+                }
+            }
+        ]
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.path.as_deref() == Some("Bundle.entry[0]")
+            && i.message.contains("fullUrl must be an absolute URL")
     }));
 }
 

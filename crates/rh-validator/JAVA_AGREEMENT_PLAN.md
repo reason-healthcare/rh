@@ -65,20 +65,37 @@ Completed:
 
 Next:
 
-7. Fix reference, Bundle, contained-resource, signature, and html-reference
-   semantics. This is now the largest with-terminology cluster at 19
-   mismatches.
-8. Continue the remaining validation-resource cluster, especially SNOMED
-   ValueSet concept/filter/ECL checks, StructureDefinition invariant execution
-   gaps, and conformance resource status/jurisdiction rules.
-9. Reduce false positives from core invariant and extension handling after
-   loading/recognizing core extension definitions more completely.
-10. Tighten `QuestionnaireResponse` agreement for answer value set resolution,
-   async terminology expectations, and quantity min/max or unit compatibility.
-11. Add a conformance-only lenient JSON parser mode for validator fixtures that
-    Java accepts but strict JSON rejects, without changing normal CLI validation
-    behavior.
+7. Resolve the `reference-bundle-contained` cluster (currently 19 with
+   terminology / 21 without). Prioritize the 9 expected-valid got-invalid
+   failures first.
+   - High-priority false positives: `bundle-document-versioned-references-good`,
+     `obs-temp`, `vs-canonical-good`, `contained-resource-bad-id-ignore`,
+     `obs-fio2`, `obs-vital-signs-mdc`, `ref-policy-default-r4`,
+     `ref-policy-default-apply-r5`, `bnd-slicing-cgm`.
+   - High-priority false negatives: `practitioner-role-example`,
+     `dr-example-org`, `dr-eh`, `mr-covid-bnd1`, `obs-hgvs-bad`,
+     `bundle-conformsto`, `bundle-ea-testcase`, `ips-htmlrefs-backwards`,
+     `ips-htmlrefs-forwards`, `signatures-example-2`.
+   - Deliverable: full alignment on all `reference-bundle-contained` mismatches in
+     a new full-R4 iteration and updated triage file.
+8. Continue `validation-resource` false negatives (14 currently): fix remaining
+   SNOMED/ValueSet concept/filter/ECL issues, fix conformance resource status
+   and jurisdiction constraints, and enforce invariant execution where currently
+   warning-only or no-op.
+9. Fix `invariant` and `extension` false positives by loading/recognizing core
+   extension definitions in canonical order and treating unresolved canonical
+   extension references consistently with Java warning/error semantics.
+10. Continue `questionnaire-response` alignment (9 mismatches): tighten
+    async-terminology behavior, answer value-set resolution, and quantity/min-max
+    unit validation.
+11. Add a conformance-only lenient JSON parser mode for fixtures that Java
+    accepts but strict JSON rejects (`json-parser` mismatch cluster), without
+    affecting normal CLI validation mode.
+12. Re-run full-R4 conformance with one-threaded execution, snapshot the full
+    logs and triage CSV, then report delta agreement per category and decide the
+    next highest-priority cluster.
 
 Create a commit for each step. After implementation work is done, run
 `just check`. Keep exact full R4 conformance logs for each validator behavior
-iteration.
+iteration. Keep full triage CSV for each iteration and include cluster direction
+(expected invalid/invalid vs valid/valid) in the commit summary.
