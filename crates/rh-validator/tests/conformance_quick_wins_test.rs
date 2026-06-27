@@ -529,6 +529,63 @@ fn valueset_compose_concepts_accept_known_supported_terminology_code() {
 }
 
 #[test]
+fn period_invariant_rejects_mixed_precision_start_end() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let encounter = json!({
+        "resourceType": "Encounter",
+        "status": "unknown",
+        "class": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+            "code": "AMB"
+        },
+        "period": {
+            "start": "2023-06-21",
+            "end": "2023-06-21T06:20:00Z"
+        }
+    });
+
+    let result = validator.validate_auto(&encounter).unwrap();
+
+    assert!(
+        result.issues.iter().any(|i| {
+            i.severity == Severity::Error
+                && i.code == IssueCode::Invariant
+                && i.message.contains("per-1")
+                && i.message.contains("period")
+        }),
+        "issues: {:#?}",
+        result.issues
+    );
+}
+
+#[test]
+fn period_invariant_accepts_ordered_same_precision_start_end() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let encounter = json!({
+        "resourceType": "Encounter",
+        "status": "unknown",
+        "class": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+            "code": "AMB"
+        },
+        "period": {
+            "start": "2023-06-21T05:20:00Z",
+            "end": "2023-06-21T06:20:00Z"
+        }
+    });
+
+    let result = validator.validate_auto(&encounter).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invariant
+            && i.message.contains("per-1")
+    }));
+}
+
+#[test]
 fn valueset_coding_filter_requires_system_hash_code_format() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

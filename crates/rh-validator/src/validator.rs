@@ -49,7 +49,7 @@ use std::sync::Arc;
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
 use crate::profile::ProfileRegistry;
-use crate::rules::RuleCompiler;
+use crate::rules::{InvariantRule, RuleCompiler, TypeRule};
 use crate::terminology::{TerminologyConfig, TerminologyService};
 use crate::types::{IssueCode, ValidationIssue, ValidationResult};
 use crate::valueset::ValueSetLoader;
@@ -576,6 +576,14 @@ impl FhirValidator {
 
         // Invariant validation
         for rule in &rules.invariant_rules {
+            let violations = self.validate_invariant(resource, rule)?;
+
+            for violation in violations {
+                result = result.with_issue(violation);
+            }
+        }
+
+        for rule in &self.datatype_invariant_rules(&rules.type_rules) {
             let violations = self.validate_invariant(resource, rule)?;
 
             for violation in violations {
@@ -4149,7 +4157,7 @@ impl FhirValidator {
                 }
             };
 
-            let is_valid = self.evaluate_invariant_result(&result);
+            let is_valid = self.evaluate_invariant_result_for_key(&rule.key, &result);
             if !is_valid {
                 issues.push(self.create_invariant_issue(rule));
             }
@@ -4178,7 +4186,7 @@ impl FhirValidator {
                     }
                 };
 
-                let is_valid = self.evaluate_invariant_result(&result);
+                let is_valid = self.evaluate_invariant_result_for_key(&rule.key, &result);
                 if !is_valid {
                     issues.push(self.create_element_invariant_issue(rule, element_name, idx));
                 }
@@ -4188,10 +4196,15 @@ impl FhirValidator {
         Ok(issues)
     }
 
-    fn evaluate_invariant_result(&self, result: &rh_fhirpath::FhirPathValue) -> bool {
+    fn evaluate_invariant_result_for_key(
+        &self,
+        key: &str,
+        result: &rh_fhirpath::FhirPathValue,
+    ) -> bool {
         use rh_fhirpath::FhirPathValue;
         match result {
             FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::Empty if key == "per-1" => false,
             FhirPathValue::Empty => true,
             FhirPathValue::Collection(ref items) if items.is_empty() => true,
             FhirPathValue::Collection(ref items) if items.len() == 1 => match &items[0] {
@@ -4200,6 +4213,21 @@ impl FhirValidator {
             },
             _ => true,
         }
+    }
+
+    fn datatype_invariant_rules(&self, type_rules: &[TypeRule]) -> Vec<InvariantRule> {
+        type_rules
+            .iter()
+            .filter(|rule| rule.types.iter().any(|type_name| type_name == "Period"))
+            .map(|rule| InvariantRule {
+                path: rule.path.clone(),
+                key: "per-1".to_string(),
+                severity: "error".to_string(),
+                human: "If present, start SHALL have a lower value than end".to_string(),
+                expression: "start.hasValue().not() or end.hasValue().not() or (start <= end)"
+                    .to_string(),
+            })
+            .collect()
     }
 
     fn create_invariant_issue(&self, rule: &crate::rules::InvariantRule) -> ValidationIssue {
