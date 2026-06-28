@@ -17,7 +17,6 @@
 | macOS / Linux | Homebrew | `brew tap reason-healthcare/rh && brew install rh` |
 | Linux | Install script | `curl -fsSL https://raw.githubusercontent.com/reason-healthcare/rh/main/scripts/install-rh.sh \| sh` |
 | Windows | Chocolatey | `choco install rh` |
-| Any | Nix | `nix shell github:reason-healthcare/rh` |
 | Any | Docker | `docker pull ghcr.io/reason-healthcare/rh:latest` |
 | Any | Cargo | `cargo install rh-cli` |
 

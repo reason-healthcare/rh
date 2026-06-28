@@ -10,23 +10,6 @@ permissions:
   packages: write
 
 jobs:
-  nix-hashes:
-    name: Compute Nix release hashes
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      - name: Compute Nix hashes
-        run: scripts/nix-release-hashes "${GITHUB_REF_NAME}" | tee -a "$GITHUB_STEP_SUMMARY"
-
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
