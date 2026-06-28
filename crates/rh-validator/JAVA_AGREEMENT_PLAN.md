@@ -115,10 +115,92 @@ Completed:
     - With terminology (63): validation-resource 13, invariant 12,
       reference-bundle-contained 10, questionnaire-response 8, other 7,
       json-parser 6, extension 5, profile-slicing 2.
+13. Continue validation-resource with core choice binding validation for fixed
+    and pattern rules on choice elements. This fixed
+    `fixed-quantity-binding-observation` while preserving
+    `bb-obs-value-is-not-in-valueset` Java agreement. Targeted `profile` module
+    agreement improved to 43/49 before later extension work.
+14. Continue invariant/resource validation with contained resource ID character
+    checks. Contained IDs now reject invalid characters such as `_` for
+    `resource-invalid-id-3`, while over-length contained IDs remain lenient to
+    match Java behavior for `contained-resource-bad-id-ignore`.
+15. Continue reference-bundle-contained and questionnaire-response with
+    contained dom-3 handling:
+    - `QuestionnaireResponse.questionnaire` and `Questionnaire.item.answerValueSet`
+      local references now satisfy contained-resource dom-3.
+    - The conformance runner now honors manifest `validateContains: IGNORE` by
+      suppressing only contained-reference dom-3 issues for that configured run
+      mode.
+    - Targeted `references` module agreement is now 14/15; targeted
+      `questionnaire` module agreement is now 76/82.
+16. Continue extension handling with a narrow known-missing extension definition
+    allowlist for Java-compatible fixtures:
+    `endpoint-fhir-version`, `organization-brand`, `organization-portal`,
+    `structuredefinition-compliesWithProfile`, and the matchetype test
+    extension URLs. This fixed `profile-compliesWith`,
+    `res-inv-example-good`, `matchetype-extension-1`, and
+    `matchetype-extension-2`. Targeted `matchetype` module agreement is now
+    45/46 and targeted `profile` module agreement is now 45/49.
 
 Next:
 
-13. `validation-resource` false negatives (13 with terminology, 14 without).
+17. `validation-resource` false negatives. Remaining examples include
+    Measure/MeasureReport resource rules (`mr-covid-m5`,
+    `measure-report-ihe`), StructureDefinition invariants or
+    differential/snapshot rules (`obs-mz`, `ai5`, `ai6`,
+    `StructureDefinition-Slice23`, `ext-derived`, `ext-derived-circle`),
+    ValueSet/ECL/property rules (`vs-bad-props`, `vs-bad-ecl`,
+    `vs-bad-ecl-us`), CodeSystem metadata/status (`cs-narrative-status-pub`),
+    and match-type pattern behavior (`matchetype-pattern-2`). Suggested first
+    task: inspect Java outcome and pattern resources for
+    `matchetype-pattern-2`, because it is isolated and visible in the
+    `matchetype` module.
+18. `invariant` false negatives. Remaining examples are largely
+    Measure/MeasureReport invariants (`mr-covid-m`, `mr-covid-m2`,
+    `mr-covid-m3`, `mr-covid-mr1`, `measure-report-ihe`), narrative/comment
+    and security-adjacent invariants (`bad-markdown-no-html`, `comments-4`,
+    `ai3`, `ai4`, `obs-temp-code2`), plus `supplement-1a`. Suggested first
+    task: pick one Measure/MeasureReport invariant and determine whether the
+    FHIRPath expression is unsupported or the resource graph context is wrong.
+19. `reference-bundle-contained` remaining mismatches. Targeted references
+    module now has one Java mismatch: `dr-eh` is Java-invalid/RH-valid due to
+    unresolved US Core DocumentReference profile/reference behavior. Other
+    remaining full-suite rows likely overlap validation-resource and
+    terminology resolution. Suggested first task: inspect Java outcome for
+    `dr-eh` and decide whether this is missing profile package loading,
+    reference target profile validation, or DocumentReference-specific rules.
+20. `questionnaire-response` remaining mismatches. Contained dom-3 false
+    positives are resolved; remaining mismatches are unresolved
+    async/value-set/quantity validation: `choice-async-qr`,
+    `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
+    `quantity-min-max-qr`, and `quantity-units-not-in-value-set-qr`, plus
+    `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
+    the referenced Questionnaire/ValueSet for one async choice case and verify
+    whether failure is terminology expansion or questionnaire lookup.
+21. `extension` follow-up. The remaining `res-inv-example-bad` profile-module
+    mismatch is no longer an unknown-extension issue; the first fatal issue is
+    now unresolved reference `Endpoint/examplelabsXX` inside a profile
+    invariant. Treat this as reference/invariant work, not extension loading.
+22. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+    `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
+    larger validation-resource/invariant/reference work unless a targeted
+    discriminator rule is obvious.
+23. `json-parser` false positives (6): `shc-bundle`, `json-comments-1-yes`,
+    `json-comments-2-yes`, `bad-json-close`, `bad-json-close-2`,
+    `bad-json-close-3`. Add a conformance-only lenient JSON parser mode only in
+    the test harness; do not relax normal CLI validation.
+24. `other` false negatives (7): `pat-security-bad-string`, `shc-bad-1`,
+    `shc-cvx`, `cm`, `sp-composite`, `contract-binding-test`, `scoring-test`.
+    Leave these as last-resort investigation buckets unless one maps cleanly to
+    an existing validator subsystem.
+25. After each small task, run the relevant `just test-fhir-module <module>`,
+    then `just check`, commit, and only then run `just test-fhir-all` when a
+    full category slice is complete or the behavior could affect multiple
+    modules.
+
+Superseded next-step notes from the 331/399 and 336/399 baseline:
+
+- `validation-resource` false negatives (13 with terminology, 14 without).
     This is now the largest with-terminology cluster and all current
     with-terminology rows are Java-invalid/RH-valid. Keep these as small
     sub-steps:
@@ -135,7 +217,7 @@ Next:
     Suggested first task: inspect Java outcome for
     `fixed-quantity-binding-observation` and implement one fixed Quantity
     profile check; verify only the `profile` module before committing.
-14. `invariant` false negatives (12 with terminology). These are all
+- `invariant` false negatives (12 with terminology). These are all
     Java-invalid/RH-valid and should be split by resource family:
     - Measure/MeasureReport invariants: `mr-covid-m`, `mr-covid-m2`,
       `mr-covid-m3`, `mr-covid-mr1`, `measure-report-ihe`.
@@ -146,7 +228,7 @@ Next:
     Suggested first task: inspect the Java outcome for `resource-invalid-id-3`
     and decide whether this belongs in base resource ID validation or a
     profile-specific invariant.
-15. `reference-bundle-contained` remaining mismatches (10 with terminology).
+- `reference-bundle-contained` remaining mismatches (10 with terminology).
     Current failure directions:
     - False positive: `contained-resource-bad-id-ignore` (contained dom-3
       leniency/configuration).
@@ -156,7 +238,7 @@ Next:
     Suggested first task: inspect `contained-resource-bad-id-ignore` and the
     local contained-reference graph; this likely also informs the
     questionnaire-response dom-3 false positives.
-16. `questionnaire-response` remaining mismatches (8). Split into two
+- `questionnaire-response` remaining mismatches (8). Split into two
     independent sub-clusters:
     - False positives from contained dom-3/reference detection: `contained`,
       `qr-internal-refs`, `q_val_fail`.
@@ -167,7 +249,7 @@ Next:
     Suggested first task: fix contained dom-3 reference detection for
     Questionnaire/QuestionnaireResponse local references, because it can reduce
     both this cluster and `reference-bundle-contained`.
-17. `extension` false positives (5). Current rows are all Java-valid/RH-invalid:
+- `extension` false positives (5). Current rows are all Java-valid/RH-invalid:
     `res-inv-example-good`, `res-inv-example-bad`, `matchetype-extension-1`,
     `matchetype-extension-2`, `profile-compliesWith`. These mostly indicate
     missing core/test extension definition recognition or over-strict unknown
@@ -175,22 +257,6 @@ Next:
     extensions used by `res-inv-example-*` (`organization-brand`,
     `organization-portal`, `endpoint-fhir-version`) only if Java treats them as
     acceptable in this context.
-18. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
-    `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
-    larger validation-resource/invariant/reference work unless a targeted
-    discriminator rule is obvious.
-19. `json-parser` false positives (6): `shc-bundle`, `json-comments-1-yes`,
-    `json-comments-2-yes`, `bad-json-close`, `bad-json-close-2`,
-    `bad-json-close-3`. Add a conformance-only lenient JSON parser mode only in
-    the test harness; do not relax normal CLI validation.
-20. `other` false negatives (7): `pat-security-bad-string`, `shc-bad-1`,
-    `shc-cvx`, `cm`, `sp-composite`, `contract-binding-test`, `scoring-test`.
-    Leave these as last-resort investigation buckets unless one maps cleanly to
-    an existing validator subsystem.
-21. After each small task, run the relevant `just test-fhir-module <module>`,
-    then `just check`, commit, and only then run `just test-fhir-all` when a
-    full category slice is complete or the behavior could affect multiple
-    modules.
 
 Create a commit for each step. After implementation work is done, run
 `just check`. Keep exact full R4 conformance logs for each validator behavior
