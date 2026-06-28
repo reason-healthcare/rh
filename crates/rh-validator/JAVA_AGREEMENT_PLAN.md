@@ -13,43 +13,39 @@ just test-fhir-all
 
 Current agreement from that run:
 
-- No terminology: 371/404 (91.8%)
-- With terminology: 376/404 (93.1%)
+- No terminology: 377/404 (93.3%)
+- With terminology: 382/404 (94.6%)
 
 Current triage artifacts:
 
 - No terminology:
-  `target/conformance-triage/r4-java-mismatches-1782656381-no-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782660445-no-terminology.csv`
 - With terminology:
-  `target/conformance-triage/r4-java-mismatches-1782656762-with-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782662963-with-terminology.csv`
 
 ## Gap Closure Opportunities
 
 Highest-leverage remaining work, in recommended order:
 
-1. Measure / MeasureReport invariants. Rows include `mr-covid-m`,
-   `mr-covid-m2`, `mr-covid-m3`, `mr-covid-m5`, `mr-covid-mr1`, and
-   `measure-report-ihe`. These likely share missing FHIRPath support,
-   invariant extraction, or resource-context behavior, so one fix may close
-   several rows.
-2. Reference/profile package resolution. Rows include
+1. Reference/profile package resolution. Rows include
    `practitioner-role-example`, `dr-eh`, `obs-hgvs-bad`, `obs-vs-1`,
    `obs-vs-2`, and `obs-temp-bad`. Current RH output often warns that a
    profile is not found while Java applies the profile and rejects the
    instance.
-3. QuestionnaireResponse async/value-set validation. Rows include
+2. QuestionnaireResponse async/value-set validation. Rows include
    `choice-async-qr`, `choice-gender-coding-async-qr`,
    `open-choice-gender-coding-async-qr`, `quantity-min-max-qr`,
    `quantity-units-not-in-value-set-qr`, and
    `nested-questionnaire-nested-valueset`. These should be handled as a
    contained questionnaire lookup and answer-validation subsystem pass.
-4. StructureDefinition invariant/profile rules. Rows include `obs-mz`,
-   `StructureDefinition-Slice23`, `ext-derived`, `ext-derived-circle`, `ai5`,
-   and `ai6`. Several currently surface failed `sdf-*` invariant evaluation as
-   warnings rather than Java-invalid errors.
-5. Profile slicing. Remaining rows are `patient-ig-bad` and
+3. Resource invariants. Rows include `bad-markdown-no-html`, `ai3`, `ai4`,
+   `obs-temp-code2`, and `supplement-1a`.
+4. Profile slicing. Remaining rows are `patient-ig-bad` and
    `sdoh-type-slice`; keep these after the broader invariant/reference work
    unless a targeted discriminator rule becomes obvious.
+5. Remaining validation-resource edge case: `ext-derived-circle`, which is
+   still Java-invalid/RH-valid in full runs because the base profile resolves
+   circularly to itself.
 
 ## Steps
 
@@ -251,14 +247,23 @@ Completed:
       `StructureDefinition-Slice23` to agree with Java.
     Targeted `sd` module agreement is now 7/7. Targeted `general` module
     agreement improved to 37/40, with `ai5`, `ai6`, and
-    `StructureDefinition-Slice23` now agreeing with Java. A full R4 rerun is
-    needed to refresh the category counts after this item.
+    `StructureDefinition-Slice23` now agreeing with Java.
+24. Re-run full R4 conformance after the validation-resource pass. Agreement
+    improved to 377/404 without terminology and 382/404 with terminology.
+    Current triage artifacts:
+    `target/conformance-triage/r4-java-mismatches-1782660445-no-terminology.csv`
+    and
+    `target/conformance-triage/r4-java-mismatches-1782662963-with-terminology.csv`.
+    Current mismatch counts are:
+    - No terminology (27): invariant 8, reference-bundle-contained 8,
+      questionnaire-response 6, validation-resource 2, profile-slicing 2,
+      terminology 1.
+    - With terminology (22): reference-bundle-contained 8,
+      questionnaire-response 6, invariant 5, profile-slicing 2,
+      validation-resource 1.
 
 Next:
 
-24. `invariant` false negatives. Remaining examples are
-    narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
-    `ai4`, `obs-temp-code2`) plus `supplement-1a`.
 25. `reference-bundle-contained` remaining mismatches. Targeted references
     module now has one Java mismatch: `dr-eh` is Java-invalid/RH-valid due to
     unresolved US Core DocumentReference profile/reference behavior. Full-suite
@@ -278,15 +283,22 @@ Next:
     `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
     the referenced Questionnaire/ValueSet for one async choice case and verify
     whether failure is terminology expansion or questionnaire lookup.
-27. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+27. `invariant` false negatives. Remaining examples are
+    narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
+    `ai4`, `obs-temp-code2`) plus `supplement-1a`.
+28. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-28. The former `extension` follow-up, `res-inv-example-bad`, is categorized
+29. Remaining `validation-resource` false negative: `ext-derived-circle` is
+    Java-invalid/RH-valid in full runs but valid in the targeted `sd` module
+    because the supporting base profile changes the circular-base behavior.
+    Treat this as a circular StructureDefinition base resolution edge case.
+30. The former `extension` follow-up, `res-inv-example-bad`, is categorized
     under reference-bundle-contained in the current triage. The first fatal
     issue is unresolved reference `Endpoint/examplelabsXX` inside a profile
     invariant. Treat this as reference/invariant work, not extension loading.
-29. After each small task, run the relevant `just test-fhir-module <module>`,
+31. After each small task, run the relevant `just test-fhir-module <module>`,
     then `just check`, commit, and only then run `just test-fhir-all` when a
     full category slice is complete or the behavior could affect multiple
     modules.
