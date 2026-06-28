@@ -130,11 +130,11 @@ impl RuleCompiler {
             for element in &snapshot_data.element {
                 let path = &element.path;
 
-                if let (Some(min), Some(max)) = (element.min, &element.max) {
+                if element.min.is_some() || element.max.is_some() {
                     cardinality_rules.push(CardinalityRule {
                         path: path.clone(),
-                        min: Some(min),
-                        max: Some(max.clone()),
+                        min: element.min,
+                        max: element.max.clone(),
                     });
                 }
 
@@ -281,7 +281,7 @@ impl RuleCompiler {
             return Ok(rules);
         }
 
-        add_differential_binding_rules(snapshot, &mut binding_rules);
+        add_differential_rules(snapshot, &mut cardinality_rules, &mut binding_rules);
 
         let rules = CompiledValidationRules {
             profile_url: profile_url.clone(),
@@ -351,6 +351,37 @@ fn add_differential_binding_rules(
             value_set_url: value_set_url.clone(),
             strength: binding.strength.clone(),
         });
+    }
+}
+
+fn add_differential_rules(
+    structure_definition: &StructureDefinition,
+    cardinality_rules: &mut Vec<CardinalityRule>,
+    binding_rules: &mut Vec<BindingRule>,
+) {
+    let Some(differential) = &structure_definition.differential else {
+        return;
+    };
+
+    for element in &differential.element {
+        if element.path.split('.').count() == 2 && (element.min.is_some() || element.max.is_some())
+        {
+            cardinality_rules.push(CardinalityRule {
+                path: element.path.clone(),
+                min: element.min,
+                max: element.max.clone(),
+            });
+        }
+
+        if let Some(binding) = &element.binding {
+            if let Some(value_set_url) = &binding.value_set {
+                binding_rules.push(BindingRule {
+                    path: element.path.clone(),
+                    value_set_url: value_set_url.clone(),
+                    strength: binding.strength.clone(),
+                });
+            }
+        }
     }
 }
 

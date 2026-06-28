@@ -1870,3 +1870,154 @@ fn capability_statement_search_param_definition_type_must_match() {
             && i.path.as_deref() == Some("CapabilityStatement.rest[0].resource[0].searchParam[0]")
     }));
 }
+
+#[test]
+fn dynamic_differential_profile_enforces_max_cardinality() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/patient-profile",
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+        "derivation": "constraint",
+        "kind": "resource",
+        "differential": {
+            "element": [{
+                "id": "Patient.identifier",
+                "path": "Patient.identifier",
+                "max": "0"
+            }]
+        }
+    }));
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "meta": {
+            "profile": ["http://example.org/patient-profile"]
+        },
+        "identifier": [{
+            "system": "http://example.org/patient-identifier",
+            "value": "123456"
+        }]
+    });
+
+    let result = validator.validate_auto(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("Cardinality violation at 'Patient.identifier': expected at most 0")
+    }));
+}
+
+#[test]
+fn dynamic_differential_profile_enforces_min_cardinality() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/other-patient-profile",
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+        "derivation": "constraint",
+        "kind": "resource",
+        "differential": {
+            "element": [{
+                "id": "Patient.identifier",
+                "path": "Patient.identifier",
+                "min": 1,
+                "max": "*"
+            }]
+        }
+    }));
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "meta": {
+            "profile": ["http://example.org/other-patient-profile"]
+        }
+    });
+
+    let result = validator.validate_auto(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("Cardinality violation at 'Patient.identifier': expected at least 1")
+    }));
+}
+
+#[test]
+fn structure_definition_choice_path_must_use_base_choice_path() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let structure_definition = json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.com/Observation",
+        "type": "Observation",
+        "kind": "resource",
+        "derivation": "constraint",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+        "differential": {
+            "element": [{
+                "id": "Observation.valueQuantity",
+                "path": "Observation.valueBla"
+            }]
+        }
+    });
+
+    let result = validator.validate(&structure_definition).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Processing
+            && i.message
+                .contains("The path must be 'Observation.value[x]' not 'Observation.valueBla'")
+            && i.path.as_deref() == Some("StructureDefinition")
+    }));
+}
+
+#[test]
+fn structure_definition_derived_profile_cannot_change_base_fixed_value() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/test/StructureDefinition/ext-base",
+        "type": "Extension",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+        "differential": {
+            "element": [{
+                "id": "Extension.url",
+                "path": "Extension.url",
+                "fixedUri": "http://hl7.org/fhir/test/StructureDefinition/ext-base"
+            }]
+        }
+    }));
+
+    let derived = json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/test/StructureDefinition/ext-derived",
+        "type": "Extension",
+        "kind": "complex-type",
+        "derivation": "constraint",
+        "baseDefinition": "http://hl7.org/fhir/test/StructureDefinition/ext-base",
+        "differential": {
+            "element": [{
+                "id": "Extension.url",
+                "path": "Extension.url",
+                "fixedUri": "http://hl7.org/fhir/test/StructureDefinition/ext-derived"
+            }]
+        }
+    });
+
+    let result = validator.validate(&derived).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Value
+            && i.message.contains("fixed to")
+            && i.path.as_deref() == Some("Extension.url")
+    }));
+}

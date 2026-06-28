@@ -384,6 +384,12 @@ impl FhirValidator {
             }
         }
 
+        if resource_type_name == "StructureDefinition" {
+            for issue in self.validate_structure_definition_resource(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
         // Validate strings for HTML-like content (security check)
         let string_security_issues =
             validate_string_security(resource, resource_type_name, self.options.security_checks);
@@ -1023,6 +1029,163 @@ impl FhirValidator {
             "ConceptMap" => self.validate_conceptmap_source_codes(resource),
             _ => Vec::new(),
         }
+    }
+
+    fn validate_structure_definition_resource(
+        &self,
+        structure_definition: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+
+        issues.extend(self.validate_structure_definition_choice_paths(structure_definition));
+        issues.extend(self.validate_structure_definition_base_fixed_values(structure_definition));
+
+        issues
+    }
+
+    fn validate_structure_definition_choice_paths(
+        &self,
+        structure_definition: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(base_url) = structure_definition
+            .get("baseDefinition")
+            .and_then(|v| v.as_str())
+        else {
+            return issues;
+        };
+        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+            return issues;
+        };
+        let Some(base_snapshot) = base_profile.snapshot.as_ref() else {
+            return issues;
+        };
+
+        let choice_paths: Vec<(&str, &str)> = base_snapshot
+            .element
+            .iter()
+            .filter_map(|element| {
+                let choice_path = element.path.as_str();
+                let choice_segment = choice_path.rsplit('.').next()?;
+                let choice_root = choice_segment.strip_suffix("[x]")?;
+                Some((choice_root, choice_path))
+            })
+            .collect();
+
+        if choice_paths.is_empty() {
+            return issues;
+        }
+
+        let Some(elements) = structure_definition
+            .get("differential")
+            .and_then(|d| d.get("element"))
+            .and_then(|e| e.as_array())
+        else {
+            return issues;
+        };
+
+        for element in elements {
+            let Some(path) = element.get("path").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let Some(id) = element.get("id").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            if element.get("type").is_some() {
+                continue;
+            }
+
+            let Some(id_segment) = id.rsplit('.').next() else {
+                continue;
+            };
+
+            for (choice_root, choice_path) in &choice_paths {
+                if id_segment.starts_with(choice_root)
+                    && id_segment != format!("{choice_root}[x]")
+                    && path != *choice_path
+                {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Processing,
+                            format!(
+                                "Error generating Snapshot: The path must be '{choice_path}' not '{path}' when the type list is not constrained"
+                            ),
+                        )
+                        .with_path("StructureDefinition".to_string()),
+                    );
+                    break;
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_structure_definition_base_fixed_values(
+        &self,
+        structure_definition: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(base_url) = structure_definition
+            .get("baseDefinition")
+            .and_then(|v| v.as_str())
+        else {
+            return issues;
+        };
+        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+            return issues;
+        };
+        let Some(base_differential) = base_profile.differential.as_ref() else {
+            return issues;
+        };
+        let Some(elements) = structure_definition
+            .get("differential")
+            .and_then(|d| d.get("element"))
+            .and_then(|e| e.as_array())
+        else {
+            return issues;
+        };
+
+        for element in elements {
+            let Some(path) = element.get("path").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            let Some(base_element) = base_differential
+                .element
+                .iter()
+                .find(|base_element| base_element.path == path)
+            else {
+                continue;
+            };
+
+            for (base_key, base_value) in &base_element.additional {
+                if !base_key.starts_with("fixed") {
+                    continue;
+                }
+                let Some(derived_value) = element.get(base_key) else {
+                    continue;
+                };
+                if derived_value == base_value {
+                    continue;
+                }
+
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Value,
+                        format!(
+                            "Value is '{}' but is fixed to '{}' in the profile",
+                            display_json_value(derived_value),
+                            display_json_value(base_value)
+                        ),
+                    )
+                    .with_path(path.to_string()),
+                );
+            }
+        }
+
+        issues
     }
 
     fn validate_codesystem_concept_properties(&self, codesystem: &Value) -> Vec<ValidationIssue> {
@@ -5697,6 +5860,13 @@ fn value_matches_pattern(actual: &Value, expected: &Value) -> bool {
         }
         _ => actual == expected,
     }
+}
+
+fn display_json_value(value: &Value) -> String {
+    value
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| value.to_string())
 }
 
 fn element_matches_profile_discriminator(

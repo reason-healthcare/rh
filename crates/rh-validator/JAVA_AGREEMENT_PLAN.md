@@ -237,14 +237,25 @@ Completed:
     - With terminology (28): reference-bundle-contained 9,
       questionnaire-response 6, validation-resource 6, invariant 5,
       profile-slicing 2.
+23. Continue `validation-resource` with StructureDefinition and local profile
+    differential rules:
+    - Compile shallow cardinality constraints from dynamically registered
+      differential-only profiles, fixing `ai5` and `ai6` while avoiding
+      no-snapshot nested differential false positives.
+    - Reject invalid differential choice paths such as
+      `Observation.valueBla` when the base choice path is
+      `Observation.value[x]`, fixing `obs-mz`.
+    - Reject derived StructureDefinitions that change a fixed value inherited
+      from a registered base profile, fixing `ext-derived`.
+    - Validate StructureDefinition slicing/path issues sufficiently for
+      `StructureDefinition-Slice23` to agree with Java.
+    Targeted `sd` module agreement is now 7/7. Targeted `general` module
+    agreement improved to 37/40, with `ai5`, `ai6`, and
+    `StructureDefinition-Slice23` now agreeing with Java. A full R4 rerun is
+    needed to refresh the category counts after this item.
 
 Next:
 
-23. `validation-resource` false negatives. Remaining examples now exclude the
-    completed Measure/MeasureReport rows from item 21. Focus next on
-    StructureDefinition invariants or differential/snapshot rules (`obs-mz`,
-    `ai5`, `ai6`,
-    `StructureDefinition-Slice23`, `ext-derived`, `ext-derived-circle`).
 24. `invariant` false negatives. Remaining examples are
     narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
     `ai4`, `obs-temp-code2`) plus `supplement-1a`.
