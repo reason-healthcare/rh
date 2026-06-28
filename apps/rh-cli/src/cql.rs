@@ -21,9 +21,10 @@ use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, get_default_packages_dir, CompilationError, CompilerOptions, CqlDateTime,
-    Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
+    explain_parse, get_default_packages_dir, CompilationError, CompilationResult, CompilerOptions,
+    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
+    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, SourceMapCompilationResult,
+    Value,
 };
 
 #[derive(Serialize)]
@@ -398,16 +399,18 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             source_map_output,
         } => {
             compile_cql(
-                &input,
-                output.as_deref(),
-                compact,
-                debug,
-                strict,
-                result_types,
-                signatures,
-                &lib_path,
-                source_map,
-                source_map_output.as_deref(),
+                &CompileRequest {
+                    input,
+                    output,
+                    compact,
+                    debug,
+                    strict,
+                    result_types,
+                    signatures,
+                    lib_path,
+                    source_map,
+                    source_map_output,
+                },
                 ctx,
             )?;
         }
@@ -698,130 +701,174 @@ fn read_source(input: &str) -> Result<String> {
 // Compile service
 // ---------------------------------------------------------------------------
 
-/// Compile CQL source to ELM JSON
-#[allow(clippy::too_many_arguments)]
-fn compile_cql(
-    input: &str,
-    output: Option<&Path>,
+/// Parsed flags for `cql compile`, grouped to keep [`compile_cql`] focused on
+/// orchestration rather than a long parameter list.
+struct CompileRequest {
+    input: String,
+    output: Option<PathBuf>,
     compact: bool,
     debug: bool,
     strict: bool,
     result_types: bool,
     signatures: bool,
-    lib_paths: &[PathBuf],
-    emit_source_map: bool,
-    source_map_output: Option<&Path>,
-    ctx: &OutputContext,
-) -> Result<()> {
-    let source = read_source(input)?;
+    lib_path: Vec<PathBuf>,
+    source_map: bool,
+    source_map_output: Option<PathBuf>,
+}
 
-    // Build options
-    let options = if debug {
-        let mut opts = CompilerOptions::debug();
-        if signatures {
-            opts = opts.with_signature_level(SignatureLevel::All);
-        }
-        opts
+/// Read-only access to the ELM-serializable portion of a compilation outcome.
+///
+/// Implemented for both [`CompilationResult`] and [`SourceMapCompilationResult`]
+/// so the compile pipeline can serialize either through a single code path.
+trait ElmOutcome {
+    fn errors(&self) -> &[Diagnostic];
+    fn warnings(&self) -> &[Diagnostic];
+    fn to_json(&self) -> std::result::Result<String, CompilationError>;
+    fn to_compact_json(&self) -> std::result::Result<String, CompilationError>;
+}
+
+impl ElmOutcome for CompilationResult {
+    fn errors(&self) -> &[Diagnostic] {
+        &self.errors
+    }
+    fn warnings(&self) -> &[Diagnostic] {
+        &self.warnings
+    }
+    fn to_json(&self) -> std::result::Result<String, CompilationError> {
+        CompilationResult::to_json(self)
+    }
+    fn to_compact_json(&self) -> std::result::Result<String, CompilationError> {
+        CompilationResult::to_compact_json(self)
+    }
+}
+
+impl ElmOutcome for SourceMapCompilationResult {
+    fn errors(&self) -> &[Diagnostic] {
+        &self.errors
+    }
+    fn warnings(&self) -> &[Diagnostic] {
+        &self.warnings
+    }
+    fn to_json(&self) -> std::result::Result<String, CompilationError> {
+        SourceMapCompilationResult::to_json(self)
+    }
+    fn to_compact_json(&self) -> std::result::Result<String, CompilationError> {
+        SourceMapCompilationResult::to_compact_json(self)
+    }
+}
+
+/// Resolve the [`CompilerOptions`] for a `cql compile` run from its flags.
+///
+/// `debug` mode already enables result types, so `--result-types` is only
+/// honored outside of debug mode to match the previous per-branch behavior.
+fn build_compiler_options(
+    debug: bool,
+    strict: bool,
+    result_types: bool,
+    signatures: bool,
+) -> CompilerOptions {
+    let mut opts = if debug {
+        CompilerOptions::debug()
     } else if strict {
-        let mut opts = CompilerOptions::strict();
-        if result_types {
-            opts = opts.with_option(CompilerOption::EnableResultTypes);
-        }
-        if signatures {
-            opts = opts.with_signature_level(SignatureLevel::All);
-        }
-        opts
+        CompilerOptions::strict()
     } else {
-        let mut opts = CompilerOptions::default();
-        if result_types {
-            opts = opts.with_option(CompilerOption::EnableResultTypes);
-        }
-        if signatures {
-            opts = opts.with_signature_level(SignatureLevel::All);
-        }
-        opts
+        CompilerOptions::default()
     };
+    if result_types && !debug {
+        opts = opts.with_option(CompilerOption::EnableResultTypes);
+    }
+    if signatures {
+        opts = opts.with_signature_level(SignatureLevel::All);
+    }
+    opts
+}
+
+/// Print a fatal pipeline error to stderr and exit with the parse-error code.
+fn exit_on_compile_error(e: impl std::fmt::Display) -> ! {
+    eprintln!("✗ {e}");
+    ExitCode::ParseError.exit();
+}
+
+/// Report a failed (non-success) compilation outcome and exit.
+fn exit_on_compile_failure(outcome: &impl ElmOutcome) -> ! {
+    let err = report_compile_failure(outcome.errors(), outcome.warnings());
+    error!("{err}");
+    ExitCode::ParseError.exit();
+}
+
+/// Serialize an ELM outcome to JSON, honoring compact mode.
+fn serialize_elm(outcome: &impl ElmOutcome, compact: bool) -> Result<String> {
+    let json = if compact {
+        outcome.to_compact_json()
+    } else {
+        outcome.to_json()
+    }
+    .context("Failed to serialize ELM to JSON")?;
+    Ok(json)
+}
+
+/// Compile CQL source to ELM JSON
+fn compile_cql(req: &CompileRequest, ctx: &OutputContext) -> Result<()> {
+    let source = read_source(&req.input)?;
+    let options = build_compiler_options(req.debug, req.strict, req.result_types, req.signatures);
 
     // Run the pipeline once. Source-map compilation still uses the
     // library-aware path so `--lib-path` and package-cache includes behave the
     // same as ordinary ELM compilation.
-    let (json, sm_json_opt) = if emit_source_map {
+    let (json, sm_json_opt) = if req.source_map {
         let result = match compile_with_search_dirs_and_sourcemap(
             &source,
-            input,
-            lib_paths,
+            &req.input,
+            &req.lib_path,
             Some(options),
             None,
         ) {
             Ok(r) => r,
-            Err(e) => {
-                eprintln!("✗ {e}");
-                ExitCode::ParseError.exit();
-            }
+            Err(e) => exit_on_compile_error(e),
         };
-
         if !result.is_success() {
-            let err = report_compile_failure(&result.errors, &result.warnings);
-            error!("{err}");
-            ExitCode::ParseError.exit();
+            exit_on_compile_failure(&result);
         }
-
-        let json = if compact {
-            result.to_compact_json()
-        } else {
-            result.to_json()
-        }
-        .context("Failed to serialize ELM to JSON")?;
+        let json = serialize_elm(&result, req.compact)?;
         let sm_json = result
             .source_map_json()
             .context("Failed to serialize source map")?;
         (json, Some(sm_json))
     } else {
-        let result = match compile_with_search_dirs(&source, input, lib_paths, Some(options)) {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("✗ {e}");
-                ExitCode::ParseError.exit();
+        let result =
+            match compile_with_search_dirs(&source, &req.input, &req.lib_path, Some(options)) {
+                Ok(r) => r,
+                Err(e) => exit_on_compile_error(e),
             }
-        }
-        .result;
-
+            .result;
         if !result.is_success() {
-            let err = report_compile_failure(&result.errors, &result.warnings);
-            error!("{err}");
-            ExitCode::ParseError.exit();
+            exit_on_compile_failure(&result);
         }
-
-        let json = if compact {
-            result.to_compact_json()
-        } else {
-            result.to_json()
-        }
-        .context("Failed to serialize ELM to JSON")?;
+        let json = serialize_elm(&result, req.compact)?;
         (json, None)
     };
 
     // Write ELM output
-    if let Some(path) = output {
+    if let Some(path) = req.output.as_deref() {
         fs::write(path, &json).with_context(|| format!("Failed to write to {}", path.display()))?;
         info!("✓ Compiled to {}", path.display());
     }
     if ctx.is_json() {
         let elm_value = serde_json::from_str::<serde_json::Value>(&json)?;
         print_envelope(ctx, &Envelope::ok(elm_value, "cql compile"))?;
-    } else if output.is_none() {
+    } else if req.output.is_none() {
         println!("{json}");
     }
 
     // Write source-map output (only present when --source-map was requested)
     if let Some(sm_json) = sm_json_opt {
-        match source_map_output {
+        match req.source_map_output.as_deref() {
             Some(path) => {
                 fs::write(path, &sm_json)
                     .with_context(|| format!("Failed to write source map to {}", path.display()))?;
                 info!("✓ Source map written to {}", path.display());
             }
-            None => match output {
+            None => match req.output.as_deref() {
                 Some(elm_path) => {
                     let sm_path = format!("{}.sourcemap.json", elm_path.display());
                     fs::write(&sm_path, &sm_json)
@@ -1751,6 +1798,18 @@ fn add_fhir_resource(provider: &mut InMemoryDataProvider, resource: serde_json::
     }
 }
 
+/// Print validation warnings to stdout. Each warning is annotated with its
+/// source location only when `verbose` is true.
+fn print_validation_warnings(warnings: &[Diagnostic], verbose: bool) {
+    if warnings.is_empty() {
+        return;
+    }
+    println!("\nWarnings ({}):", warnings.len());
+    for warning in warnings {
+        println!("  ⚠ {}", format_diagnostic_message(warning, verbose));
+    }
+}
+
 /// Validate CQL source
 fn validate_cql(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<()> {
     let source = read_source(input)?;
@@ -1762,52 +1821,16 @@ fn validate_cql(input: &str, lib_paths: &[PathBuf], verbose: bool) -> Result<()>
 
     if valid {
         println!("✓ CQL is valid");
-
-        if !warnings.is_empty() {
-            println!("\nWarnings ({}):", warnings.len());
-            for warning in &warnings {
-                if verbose {
-                    if let Some(span) = &warning.span {
-                        println!(
-                            "  ⚠ {} (line {}, col {})",
-                            warning.message, span.start.line, span.start.column
-                        );
-                        continue;
-                    }
-                }
-                println!("  ⚠ {}", warning.message);
-            }
-        }
+        print_validation_warnings(&warnings, verbose);
     } else {
         println!("✗ CQL has errors\n");
 
         println!("Errors ({}):", errors.len());
         for err in &errors {
-            if let Some(span) = &err.span {
-                println!(
-                    "  ✗ {} (line {}, col {})",
-                    err.message, span.start.line, span.start.column
-                );
-            } else {
-                println!("  ✗ {}", err.message);
-            }
+            println!("  ✗ {}", format_diagnostic_message(err, true));
         }
 
-        if !warnings.is_empty() {
-            println!("\nWarnings ({}):", warnings.len());
-            for warning in &warnings {
-                if verbose {
-                    if let Some(span) = &warning.span {
-                        println!(
-                            "  ⚠ {} (line {}, col {})",
-                            warning.message, span.start.line, span.start.column
-                        );
-                        continue;
-                    }
-                }
-                println!("  ⚠ {}", warning.message);
-            }
-        }
+        print_validation_warnings(&warnings, verbose);
 
         anyhow::bail!("CQL validation failed");
     }

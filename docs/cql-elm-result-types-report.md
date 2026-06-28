@@ -130,9 +130,9 @@ For functions with a body, derive metadata from `body.data_type`. If a function 
 
 Function parameters already carry parser-level type specifiers. `OperandDef` should emit `operandTypeName` for named parameter types and `operandTypeSpecifier` for structural parameter types. This is adjacent to result types, but downstream ELM inspection usually expects both return and operand typing.
 
-5. Consider an explicit CLI flag
+5. Keep the explicit CLI flag documented
 
-`--debug` currently enables result types. For reference parity, add `rh cql compile --result-types` as an independent flag, while keeping `--debug` behavior unchanged.
+`--debug` currently enables result types. For reference parity, `rh cql compile --result-types` is also available as an independent flag, while `--debug` behavior remains unchanged.
 
 ## Test Plan
 
@@ -145,7 +145,7 @@ Add focused tests before touching broad golden files:
 - Property/member access returning `FHIR.Reference` emits `resultTypeName` for the named `FHIR.Reference` result.
 - Tuple expression emits `TupleTypeSpecifier` with per-element type specifiers.
 - Function return and operand definitions emit the same named-vs-structural split.
-- `rh cql compile --result-types` works independently of `--debug` if that flag is added.
+- `rh cql compile --result-types` works independently of `--debug`.
 
 Then add a Java reference comparison fixture that compiles with `EnableResultTypes` and checks metadata shape rather than exact local IDs or locator placement.
 
@@ -163,7 +163,7 @@ Then add a Java reference comparison fixture that compiles with `EnableResultTyp
 2. Unit-test the conversion layer directly for system, model, list, interval, tuple, choice, and type parameter cases.
 3. Wire `ElmEmitter::element_fields()` to use the conversion layer.
 4. Wire `ExpressionDef`, `FunctionDef`, and `OperandDef`.
-5. Add CLI `--result-types` and docs if independent control is desired.
+5. Keep the CLI `--result-types` documentation and tests in sync with emitter behavior.
 6. Add one or two Java reference fixtures for structural result type parity.
 
 ## Recommendation
