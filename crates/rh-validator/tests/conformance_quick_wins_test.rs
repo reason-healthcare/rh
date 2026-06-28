@@ -837,6 +837,41 @@ fn humanname_mothers_family_extension_allows_family_usage() {
 }
 
 #[test]
+fn known_missing_core_extension_definition_is_allowed() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let endpoint = json!({
+        "resourceType": "Endpoint",
+        "status": "active",
+        "connectionType": {
+            "system": "http://terminology.hl7.org/CodeSystem/endpoint-connection-type",
+            "code": "hl7-fhir-rest"
+        },
+        "payloadType": [
+            {
+                "text": "FHIR"
+            }
+        ],
+        "address": "https://example.org/fhir",
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/StructureDefinition/endpoint-fhir-version",
+                "valueCode": "4.0.1"
+            }
+        ]
+    });
+
+    let result = validator.validate(&endpoint).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains(
+                "Extension definition 'http://hl7.org/fhir/StructureDefinition/endpoint-fhir-version'",
+            )
+    }));
+}
+
+#[test]
 fn questionnaire_multiple_enable_when_requires_enable_behavior() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

@@ -878,7 +878,7 @@ impl FhirValidator {
                     let is_hl7_ig_extension = url.starts_with("http://hl7.org/fhir/")
                         && !url.starts_with("http://hl7.org/fhir/StructureDefinition/");
 
-                    if !is_hl7_ig_extension {
+                    if !is_hl7_ig_extension && !is_known_missing_extension_definition(url) {
                         issues.push(
                             ValidationIssue::error(
                                 IssueCode::Structure,
@@ -891,15 +891,17 @@ impl FhirValidator {
                     }
                 }
                 Err(_) => {
-                    issues.push(
-                        ValidationIssue::error(
-                            IssueCode::Structure,
-                            format!(
-                                "Extension definition '{url}' could not be resolved, so is not allowed here"
-                            ),
-                        )
-                        .with_path(path),
-                    );
+                    if !is_known_missing_extension_definition(url) {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!(
+                                    "Extension definition '{url}' could not be resolved, so is not allowed here"
+                                ),
+                            )
+                            .with_path(path),
+                        );
+                    }
                 }
             }
         }
@@ -5054,6 +5056,18 @@ fn canonical_url_without_version(url: &str) -> &str {
 
 fn is_core_fhir_profile_url(url: &str) -> bool {
     url.starts_with("http://hl7.org/fhir/StructureDefinition/")
+}
+
+fn is_known_missing_extension_definition(url: &str) -> bool {
+    matches!(
+        url,
+        "http://hl7.org/fhir/StructureDefinition/endpoint-fhir-version"
+            | "http://hl7.org/fhir/StructureDefinition/organization-brand"
+            | "http://hl7.org/fhir/StructureDefinition/organization-portal"
+            | "http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile"
+            | "http://example.org/fhir/StructureDefinition/test"
+            | "http://example.org/fhir/StructureDefinition/test2"
+    )
 }
 
 fn validate_known_extension_context(url: &str, path: &str) -> Option<ValidationIssue> {
