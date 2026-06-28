@@ -1173,7 +1173,44 @@ fn installed_package_dir(package_ref: &str) -> Option<PathBuf> {
     }
 
     let packages_dir = rh_foundation::loader::PackageLoader::get_default_packages_dir().ok()?;
-    Some(packages_dir.join(package_ref).join("package"))
+    let exact = packages_dir.join(package_ref).join("package");
+    if exact.is_dir() {
+        return Some(exact);
+    }
+
+    compatible_installed_package_dir(&packages_dir, package_ref)
+}
+
+fn compatible_installed_package_dir(packages_dir: &Path, package_ref: &str) -> Option<PathBuf> {
+    let (package_id, requested_version) = package_ref.split_once('#')?;
+    let requested_minor = major_minor_version(requested_version)?;
+    let prefix = format!("{package_id}#");
+
+    let mut candidates: Vec<(String, PathBuf)> = fs::read_dir(packages_dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let version = file_name.strip_prefix(&prefix)?;
+            if major_minor_version(version)? != requested_minor {
+                return None;
+            }
+            let package_dir = entry.path().join("package");
+            package_dir
+                .is_dir()
+                .then_some((version.to_string(), package_dir))
+        })
+        .collect();
+
+    candidates.sort_by(|a, b| b.0.cmp(&a.0));
+    candidates.into_iter().map(|(_, path)| path).next()
+}
+
+fn major_minor_version(version: &str) -> Option<(u64, u64)> {
+    let mut parts = version.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    Some((major, minor))
 }
 
 fn sanitize_path_component(value: &str) -> String {
@@ -1326,6 +1363,27 @@ mod tests {
         assert_eq!(
             resolve_package_resource("hl7.fhir.us.core#3.1.1", &temp),
             Some(ResolvedPackageResource::LocalArchive(package_path))
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
+
+    #[test]
+    fn compatible_installed_package_uses_same_major_minor_version() {
+        let temp = temp_test_dir();
+        let package_dir = temp.join("hl7.fhir.us.core#3.1.1").join("package");
+        fs::create_dir_all(&package_dir).expect("create compatible package dir");
+        fs::create_dir_all(temp.join("hl7.fhir.us.core#6.1.0").join("package"))
+            .expect("create incompatible package dir");
+
+        assert_eq!(
+            compatible_installed_package_dir(&temp, "hl7.fhir.us.core#3.1.0"),
+            Some(package_dir)
+        );
+
+        assert_eq!(
+            compatible_installed_package_dir(&temp, "hl7.fhir.us.core#3.2.0"),
+            None
         );
 
         fs::remove_dir_all(temp).expect("remove temp dir");

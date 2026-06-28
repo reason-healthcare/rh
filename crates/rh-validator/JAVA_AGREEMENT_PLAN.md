@@ -261,21 +261,30 @@ Completed:
     - With terminology (22): reference-bundle-contained 8,
       questionnaire-response 6, invariant 5, profile-slicing 2,
       validation-resource 1.
+25. Continue `reference-bundle-contained` with profile-backed Reference target
+    validation:
+    - Resolve compatible installed package patch versions for conformance
+      fixtures when the exact package version is not cached, allowing
+      `hl7.fhir.us.core#3.1.0` to use installed `3.1.1` test resources.
+    - Compile Reference `targetProfile` constraints from profile snapshots and
+      reject references whose URL implies a disallowed resource type.
+    This fixes `dr-eh`; targeted `references` module agreement is now 15/15.
+    A full R4 rerun is still needed before updating the current full-suite
+    reference-bundle-contained count.
 
 Next:
 
-25. `reference-bundle-contained` remaining mismatches. Targeted references
-    module now has one Java mismatch: `dr-eh` is Java-invalid/RH-valid due to
-    unresolved US Core DocumentReference profile/reference behavior. Full-suite
-    rows include unresolved external/profile package cases
-    (`practitioner-role-example`, `dr-eh`, `obs-temp-bad`, `obs-hgvs-bad`,
+26. `reference-bundle-contained` remaining mismatches. Targeted references
+    module now agrees 15/15. Full-suite rows include unresolved
+    external/profile package cases (`practitioner-role-example`,
+    `obs-temp-bad`, `obs-hgvs-bad`,
     `obs-vs-1`, `obs-vs-2`), Bundle/reference behavior
     (`dr-example-org`, `bundle-conformsto`, `res-inv-example-bad`), and likely
-    overlap with validation-resource or terminology resolution. Suggested first
-    task: inspect Java outcome for `dr-eh` and decide whether this is missing
-    profile package loading, reference target profile validation, or
-    DocumentReference-specific rules.
-26. `questionnaire-response` remaining mismatches. Contained dom-3 false
+    overlap with validation-resource or terminology resolution. Suggested next
+    task: inspect `practitioner-role-example` or `obs-hgvs-bad` to decide
+    whether another installed-package fallback, targetProfile rule, or
+    package dependency load is missing.
+27. `questionnaire-response` remaining mismatches. Contained dom-3 false
     positives are resolved; remaining mismatches are unresolved
     async/value-set/quantity validation: `choice-async-qr`,
     `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
@@ -283,22 +292,22 @@ Next:
     `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
     the referenced Questionnaire/ValueSet for one async choice case and verify
     whether failure is terminology expansion or questionnaire lookup.
-27. `invariant` false negatives. Remaining examples are
+28. `invariant` false negatives. Remaining examples are
     narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
     `ai4`, `obs-temp-code2`) plus `supplement-1a`.
-28. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+29. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-29. Remaining `validation-resource` false negative: `ext-derived-circle` is
+30. Remaining `validation-resource` false negative: `ext-derived-circle` is
     Java-invalid/RH-valid in full runs but valid in the targeted `sd` module
     because the supporting base profile changes the circular-base behavior.
     Treat this as a circular StructureDefinition base resolution edge case.
-30. The former `extension` follow-up, `res-inv-example-bad`, is categorized
+31. The former `extension` follow-up, `res-inv-example-bad`, is categorized
     under reference-bundle-contained in the current triage. The first fatal
     issue is unresolved reference `Endpoint/examplelabsXX` inside a profile
     invariant. Treat this as reference/invariant work, not extension loading.
-31. After each small task, run the relevant `just test-fhir-module <module>`,
+32. After each small task, run the relevant `just test-fhir-module <module>`,
     then `just check`, commit, and only then run `just test-fhir-all` when a
     full category slice is complete or the behavior could affect multiple
     modules.

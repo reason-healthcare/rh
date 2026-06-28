@@ -2021,3 +2021,64 @@ fn structure_definition_derived_profile_cannot_change_base_fixed_value() {
             && i.path.as_deref() == Some("Extension.url")
     }));
 }
+
+#[test]
+fn reference_target_profile_rejects_wrong_reference_type() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/StructureDefinition/patient-target",
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+        "snapshot": {
+            "element": [{
+                "id": "Patient",
+                "path": "Patient"
+            }]
+        }
+    }));
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/StructureDefinition/documentreference-target",
+        "type": "DocumentReference",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/DocumentReference",
+        "snapshot": {
+            "element": [{
+                "id": "DocumentReference.subject",
+                "path": "DocumentReference.subject",
+                "min": 1,
+                "max": "1",
+                "type": [{
+                    "code": "Reference",
+                    "targetProfile": [
+                        "http://example.org/StructureDefinition/patient-target"
+                    ]
+                }]
+            }]
+        }
+    }));
+
+    let document_reference = json!({
+        "resourceType": "DocumentReference",
+        "status": "current",
+        "subject": {
+            "reference": "Device/foo"
+        }
+    });
+
+    let result = validator
+        .validate_with_profile(
+            &document_reference,
+            "http://example.org/StructureDefinition/documentreference-target",
+        )
+        .unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message
+                .contains("The type 'Device' implied by the reference URL")
+            && i.path.as_deref() == Some("DocumentReference.subject")
+    }));
+}

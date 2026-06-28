@@ -11,6 +11,7 @@ pub struct CompiledValidationRules {
     pub profile_url: String,
     pub cardinality_rules: Vec<CardinalityRule>,
     pub type_rules: Vec<TypeRule>,
+    pub reference_target_rules: Vec<ReferenceTargetRule>,
     pub binding_rules: Vec<BindingRule>,
     pub fixed_pattern_rules: Vec<FixedPatternRule>,
     pub invariant_rules: Vec<InvariantRule>,
@@ -29,6 +30,12 @@ pub struct CardinalityRule {
 pub struct TypeRule {
     pub path: String,
     pub types: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReferenceTargetRule {
+    pub path: String,
+    pub target_profiles: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -121,6 +128,7 @@ impl RuleCompiler {
 
         let mut cardinality_rules = Vec::new();
         let mut type_rules = Vec::new();
+        let mut reference_target_rules = Vec::new();
         let mut binding_rules = Vec::new();
         let mut fixed_pattern_rules = Vec::new();
         let mut invariant_rules = Vec::new();
@@ -144,6 +152,20 @@ impl RuleCompiler {
                         type_rules.push(TypeRule {
                             path: path.clone(),
                             types: type_codes,
+                        });
+                    }
+
+                    let target_profiles: Vec<String> = types
+                        .iter()
+                        .filter(|type_def| type_def.code == "Reference")
+                        .filter_map(|type_def| type_def.target_profile.as_ref())
+                        .flatten()
+                        .cloned()
+                        .collect();
+                    if !target_profiles.is_empty() {
+                        reference_target_rules.push(ReferenceTargetRule {
+                            path: path.clone(),
+                            target_profiles,
                         });
                     }
                 }
@@ -269,6 +291,7 @@ impl RuleCompiler {
                 profile_url: profile_url.clone(),
                 cardinality_rules,
                 type_rules,
+                reference_target_rules,
                 binding_rules,
                 fixed_pattern_rules,
                 invariant_rules,
@@ -287,6 +310,7 @@ impl RuleCompiler {
             profile_url: profile_url.clone(),
             cardinality_rules,
             type_rules,
+            reference_target_rules,
             binding_rules,
             fixed_pattern_rules,
             invariant_rules,

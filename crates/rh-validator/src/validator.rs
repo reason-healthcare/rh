@@ -49,7 +49,7 @@ use std::sync::Arc;
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
 use crate::profile::ProfileRegistry;
-use crate::rules::{FixedPatternRule, InvariantRule, RuleCompiler, TypeRule};
+use crate::rules::{FixedPatternRule, InvariantRule, ReferenceTargetRule, RuleCompiler, TypeRule};
 use crate::terminology::{TerminologyConfig, TerminologyService};
 use crate::types::{IssueCode, ValidationIssue, ValidationResult};
 use crate::valueset::ValueSetLoader;
@@ -607,6 +607,16 @@ impl FhirValidator {
             }
         }
 
+        for rule in &rules.reference_target_rules {
+            if !should_validate_path(&rule.path, resource) {
+                continue;
+            }
+
+            for violation in self.validate_reference_target_at_path(resource, rule) {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
+        }
+
         for rule in &rules.fixed_pattern_rules {
             let violations = validate_fixed_pattern_at_path(resource, rule);
 
@@ -1041,6 +1051,44 @@ impl FhirValidator {
         issues.extend(self.validate_structure_definition_base_fixed_values(structure_definition));
 
         issues
+    }
+
+    fn validate_reference_target_at_path(
+        &self,
+        resource: &Value,
+        rule: &ReferenceTargetRule,
+    ) -> Vec<ValidationIssue> {
+        let allowed_types = self.allowed_reference_target_types(&rule.target_profiles);
+        if allowed_types.is_empty() {
+            return Vec::new();
+        }
+
+        get_values_at_path(resource, &rule.path)
+            .into_iter()
+            .filter_map(reference_value_target_type)
+            .filter(|target_type| !allowed_types.iter().any(|allowed| allowed == target_type))
+            .map(|target_type| {
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    format!(
+                        "The type '{target_type}' implied by the reference URL is not a valid Target for this element (must be one of [{}])",
+                        allowed_types.join(", ")
+                    ),
+                )
+            })
+            .collect()
+    }
+
+    fn allowed_reference_target_types(&self, target_profiles: &[String]) -> Vec<String> {
+        let mut allowed = Vec::new();
+        for target_profile in target_profiles {
+            if let Ok(Some(profile)) = self.profile_registry.get_snapshot(target_profile) {
+                if !allowed.iter().any(|type_name| type_name == &profile.type_) {
+                    allowed.push(profile.type_);
+                }
+            }
+        }
+        allowed
     }
 
     fn validate_structure_definition_choice_paths(
@@ -5867,6 +5915,42 @@ fn display_json_value(value: &Value) -> String {
         .as_str()
         .map(str::to_string)
         .unwrap_or_else(|| value.to_string())
+}
+
+fn reference_value_target_type(reference: &Value) -> Option<String> {
+    let reference = reference.get("reference").and_then(|v| v.as_str())?;
+    if reference.starts_with('#') || reference.starts_with("urn:") {
+        return None;
+    }
+
+    let path = reference.split('?').next().unwrap_or(reference);
+    let segments: Vec<&str> = path
+        .trim_matches('/')
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+
+    if segments.len() >= 2 {
+        return segments
+            .get(segments.len() - 2)
+            .filter(|segment| is_resource_type_segment(segment))
+            .map(|segment| (*segment).to_string());
+    }
+
+    segments
+        .first()
+        .filter(|segment| is_resource_type_segment(segment))
+        .map(|segment| (*segment).to_string())
+}
+
+fn is_resource_type_segment(segment: &str) -> bool {
+    segment
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_uppercase())
+        && segment
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }
 
 fn element_matches_profile_discriminator(
