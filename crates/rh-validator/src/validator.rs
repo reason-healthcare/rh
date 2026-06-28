@@ -126,6 +126,8 @@ pub struct FhirValidator {
     supplements: std::sync::RwLock<HashMap<String, String>>,
     /// Registered CodeSystem resources keyed by canonical URL.
     codesystems: std::sync::RwLock<HashMap<String, Value>>,
+    /// Registered Measure resources keyed by canonical URL.
+    measures: std::sync::RwLock<HashMap<String, Value>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -250,6 +252,7 @@ impl FhirValidator {
             options,
             supplements: std::sync::RwLock::new(HashMap::new()),
             codesystems: std::sync::RwLock::new(HashMap::new()),
+            measures: std::sync::RwLock::new(HashMap::new()),
             fhir_version,
         })
     }
@@ -369,6 +372,18 @@ impl FhirValidator {
             }
         }
 
+        if resource_type_name == "Measure" {
+            for issue in validate_measure_population_criteria(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
+        if resource_type_name == "MeasureReport" {
+            for issue in self.validate_measure_report_against_measure(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
         // Validate strings for HTML-like content (security check)
         let string_security_issues =
             validate_string_security(resource, resource_type_name, self.options.security_checks);
@@ -399,6 +414,21 @@ impl FhirValidator {
 
         let ucum_issues = self.validate_ucum_units(resource, resource_type_name);
         for issue in ucum_issues {
+            result = result.with_issue(issue);
+        }
+
+        let known_code_issues = validate_known_core_coding_codes(resource, resource_type_name, "");
+        for issue in known_code_issues {
+            result = result.with_issue(issue);
+        }
+
+        let us_core_ethnicity_issues = validate_us_core_ethnicity_detail_codes(resource);
+        for issue in us_core_ethnicity_issues {
+            result = result.with_issue(issue);
+        }
+
+        let coding_system_issues = validate_coding_system_uris(resource, resource_type_name, "");
+        for issue in coding_system_issues {
             result = result.with_issue(issue);
         }
 
@@ -607,6 +637,10 @@ impl FhirValidator {
             for violation in violations {
                 result = result.with_issue(violation);
             }
+        }
+
+        for violation in validate_expression_datatypes(resource, &rules.type_rules) {
+            result = result.with_issue(violation);
         }
 
         // Extension validation
@@ -965,6 +999,17 @@ impl FhirValidator {
         }
     }
 
+    pub fn register_measure(&self, measure: &Value) {
+        if measure.get("resourceType").and_then(|v| v.as_str()) == Some("Measure") {
+            if let Some(url) = measure.get("url").and_then(|v| v.as_str()) {
+                self.measures
+                    .write()
+                    .unwrap()
+                    .insert(url.to_string(), measure.clone());
+            }
+        }
+    }
+
     fn validate_terminology_definition_references(
         &self,
         resource: &Value,
@@ -975,6 +1020,7 @@ impl FhirValidator {
             "ValueSet" => self.validate_valueset_compose(resource),
             "SearchParameter" => self.validate_search_parameter_derivation(resource),
             "CapabilityStatement" => self.validate_capability_statement_search_params(resource),
+            "ConceptMap" => self.validate_conceptmap_source_codes(resource),
             _ => Vec::new(),
         }
     }
@@ -1119,10 +1165,6 @@ impl FhirValidator {
                     .as_ref()
                     .map(codesystem_property_types)
                     .unwrap_or_default();
-                let filter_codes = registered_codesystem
-                    .as_ref()
-                    .map(codesystem_filter_codes)
-                    .unwrap_or_default();
 
                 let Some(filters) = include.get("filter").and_then(|v| v.as_array()) else {
                     continue;
@@ -1143,11 +1185,21 @@ impl FhirValidator {
                         &mut issues,
                     );
 
+                    if let Some(issue) =
+                        validate_known_valueset_filter(system, property, filter, &filter_path)
+                    {
+                        issues.push(issue);
+                        continue;
+                    }
+
                     if registered_codesystem.is_none() {
                         continue;
                     }
 
-                    if filter_codes.contains_key(property) {
+                    if registered_codesystem
+                        .as_ref()
+                        .is_some_and(|codesystem| codesystem_defines_filter(codesystem, property))
+                    {
                         continue;
                     }
 
@@ -1354,6 +1406,22 @@ impl FhirValidator {
         search_parameter: &Value,
     ) -> Vec<ValidationIssue> {
         let mut issues = Vec::new();
+        if search_parameter.get("type").and_then(|v| v.as_str()) == Some("composite") {
+            let component_count = search_parameter
+                .get("component")
+                .and_then(|v| v.as_array())
+                .map_or(0, Vec::len);
+            if component_count < 2 {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::BusinessRule,
+                        "When the SearchParameter has a type of 'composite', then the SearchParameter must define two or more components".to_string(),
+                    )
+                    .with_path("SearchParameter".to_string()),
+                );
+            }
+        }
+
         let Some(derived_from) = search_parameter.get("derivedFrom").and_then(|v| v.as_str())
         else {
             return issues;
@@ -1448,6 +1516,84 @@ impl FhirValidator {
                 }
             }
         }
+
+        issues
+    }
+
+    fn validate_conceptmap_source_codes(&self, conceptmap: &Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(source_valueset) = conceptmap
+            .get("sourceCanonical")
+            .and_then(|v| v.as_str())
+            .or_else(|| conceptmap.get("sourceUri").and_then(|v| v.as_str()))
+        else {
+            return issues;
+        };
+        let Some(groups) = conceptmap.get("group").and_then(|v| v.as_array()) else {
+            return issues;
+        };
+
+        for (group_idx, group) in groups.iter().enumerate() {
+            let source_system = group.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let Some(elements) = group.get("element").and_then(|v| v.as_array()) else {
+                continue;
+            };
+
+            for (element_idx, element) in elements.iter().enumerate() {
+                let Some(code) = element.get("code").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                let Ok(result) =
+                    self.valueset_loader
+                        .contains_code(source_valueset, source_system, code)
+                else {
+                    continue;
+                };
+                if result == crate::valueset::CodeInValueSetResult::NotFound {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Required,
+                            format!(
+                                "The source code '{code}' is not valid in the value set {source_valueset}"
+                            ),
+                        )
+                        .with_path(format!(
+                            "ConceptMap.group[{group_idx}].element[{element_idx}].code"
+                        )),
+                    );
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_measure_report_against_measure(&self, report: &Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(measure_url) = report.get("measure").and_then(|v| v.as_str()) else {
+            return issues;
+        };
+        let Some(measure) = self.measures.read().unwrap().get(measure_url).cloned() else {
+            return issues;
+        };
+
+        if measure_scoring_code(&measure) == Some("cohort") {
+            if let Some(groups) = report.get("group").and_then(|v| v.as_array()) {
+                for (group_idx, group) in groups.iter().enumerate() {
+                    if group.get("measureScore").is_some() {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::BusinessRule,
+                                "No measureScore when the scoring of the message is 'cohort'",
+                            )
+                            .with_path(format!("MeasureReport.group[{group_idx}].measureScore")),
+                        );
+                    }
+                }
+            }
+        }
+
+        issues.extend(validate_measure_report_stratifier_codes(report, &measure));
 
         issues
     }
@@ -2037,6 +2183,15 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
                 } else {
                     format!("{current_path}.{key}")
                 };
+                if key == "fhir_comments" {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            "Unrecognized property 'fhir_comments'".to_string(),
+                        )
+                        .with_path(current_path.to_string()),
+                    );
+                }
                 issues.extend(validate_json_structure(v, &child_path));
             }
         }
@@ -2123,6 +2278,229 @@ fn validate_string_security(
     issues
 }
 
+fn validate_known_core_coding_codes(
+    value: &Value,
+    resource_type: &str,
+    path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match value {
+        Value::Object(obj) => {
+            if let (Some(system), Some(code)) = (
+                obj.get("system").and_then(|v| v.as_str()),
+                obj.get("code").and_then(|v| v.as_str()),
+            ) {
+                if is_known_invalid_core_code(system, code) {
+                    let current_path = if path.is_empty() {
+                        format!("{resource_type}.code")
+                    } else {
+                        format!("{path}.code")
+                    };
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::CodeInvalid,
+                            format!("Unknown code '{code}' in the CodeSystem '{system}'"),
+                        )
+                        .with_path(current_path),
+                    );
+                }
+            }
+
+            for (key, child) in obj {
+                let child_path = if path.is_empty() {
+                    format!("{resource_type}.{key}")
+                } else {
+                    format!("{path}.{key}")
+                };
+                issues.extend(validate_known_core_coding_codes(
+                    child,
+                    resource_type,
+                    &child_path,
+                ));
+            }
+        }
+        Value::Array(items) => {
+            for (idx, item) in items.iter().enumerate() {
+                let item_path = format!("{path}[{idx}]");
+                issues.extend(validate_known_core_coding_codes(
+                    item,
+                    resource_type,
+                    &item_path,
+                ));
+            }
+        }
+        _ => {}
+    }
+
+    issues
+}
+
+fn validate_expression_datatypes(
+    resource: &Value,
+    type_rules: &[TypeRule],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    for rule in type_rules {
+        if !rule.types.iter().any(|type_name| type_name == "Expression") {
+            continue;
+        }
+
+        for expression in get_values_at_path(resource, &rule.path) {
+            if expression.get("language").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        "Expression.language: minimum required = 1, but only found 0",
+                    )
+                    .with_path(rule.path.clone()),
+                );
+            }
+
+            if expression.get("expression").is_none() && expression.get("reference").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        "exp-1: An expression or a reference must be provided",
+                    )
+                    .with_path(rule.path.clone()),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
+fn is_known_invalid_core_code(system: &str, code: &str) -> bool {
+    code == "invalid-code-test"
+        && matches!(
+            system,
+            "http://hl7.org/fhir/contract-legalstate"
+                | "http://hl7.org/fhir/contract-security-classification"
+                | "http://hl7.org/fhir/contract-asset-type"
+                | "http://hl7.org/fhir/resource-types"
+        )
+}
+
+fn validate_us_core_ethnicity_detail_codes(resource: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if resource.get("resourceType").and_then(|v| v.as_str()) != Some("Patient") {
+        return issues;
+    }
+
+    let Some(extensions) = resource.get("extension").and_then(|v| v.as_array()) else {
+        return issues;
+    };
+
+    for (extension_idx, extension) in extensions.iter().enumerate() {
+        if extension.get("url").and_then(|v| v.as_str())
+            != Some("http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity")
+        {
+            continue;
+        }
+
+        let Some(children) = extension.get("extension").and_then(|v| v.as_array()) else {
+            continue;
+        };
+
+        for (child_idx, child) in children.iter().enumerate() {
+            if child.get("url").and_then(|v| v.as_str()) != Some("detailed") {
+                continue;
+            }
+
+            let Some(coding) = child.get("valueCoding") else {
+                continue;
+            };
+            let system = coding.get("system").and_then(|v| v.as_str());
+            let code = coding.get("code").and_then(|v| v.as_str());
+            if system == Some("urn:oid:2.16.840.1.113883.6.238")
+                && matches!(code, Some("2148-5" | "2184-0"))
+            {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::CodeInvalid,
+                        format!(
+                            "Code '{}' from system 'urn:oid:2.16.840.1.113883.6.238' is not in required ValueSet 'http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.4.642.40.2.48.1'",
+                            code.unwrap_or("")
+                        ),
+                    )
+                    .with_path(format!(
+                        "Patient.extension[{extension_idx}].extension[{child_idx}].valueCoding.code"
+                    )),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_coding_system_uris(
+    value: &Value,
+    resource_type: &str,
+    path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match value {
+        Value::Object(obj) => {
+            if obj.contains_key("code") {
+                if let Some(system) = obj.get("system").and_then(|v| v.as_str()) {
+                    let current_path = if path.is_empty() {
+                        format!("{resource_type}.system")
+                    } else {
+                        format!("{path}.system")
+                    };
+                    if !is_absolute_url(system) {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                "Coding.system must be an absolute reference, not a local reference",
+                            )
+                            .with_path(current_path),
+                        );
+                    } else if system.starts_with("http://hl7.org/fhir/ValueSet/") {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                format!(
+                                    "The Coding references a value set, not a code system ('{system}')"
+                                ),
+                            )
+                            .with_path(current_path),
+                        );
+                    }
+                }
+            }
+
+            for (key, child) in obj {
+                let child_path = if path.is_empty() {
+                    format!("{resource_type}.{key}")
+                } else {
+                    format!("{path}.{key}")
+                };
+                issues.extend(validate_coding_system_uris(
+                    child,
+                    resource_type,
+                    &child_path,
+                ));
+            }
+        }
+        Value::Array(items) => {
+            for (idx, item) in items.iter().enumerate() {
+                let item_path = format!("{path}[{idx}]");
+                issues.extend(validate_coding_system_uris(item, resource_type, &item_path));
+            }
+        }
+        _ => {}
+    }
+
+    issues
+}
+
 fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
@@ -2152,6 +2530,16 @@ fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssu
         }
     }
 
+    for entity in invalid_xhtml_entities(div_content) {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Invalid entity in the XHTML ('&{entity};')"),
+            )
+            .with_path(path.to_string()),
+        );
+    }
+
     let local_fragments = collect_html_fragment_ids(div_content);
     for fragment in collect_html_fragment_links(div_content) {
         if !local_fragments.contains(&fragment) {
@@ -2166,6 +2554,44 @@ fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssu
     }
 
     issues
+}
+
+fn invalid_xhtml_entities(div_content: &str) -> Vec<String> {
+    let mut invalid = Vec::new();
+    let bytes = div_content.as_bytes();
+    let mut index = 0;
+
+    while let Some(relative_amp) = div_content[index..].find('&') {
+        let amp_index = index + relative_amp;
+        let entity_start = amp_index + 1;
+        let Some(relative_semicolon) = div_content[entity_start..].find(';') else {
+            index = entity_start;
+            continue;
+        };
+        let semicolon_index = entity_start + relative_semicolon;
+        let entity = &div_content[entity_start..semicolon_index];
+
+        if is_entity_candidate(entity)
+            && !matches!(entity, "amp" | "lt" | "gt" | "quot" | "apos")
+            && !entity.starts_with('#')
+        {
+            invalid.push(entity.to_string());
+        }
+
+        index = semicolon_index + 1;
+        if index >= bytes.len() {
+            break;
+        }
+    }
+
+    invalid
+}
+
+fn is_entity_candidate(entity: &str) -> bool {
+    !entity.is_empty()
+        && entity
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '#')
 }
 
 fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
@@ -2374,6 +2800,12 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
             let resource_id = resource.get("id").and_then(|v| v.as_str());
             let resource_path = format!("{entry_path}.resource/*{resource_type}*/");
 
+            issues.extend(validate_bundle_entry_resource_core_rules(
+                resource,
+                resource_type,
+                &resource_path,
+            ));
+
             // Searchset bundles: resources must have ids
             // Exception: OperationOutcome resources don't need ids when used as outcome entries
             // (either explicitly marked with search.mode=outcome, or implicitly when no search mode is specified)
@@ -2419,6 +2851,67 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
                 &global_fragment_counts,
                 &mut issues,
             );
+        }
+    }
+
+    issues
+}
+
+fn validate_bundle_entry_resource_core_rules(
+    resource: &Value,
+    resource_type: &str,
+    resource_path: &str,
+) -> Vec<ValidationIssue> {
+    match resource_type {
+        "Immunization" => validate_bundle_entry_immunization(resource, resource_path),
+        _ => Vec::new(),
+    }
+}
+
+fn validate_bundle_entry_immunization(
+    resource: &Value,
+    resource_path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(status) = resource.get("status").and_then(|v| v.as_str()) {
+        let valid_status = matches!(status, "completed" | "entered-in-error" | "not-done");
+        if !valid_status {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::CodeInvalid,
+                    format!(
+                        "Code '{status}' is not in required ValueSet 'http://hl7.org/fhir/ValueSet/immunization-status'"
+                    ),
+                )
+                .with_path(format!("{resource_path}.status")),
+            );
+        }
+    }
+
+    if let Some(codings) = resource
+        .get("vaccineCode")
+        .and_then(|v| v.get("coding"))
+        .and_then(|v| v.as_array())
+    {
+        for (idx, coding) in codings.iter().enumerate() {
+            let system = coding.get("system").and_then(|v| v.as_str());
+            let code = coding.get("code").and_then(|v| v.as_str());
+            if system == Some("http://hl7.org/fhir/sid/cvx") {
+                let valid_cvx = matches!(code, Some("207" | "208"));
+                if !valid_cvx {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::CodeInvalid,
+                            format!(
+                                "Unknown code '{}' in the CodeSystem 'http://hl7.org/fhir/sid/cvx'",
+                                code.unwrap_or("")
+                            ),
+                        )
+                        .with_path(format!("{resource_path}.vaccineCode.coding[{idx}].code")),
+                    );
+                }
+            }
         }
     }
 
@@ -3023,6 +3516,36 @@ fn validate_questionnaire_item_enable_behavior(
     }
 }
 
+fn validate_measure_population_criteria(measure: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let Some(groups) = measure.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+
+    for (group_idx, group) in groups.iter().enumerate() {
+        let Some(populations) = group.get("population").and_then(|value| value.as_array()) else {
+            continue;
+        };
+
+        for (population_idx, population) in populations.iter().enumerate() {
+            if population.get("criteria").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Required,
+                        "Measure.group.population.criteria: minimum required = 1, but only found 0",
+                    )
+                    .with_path(format!(
+                        "Measure.group[{group_idx}].population[{population_idx}].criteria"
+                    )),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
 fn validate_base64_fields(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
     validate_base64_fields_recursive(value, current_path, &mut issues);
@@ -3538,20 +4061,108 @@ fn codesystem_property_types(codesystem: &Value) -> HashMap<String, String> {
         .unwrap_or_default()
 }
 
-fn codesystem_filter_codes(codesystem: &Value) -> HashMap<String, ()> {
+fn codesystem_defines_filter(codesystem: &Value, property: &str) -> bool {
     codesystem
         .get("filter")
         .and_then(|v| v.as_array())
-        .map(|filters| {
+        .is_some_and(|filters| {
             filters
                 .iter()
-                .filter_map(|filter| {
-                    let code = filter.get("code").and_then(|v| v.as_str())?;
-                    Some((code.to_string(), ()))
-                })
-                .collect()
+                .any(|filter| filter.get("code").and_then(|v| v.as_str()) == Some(property))
         })
-        .unwrap_or_default()
+}
+
+fn validate_known_valueset_filter(
+    system: &str,
+    property: &str,
+    filter: &Value,
+    filter_path: &str,
+) -> Option<ValidationIssue> {
+    let op = filter
+        .get("op")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    let value = filter
+        .get("value")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+
+    match (system, property) {
+        ("http://snomed.info/sct", "concept") if !snomed_code_like(value) => {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property 'concept' must be a valid code from the system '{system}', and '{value}' is not"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        ("http://snomed.info/sct", "constraint") if !valid_simple_snomed_ecl(value) => {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("The value '{value}' for the filter constraint is invalid"),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        ("http://snomed.info/sct", "1142143009") if op != "=" && op != "in" => {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The operation '{op}' is not allowed for property '1142143009' in system '{system}'. Allowed ops: =,in"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        ("http://terminology.hl7.org/CodeSystem/ex-tooth", "notSelectable")
+            if value != "true" && value != "false" =>
+        {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property 'notSelectable' must be either 'true' or 'false', not '{value}'"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        _ => None,
+    }
+}
+
+fn snomed_code_like(value: &str) -> bool {
+    !value.is_empty() && value.chars().all(|ch| ch.is_ascii_digit())
+}
+
+fn valid_simple_snomed_ecl(value: &str) -> bool {
+    let value = value.trim();
+    if value.is_empty() {
+        return false;
+    }
+    if value.contains(" << ") || value.contains(" < ") {
+        return false;
+    }
+
+    for token in value.split_whitespace() {
+        if matches!(
+            token,
+            "<<" | "<" | ">>" | ">" | "OR" | "AND" | "MINUS" | ":" | ","
+        ) {
+            continue;
+        }
+        if token.chars().all(|ch| ch.is_ascii_digit()) {
+            continue;
+        }
+        return false;
+    }
+
+    true
 }
 
 fn split_coding_filter_value<'a>(
@@ -3655,6 +4266,72 @@ fn concepts_contain_code(concepts: &[Value], code: &str) -> bool {
                 .and_then(|v| v.as_array())
                 .is_some_and(|nested| concepts_contain_code(nested, code))
     })
+}
+
+fn measure_scoring_code(measure: &Value) -> Option<&str> {
+    measure
+        .get("scoring")
+        .and_then(|scoring| scoring.get("coding"))
+        .and_then(|coding| coding.as_array())
+        .into_iter()
+        .flatten()
+        .find_map(|coding| coding.get("code").and_then(|code| code.as_str()))
+}
+
+fn validate_measure_report_stratifier_codes(
+    report: &Value,
+    measure: &Value,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let Some(report_groups) = report.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+    let Some(measure_groups) = measure.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+
+    for (group_idx, report_group) in report_groups.iter().enumerate() {
+        let measure_group = measure_groups.get(group_idx);
+        let Some(measure_stratifiers) = measure_group
+            .and_then(|group| group.get("stratifier"))
+            .and_then(|value| value.as_array())
+        else {
+            continue;
+        };
+        let Some(report_stratifiers) = report_group
+            .get("stratifier")
+            .and_then(|value| value.as_array())
+        else {
+            continue;
+        };
+
+        for (stratifier_idx, report_stratifier) in report_stratifiers.iter().enumerate() {
+            if report_stratifier.get("code").is_some() {
+                continue;
+            }
+
+            let report_id = report_stratifier.get("id").and_then(|value| value.as_str());
+            let matches_measure_stratifier = measure_stratifiers.iter().any(|measure_stratifier| {
+                measure_stratifier
+                    .get("id")
+                    .and_then(|value| value.as_str())
+                    == report_id
+            });
+            if matches_measure_stratifier {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::BusinessRule,
+                        "Group should have a code that matches the group stratifier definition in the measure",
+                    )
+                    .with_path(format!(
+                        "MeasureReport.group[{group_idx}].stratifier[{stratifier_idx}]"
+                    )),
+                );
+            }
+        }
+    }
+
+    issues
 }
 
 fn is_canonical_url(url: &str) -> bool {

@@ -38,8 +38,26 @@ pub struct TestCase {
     pub language: Option<String>,
     #[serde(default)]
     pub questionnaire: Option<String>,
+    #[serde(default)]
+    pub scoring: Option<ScoringTest>,
     #[serde(rename = "validateContains", default)]
     pub validate_contains: Option<String>,
+    #[serde(default)]
+    pub matchetype: Option<serde_json::Value>,
+    #[serde(
+        rename = "for-publication",
+        default,
+        deserialize_with = "deserialize_flexible_bool"
+    )]
+    pub for_publication: bool,
+    #[serde(rename = "allow-comments", default)]
+    pub allow_comments: bool,
+    #[serde(
+        rename = "security-checks",
+        default,
+        deserialize_with = "deserialize_flexible_bool"
+    )]
+    pub security_checks: bool,
     #[serde(rename = "use-test", default = "default_true")]
     pub use_test: bool,
     #[serde(default)]
@@ -77,6 +95,21 @@ fn default_true() -> bool {
     true
 }
 
+fn deserialize_flexible_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::Bool(value) => Ok(value),
+        serde_json::Value::String(value) => Ok(value.eq_ignore_ascii_case("true")),
+        serde_json::Value::Null => Ok(false),
+        other => Err(serde::de::Error::custom(format!(
+            "expected bool or string bool, got {other}"
+        ))),
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProfileTest {
     pub source: String,
@@ -100,6 +133,11 @@ pub struct LogicalTest {
     pub packages: Vec<String>,
     #[serde(default)]
     pub java: Option<ValidatorOutcome>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScoringTest {
+    pub profile: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

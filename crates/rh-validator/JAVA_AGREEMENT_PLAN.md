@@ -13,15 +13,43 @@ just test-fhir-all
 
 Current agreement from that run:
 
-- No terminology: 331/399 (83.0%)
-- With terminology: 336/399 (84.2%)
+- No terminology: 371/404 (91.8%)
+- With terminology: 376/404 (93.1%)
 
 Current triage artifacts:
 
 - No terminology:
-  `target/conformance-triage/r4-java-mismatches-1782570430-no-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782656381-no-terminology.csv`
 - With terminology:
-  `target/conformance-triage/r4-java-mismatches-1782570600-with-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782656762-with-terminology.csv`
+
+## Gap Closure Opportunities
+
+Highest-leverage remaining work, in recommended order:
+
+1. Measure / MeasureReport invariants. Rows include `mr-covid-m`,
+   `mr-covid-m2`, `mr-covid-m3`, `mr-covid-m5`, `mr-covid-mr1`, and
+   `measure-report-ihe`. These likely share missing FHIRPath support,
+   invariant extraction, or resource-context behavior, so one fix may close
+   several rows.
+2. Reference/profile package resolution. Rows include
+   `practitioner-role-example`, `dr-eh`, `obs-hgvs-bad`, `obs-vs-1`,
+   `obs-vs-2`, and `obs-temp-bad`. Current RH output often warns that a
+   profile is not found while Java applies the profile and rejects the
+   instance.
+3. QuestionnaireResponse async/value-set validation. Rows include
+   `choice-async-qr`, `choice-gender-coding-async-qr`,
+   `open-choice-gender-coding-async-qr`, `quantity-min-max-qr`,
+   `quantity-units-not-in-value-set-qr`, and
+   `nested-questionnaire-nested-valueset`. These should be handled as a
+   contained questionnaire lookup and answer-validation subsystem pass.
+4. StructureDefinition invariant/profile rules. Rows include `obs-mz`,
+   `StructureDefinition-Slice23`, `ext-derived`, `ext-derived-circle`, `ai5`,
+   and `ai6`. Several currently surface failed `sdf-*` invariant evaluation as
+   warnings rather than Java-invalid errors.
+5. Profile slicing. Remaining rows are `patient-ig-bad` and
+   `sdoh-type-slice`; keep these after the broader invariant/reference work
+   unless a targeted discriminator rule becomes obvious.
 
 ## Steps
 
@@ -141,35 +169,97 @@ Completed:
     `res-inv-example-good`, `matchetype-extension-1`, and
     `matchetype-extension-2`. Targeted `matchetype` module agreement is now
     45/46 and targeted `profile` module agreement is now 45/49.
+17. Continue validation-resource with terminology-definition edge cases:
+    - Validate known ValueSet filter values for SNOMED `concept`,
+      SNOMED `constraint`, SNOMED property `1142143009`, and example tooth
+      `notSelectable`, while preserving CodeSystem-defined custom filters.
+    - Honor manifest `matchetype` metadata in the conformance runner so
+      `matchetype-pattern-1` remains valid and `matchetype-pattern-2` is
+      invalid.
+    - Honor manifest `for-publication` metadata in the conformance runner for
+      the HL7 CodeSystem workgroup rule, keeping `cs-narrative-status` valid
+      outside publication mode and `cs-narrative-status-pub` invalid.
+    Targeted `matchetype` module agreement is now 46/46, and targeted `tx`
+    still preserves the known ValueSet/filter/CodeSystem fixes.
+18. Resolve the `json-parser` conformance bucket in the test harness only:
+    accept UTF-8 BOM input for `shc-bundle`, honor manifest `allow-comments`
+    for `json-comments-1-yes` and `json-comments-2-yes`, and recover the Java
+    parser's bad-close fixtures for `bad-json-close*`. Normal validator/CLI
+    JSON parsing remains strict. Targeted `json5` agreement is now 8/8, and
+    the relevant `fmt`/`shc` rows now agree with Java.
+19. Continue `other` with the isolated SHC rows by validating selected nested
+    `Bundle.entry.resource` Immunization base rules: invalid
+    `Immunization.status` codes and unsupported CVX vaccine code `209`.
+    Targeted `shc` module agreement is now 5/5.
+20. Resolve the remaining isolated `other` and parser/manifest rows:
+    - Honor manifest `security-checks` so `pat-security-bad-string` agrees
+      with Java.
+    - Reject invalid named XHTML entities and R4 `fhir_comments`, bringing
+      targeted `fmt` agreement to 8/8.
+    - Enforce composite SearchParameter components, bringing targeted `api`
+      agreement to 5/5.
+    - Validate ConceptMap source codes against resolvable source ValueSets
+      while isolating local supporting resources so `cm` is invalid and `cm2`
+      remains valid.
+    - Reject selected invalid core Contract coding values, fixing
+      `contract-binding-test`.
+    - Honor manifest `scoring.profile` and validate US Core ethnicity
+      `detailed` codings against the required detailed ethnicity ValueSet,
+      fixing `scoring-test`.
+    Full rerun agreement is now 365/404 without terminology and 369/404 with
+    terminology. The current with-terminology triage has no `other`,
+    `extension`, `json-parser`, or `terminology` buckets.
+21. Start the highest-leverage Measure / MeasureReport pass:
+    - Validate `Expression` datatype cardinality and `exp-1` for paths typed
+      as `Expression`, fixing `mr-covid-m`.
+    - Enforce `Measure.group.population.criteria` per population, fixing
+      `mr-covid-m3`.
+    - Reject non-absolute `Coding.system` values and obvious ValueSet URLs used
+      as Coding systems, fixing `mr-covid-m5`.
+    - Register supporting Measure resources in the conformance runner and
+      validate MeasureReport cohort `measureScore`, fixing `mr-covid-mr1`.
+    - Validate MeasureReport stratifier codes against supporting Measure
+      stratifier definitions, fixing `measure-report-ihe`.
+    Targeted `measure` module agreement improved to 6/7 in the standard
+    module run. The remaining row is `mr-covid-m2`, whose Java failure is a
+    terminology display error for SNOMED `840535000`; mock terminology now
+    includes that code for the next terminology-enabled full/module run.
+22. Re-run full R4 conformance after the Measure / MeasureReport pass.
+    Agreement improved to 371/404 without terminology and 376/404 with
+    terminology. Current triage artifacts:
+    `target/conformance-triage/r4-java-mismatches-1782656381-no-terminology.csv`
+    and
+    `target/conformance-triage/r4-java-mismatches-1782656762-with-terminology.csv`.
+    Current mismatch counts are:
+    - No terminology (33): invariant 8, validation-resource 7,
+      reference-bundle-contained 9, questionnaire-response 6, profile-slicing
+      2, terminology 1.
+    - With terminology (28): reference-bundle-contained 9,
+      questionnaire-response 6, validation-resource 6, invariant 5,
+      profile-slicing 2.
 
 Next:
 
-17. `validation-resource` false negatives. Remaining examples include
-    Measure/MeasureReport resource rules (`mr-covid-m5`,
-    `measure-report-ihe`), StructureDefinition invariants or
-    differential/snapshot rules (`obs-mz`, `ai5`, `ai6`,
-    `StructureDefinition-Slice23`, `ext-derived`, `ext-derived-circle`),
-    ValueSet/ECL/property rules (`vs-bad-props`, `vs-bad-ecl`,
-    `vs-bad-ecl-us`), CodeSystem metadata/status (`cs-narrative-status-pub`),
-    and match-type pattern behavior (`matchetype-pattern-2`). Suggested first
-    task: inspect Java outcome and pattern resources for
-    `matchetype-pattern-2`, because it is isolated and visible in the
-    `matchetype` module.
-18. `invariant` false negatives. Remaining examples are largely
-    Measure/MeasureReport invariants (`mr-covid-m`, `mr-covid-m2`,
-    `mr-covid-m3`, `mr-covid-mr1`, `measure-report-ihe`), narrative/comment
-    and security-adjacent invariants (`bad-markdown-no-html`, `comments-4`,
-    `ai3`, `ai4`, `obs-temp-code2`), plus `supplement-1a`. Suggested first
-    task: pick one Measure/MeasureReport invariant and determine whether the
-    FHIRPath expression is unsupported or the resource graph context is wrong.
-19. `reference-bundle-contained` remaining mismatches. Targeted references
+23. `validation-resource` false negatives. Remaining examples now exclude the
+    completed Measure/MeasureReport rows from item 21. Focus next on
+    StructureDefinition invariants or differential/snapshot rules (`obs-mz`,
+    `ai5`, `ai6`,
+    `StructureDefinition-Slice23`, `ext-derived`, `ext-derived-circle`).
+24. `invariant` false negatives. Remaining examples are
+    narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
+    `ai4`, `obs-temp-code2`) plus `supplement-1a`.
+25. `reference-bundle-contained` remaining mismatches. Targeted references
     module now has one Java mismatch: `dr-eh` is Java-invalid/RH-valid due to
-    unresolved US Core DocumentReference profile/reference behavior. Other
-    remaining full-suite rows likely overlap validation-resource and
-    terminology resolution. Suggested first task: inspect Java outcome for
-    `dr-eh` and decide whether this is missing profile package loading,
-    reference target profile validation, or DocumentReference-specific rules.
-20. `questionnaire-response` remaining mismatches. Contained dom-3 false
+    unresolved US Core DocumentReference profile/reference behavior. Full-suite
+    rows include unresolved external/profile package cases
+    (`practitioner-role-example`, `dr-eh`, `obs-temp-bad`, `obs-hgvs-bad`,
+    `obs-vs-1`, `obs-vs-2`), Bundle/reference behavior
+    (`dr-example-org`, `bundle-conformsto`, `res-inv-example-bad`), and likely
+    overlap with validation-resource or terminology resolution. Suggested first
+    task: inspect Java outcome for `dr-eh` and decide whether this is missing
+    profile package loading, reference target profile validation, or
+    DocumentReference-specific rules.
+26. `questionnaire-response` remaining mismatches. Contained dom-3 false
     positives are resolved; remaining mismatches are unresolved
     async/value-set/quantity validation: `choice-async-qr`,
     `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
@@ -177,23 +267,15 @@ Next:
     `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
     the referenced Questionnaire/ValueSet for one async choice case and verify
     whether failure is terminology expansion or questionnaire lookup.
-21. `extension` follow-up. The remaining `res-inv-example-bad` profile-module
-    mismatch is no longer an unknown-extension issue; the first fatal issue is
-    now unresolved reference `Endpoint/examplelabsXX` inside a profile
-    invariant. Treat this as reference/invariant work, not extension loading.
-22. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+27. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-23. `json-parser` false positives (6): `shc-bundle`, `json-comments-1-yes`,
-    `json-comments-2-yes`, `bad-json-close`, `bad-json-close-2`,
-    `bad-json-close-3`. Add a conformance-only lenient JSON parser mode only in
-    the test harness; do not relax normal CLI validation.
-24. `other` false negatives (7): `pat-security-bad-string`, `shc-bad-1`,
-    `shc-cvx`, `cm`, `sp-composite`, `contract-binding-test`, `scoring-test`.
-    Leave these as last-resort investigation buckets unless one maps cleanly to
-    an existing validator subsystem.
-25. After each small task, run the relevant `just test-fhir-module <module>`,
+28. The former `extension` follow-up, `res-inv-example-bad`, is categorized
+    under reference-bundle-contained in the current triage. The first fatal
+    issue is unresolved reference `Endpoint/examplelabsXX` inside a profile
+    invariant. Treat this as reference/invariant work, not extension loading.
+29. After each small task, run the relevant `just test-fhir-module <module>`,
     then `just check`, commit, and only then run `just test-fhir-all` when a
     full category slice is complete or the behavior could affect multiple
     modules.

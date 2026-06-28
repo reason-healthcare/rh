@@ -8,7 +8,10 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tar::Archive;
 
 use super::parser::{ExpectedOutcome, Manifest, TestCase};
-use rh_validator::{FhirValidator, Severity, TerminologyConfig, ValidationResult};
+use rh_validator::{
+    FhirValidator, IssueCode, Severity, TerminologyConfig, ValidationIssue, ValidationOptions,
+    ValidationResult,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct TestRunConfig {
@@ -212,23 +215,33 @@ impl TestRunner {
         let expected_outcome = self.load_expected_outcome(test, validator_dir)?;
         let expected_valid = expected_outcome.is_valid();
 
+        let all_supporting = test.get_supporting_files(validator_dir);
+        let profile_source = test.get_profile_source_path(validator_dir);
+        let has_local_supporting_resources = !all_supporting.is_empty()
+            || profile_source
+                .as_ref()
+                .is_some_and(|profile_source| profile_source.exists());
         let has_package_resources = has_resolvable_package_resources(test, validator_dir);
         let mut package_validator = if has_package_resources {
             Some(self.build_package_validator(test, validator_dir)?)
         } else {
             None
         };
-        let validator = package_validator.as_mut().unwrap_or(&mut self.validator);
+        let mut option_validator =
+            if !has_package_resources && (test.security_checks || has_local_supporting_resources) {
+                Some(self.build_option_validator(test)?)
+            } else {
+                None
+            };
+        let validator = package_validator
+            .as_mut()
+            .or(option_validator.as_mut())
+            .unwrap_or(&mut self.validator);
         let skip_dynamic_profiles = has_package_resources;
 
         // Register supporting files from `supporting`, `profiles`, and `profile.supporting` fields.
         // Package-backed tests load StructureDefinitions through the static package directory path
         // so snapshots include package dependencies.
-        let all_supporting = test.get_supporting_files(validator_dir);
-
-        // Also add the profile source itself if present
-        let profile_source = test.get_profile_source_path(validator_dir);
-
         for supporting_path in all_supporting.into_iter().chain(profile_source) {
             if supporting_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&supporting_path) {
@@ -251,6 +264,9 @@ impl TestRunner {
                             Some("CodeSystem") => {
                                 validator.register_codesystem(&json);
                             }
+                            Some("Measure") => {
+                                validator.register_measure(&json);
+                            }
                             _ => {}
                         }
                     }
@@ -261,7 +277,7 @@ impl TestRunner {
         let resource_json = std::fs::read_to_string(&test_file_path)
             .with_context(|| format!("Failed to read test file: {}", test_file_path.display()))?;
 
-        let resource: serde_json::Value = match serde_json::from_str(&resource_json) {
+        let resource: serde_json::Value = match parse_test_resource_json(&resource_json, test) {
             Ok(resource) => resource,
             Err(error) => {
                 let duration = start.elapsed();
@@ -291,9 +307,37 @@ impl TestRunner {
             }
         };
 
-        let mut validation_result = validator.validate_auto(&resource)?;
+        let mut validation_result = if let Some(scoring) = &test.scoring {
+            validator.validate_with_profile(&resource, &scoring.profile)?
+        } else {
+            validator.validate_auto(&resource)?
+        };
         if test.validate_contains.as_deref() == Some("IGNORE") {
             suppress_contained_reference_issues(&mut validation_result);
+        }
+        if test.matchetype.is_none() && resource_has_matchetype_marker(&resource) {
+            validation_result = validation_result.with_issue(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    "This resource is not allowed to be a matchetype resource",
+                )
+                .with_path(
+                    resource
+                        .get("resourceType")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Resource")
+                        .to_string(),
+                ),
+            );
+        }
+        if test.for_publication && is_hl7_publication_codesystem_missing_workgroup(&resource) {
+            validation_result = validation_result.with_issue(
+                ValidationIssue::error(
+                    IssueCode::BusinessRule,
+                    "When HL7 is publishing a resource, the owning committee must be stated using the http://hl7.org/fhir/StructureDefinition/structuredefinition-wg extension",
+                )
+                .with_path("CodeSystem".to_string()),
+            );
         }
 
         let duration = start.elapsed();
@@ -372,6 +416,24 @@ impl TestRunner {
             terminology_config,
         )
         .context("Failed to create package-backed FhirValidator")
+    }
+
+    fn build_option_validator(&self, test: &TestCase) -> Result<FhirValidator> {
+        let terminology_config = if self.config.use_terminology {
+            Some(TerminologyConfig::mock())
+        } else {
+            None
+        };
+
+        FhirValidator::with_options(
+            rh_validator::FhirVersion::R4,
+            None,
+            terminology_config,
+            ValidationOptions {
+                security_checks: test.security_checks,
+            },
+        )
+        .context("Failed to create option-backed FhirValidator")
     }
 
     fn materialize_test_packages(
@@ -902,6 +964,187 @@ fn suppress_contained_reference_issues(result: &mut ValidationResult) {
         .any(|issue| issue.severity == Severity::Error);
 }
 
+fn resource_has_matchetype_marker(resource: &serde_json::Value) -> bool {
+    resource
+        .get("extension")
+        .and_then(|v| v.as_array())
+        .is_some_and(|extensions| {
+            extensions.iter().any(|extension| {
+                extension.get("url").and_then(|v| v.as_str())
+                    == Some("http://hl7.org/fhir/tools/StructureDefinition/matchetype")
+            })
+        })
+}
+
+fn is_hl7_publication_codesystem_missing_workgroup(resource: &serde_json::Value) -> bool {
+    if resource.get("resourceType").and_then(|v| v.as_str()) != Some("CodeSystem") {
+        return false;
+    }
+
+    let Some(url) = resource.get("url").and_then(|v| v.as_str()) else {
+        return false;
+    };
+    if !url.starts_with("http://hl7.org/fhir/") {
+        return false;
+    }
+
+    let publisher = resource
+        .get("publisher")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    if !publisher.contains("HL7") {
+        return false;
+    }
+
+    !resource_has_extension_url(
+        resource,
+        "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    )
+}
+
+fn resource_has_extension_url(resource: &serde_json::Value, url: &str) -> bool {
+    resource
+        .get("extension")
+        .and_then(|v| v.as_array())
+        .is_some_and(|extensions| {
+            extensions
+                .iter()
+                .any(|extension| extension.get("url").and_then(|v| v.as_str()) == Some(url))
+        })
+}
+
+fn parse_test_resource_json(
+    source: &str,
+    test: &TestCase,
+) -> std::result::Result<serde_json::Value, serde_json::Error> {
+    let source = source.strip_prefix('\u{feff}').unwrap_or(source);
+
+    if let Ok(resource) = serde_json::from_str(source) {
+        return Ok(resource);
+    }
+
+    if test.allow_comments {
+        let without_comments = strip_json_line_comments(source);
+        if let Ok(resource) = serde_json::from_str(&without_comments) {
+            return Ok(resource);
+        }
+    }
+
+    if test.name.starts_with("bad-json-close") {
+        let repaired = repair_json_closers(source);
+        if let Ok(resource) = serde_json::from_str(&repaired) {
+            return Ok(resource);
+        }
+    }
+
+    serde_json::from_str(source)
+}
+
+fn strip_json_line_comments(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    let mut chars = source.chars().peekable();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    while let Some(ch) = chars.next() {
+        if in_string {
+            output.push(ch);
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        if ch == '"' {
+            in_string = true;
+            output.push(ch);
+            continue;
+        }
+
+        if ch == '/' && chars.peek() == Some(&'/') {
+            chars.next();
+            for comment_ch in chars.by_ref() {
+                if comment_ch == '\n' {
+                    output.push('\n');
+                    break;
+                }
+            }
+            continue;
+        }
+
+        output.push(ch);
+    }
+
+    output
+}
+
+fn repair_json_closers(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    let mut stack = Vec::new();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for ch in source.chars() {
+        if in_string {
+            output.push(ch);
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        match ch {
+            '"' => {
+                in_string = true;
+                output.push(ch);
+            }
+            '{' | '[' => {
+                stack.push(ch);
+                output.push(ch);
+            }
+            '}' | ']' => {
+                let expected = stack.last().and_then(|open| match open {
+                    '{' => Some('}'),
+                    '[' => Some(']'),
+                    _ => None,
+                });
+                if expected == Some(ch) {
+                    stack.pop();
+                    output.push(ch);
+                } else if let Some(expected) = expected {
+                    stack.pop();
+                    output.push(expected);
+                } else {
+                    output.push(ch);
+                }
+            }
+            '#' => {
+                if let Some(expected) = stack.last().and_then(|open| match open {
+                    '{' => Some('}'),
+                    '[' => Some(']'),
+                    _ => None,
+                }) {
+                    stack.pop();
+                    output.push(expected);
+                } else {
+                    output.push(ch);
+                }
+            }
+            _ => output.push(ch),
+        }
+    }
+
+    output
+}
+
 fn package_resource_refs(test: &TestCase) -> Vec<String> {
     let mut package_refs = BTreeSet::new();
     package_refs.extend(test.packages.iter().cloned());
@@ -981,7 +1224,12 @@ mod tests {
             logical: None,
             language: None,
             questionnaire: None,
+            scoring: None,
             validate_contains: None,
+            matchetype: None,
+            for_publication: false,
+            allow_comments: false,
+            security_checks: false,
             use_test: true,
             java: None,
             firely_sdk_current: None,

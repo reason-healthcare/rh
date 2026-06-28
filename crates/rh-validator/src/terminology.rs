@@ -314,6 +314,21 @@ impl MockTerminologyService {
             "Diastolic blood pressure",
         );
         self.add_code("http://snomed.info/sct", "386661006", "Fever");
+        self.add_code_with_designations(
+            "http://snomed.info/sct",
+            "840535000",
+            "Antibody to severe acute respiratory syndrome coronavirus 2",
+            vec![
+                ("en-US", "Antibody to Wuhan coronavirus"),
+                ("en-US", "Antibody to 2019 novel coronavirus"),
+                ("en-US", "Antibody to 2019-nCoV"),
+                ("en-US", "Antibody to SARS-CoV-2"),
+                (
+                    "en-US",
+                    "Severe acute respiratory syndrome coronavirus 2 antibody",
+                ),
+            ],
+        );
 
         // V3 Role codes
         self.add_code(

@@ -45,6 +45,53 @@ fn security_checks_enabled_reports_error() {
 }
 
 #[test]
+fn narrative_rejects_invalid_named_xhtml_entity() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let encounter = json!({
+        "resourceType": "Encounter",
+        "id": "example",
+        "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CPT&reg;</p></div>"
+        },
+        "status": "finished",
+        "class": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+            "code": "AMB"
+        }
+    });
+
+    let result = validator.validate(&encounter).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains("Invalid entity in the XHTML ('&reg;')")
+            && i.path.as_deref() == Some("Encounter.text.div")
+    }));
+}
+
+#[test]
+fn r4_rejects_fhir_comments_property() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "id": "example",
+        "fhir_comments": ["legacy comment"]
+    });
+
+    let result = validator.validate(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("Unrecognized property 'fhir_comments'")
+            && i.path.as_deref() == Some("Patient")
+    }));
+}
+
+#[test]
 fn document_bundle_duplicate_fullurl_is_reported() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
@@ -349,6 +396,81 @@ fn bundle_duplicate_resource_identity_is_reported() {
     assert!(result.issues.iter().any(|i| {
         i.path.as_deref() == Some("Bundle.entry[0].resource.id")
             || i.path.as_deref() == Some("Bundle.entry[1].resource.id")
+    }));
+}
+
+#[test]
+fn bundle_entry_immunization_rejects_invalid_status() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [
+            {
+                "fullUrl": "resource:1",
+                "resource": {
+                    "resourceType": "Immunization",
+                    "status": "Completed",
+                    "vaccineCode": {
+                        "coding": [
+                            {
+                                "system": "https://www.humanservices.gov.au/organisations/health-professionals/enablers/air-vaccine-code-formats",
+                                "code": "COVAST"
+                            }
+                        ]
+                    },
+                    "patient": { "reference": "resource:0" },
+                    "occurrenceDateTime": "2021-05-12"
+                }
+            }
+        ]
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.path.as_deref() == Some("Bundle.entry[0].resource/*Immunization*/.status")
+    }));
+}
+
+#[test]
+fn bundle_entry_immunization_rejects_unsupported_cvx_code() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [
+            {
+                "fullUrl": "resource:1",
+                "resource": {
+                    "resourceType": "Immunization",
+                    "status": "completed",
+                    "vaccineCode": {
+                        "coding": [
+                            {
+                                "system": "http://hl7.org/fhir/sid/cvx",
+                                "code": "209"
+                            }
+                        ]
+                    },
+                    "patient": { "reference": "resource:0" },
+                    "occurrenceDateTime": "2021-05-12"
+                }
+            }
+        ]
+    });
+
+    let result = validator.validate(&bundle).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.path.as_deref()
+                == Some("Bundle.entry[0].resource/*Immunization*/.vaccineCode.coding[0].code")
     }));
 }
 
@@ -1237,6 +1359,430 @@ fn valueset_parameter_expression_requires_fhirpath_language() {
 }
 
 #[test]
+fn valueset_rejects_invalid_known_filter_values() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/bad-filter-values",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://snomed.info/sct",
+                    "filter": [
+                        { "property": "concept", "op": "is-a", "value": "something" },
+                        { "property": "1142143009", "op": "not-in", "value": "734137005" },
+                        { "property": "constraint", "op": "=", "value": "234234 << 234234" }
+                    ]
+                },
+                {
+                    "system": "http://terminology.hl7.org/CodeSystem/ex-tooth",
+                    "filter": [
+                        { "property": "notSelectable", "op": "=", "value": "1" }
+                    ]
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&valueset).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("property 'concept' must be a valid code")
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].filter[0]")
+    }));
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("operation 'not-in' is not allowed for property '1142143009'")
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].filter[1]")
+    }));
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("value '234234 << 234234' for the filter constraint is invalid")
+            && i.path.as_deref() == Some("ValueSet.compose.include[0].filter[2]")
+    }));
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message
+                .contains("property 'notSelectable' must be either 'true' or 'false'")
+            && i.path.as_deref() == Some("ValueSet.compose.include[1].filter[0]")
+    }));
+}
+
+#[test]
+fn conceptmap_source_code_must_be_in_source_valueset_when_resolved() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let valueset = json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/ValueSet/source",
+        "status": "active",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://example.org/CodeSystem/source",
+                    "concept": [
+                        { "code": "pharm" },
+                        { "code": "vac" }
+                    ]
+                }
+            ]
+        }
+    });
+    validator.register_valueset(&valueset);
+
+    let conceptmap = json!({
+        "resourceType": "ConceptMap",
+        "url": "http://example.org/ConceptMap/example",
+        "status": "active",
+        "sourceCanonical": "http://example.org/ValueSet/source",
+        "targetCanonical": "http://example.org/ValueSet/target",
+        "group": [
+            {
+                "source": "http://example.org/CodeSystem/source",
+                "target": "http://snomed.info/sct",
+                "element": [
+                    {
+                        "code": "med",
+                        "target": [
+                            {
+                                "code": "264358009",
+                                "equivalence": "equivalent"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate(&conceptmap).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Required
+            && i.message
+                .contains("The source code 'med' is not valid in the value set")
+            && i.path.as_deref() == Some("ConceptMap.group[0].element[0].code")
+    }));
+}
+
+#[test]
+fn contract_known_core_coding_codes_reject_invalid_code() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let contract = json!({
+        "resourceType": "Contract",
+        "legalState": {
+            "coding": [
+                {
+                    "system": "http://hl7.org/fhir/contract-legalstate",
+                    "code": "invalid-code-test"
+                }
+            ]
+        }
+    });
+
+    let result = validator.validate(&contract).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.message.contains("Unknown code 'invalid-code-test'")
+            && i.path.as_deref() == Some("Contract.legalState.coding[0].code")
+    }));
+}
+
+#[test]
+fn us_core_ethnicity_detailed_rejects_codes_outside_required_valueset() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "extension": [{
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+            "extension": [{
+                "url": "detailed",
+                "valueCoding": {
+                    "system": "urn:oid:2.16.840.1.113883.6.238",
+                    "code": "2184-0"
+                }
+            }]
+        }]
+    });
+
+    let result = validator.validate(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.message.contains("is not in required ValueSet")
+            && i.path.as_deref() == Some("Patient.extension[0].extension[0].valueCoding.code")
+    }));
+}
+
+#[test]
+fn expression_datatype_requires_language_and_expression_or_reference() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let measure = json!({
+        "resourceType": "Measure",
+        "url": "http://example.org/Measure/example",
+        "status": "draft",
+        "group": [{
+            "population": [{
+                "criteria": {
+                    "description": "Missing language and expression"
+                }
+            }]
+        }]
+    });
+
+    let result = validator.validate_auto(&measure).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("Expression.language")
+            && i.path.as_deref() == Some("Measure.group.population.criteria")
+    }));
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invariant
+            && i.message.contains("exp-1")
+            && i.path.as_deref() == Some("Measure.group.population.criteria")
+    }));
+}
+
+#[test]
+fn measure_population_requires_criteria_per_population() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let measure = json!({
+        "resourceType": "Measure",
+        "url": "http://example.org/Measure/example",
+        "status": "draft",
+        "group": [{
+            "population": [
+                {
+                    "code": {
+                        "coding": [{
+                            "system": "http://terminology.hl7.org/CodeSystem/measure-population",
+                            "code": "initial-population"
+                        }]
+                    }
+                },
+                {
+                    "criteria": {
+                        "language": "text/cql",
+                        "expression": "Initial Population"
+                    }
+                }
+            ]
+        }]
+    });
+
+    let result = validator.validate_auto(&measure).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Required
+            && i.message.contains("Measure.group.population.criteria")
+            && i.path.as_deref() == Some("Measure.group[0].population[0].criteria")
+    }));
+}
+
+#[test]
+fn coding_system_must_be_absolute_codesystem_uri() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let measure = json!({
+        "resourceType": "Measure",
+        "url": "http://example.org/Measure/example",
+        "status": "draft",
+        "subjectCodeableConcept": {
+            "coding": [{
+                "system": "Location1",
+                "code": "Location"
+            }]
+        },
+        "type": [{
+            "coding": [{
+                "system": "http://hl7.org/fhir/ValueSet/measure-type",
+                "code": "structure"
+            }]
+        }]
+    });
+
+    let result = validator.validate_auto(&measure).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message.contains("absolute reference")
+            && i.path.as_deref() == Some("Measure.subjectCodeableConcept.coding[0].system")
+    }));
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message.contains("value set, not a code system")
+            && i.path.as_deref() == Some("Measure.type[0].coding[0].system")
+    }));
+}
+
+#[test]
+fn cohort_measure_report_must_not_have_group_measure_score() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_measure(&json!({
+        "resourceType": "Measure",
+        "url": "http://example.org/Measure/cohort",
+        "status": "draft",
+        "scoring": {
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+                "code": "cohort"
+            }]
+        }
+    }));
+
+    let report = json!({
+        "resourceType": "MeasureReport",
+        "status": "complete",
+        "type": "summary",
+        "measure": "http://example.org/Measure/cohort",
+        "period": {
+            "start": "2026-01-01",
+            "end": "2026-01-31"
+        },
+        "group": [{
+            "measureScore": {
+                "value": 1
+            }
+        }]
+    });
+
+    let result = validator.validate_auto(&report).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::BusinessRule
+            && i.message.contains("No measureScore")
+            && i.path.as_deref() == Some("MeasureReport.group[0].measureScore")
+    }));
+}
+
+#[test]
+fn measure_report_stratifier_must_have_matching_measure_code() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_measure(&json!({
+        "resourceType": "Measure",
+        "url": "http://example.org/Measure/stratified",
+        "status": "draft",
+        "group": [{
+            "stratifier": [{
+                "id": "stratifier-1",
+                "component": [{
+                    "code": {
+                        "coding": [{
+                            "system": "http://example.org/CodeSystem/measure-codes",
+                            "code": "ageGroup"
+                        }]
+                    },
+                    "criteria": {
+                        "language": "text/cql",
+                        "expression": "Age Group"
+                    }
+                }]
+            }]
+        }]
+    }));
+
+    let report = json!({
+        "resourceType": "MeasureReport",
+        "status": "complete",
+        "type": "summary",
+        "measure": "http://example.org/Measure/stratified",
+        "period": {
+            "start": "2026-01-01",
+            "end": "2026-01-31"
+        },
+        "group": [{
+            "stratifier": [{
+                "id": "stratifier-1",
+                "stratum": []
+            }]
+        }]
+    });
+
+    let result = validator.validate_auto(&report).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::BusinessRule
+            && i.message
+                .contains("matches the group stratifier definition")
+            && i.path.as_deref() == Some("MeasureReport.group[0].stratifier[0]")
+    }));
+}
+
+#[test]
+fn hl7_published_codesystem_does_not_require_workgroup_without_publication_mode() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let codesystem = json!({
+        "resourceType": "CodeSystem",
+        "url": "http://hl7.org/fhir/example-status",
+        "status": "active",
+        "publisher": "HL7 (FHIR Project)",
+        "content": "complete",
+        "concept": [
+            { "code": "example" }
+        ]
+    });
+
+    let result = validator.validate(&codesystem).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error && i.message.contains("owning committee must be stated")
+    }));
+}
+
+#[test]
+fn hl7_published_codesystem_accepts_workgroup_extension() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let codesystem = json!({
+        "resourceType": "CodeSystem",
+        "url": "http://hl7.org/fhir/example-status",
+        "status": "active",
+        "publisher": "HL7 (FHIR Project)",
+        "content": "complete",
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+                "valueCode": "fhir"
+            }
+        ],
+        "concept": [
+            { "code": "example" }
+        ]
+    });
+
+    let result = validator.validate(&codesystem).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error && i.message.contains("owning committee must be stated")
+    }));
+}
+
+#[test]
 fn search_parameter_derived_from_checks_type_and_base() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
@@ -1262,6 +1808,30 @@ fn search_parameter_derived_from_checks_type_and_base() {
         i.severity == Severity::Error
             && i.message
                 .contains("The resource type Patient is not listed as a base")
+            && i.path.as_deref() == Some("SearchParameter")
+    }));
+}
+
+#[test]
+fn composite_search_parameter_requires_two_components() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let search_parameter = json!({
+        "resourceType": "SearchParameter",
+        "url": "http://example.org/SearchParameter/documentreference-relationship",
+        "status": "active",
+        "code": "relationship",
+        "base": ["DocumentReference"],
+        "type": "composite",
+        "expression": "DocumentReference.relatesTo"
+    });
+
+    let result = validator.validate(&search_parameter).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::BusinessRule
+            && i.message.contains("must define two or more components")
             && i.path.as_deref() == Some("SearchParameter")
     }));
 }

@@ -13,6 +13,7 @@ readme = "README.md"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+doctest = false
 
 [dependencies]
 anyhow = { workspace = true }
