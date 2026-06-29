@@ -372,12 +372,6 @@ impl FhirValidator {
             }
         }
 
-        if resource_type_name == "Observation" {
-            for issue in validate_observation_blood_pressure_magic_code(resource) {
-                result = result.with_issue(issue);
-            }
-        }
-
         if resource_type_name == "Measure" {
             for issue in validate_measure_population_criteria(resource) {
                 result = result.with_issue(issue);
@@ -429,7 +423,7 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
-        let known_code_issues = validate_known_core_coding_codes(resource, resource_type_name, "");
+        let known_code_issues = self.validate_known_coding_codes(resource, resource_type_name, "");
         for issue in known_code_issues {
             result = result.with_issue(issue);
         }
@@ -1829,6 +1823,76 @@ impl FhirValidator {
         Some(concepts_contain_code(concepts, code))
     }
 
+    fn codesystem_contains_code(&self, system: &str, code: &str) -> Option<bool> {
+        if let Some(contains_code) = self.registered_codesystem_contains_code(system, code) {
+            return Some(contains_code);
+        }
+
+        self.valueset_loader
+            .codesystem_contains_code(system, code)
+            .ok()
+            .flatten()
+    }
+
+    fn validate_known_coding_codes(
+        &self,
+        value: &Value,
+        resource_type: &str,
+        path: &str,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+
+        match value {
+            Value::Object(obj) => {
+                if let (Some(system), Some(code)) = (
+                    obj.get("system").and_then(|v| v.as_str()),
+                    obj.get("code").and_then(|v| v.as_str()),
+                ) {
+                    if self.codesystem_contains_code(system, code) == Some(false) {
+                        let current_path = if path.is_empty() {
+                            format!("{resource_type}.code")
+                        } else {
+                            format!("{path}.code")
+                        };
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::CodeInvalid,
+                                format!("Unknown code '{code}' in the CodeSystem '{system}'"),
+                            )
+                            .with_path(current_path),
+                        );
+                    }
+                }
+
+                for (key, child) in obj {
+                    let child_path = if path.is_empty() {
+                        format!("{resource_type}.{key}")
+                    } else {
+                        format!("{path}.{key}")
+                    };
+                    issues.extend(self.validate_known_coding_codes(
+                        child,
+                        resource_type,
+                        &child_path,
+                    ));
+                }
+            }
+            Value::Array(items) => {
+                for (idx, item) in items.iter().enumerate() {
+                    let item_path = format!("{path}[{idx}]");
+                    issues.extend(self.validate_known_coding_codes(
+                        item,
+                        resource_type,
+                        &item_path,
+                    ));
+                }
+            }
+            _ => {}
+        }
+
+        issues
+    }
+
     pub fn cache_stats(&self) -> ((usize, usize), (usize, usize)) {
         (
             self.profile_registry.cache_stats(),
@@ -2499,96 +2563,6 @@ fn validate_string_security(
     issues
 }
 
-fn validate_known_core_coding_codes(
-    value: &Value,
-    resource_type: &str,
-    path: &str,
-) -> Vec<ValidationIssue> {
-    let mut issues = Vec::new();
-
-    match value {
-        Value::Object(obj) => {
-            if let (Some(system), Some(code)) = (
-                obj.get("system").and_then(|v| v.as_str()),
-                obj.get("code").and_then(|v| v.as_str()),
-            ) {
-                if is_known_invalid_core_code(system, code) {
-                    let current_path = if path.is_empty() {
-                        format!("{resource_type}.code")
-                    } else {
-                        format!("{path}.code")
-                    };
-                    issues.push(
-                        ValidationIssue::error(
-                            IssueCode::CodeInvalid,
-                            format!("Unknown code '{code}' in the CodeSystem '{system}'"),
-                        )
-                        .with_path(current_path),
-                    );
-                }
-            }
-
-            for (key, child) in obj {
-                let child_path = if path.is_empty() {
-                    format!("{resource_type}.{key}")
-                } else {
-                    format!("{path}.{key}")
-                };
-                issues.extend(validate_known_core_coding_codes(
-                    child,
-                    resource_type,
-                    &child_path,
-                ));
-            }
-        }
-        Value::Array(items) => {
-            for (idx, item) in items.iter().enumerate() {
-                let item_path = format!("{path}[{idx}]");
-                issues.extend(validate_known_core_coding_codes(
-                    item,
-                    resource_type,
-                    &item_path,
-                ));
-            }
-        }
-        _ => {}
-    }
-
-    issues
-}
-
-fn validate_observation_blood_pressure_magic_code(observation: &Value) -> Vec<ValidationIssue> {
-    let Some(codings) = observation
-        .get("code")
-        .and_then(|code| code.get("coding"))
-        .and_then(|coding| coding.as_array())
-    else {
-        return Vec::new();
-    };
-
-    let has_trigger_code = codings.iter().any(|coding| {
-        coding.get("system").and_then(|v| v.as_str()) == Some("http://loinc.org")
-            && coding.get("code").and_then(|v| v.as_str()) == Some("76534-7")
-    });
-    if !has_trigger_code {
-        return Vec::new();
-    }
-
-    let has_bp_panel_code = codings.iter().any(|coding| {
-        coding.get("system").and_then(|v| v.as_str()) == Some("http://loinc.org")
-            && coding.get("code").and_then(|v| v.as_str()) == Some("85354-9")
-    });
-    if has_bp_panel_code {
-        return Vec::new();
-    }
-
-    vec![ValidationIssue::error(
-        IssueCode::Structure,
-        "BPCode: magic LOINC code 85354-9 required, but not found",
-    )
-    .with_path("Observation.code".to_string())]
-}
-
 fn validate_expression_datatypes(
     resource: &Value,
     type_rules: &[TypeRule],
@@ -2624,18 +2598,6 @@ fn validate_expression_datatypes(
     }
 
     issues
-}
-
-fn is_known_invalid_core_code(system: &str, code: &str) -> bool {
-    (code == "invalid-code-test"
-        && matches!(
-            system,
-            "http://hl7.org/fhir/contract-legalstate"
-                | "http://hl7.org/fhir/contract-security-classification"
-                | "http://hl7.org/fhir/contract-asset-type"
-                | "http://hl7.org/fhir/resource-types"
-        ))
-        || (system == "http://varnomen.hgvs.org" && code == "NC_000019.8:g.1171707G>AXXX")
 }
 
 fn validate_us_core_ethnicity_detail_codes(resource: &Value) -> Vec<ValidationIssue> {

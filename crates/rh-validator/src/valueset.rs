@@ -298,7 +298,11 @@ impl ValueSetLoader {
         false
     }
 
-    fn codesystem_contains_code(&self, system: &str, code: &str) -> Result<Option<bool>> {
+    pub(crate) fn codesystem_contains_code(
+        &self,
+        system: &str,
+        code: &str,
+    ) -> Result<Option<bool>> {
         for package_dir in &self.package_dirs {
             if let Some(codesystem) = self.load_codesystem_from_directory(package_dir, system)? {
                 if let Some(concepts) = &codesystem.concept {

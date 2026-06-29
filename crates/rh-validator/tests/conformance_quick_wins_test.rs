@@ -1473,16 +1473,25 @@ fn conceptmap_source_code_must_be_in_source_valueset_when_resolved() {
 }
 
 #[test]
-fn contract_known_core_coding_codes_reject_invalid_code() {
+fn complete_registered_codesystem_rejects_unknown_code() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    validator.register_codesystem(&json!({
+        "resourceType": "CodeSystem",
+        "url": "http://example.org/fhir/CodeSystem/contract-state",
+        "content": "complete",
+        "concept": [
+            {"code": "active"},
+            {"code": "cancelled"}
+        ]
+    }));
 
     let contract = json!({
         "resourceType": "Contract",
         "legalState": {
             "coding": [
                 {
-                    "system": "http://hl7.org/fhir/contract-legalstate",
-                    "code": "invalid-code-test"
+                    "system": "http://example.org/fhir/CodeSystem/contract-state",
+                    "code": "missing-code"
                 }
             ]
         }
@@ -1493,54 +1502,48 @@ fn contract_known_core_coding_codes_reject_invalid_code() {
     assert!(result.issues.iter().any(|i| {
         i.severity == Severity::Error
             && i.code == IssueCode::CodeInvalid
-            && i.message.contains("Unknown code 'invalid-code-test'")
+            && i.message.contains("Unknown code 'missing-code'")
             && i.path.as_deref() == Some("Contract.legalState.coding[0].code")
     }));
 }
 
 #[test]
-fn hgvs_known_invalid_variant_code_is_rejected() {
+fn structure_definition_pattern_rule_rejects_missing_required_coding() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let observation = json!({
-        "resourceType": "Observation",
-        "status": "final",
-        "code": {
-            "coding": [{
-                "system": "http://loinc.org",
-                "code": "69548-6"
-            }]
-        },
-        "component": [{
-            "code": {
-                "coding": [{
-                    "system": "http://loinc.org",
-                    "code": "81290-9"
-                }]
-            },
-            "valueCodeableConcept": {
-                "coding": [{
-                    "system": "http://varnomen.hgvs.org",
-                    "code": "NC_000019.8:g.1171707G>AXXX"
-                }]
-            }
-        }]
-    });
-
-    let result = validator.validate(&observation).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::CodeInvalid
-            && i.message.contains("NC_000019.8:g.1171707G>AXXX")
-            && i.path.as_deref()
-                == Some("Observation.component[0].valueCodeableConcept.coding[0].code")
+    let profile_url = "http://example.org/fhir/StructureDefinition/observation-code-pattern";
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": profile_url,
+        "name": "ObservationCodePattern",
+        "status": "draft",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Observation",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+        "derivation": "constraint",
+        "snapshot": {
+            "element": [
+                {
+                    "id": "Observation",
+                    "path": "Observation",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Observation.code",
+                    "path": "Observation.code",
+                    "min": 1,
+                    "max": "1",
+                    "patternCodeableConcept": {
+                        "coding": [{
+                            "system": "http://loinc.org",
+                            "code": "85354-9"
+                        }]
+                    }
+                }
+            ]
+        }
     }));
-}
-
-#[test]
-fn observation_bp_trigger_code_requires_magic_panel_code() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
     let observation = json!({
         "resourceType": "Observation",
@@ -1550,30 +1553,17 @@ fn observation_bp_trigger_code_requires_magic_panel_code() {
                 "system": "http://loinc.org",
                 "code": "76534-7"
             }]
-        },
-        "component": [
-            {
-                "code": {
-                    "coding": [{
-                        "system": "http://loinc.org",
-                        "code": "8480-6"
-                    }]
-                },
-                "valueQuantity": {
-                    "value": 136,
-                    "system": "http://unitsofmeasure.org",
-                    "code": "mm[Hg]"
-                }
-            }
-        ]
+        }
     });
 
-    let result = validator.validate(&observation).unwrap();
+    let result = validator
+        .validate_with_profile(&observation, profile_url)
+        .unwrap();
 
     assert!(result.issues.iter().any(|i| {
         i.severity == Severity::Error
-            && i.code == IssueCode::Structure
-            && i.message.contains("magic LOINC code 85354-9 required")
+            && i.code == IssueCode::Value
+            && i.message.contains("required pattern value")
             && i.path.as_deref() == Some("Observation.code")
     }));
 }
