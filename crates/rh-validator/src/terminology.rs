@@ -302,6 +302,14 @@ impl MockTerminologyService {
             vec![("en-US", "Blood pressure panel with all children optional")],
         );
 
+        // NUCC Provider Taxonomy
+        self.add_code_with_designations(
+            "http://nucc.org/provider-taxonomy",
+            "208D00000X",
+            "General Practice Physician",
+            vec![("en-US", "General Practice Physician")],
+        );
+
         // Some SNOMED CT codes
         self.add_code(
             "http://snomed.info/sct",
@@ -1285,6 +1293,24 @@ mod tests {
             .unwrap();
 
         assert!(result.result);
+    }
+
+    #[test]
+    fn test_nucc_provider_taxonomy_display() {
+        let service = MockTerminologyService::with_common_codes();
+
+        let result = service
+            .validate_code_in_codesystem(
+                "http://nucc.org/provider-taxonomy",
+                "208D00000X",
+                Some("General Practice"),
+            )
+            .unwrap();
+
+        assert!(!result.result);
+        let message = result.message.unwrap();
+        assert!(message.contains("Wrong Display Name"));
+        assert!(message.contains("General Practice Physician"));
     }
 
     #[test]

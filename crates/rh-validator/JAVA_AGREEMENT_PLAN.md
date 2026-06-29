@@ -14,22 +14,22 @@ just test-fhir-all
 Current agreement from that run:
 
 - No terminology: 377/404 (93.3%)
-- With terminology: 382/404 (94.6%)
+- With terminology: 384/404 (95.0%)
 
 Current triage artifacts:
 
 - No terminology:
   `target/conformance-triage/r4-java-mismatches-1782660445-no-terminology.csv`
 - With terminology:
-  `target/conformance-triage/r4-java-mismatches-1782662963-with-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782734928-with-terminology.csv`
 
 ## Gap Closure Opportunities
 
 Highest-leverage remaining work, in recommended order:
 
 1. Reference/profile package resolution. Rows include
-   `practitioner-role-example`, `dr-eh`, `obs-hgvs-bad`, `obs-vs-1`,
-   `obs-vs-2`, and `obs-temp-bad`. Current RH output often warns that a
+   `obs-hgvs-bad`, `obs-vs-1`, `obs-vs-2`, and `obs-temp-bad`. Current RH
+   output often warns that a
    profile is not found while Java applies the profile and rejects the
    instance.
 2. QuestionnaireResponse async/value-set validation. Rows include
@@ -269,22 +269,31 @@ Completed:
     - Compile Reference `targetProfile` constraints from profile snapshots and
       reject references whose URL implies a disallowed resource type.
     This fixes `dr-eh`; targeted `references` module agreement is now 15/15.
-    A full R4 rerun is still needed before updating the current full-suite
-    reference-bundle-contained count.
+26. Continue `reference-bundle-contained` terminology/profile work:
+    - Treat Reference `targetProfile` resolving to base `Resource` as
+      unconstrained, preserving valid Communication and QuestionnaireResponse
+      references while keeping narrowed targets such as Patient-only checks.
+    - Add NUCC provider taxonomy display data for
+      `http://nucc.org/provider-taxonomy#208D00000X`, fixing
+      `practitioner-role-example` in terminology-enabled runs.
+    With-terminology agreement improved to 384/404. Current with-terminology
+    triage artifact:
+    `target/conformance-triage/r4-java-mismatches-1782734928-with-terminology.csv`.
+    Current with-terminology mismatch counts are:
+    reference-bundle-contained 6, questionnaire-response 6, invariant 5,
+    profile-slicing 2, validation-resource 1.
 
 Next:
 
-26. `reference-bundle-contained` remaining mismatches. Targeted references
+27. `reference-bundle-contained` remaining mismatches. Targeted references
     module now agrees 15/15. Full-suite rows include unresolved
-    external/profile package cases (`practitioner-role-example`,
-    `obs-temp-bad`, `obs-hgvs-bad`,
+    external/profile package cases (`obs-temp-bad`, `obs-hgvs-bad`,
     `obs-vs-1`, `obs-vs-2`), Bundle/reference behavior
     (`dr-example-org`, `bundle-conformsto`, `res-inv-example-bad`), and likely
     overlap with validation-resource or terminology resolution. Suggested next
-    task: inspect `practitioner-role-example` or `obs-hgvs-bad` to decide
-    whether another installed-package fallback, targetProfile rule, or
-    package dependency load is missing.
-27. `questionnaire-response` remaining mismatches. Contained dom-3 false
+    task: inspect `obs-hgvs-bad` to decide whether mCODE package loading,
+    HGVS terminology, or required value-set validation is missing.
+28. `questionnaire-response` remaining mismatches. Contained dom-3 false
     positives are resolved; remaining mismatches are unresolved
     async/value-set/quantity validation: `choice-async-qr`,
     `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
@@ -292,22 +301,22 @@ Next:
     `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
     the referenced Questionnaire/ValueSet for one async choice case and verify
     whether failure is terminology expansion or questionnaire lookup.
-28. `invariant` false negatives. Remaining examples are
+29. `invariant` false negatives. Remaining examples are
     narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
     `ai4`, `obs-temp-code2`) plus `supplement-1a`.
-29. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+30. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-30. Remaining `validation-resource` false negative: `ext-derived-circle` is
+31. Remaining `validation-resource` false negative: `ext-derived-circle` is
     Java-invalid/RH-valid in full runs but valid in the targeted `sd` module
     because the supporting base profile changes the circular-base behavior.
     Treat this as a circular StructureDefinition base resolution edge case.
-31. The former `extension` follow-up, `res-inv-example-bad`, is categorized
+32. The former `extension` follow-up, `res-inv-example-bad`, is categorized
     under reference-bundle-contained in the current triage. The first fatal
     issue is unresolved reference `Endpoint/examplelabsXX` inside a profile
     invariant. Treat this as reference/invariant work, not extension loading.
-32. After each small task, run the relevant `just test-fhir-module <module>`,
+33. After each small task, run the relevant `just test-fhir-module <module>`,
     then `just check`, commit, and only then run `just test-fhir-all` when a
     full category slice is complete or the behavior could affect multiple
     modules.

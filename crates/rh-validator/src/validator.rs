@@ -1059,7 +1059,11 @@ impl FhirValidator {
         rule: &ReferenceTargetRule,
     ) -> Vec<ValidationIssue> {
         let allowed_types = self.allowed_reference_target_types(&rule.target_profiles);
-        if allowed_types.is_empty() {
+        if allowed_types.is_empty()
+            || allowed_types
+                .iter()
+                .any(|type_name| type_name == "Resource")
+        {
             return Vec::new();
         }
 

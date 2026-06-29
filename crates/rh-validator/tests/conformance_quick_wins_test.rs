@@ -2082,3 +2082,61 @@ fn reference_target_profile_rejects_wrong_reference_type() {
             && i.path.as_deref() == Some("DocumentReference.subject")
     }));
 }
+
+#[test]
+fn reference_target_profile_resource_allows_any_resource_type() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/StructureDefinition/resource-target",
+        "type": "Resource",
+        "snapshot": {
+            "element": [{
+                "id": "Resource",
+                "path": "Resource"
+            }]
+        }
+    }));
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/StructureDefinition/communication-target",
+        "type": "Communication",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Communication",
+        "snapshot": {
+            "element": [{
+                "id": "Communication.about",
+                "path": "Communication.about",
+                "min": 0,
+                "max": "*",
+                "type": [{
+                    "code": "Reference",
+                    "targetProfile": [
+                        "http://example.org/StructureDefinition/resource-target"
+                    ]
+                }]
+            }]
+        }
+    }));
+
+    let communication = json!({
+        "resourceType": "Communication",
+        "status": "completed",
+        "about": [{
+            "reference": "Patient/example"
+        }]
+    });
+
+    let result = validator
+        .validate_with_profile(
+            &communication,
+            "http://example.org/StructureDefinition/communication-target",
+        )
+        .unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.message.contains("implied by the reference URL")
+            && i.path.as_deref() == Some("Communication.about")
+    }));
+}
