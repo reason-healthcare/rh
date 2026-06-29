@@ -1539,6 +1539,46 @@ fn hgvs_known_invalid_variant_code_is_rejected() {
 }
 
 #[test]
+fn observation_bp_trigger_code_requires_magic_panel_code() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+            "coding": [{
+                "system": "http://loinc.org",
+                "code": "76534-7"
+            }]
+        },
+        "component": [
+            {
+                "code": {
+                    "coding": [{
+                        "system": "http://loinc.org",
+                        "code": "8480-6"
+                    }]
+                },
+                "valueQuantity": {
+                    "value": 136,
+                    "system": "http://unitsofmeasure.org",
+                    "code": "mm[Hg]"
+                }
+            }
+        ]
+    });
+
+    let result = validator.validate(&observation).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("magic LOINC code 85354-9 required")
+            && i.path.as_deref() == Some("Observation.code")
+    }));
+}
+
+#[test]
 fn us_core_ethnicity_detailed_rejects_codes_outside_required_valueset() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

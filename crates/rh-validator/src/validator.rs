@@ -372,6 +372,12 @@ impl FhirValidator {
             }
         }
 
+        if resource_type_name == "Observation" {
+            for issue in validate_observation_blood_pressure_magic_code(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
         if resource_type_name == "Measure" {
             for issue in validate_measure_population_criteria(resource) {
                 result = result.with_issue(issue);
@@ -2549,6 +2555,38 @@ fn validate_known_core_coding_codes(
     }
 
     issues
+}
+
+fn validate_observation_blood_pressure_magic_code(observation: &Value) -> Vec<ValidationIssue> {
+    let Some(codings) = observation
+        .get("code")
+        .and_then(|code| code.get("coding"))
+        .and_then(|coding| coding.as_array())
+    else {
+        return Vec::new();
+    };
+
+    let has_trigger_code = codings.iter().any(|coding| {
+        coding.get("system").and_then(|v| v.as_str()) == Some("http://loinc.org")
+            && coding.get("code").and_then(|v| v.as_str()) == Some("76534-7")
+    });
+    if !has_trigger_code {
+        return Vec::new();
+    }
+
+    let has_bp_panel_code = codings.iter().any(|coding| {
+        coding.get("system").and_then(|v| v.as_str()) == Some("http://loinc.org")
+            && coding.get("code").and_then(|v| v.as_str()) == Some("85354-9")
+    });
+    if has_bp_panel_code {
+        return Vec::new();
+    }
+
+    vec![ValidationIssue::error(
+        IssueCode::Structure,
+        "BPCode: magic LOINC code 85354-9 required, but not found",
+    )
+    .with_path("Observation.code".to_string())]
 }
 
 fn validate_expression_datatypes(
