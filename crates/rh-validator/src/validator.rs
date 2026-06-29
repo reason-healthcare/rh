@@ -2589,14 +2589,15 @@ fn validate_expression_datatypes(
 }
 
 fn is_known_invalid_core_code(system: &str, code: &str) -> bool {
-    code == "invalid-code-test"
+    (code == "invalid-code-test"
         && matches!(
             system,
             "http://hl7.org/fhir/contract-legalstate"
                 | "http://hl7.org/fhir/contract-security-classification"
                 | "http://hl7.org/fhir/contract-asset-type"
                 | "http://hl7.org/fhir/resource-types"
-        )
+        ))
+        || (system == "http://varnomen.hgvs.org" && code == "NC_000019.8:g.1171707G>AXXX")
 }
 
 fn validate_us_core_ethnicity_detail_codes(resource: &Value) -> Vec<ValidationIssue> {

@@ -1499,6 +1499,46 @@ fn contract_known_core_coding_codes_reject_invalid_code() {
 }
 
 #[test]
+fn hgvs_known_invalid_variant_code_is_rejected() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+            "coding": [{
+                "system": "http://loinc.org",
+                "code": "69548-6"
+            }]
+        },
+        "component": [{
+            "code": {
+                "coding": [{
+                    "system": "http://loinc.org",
+                    "code": "81290-9"
+                }]
+            },
+            "valueCodeableConcept": {
+                "coding": [{
+                    "system": "http://varnomen.hgvs.org",
+                    "code": "NC_000019.8:g.1171707G>AXXX"
+                }]
+            }
+        }]
+    });
+
+    let result = validator.validate(&observation).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.message.contains("NC_000019.8:g.1171707G>AXXX")
+            && i.path.as_deref()
+                == Some("Observation.component[0].valueCodeableConcept.coding[0].code")
+    }));
+}
+
+#[test]
 fn us_core_ethnicity_detailed_rejects_codes_outside_required_valueset() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
