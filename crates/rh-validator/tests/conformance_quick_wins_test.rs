@@ -2019,6 +2019,34 @@ fn dynamic_differential_profile_enforces_min_cardinality() {
 }
 
 #[test]
+fn unknown_hl7_ig_extension_definition_is_rejected() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+            "text": "example"
+        },
+        "extension": [{
+            "url": "http://hl7.org/fhir/uv/example/StructureDefinition/not-loaded",
+            "valueString": "unsupported"
+        }]
+    });
+
+    let result = validator.validate_auto(&observation).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains(
+                "Extension definition 'http://hl7.org/fhir/uv/example/StructureDefinition/not-loaded' could not be found"
+            )
+            && i.path.as_deref() == Some("Observation.extension[0]")
+    }));
+}
+
+#[test]
 fn structure_definition_choice_path_must_use_base_choice_path() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 

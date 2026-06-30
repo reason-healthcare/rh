@@ -24,6 +24,7 @@ pub struct CardinalityRule {
     pub path: String,
     pub min: Option<u32>,
     pub max: Option<String>,
+    pub slice_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +44,7 @@ pub struct BindingRule {
     pub path: String,
     pub value_set_url: String,
     pub strength: String,
+    pub slice_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +52,7 @@ pub struct FixedPatternRule {
     pub path: String,
     pub value: Value,
     pub is_fixed: bool,
+    pub slice_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -143,6 +146,7 @@ impl RuleCompiler {
                         path: path.clone(),
                         min: element.min,
                         max: element.max.clone(),
+                        slice_name: effective_slice_name(element),
                     });
                 }
 
@@ -176,6 +180,7 @@ impl RuleCompiler {
                             path: path.clone(),
                             value_set_url: vs_url.clone(),
                             strength: binding.strength.clone(),
+                            slice_name: effective_slice_name(element),
                         });
                     }
                 }
@@ -185,6 +190,7 @@ impl RuleCompiler {
                         path: path.clone(),
                         value: value.clone(),
                         is_fixed: key.starts_with("fixed"),
+                        slice_name: effective_slice_name(element),
                     });
                 }
 
@@ -374,6 +380,7 @@ fn add_differential_binding_rules(
             path: element.path.clone(),
             value_set_url: value_set_url.clone(),
             strength: binding.strength.clone(),
+            slice_name: effective_slice_name(element),
         });
     }
 }
@@ -394,6 +401,7 @@ fn add_differential_rules(
                 path: element.path.clone(),
                 min: element.min,
                 max: element.max.clone(),
+                slice_name: effective_slice_name(element),
             });
         }
 
@@ -403,10 +411,25 @@ fn add_differential_rules(
                     path: element.path.clone(),
                     value_set_url: value_set_url.clone(),
                     strength: binding.strength.clone(),
+                    slice_name: effective_slice_name(element),
                 });
             }
         }
     }
+}
+
+fn effective_slice_name(element: &ElementDefinition) -> Option<String> {
+    if let Some(slice_name) = &element.slice_name {
+        return Some(slice_name.clone());
+    }
+
+    let id = element.id.as_deref()?;
+    id.split('.').find_map(|segment| {
+        segment
+            .split_once(':')
+            .map(|(_, slice)| slice.to_string())
+            .filter(|slice| !slice.is_empty())
+    })
 }
 
 fn collect_discriminator_constraints(

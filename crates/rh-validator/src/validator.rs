@@ -586,8 +586,11 @@ impl FhirValidator {
                 continue;
             }
 
-            let violations =
-                validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max);
+            let violations = if rule.slice_name.is_some() {
+                validate_cardinality_for_slice(resource, rule, &rules.slicing_rules)
+            } else {
+                validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max)
+            };
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
@@ -618,7 +621,11 @@ impl FhirValidator {
         }
 
         for rule in &rules.fixed_pattern_rules {
-            let violations = validate_fixed_pattern_at_path(resource, rule);
+            let violations = if rule.slice_name.is_some() {
+                validate_fixed_pattern_for_slice(resource, rule, &rules.slicing_rules)
+            } else {
+                validate_fixed_pattern_at_path(resource, rule)
+            };
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
@@ -631,7 +638,7 @@ impl FhirValidator {
                 continue;
             }
 
-            let violations = self.validate_binding_at_path(resource, rule)?;
+            let violations = self.validate_binding_at_path(resource, rule, &rules.slicing_rules)?;
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
@@ -921,14 +928,7 @@ impl FhirValidator {
                     }
                 }
                 Ok(None) => {
-                    // Extension not found - check if it's from an IG we might not have
-                    // Skip HL7 FHIR IG extensions (but not core) since we may not have
-                    // the IG packages loaded. Core extensions start with
-                    // http://hl7.org/fhir/StructureDefinition/ and should be loaded.
-                    let is_hl7_ig_extension = url.starts_with("http://hl7.org/fhir/")
-                        && !url.starts_with("http://hl7.org/fhir/StructureDefinition/");
-
-                    if !is_hl7_ig_extension && !is_known_missing_extension_definition(url) {
+                    if !is_known_missing_extension_definition(url) {
                         issues.push(
                             ValidationIssue::error(
                                 IssueCode::Structure,
@@ -2125,6 +2125,26 @@ fn count_in_item(item: &Value, remaining_path: &[&str]) -> usize {
 
     let mut current = item;
     for (i, part) in remaining_path.iter().enumerate() {
+        if let Some(prefix) = part.strip_suffix("[x]") {
+            let Some(object) = current.as_object() else {
+                return 0;
+            };
+            let matching_fields = object
+                .iter()
+                .filter(|(key, _)| key.starts_with(prefix) && key.len() > prefix.len())
+                .collect::<Vec<_>>();
+
+            if i == remaining_path.len() - 1 {
+                return matching_fields.len();
+            }
+
+            let Some((_, choice_value)) = matching_fields.first() else {
+                return 0;
+            };
+            current = choice_value;
+            continue;
+        }
+
         match current.get(part) {
             Some(Value::Array(arr)) => {
                 if i == remaining_path.len() - 1 {
@@ -2143,6 +2163,50 @@ fn count_in_item(item: &Value, remaining_path: &[&str]) -> usize {
     }
 
     0
+}
+
+fn validate_cardinality_for_slice(
+    resource: &Value,
+    rule: &crate::rules::CardinalityRule,
+    slicing_rules: &[crate::rules::SlicingRule],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let Some(slice_name) = rule.slice_name.as_deref() else {
+        return issues;
+    };
+    let Some((slicing_rule, slice)) =
+        find_slicing_rule_for_path(slicing_rules, &rule.path, slice_name)
+    else {
+        return validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max);
+    };
+    let Some(relative_path) = relative_rule_path(&rule.path, &slicing_rule.path) else {
+        return issues;
+    };
+    if relative_path.is_empty() {
+        return issues;
+    }
+
+    let parts: Vec<&str> = slicing_rule.path.split('.').collect();
+    let Some(array) = navigate_to_array(resource, &parts) else {
+        return issues;
+    };
+    let relative_parts: Vec<&str> = relative_path.split('.').collect();
+
+    for item in array
+        .iter()
+        .filter(|item| matches_slice(item, slice, &slicing_rule.discriminators))
+    {
+        let count = get_values_at_relative_path(item, &relative_parts).len();
+        check_cardinality(
+            &rule.path,
+            count,
+            rule.min,
+            rule.max.as_deref(),
+            &mut issues,
+        );
+    }
+
+    issues
 }
 
 fn count_simple_path(resource: &Value, parts: &[&str]) -> usize {
@@ -2313,6 +2377,142 @@ fn validate_fixed_pattern_at_path(
     }
 
     issues
+}
+
+fn validate_fixed_pattern_for_slice(
+    resource: &Value,
+    rule: &FixedPatternRule,
+    slicing_rules: &[crate::rules::SlicingRule],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let values = get_values_for_slice(
+        resource,
+        &rule.path,
+        rule.slice_name.as_deref(),
+        slicing_rules,
+    );
+
+    for value in values {
+        let matches = if rule.is_fixed {
+            value == &rule.value
+        } else {
+            value_matches_pattern(value, &rule.value)
+        };
+
+        if !matches {
+            let kind = if rule.is_fixed { "fixed" } else { "pattern" };
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!(
+                    "Element does not match required {kind} value at '{}'",
+                    rule.path
+                ),
+            ));
+        }
+    }
+
+    issues
+}
+
+fn get_values_for_slice<'a>(
+    resource: &'a Value,
+    path: &str,
+    slice_name: Option<&str>,
+    slicing_rules: &[crate::rules::SlicingRule],
+) -> Vec<&'a Value> {
+    let Some(slice_name) = slice_name else {
+        return get_values_at_path(resource, path);
+    };
+    let Some((slicing_rule, slice)) = find_slicing_rule_for_path(slicing_rules, path, slice_name)
+    else {
+        return get_values_at_path(resource, path);
+    };
+    let Some(relative_path) = relative_rule_path(path, &slicing_rule.path) else {
+        return Vec::new();
+    };
+
+    let parts: Vec<&str> = slicing_rule.path.split('.').collect();
+    let Some(array) = navigate_to_array(resource, &parts) else {
+        return Vec::new();
+    };
+    let relative_parts: Vec<&str> = if relative_path.is_empty() {
+        Vec::new()
+    } else {
+        relative_path.split('.').collect()
+    };
+
+    array
+        .iter()
+        .filter(|item| matches_slice(item, slice, &slicing_rule.discriminators))
+        .flat_map(|item| get_values_at_relative_path(item, &relative_parts))
+        .collect()
+}
+
+fn get_values_at_relative_path<'a>(value: &'a Value, parts: &[&str]) -> Vec<&'a Value> {
+    if parts.is_empty() {
+        return vec![value];
+    }
+
+    let mut current = vec![value];
+    for part in parts {
+        let mut next = Vec::new();
+        for value in current {
+            if let Some(choice_prefix) = part.strip_suffix("[x]") {
+                if let Some(object) = value.as_object() {
+                    for (key, choice_value) in object {
+                        if key.starts_with(choice_prefix) && key.len() > choice_prefix.len() {
+                            match choice_value {
+                                Value::Array(arr) => next.extend(arr.iter()),
+                                other => next.push(other),
+                            }
+                        }
+                    }
+                }
+            } else {
+                match value.get(part) {
+                    Some(Value::Array(arr)) => next.extend(arr.iter()),
+                    Some(other) => next.push(other),
+                    None => {}
+                }
+            }
+        }
+
+        if next.is_empty() {
+            return Vec::new();
+        }
+        current = next;
+    }
+
+    current
+}
+
+fn find_slicing_rule_for_path<'a>(
+    slicing_rules: &'a [crate::rules::SlicingRule],
+    path: &str,
+    slice_name: &str,
+) -> Option<(
+    &'a crate::rules::SlicingRule,
+    &'a crate::rules::SliceDefinition,
+)> {
+    slicing_rules.iter().find_map(|slicing_rule| {
+        if path != slicing_rule.path && !path.starts_with(&format!("{}.", slicing_rule.path)) {
+            return None;
+        }
+        let slice = slicing_rule
+            .slices
+            .iter()
+            .find(|slice| slice.name == slice_name)?;
+        Some((slicing_rule, slice))
+    })
+}
+
+fn relative_rule_path<'a>(path: &'a str, slicing_path: &str) -> Option<&'a str> {
+    if path == slicing_path {
+        return Some("");
+    }
+
+    path.strip_prefix(slicing_path)
+        .and_then(|suffix| suffix.strip_prefix('.'))
 }
 
 fn is_contained_path(path: &str) -> bool {
@@ -5128,6 +5328,7 @@ impl FhirValidator {
         &self,
         resource: &Value,
         rule: &crate::rules::BindingRule,
+        slicing_rules: &[crate::rules::SlicingRule],
     ) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
 
@@ -5137,6 +5338,7 @@ impl FhirValidator {
         }
 
         if rule.path.contains("[x]")
+            && rule.slice_name.is_none()
             && !rule
                 .value_set_url
                 .starts_with("http://hl7.org/fhir/ValueSet/")
@@ -5145,7 +5347,16 @@ impl FhirValidator {
         }
 
         // Get values at path
-        let values = get_values_at_path(resource, &rule.path);
+        let values = if rule.slice_name.is_some() {
+            get_values_for_slice(
+                resource,
+                &rule.path,
+                rule.slice_name.as_deref(),
+                slicing_rules,
+            )
+        } else {
+            get_values_at_path(resource, &rule.path)
+        };
 
         // Check for primitive extension arrays without corresponding values FIRST
         // This validation doesn't depend on ValueSet being extensional - just checks if value exists
@@ -5705,6 +5916,10 @@ fn validate_slicing_at_path(
     };
 
     if parts[0] != resource_type {
+        return issues;
+    }
+
+    if parts.iter().any(|part| part.ends_with("[x]")) {
         return issues;
     }
 

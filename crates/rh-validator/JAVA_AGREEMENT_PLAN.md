@@ -11,26 +11,46 @@ Latest full R4 run:
 just test-fhir-all
 ```
 
-Current agreement from that run:
+Current audited full-run agreement after removing hardcoded fixture logic:
 
-- No terminology: 377/404 (93.3%)
-- With terminology: 387/404 (95.8%)
+- No terminology: 373/404 (92.3%) from
+  `target/conformance-logs/r4-full-20260630-105233-audit.log`
+- With terminology: 379/404 (93.8%) from
+  `target/conformance-logs/r4-full-20260630-105233-audit.log`
+
+Important update: earlier 377/404 and 388/404 numbers included now-superseded
+validator code that hardcoded individual fixture/profile codes such as HGVS,
+blood pressure, and body temperature observations. The hardcoded checks were
+removed in commit `b223349f`
+(`fix(validator): derive coding checks from definitions`). The current audited
+baseline above is the post-cleanup baseline.
+
+Policy: do not restore Java agreement by hardcoding individual fixture values,
+profile URLs, or example code strings in the validator. New fixes should be
+driven by StructureDefinition snapshots, bindings, CodeSystem/ValueSet content,
+terminology services, or manifest/package metadata in the conformance runner.
 
 Current triage artifacts:
 
 - No terminology:
-  `target/conformance-triage/r4-java-mismatches-1782660445-no-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782817528-no-terminology.csv`
 - With terminology:
-  `target/conformance-triage/r4-java-mismatches-1782736766-with-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782818297-with-terminology.csv`
 
 ## Gap Closure Opportunities
 
 Highest-leverage remaining work, in recommended order:
 
-1. Reference/profile package resolution. Rows include
-   `obs-temp-bad`. Current RH output often warns that a
-   profile is not found while Java applies the profile and rejects the
-   instance.
+1. Extension-definition resolution and compatibility. Current mismatches are
+   mostly Java-valid/RH-invalid rows using FHIR version-conversion,
+   matchetype, ValueSet parameter, and snapshot metadata extensions:
+   `ext-xver-modifier-1`, `xver-extensions-vs`,
+   `extension-version-restriction-range-r4`,
+   `extension-version-restriction-range-ctxt-r4`,
+   `matchetype-pattern-1`, `vs-params-1`, `vs-params-q`,
+   `profile-compliesWith`, and `xver-valueset-4_5`. Avoid ad hoc URL
+   allowlists where package/test metadata can provide definitions; only keep
+   compatibility allowlists for documented Java-accepted missing definitions.
 2. QuestionnaireResponse async/value-set validation. Rows include
    `choice-async-qr`, `choice-gender-coding-async-qr`,
    `open-choice-gender-coding-async-qr`, `quantity-min-max-qr`,
@@ -39,10 +59,15 @@ Highest-leverage remaining work, in recommended order:
    contained questionnaire lookup and answer-validation subsystem pass.
 3. Resource invariants. Rows include `bad-markdown-no-html`, `ai3`, `ai4`,
    `obs-temp-code2`, and `supplement-1a`.
-4. Profile slicing. Remaining rows are `patient-ig-bad` and
+4. Reference/profile/package edge cases. Remaining rows include
+   `dr-example-org`, `obs-hgvs-bad`, `obs-temp-bad`, and
+   `res-inv-example-bad`; treat these as manifest-context example URL
+   validation, declared package/profile loading, and profiled Bundle
+   reference/invariant behavior rather than broad code literals.
+5. Profile slicing. Remaining rows are `patient-ig-bad` and
    `sdoh-type-slice`; keep these after the broader invariant/reference work
    unless a targeted discriminator rule becomes obvious.
-5. Remaining validation-resource edge case: `ext-derived-circle`, which is
+6. Remaining validation-resource edge case: `ext-derived-circle`, which is
    still Java-invalid/RH-valid in full runs because the base profile resolves
    circularly to itself.
 
@@ -281,40 +306,103 @@ Completed:
     Current with-terminology mismatch counts are:
     reference-bundle-contained 6, questionnaire-response 6, invariant 5,
     profile-slicing 2, validation-resource 1.
-27. Continue `reference-bundle-contained` with a narrow HGVS code validation
-    rule for the mCODE genetic-variant fixture. The local cache only has
-    mCODE 4.0.0 while the fixture requests 1.0.0, so this deliberately avoids
-    a broad package-version fallback. This fixes `obs-hgvs-bad` in both the
-    targeted `tx` module and the terminology-enabled full run.
-    With-terminology agreement improved to 385/404. Current with-terminology
-    triage artifact:
-    `target/conformance-triage/r4-java-mismatches-1782735813-with-terminology.csv`.
-    Current with-terminology mismatch counts are:
-    questionnaire-response 6, reference-bundle-contained 5, invariant 5,
-    profile-slicing 2, validation-resource 1.
-28. Continue `reference-bundle-contained` with the core blood-pressure profile
-    magic-code rule. When Observation.code contains LOINC `76534-7`, the Java
-    validator applies the core BP profile and requires magic LOINC panel code
-    `85354-9`; reject instances missing it. This fixes `obs-vs-1` and
-    `obs-vs-2`.
-    Targeted `tx` module agreement improved to 33/40. With-terminology
-    agreement improved to 387/404. Current with-terminology triage artifact:
-    `target/conformance-triage/r4-java-mismatches-1782736766-with-terminology.csv`.
-    Current with-terminology mismatch counts are:
-    questionnaire-response 6, invariant 5, reference-bundle-contained 3,
-    profile-slicing 2, validation-resource 1.
+27. Superseded: a narrow HGVS code validation rule temporarily fixed
+    `obs-hgvs-bad`, but it hardcoded fixture-specific terminology behavior in
+    the validator. That rule has been removed. Recover this row through loaded
+    mCODE profile/package metadata, terminology validation, or a reusable
+    CodeSystem/ValueSet mechanism.
+28. Superseded: a core blood-pressure "magic-code" validator rule temporarily
+    fixed `obs-vs-1` and `obs-vs-2`, but it hardcoded observation codes in the
+    validator. That rule has been removed. Recover these rows by applying the
+    relevant StructureDefinition fixed/pattern/binding constraints from loaded
+    profiles.
+29. Superseded: a core body-temperature "magic-code" validator rule
+    temporarily fixed `obs-temp-bad`, but it hardcoded observation codes in the
+    validator. That rule has been removed. Recover this row by resolving and
+    applying the declared profile/StructureDefinition constraints.
+30. Post-cleanup targeted rerun:
+    - `just test-fhir-module tx`: 31/40 Java agreement. Reopened rows include
+      `obs-hgvs-bad`, `obs-vs-1`, and `obs-vs-2`.
+    - `just test-fhir-module profile`: 45/49 Java agreement. Reopened row:
+      `obs-temp-bad`.
+    Next recovery work should start with profile/package resolution and
+    application, not literal checks.
+31. Recover `obs-vs-1` and `obs-vs-2` without BP code literals by tightening
+    unresolved extension validation. Unknown HL7 IG extension definitions are
+    now rejected unless they are on the explicit known-missing compatibility
+    allowlist, matching Java for the unresolved CardX extension on those rows.
+    Targeted `tx` module agreement improved to 33/40.
+32. Re-run full R4 conformance after removing the former hardcoded fixes and
+    tightening unresolved HL7 IG extension validation. The current audited
+    full-suite agreement is 373/404 without terminology and 379/404 with
+    terminology. Current triage artifacts:
+    `target/conformance-triage/r4-java-mismatches-1782817528-no-terminology.csv`
+    and
+    `target/conformance-triage/r4-java-mismatches-1782818297-with-terminology.csv`.
+    Current mismatch counts are:
+    - No terminology (31): extension 8, invariant 7,
+      questionnaire-response 6, reference-bundle-contained 5,
+      profile-slicing 2, validation-resource 2, terminology 1.
+    - With terminology (25): extension 8, questionnaire-response 6,
+      reference-bundle-contained 4, invariant 4, profile-slicing 2,
+      validation-resource 1.
+    Former hardcoded-fix status:
+    - `obs-vs-1` and `obs-vs-2` are recovered without blood-pressure code
+      literals through the general unresolved-HL7-IG-extension rule. This is
+      acceptable as a short-term Java-compatibility rule, but the more general
+      endpoint remains CardX package/extension-definition resolution.
+    - `obs-hgvs-bad` remains Java-invalid/RH-valid. It has manifest package
+      metadata for `hl7.fhir.us.core#3.1.0` and
+      `hl7.fhir.us.mcode#1.0.0`; recover it through exact package resolution
+      and profile-derived terminology/binding rules, not HGVS string checks.
+    - `obs-temp-bad` remains Java-invalid/RH-valid. The manifest has no
+      supporting package/profile metadata and the instance only declares the
+      external Cambio profile URL. Unless that profile is made available by
+      metadata, cache, or a canonical fetch mechanism, treat this row as an
+      external-profile outlier rather than reintroducing a body-temperature
+      code literal.
+33. Continue the general package/profile path for `obs-hgvs-bad`:
+    - Installed the exact manifest package
+      `hl7.fhir.us.mcode#1.0.0` into the local FHIR package cache using
+      `rh download package hl7.fhir.us.mcode 1.0.0`.
+    - Made compiled cardinality, fixed/pattern, and binding rules carry slice
+      context derived from `ElementDefinition.sliceName` or sliced
+      `ElementDefinition.id` paths such as
+      `Observation.component:GenomicDNAChange.value[x]`.
+    - Applied those scoped rules only to matching sliced array items, avoiding
+      the false positive where every mCODE component was validated against
+      every component slice.
+    - Skipped direct array-slicing validation for choice paths such as
+      `value[x]`, because FHIR JSON represents those as typed fields like
+      `valueCodeableConcept`; scoped child rules handle the usable constraints.
+    Targeted `tx` module agreement remains 33/40, but the exact-package run now
+    keeps `obs-hgvs` Java-valid/RH-valid while `obs-hgvs-bad` remains
+    Java-invalid/RH-valid. The remaining bad-row gap is not a profile loading
+    gap: mCODE's `mcode-hgvs-vs` only includes all codes from
+    `http://varnomen.hgvs.org`, so rejecting `NC_000019.8:g.1171707G>AXXX`
+    requires terminology/code-system syntax validation for that system. Treat
+    this as a terminology-service or code-system-validator outlier rather than
+    restoring an HGVS fixture string check.
 
 Next:
 
-29. `reference-bundle-contained` remaining mismatches. Targeted references
-    module now agrees 15/15. Full-suite rows include unresolved
-    external/profile package case `obs-temp-bad`, Bundle/reference behavior
-    (`dr-example-org`, `bundle-conformsto`, `res-inv-example-bad`), and likely
-    overlap with validation-resource or terminology resolution. Suggested next
-    task: inspect `obs-temp-bad` or `dr-example-org` to determine whether the
-    remaining work is profile package loading, Bundle/DocumentReference
-    resource rules, or reference resolution.
-30. `questionnaire-response` remaining mismatches. Contained dom-3 false
+34. `extension` compatibility work. The current largest mismatch category is
+    Java-valid/RH-invalid extension-definition handling. Prefer package/test
+    metadata loading for version-conversion, matchetype, ValueSet parameter,
+    and snapshot metadata extensions; keep allowlists narrow and explicitly
+    justified only when the Java validator accepts a missing definition in the
+    conformance context.
+35. Remaining profile/terminology outliers from the former hardcoded-fix set:
+    - `obs-hgvs-bad`: add a real terminology-service or reusable
+      code-system-validator path for `http://varnomen.hgvs.org`; do not add an
+      HGVS fixture literal check.
+    - `obs-temp-bad`: make the external Cambio profile available through
+      manifest metadata, cache, or canonical fetch. Until then, keep it
+      documented as an external-profile outlier.
+    - `obs-vs-1` and `obs-vs-2`: currently recovered by unresolved HL7 IG
+      extension rejection; the cleaner endpoint is CardX package and extension
+      definition resolution.
+36. `questionnaire-response` remaining mismatches. Contained dom-3 false
     positives are resolved; remaining mismatches are unresolved
     async/value-set/quantity validation: `choice-async-qr`,
     `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
@@ -322,22 +410,30 @@ Next:
     `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
     the referenced Questionnaire/ValueSet for one async choice case and verify
     whether failure is terminology expansion or questionnaire lookup.
-31. `invariant` false negatives. Remaining examples are
+37. `invariant` false negatives. Remaining examples are
     narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
     `ai4`, `obs-temp-code2`) plus `supplement-1a`.
-32. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+38. `reference-bundle-contained` remaining mismatches. Targeted references
+    module now agrees 15/15. Full-suite rows are `dr-example-org`, where Java
+    rejects an example Attachment URL only when manifest examples are disabled,
+    and `res-inv-example-bad`, where RH currently rejects an unresolved
+    profiled Bundle reference that Java treats as valid in this base run.
+    Suggested next task: plumb manifest example context before enforcing
+    example URL validation, or inspect the profiled Bundle invariant/reference
+    scope for `res-inv-example-bad`.
+39. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-33. Remaining `validation-resource` false negative: `ext-derived-circle` is
+40. Remaining `validation-resource` false negative: `ext-derived-circle` is
     Java-invalid/RH-valid in full runs but valid in the targeted `sd` module
     because the supporting base profile changes the circular-base behavior.
     Treat this as a circular StructureDefinition base resolution edge case.
-34. The former `extension` follow-up, `res-inv-example-bad`, is categorized
+41. The former `extension` follow-up, `res-inv-example-bad`, is categorized
     under reference-bundle-contained in the current triage. The first fatal
     issue is unresolved reference `Endpoint/examplelabsXX` inside a profile
     invariant. Treat this as reference/invariant work, not extension loading.
-35. After each small task, run the relevant `just test-fhir-module <module>`,
+42. After each small task, run the relevant `just test-fhir-module <module>`,
     then `just check`, commit, and only then run `just test-fhir-all` when a
     full category slice is complete or the behavior could affect multiple
     modules.
