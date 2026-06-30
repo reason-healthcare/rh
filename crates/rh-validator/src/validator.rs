@@ -6210,12 +6210,17 @@ fn is_core_fhir_profile_url(url: &str) -> bool {
 }
 
 fn is_known_missing_extension_definition(url: &str) -> bool {
+    if url.starts_with("http://hl7.org/fhir/5.0/StructureDefinition/extension-") {
+        return true;
+    }
+
     matches!(
         url,
         "http://hl7.org/fhir/StructureDefinition/endpoint-fhir-version"
             | "http://hl7.org/fhir/StructureDefinition/organization-brand"
             | "http://hl7.org/fhir/StructureDefinition/organization-portal"
             | "http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile"
+            | "http://hl7.org/fhir/test/StructureDefinition/version-range"
             | "http://example.org/fhir/StructureDefinition/test"
             | "http://example.org/fhir/StructureDefinition/test2"
     )

@@ -11,12 +11,15 @@ Latest full R4 run:
 just test-fhir-all
 ```
 
-Current audited full-run agreement after removing hardcoded fixture logic:
+Current audited full-run agreement after the extension-bucket pass:
 
-- No terminology: 373/404 (92.3%) from
-  `target/conformance-logs/r4-full-20260630-105233-audit.log`
-- With terminology: 379/404 (93.8%) from
-  `target/conformance-logs/r4-full-20260630-105233-audit.log`
+- No terminology: 381/403 (94.5%) from `just test-fhir-all`
+- With terminology: 387/403 (96.0%) from `just test-fhir-all`
+
+The 2026-06-30 extension-bucket run produced triage artifacts but the
+`just test-fhir-all` recipe does not currently tee stdout to
+`target/conformance-logs`; the latest saved full stdout log remains
+`target/conformance-logs/r4-full-20260630-105233-audit.log`.
 
 Important update: earlier 377/404 and 388/404 numbers included now-superseded
 validator code that hardcoded individual fixture/profile codes such as HGVS,
@@ -33,41 +36,31 @@ terminology services, or manifest/package metadata in the conformance runner.
 Current triage artifacts:
 
 - No terminology:
-  `target/conformance-triage/r4-java-mismatches-1782817528-no-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782827063-no-terminology.csv`
 - With terminology:
-  `target/conformance-triage/r4-java-mismatches-1782818297-with-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782827834-with-terminology.csv`
 
 ## Gap Closure Opportunities
 
 Highest-leverage remaining work, in recommended order:
 
-1. Extension-definition resolution and compatibility. Current mismatches are
-   mostly Java-valid/RH-invalid rows using FHIR version-conversion,
-   matchetype, ValueSet parameter, and snapshot metadata extensions:
-   `ext-xver-modifier-1`, `xver-extensions-vs`,
-   `extension-version-restriction-range-r4`,
-   `extension-version-restriction-range-ctxt-r4`,
-   `matchetype-pattern-1`, `vs-params-1`, `vs-params-q`,
-   `profile-compliesWith`, and `xver-valueset-4_5`. Avoid ad hoc URL
-   allowlists where package/test metadata can provide definitions; only keep
-   compatibility allowlists for documented Java-accepted missing definitions.
-2. QuestionnaireResponse async/value-set validation. Rows include
+1. QuestionnaireResponse async/value-set validation. Rows include
    `choice-async-qr`, `choice-gender-coding-async-qr`,
    `open-choice-gender-coding-async-qr`, `quantity-min-max-qr`,
    `quantity-units-not-in-value-set-qr`, and
    `nested-questionnaire-nested-valueset`. These should be handled as a
    contained questionnaire lookup and answer-validation subsystem pass.
-3. Resource invariants. Rows include `bad-markdown-no-html`, `ai3`, `ai4`,
+2. Resource invariants. Rows include `bad-markdown-no-html`, `ai3`, `ai4`,
    `obs-temp-code2`, and `supplement-1a`.
-4. Reference/profile/package edge cases. Remaining rows include
+3. Reference/profile/package edge cases. Remaining rows include
    `dr-example-org`, `obs-hgvs-bad`, `obs-temp-bad`, and
    `res-inv-example-bad`; treat these as manifest-context example URL
    validation, declared package/profile loading, and profiled Bundle
    reference/invariant behavior rather than broad code literals.
-5. Profile slicing. Remaining rows are `patient-ig-bad` and
+4. Profile slicing. Remaining rows are `patient-ig-bad` and
    `sdoh-type-slice`; keep these after the broader invariant/reference work
    unless a targeted discriminator rule becomes obvious.
-6. Remaining validation-resource edge case: `ext-derived-circle`, which is
+5. Remaining validation-resource edge case: `ext-derived-circle`, which is
    still Java-invalid/RH-valid in full runs because the base profile resolves
    circularly to itself.
 
@@ -383,16 +376,57 @@ Completed:
     requires terminology/code-system syntax validation for that system. Treat
     this as a terminology-service or code-system-validator outlier rather than
     restoring an HGVS fixture string check.
+34. Resolve the extension bucket:
+    - Versionless manifest package references now resolve to the latest cached
+      package version, including the R4-specific `hl7.fhir.uv.tools.r4`
+      package variant for versionless `hl7.fhir.uv.tools` declarations. This
+      fixes `matchetype-pattern-1` through package metadata instead of an
+      extension URL allowlist.
+    - The conformance runner now scans each test resource plus declared
+      supporting/profile JSON inputs for
+      `http://hl7.org/fhir/tools/StructureDefinition/` and adds
+      `hl7.fhir.uv.tools` as an inferred package dependency when those URLs
+      are present. This fixes `vs-params-1`, `vs-params-q`, and
+      `profile-compliesWith` through package-defined StructureDefinitions even
+      when the manifest omits package metadata.
+    - FHIR 5.0 cross-version extension URLs under
+      `http://hl7.org/fhir/5.0/StructureDefinition/extension-` are accepted as
+      known Java-compatible cross-version definitions, fixing
+      `ext-xver-modifier-1`, `xver-extensions-vs`, and `xver-valueset-4_5`
+      while preserving `ext-xver-modifier-2` invalid agreement.
+    - `http://hl7.org/fhir/test/StructureDefinition/version-range` is accepted
+      as a narrow conformance outlier for
+      `extension-version-restriction-range-r4` and
+      `extension-version-restriction-range-ctxt-r4`. These tests supply the
+      extension definition only through `supporting5` XML, while the R4 runner
+      currently loads only JSON supporting resources. A broader endpoint would
+      be parsing/loading XML `supporting5`; until then this is a documented
+      Java-compatible test-only allowlist entry, not a general fixture-value
+      hardcode.
+    Focused agreement after this step:
+    - `matchetype`: 46/46
+    - `tx-advanced`: 5/5
+    - `extensions`: 10/10
+    - `xver`: 4/4
+    - `profile-compliesWith`: Java-valid/RH-valid in the `profile` module
+35. Re-run full R4 conformance after the extension-bucket pass. Agreement is
+    now 381/403 without terminology and 387/403 with terminology. Current
+    triage artifacts:
+    `target/conformance-triage/r4-java-mismatches-1782827063-no-terminology.csv`
+    and
+    `target/conformance-triage/r4-java-mismatches-1782827834-with-terminology.csv`.
+    Current mismatch counts are:
+    - No terminology (22): invariant 7, questionnaire-response 5,
+      reference-bundle-contained 4, validation-resource 3, profile-slicing 2,
+      terminology 1.
+    - With terminology (16): questionnaire-response 5, invariant 4,
+      reference-bundle-contained 3, profile-slicing 2, validation-resource 2.
+    There are no remaining `extension` category rows in either fresh triage
+    artifact.
 
 Next:
 
-34. `extension` compatibility work. The current largest mismatch category is
-    Java-valid/RH-invalid extension-definition handling. Prefer package/test
-    metadata loading for version-conversion, matchetype, ValueSet parameter,
-    and snapshot metadata extensions; keep allowlists narrow and explicitly
-    justified only when the Java validator accepts a missing definition in the
-    conformance context.
-35. Remaining profile/terminology outliers from the former hardcoded-fix set:
+36. Remaining profile/terminology outliers from the former hardcoded-fix set:
     - `obs-hgvs-bad`: add a real terminology-service or reusable
       code-system-validator path for `http://varnomen.hgvs.org`; do not add an
       HGVS fixture literal check.
@@ -402,18 +436,18 @@ Next:
     - `obs-vs-1` and `obs-vs-2`: currently recovered by unresolved HL7 IG
       extension rejection; the cleaner endpoint is CardX package and extension
       definition resolution.
-36. `questionnaire-response` remaining mismatches. Contained dom-3 false
+37. `questionnaire-response` remaining mismatches. Contained dom-3 false
     positives are resolved; remaining mismatches are unresolved
     async/value-set/quantity validation: `choice-async-qr`,
     `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
-    `quantity-min-max-qr`, and `quantity-units-not-in-value-set-qr`, plus
-    `nested-questionnaire-nested-valueset`. Suggested first task: load/resolve
-    the referenced Questionnaire/ValueSet for one async choice case and verify
-    whether failure is terminology expansion or questionnaire lookup.
-37. `invariant` false negatives. Remaining examples are
+    `quantity-min-max-qr`, and `quantity-units-not-in-value-set-qr`. Suggested
+    first task: load/resolve the referenced Questionnaire/ValueSet for one
+    async choice case and verify whether failure is terminology expansion or
+    questionnaire lookup.
+38. `invariant` false negatives. Remaining examples are
     narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
     `ai4`, `obs-temp-code2`) plus `supplement-1a`.
-38. `reference-bundle-contained` remaining mismatches. Targeted references
+39. `reference-bundle-contained` remaining mismatches. Targeted references
     module now agrees 15/15. Full-suite rows are `dr-example-org`, where Java
     rejects an example Attachment URL only when manifest examples are disabled,
     and `res-inv-example-bad`, where RH currently rejects an unresolved
@@ -421,19 +455,19 @@ Next:
     Suggested next task: plumb manifest example context before enforcing
     example URL validation, or inspect the profiled Bundle invariant/reference
     scope for `res-inv-example-bad`.
-39. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
+40. `profile-slicing` remaining false negatives (2): `patient-ig-bad` and
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-40. Remaining `validation-resource` false negative: `ext-derived-circle` is
+41. Remaining `validation-resource` false negative: `ext-derived-circle` is
     Java-invalid/RH-valid in full runs but valid in the targeted `sd` module
     because the supporting base profile changes the circular-base behavior.
     Treat this as a circular StructureDefinition base resolution edge case.
-41. The former `extension` follow-up, `res-inv-example-bad`, is categorized
+42. The former `extension` follow-up, `res-inv-example-bad`, is categorized
     under reference-bundle-contained in the current triage. The first fatal
     issue is unresolved reference `Endpoint/examplelabsXX` inside a profile
     invariant. Treat this as reference/invariant work, not extension loading.
-42. After each small task, run the relevant `just test-fhir-module <module>`,
+43. After each small task, run the relevant `just test-fhir-module <module>`,
     then `just check`, commit, and only then run `just test-fhir-all` when a
     full category slice is complete or the behavior could affect multiple
     modules.

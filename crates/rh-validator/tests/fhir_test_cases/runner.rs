@@ -13,6 +13,9 @@ use rh_validator::{
     ValidationResult,
 };
 
+const HL7_TOOLS_EXTENSION_URL_PREFIX: &str = "http://hl7.org/fhir/tools/StructureDefinition/";
+const HL7_TOOLS_PACKAGE: &str = "hl7.fhir.uv.tools";
+
 #[derive(Debug, Clone, Default)]
 pub struct TestRunConfig {
     pub max_tests: Option<usize>,
@@ -453,7 +456,7 @@ impl TestRunner {
             .with_context(|| format!("Failed to create package dir {}", package_dir.display()))?;
 
         let mut file_index = 0usize;
-        for package_ref in package_resource_refs(test) {
+        for package_ref in package_resource_refs_for_test(test, validator_dir) {
             match resolve_package_resource(&package_ref, validator_dir) {
                 Some(ResolvedPackageResource::LocalArchive(package_path)) => {
                     file_index =
@@ -949,7 +952,7 @@ enum ResolvedPackageResource {
 }
 
 fn has_resolvable_package_resources(test: &TestCase, validator_dir: &Path) -> bool {
-    package_resource_refs(test)
+    package_resource_refs_for_test(test, validator_dir)
         .into_iter()
         .any(|package_ref| resolve_package_resource(&package_ref, validator_dir).is_some())
 }
@@ -1153,6 +1156,25 @@ fn package_resource_refs(test: &TestCase) -> Vec<String> {
     package_refs.into_iter().collect()
 }
 
+fn package_resource_refs_for_test(test: &TestCase, validator_dir: &Path) -> Vec<String> {
+    let mut package_refs = BTreeSet::from_iter(package_resource_refs(test));
+    if test_uses_hl7_tools_extensions(test, validator_dir) {
+        package_refs.insert(HL7_TOOLS_PACKAGE.to_string());
+    }
+    package_refs.into_iter().collect()
+}
+
+fn test_uses_hl7_tools_extensions(test: &TestCase, validator_dir: &Path) -> bool {
+    let input_paths = std::iter::once(test.get_test_file_path(validator_dir))
+        .chain(test.get_supporting_files(validator_dir))
+        .chain(test.get_profile_source_path(validator_dir));
+
+    input_paths.into_iter().any(|path| {
+        fs::read_to_string(path)
+            .is_ok_and(|content| content.contains(HL7_TOOLS_EXTENSION_URL_PREFIX))
+    })
+}
+
 fn resolve_package_resource(
     package_ref: &str,
     validator_dir: &Path,
@@ -1168,17 +1190,43 @@ fn resolve_package_resource(
 }
 
 fn installed_package_dir(package_ref: &str) -> Option<PathBuf> {
-    if !package_ref.contains('#') || package_ref.contains('/') || package_ref.contains('\\') {
+    if package_ref.contains('/') || package_ref.contains('\\') {
         return None;
     }
 
     let packages_dir = rh_foundation::loader::PackageLoader::get_default_packages_dir().ok()?;
+    if !package_ref.contains('#') {
+        return latest_installed_package_dir(&packages_dir, package_ref);
+    }
+
     let exact = packages_dir.join(package_ref).join("package");
     if exact.is_dir() {
         return Some(exact);
     }
 
     compatible_installed_package_dir(&packages_dir, package_ref)
+}
+
+fn latest_installed_package_dir(packages_dir: &Path, package_id: &str) -> Option<PathBuf> {
+    latest_installed_package_dir_for_prefix(packages_dir, &format!("{package_id}#")).or_else(|| {
+        latest_installed_package_dir_for_prefix(packages_dir, &format!("{package_id}.r4#"))
+    })
+}
+
+fn latest_installed_package_dir_for_prefix(packages_dir: &Path, prefix: &str) -> Option<PathBuf> {
+    let mut candidates: Vec<(String, PathBuf)> = fs::read_dir(packages_dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let version = file_name.strip_prefix(prefix)?.to_string();
+            let package_dir = entry.path().join("package");
+            package_dir.is_dir().then_some((version, package_dir))
+        })
+        .collect();
+
+    candidates.sort_by(|left, right| compare_versions(&left.0, &right.0));
+    candidates.pop().map(|(_, path)| path)
 }
 
 fn compatible_installed_package_dir(packages_dir: &Path, package_ref: &str) -> Option<PathBuf> {
@@ -1202,8 +1250,31 @@ fn compatible_installed_package_dir(packages_dir: &Path, package_ref: &str) -> O
         })
         .collect();
 
-    candidates.sort_by(|a, b| b.0.cmp(&a.0));
-    candidates.into_iter().map(|(_, path)| path).next()
+    candidates.sort_by(|left, right| compare_versions(&left.0, &right.0));
+    candidates.pop().map(|(_, path)| path)
+}
+
+fn compare_versions(left: &str, right: &str) -> std::cmp::Ordering {
+    let left_parts = version_parts(left);
+    let right_parts = version_parts(right);
+
+    for index in 0..left_parts.len().max(right_parts.len()) {
+        let left_part = left_parts.get(index).copied().unwrap_or(0);
+        let right_part = right_parts.get(index).copied().unwrap_or(0);
+        match left_part.cmp(&right_part) {
+            std::cmp::Ordering::Equal => {}
+            ordering => return ordering,
+        }
+    }
+
+    left.cmp(right)
+}
+
+fn version_parts(version: &str) -> Vec<u64> {
+    version
+        .split(['.', '-'])
+        .map_while(|part| part.parse::<u64>().ok())
+        .collect()
 }
 
 fn major_minor_version(version: &str) -> Option<(u64, u64)> {
@@ -1343,6 +1414,30 @@ mod tests {
     }
 
     #[test]
+    fn package_resource_refs_infer_tools_package_from_input_urls() {
+        let temp = temp_test_dir();
+        let mut test = test_case_with_package("hl7.fhir.us.core#3.1.1");
+        test.file = "valueset.json".to_string();
+        fs::write(
+            temp.join("valueset.json"),
+            r#"{
+                "resourceType": "ValueSet",
+                "extension": [{
+                    "url": "http://hl7.org/fhir/tools/StructureDefinition/valueset-parameter"
+                }]
+            }"#,
+        )
+        .expect("write test resource");
+
+        assert_eq!(
+            package_resource_refs_for_test(&test, &temp),
+            vec!["hl7.fhir.us.core#3.1.1", "hl7.fhir.uv.tools"]
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
+
+    #[test]
     fn missing_package_id_is_not_resolved() {
         let temp = temp_test_dir();
 
@@ -1384,6 +1479,36 @@ mod tests {
         assert_eq!(
             compatible_installed_package_dir(&temp, "hl7.fhir.us.core#3.2.0"),
             None
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
+
+    #[test]
+    fn versionless_package_uses_latest_cached_version() {
+        let temp = temp_test_dir();
+        fs::create_dir_all(temp.join("hl7.fhir.uv.tools#1.1.2").join("package"))
+            .expect("create latest package dir");
+        fs::create_dir_all(temp.join("hl7.fhir.uv.tools#1.0.10").join("package"))
+            .expect("create older package dir");
+
+        assert_eq!(
+            latest_installed_package_dir(&temp, "hl7.fhir.uv.tools"),
+            Some(temp.join("hl7.fhir.uv.tools#1.1.2").join("package"))
+        );
+
+        fs::remove_dir_all(temp).expect("remove temp dir");
+    }
+
+    #[test]
+    fn versionless_tools_package_can_use_r4_package_variant() {
+        let temp = temp_test_dir();
+        fs::create_dir_all(temp.join("hl7.fhir.uv.tools.r4#1.1.2").join("package"))
+            .expect("create r4 tools package dir");
+
+        assert_eq!(
+            latest_installed_package_dir(&temp, "hl7.fhir.uv.tools"),
+            Some(temp.join("hl7.fhir.uv.tools.r4#1.1.2").join("package"))
         );
 
         fs::remove_dir_all(temp).expect("remove temp dir");
