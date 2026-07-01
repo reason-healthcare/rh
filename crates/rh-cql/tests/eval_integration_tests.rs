@@ -647,6 +647,84 @@ define X: [Observation]";
 }
 
 #[test]
+fn eval_fhir_choice_value_boolean_via_base_property() {
+    use rh_cql::{compile, fhir_resource_json_to_cql_value, InMemoryDataProvider};
+    use serde_json::json;
+
+    let cql = r#"library T
+using FHIR version '4.0.1'
+include FHIRHelpers version '4.0.1'
+define X:
+  exists([Observation] O
+    where FHIRHelpers.ToBoolean(O.value as FHIR.boolean) = true)"#;
+
+    let result = compile(cql, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource(
+        "Observation",
+        fhir_resource_json_to_cql_value(json!({
+            "resourceType": "Observation",
+            "id": "obs-boolean",
+            "status": "final",
+            "valueBoolean": true
+        })),
+    );
+
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+
+    assert_eq!(value, Value::Boolean(true));
+}
+
+#[test]
+fn eval_fhir_choice_codeable_concept_via_base_property() {
+    use rh_cql::{compile, fhir_resource_json_to_cql_value, InMemoryDataProvider};
+    use serde_json::json;
+
+    let cql = r#"library T
+using FHIR version '4.0.1'
+define X:
+  exists([Observation] O
+    where (O.value as FHIR.CodeableConcept).text = 'Surgical Candidate')"#;
+
+    let result = compile(cql, None).expect("compile failed");
+    if !result.errors.is_empty() {
+        panic!("compilation errors: {:?}", result.errors);
+    }
+
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource(
+        "Observation",
+        fhir_resource_json_to_cql_value(json!({
+            "resourceType": "Observation",
+            "id": "obs-concept",
+            "status": "final",
+            "valueCodeableConcept": {
+                "coding": [{
+                    "system": "http://example.org",
+                    "code": "candidate",
+                    "display": "Surgical Candidate"
+                }],
+                "text": "Surgical Candidate"
+            }
+        })),
+    );
+
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("evaluation failed");
+
+    assert_eq!(value, Value::Boolean(true));
+}
+
+#[test]
 fn eval_substring_function() {
     let cql = "library T define X: Substring('abc', 1, 1)";
     assert_eq!(eval_expr(cql, "X"), Value::String("b".into()));

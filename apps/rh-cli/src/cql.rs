@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use clap::Subcommand;
 use glob::glob;
 use serde::Serialize;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -14,9 +14,10 @@ use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, get_default_packages_dir, CompilationError, CompilerOptions, CqlDateTime,
-    Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, Value,
+    explain_parse, fhir_resource_json_to_cql_value, get_default_packages_dir, CompilationError,
+    CompilerOptions, CqlDateTime, Diagnostic, EvalContextBuilder, EvalError,
+    FileLibrarySourceProvider, FixedClock, InMemoryDataProvider, PackageLibrarySourceProvider,
+    SignatureLevel, Value,
 };
 
 #[derive(Serialize)]
@@ -1039,7 +1040,8 @@ fn load_fhir_data(
                     if single_context.is_none() {
                         if let Some(ct) = context_type {
                             if resource.get("resourceType").and_then(|v| v.as_str()) == Some(ct) {
-                                single_context = Some(json_to_cql_value(resource.clone()));
+                                single_context =
+                                    Some(fhir_resource_json_to_cql_value(resource.clone()));
                             }
                         }
                     }
@@ -1049,7 +1051,7 @@ fn load_fhir_data(
         }
     } else {
         // Single resource — also set it as context value.
-        let value = json_to_cql_value(json.clone());
+        let value = fhir_resource_json_to_cql_value(json.clone());
         add_fhir_resource(&mut provider, json);
         single_context = Some(value);
     }
@@ -1057,36 +1059,12 @@ fn load_fhir_data(
     Ok((provider, single_context))
 }
 
-/// Recursively convert a `serde_json::Value` to a CQL `Value`.
-fn json_to_cql_value(v: serde_json::Value) -> Value {
-    match v {
-        serde_json::Value::Null => Value::Null,
-        serde_json::Value::Bool(b) => Value::Boolean(b),
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Value::Integer(i)
-            } else {
-                Value::Decimal(n.as_f64().unwrap_or(0.0))
-            }
-        }
-        serde_json::Value::String(s) => Value::String(s),
-        serde_json::Value::Array(arr) => {
-            Value::List(arr.into_iter().map(json_to_cql_value).collect())
-        }
-        serde_json::Value::Object(map) => Value::Tuple(
-            map.into_iter()
-                .map(|(k, v)| (k, json_to_cql_value(v)))
-                .collect::<BTreeMap<_, _>>(),
-        ),
-    }
-}
-
 /// Add a FHIR JSON resource to `provider`, keyed by its `resourceType` field.
 /// Resources without a `resourceType` are silently skipped.
 fn add_fhir_resource(provider: &mut InMemoryDataProvider, resource: serde_json::Value) {
     if let Some(rt) = resource.get("resourceType").and_then(|v| v.as_str()) {
         let rt = rt.to_string();
-        provider.add_resource(rt, json_to_cql_value(resource));
+        provider.add_resource(rt, fhir_resource_json_to_cql_value(resource));
     }
 }
 

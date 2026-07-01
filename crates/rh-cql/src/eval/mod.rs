@@ -22,6 +22,7 @@
 
 pub mod context;
 pub mod engine;
+pub mod fhir_json;
 pub mod intervals;
 pub mod lists;
 pub mod operators;
@@ -34,6 +35,7 @@ pub use context::{
     InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
 };
 pub use engine::{evaluate_elm, evaluate_elm_with_trace, TraceEvent};
+pub use fhir_json::{fhir_resource_json_to_cql_value, json_to_cql_value};
 pub use operators::{
     abs, add, as_type, ceiling, convert, divide, equal, equivalent, exp, floor, greater,
     greater_or_equal, is_type, less, less_or_equal, ln, log, max_value, min_value, modulo,

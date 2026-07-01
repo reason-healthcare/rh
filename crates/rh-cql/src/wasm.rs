@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 
+use crate::eval::fhir_json::{fhir_resource_json_to_cql_value, json_to_cql_value};
 use crate::eval::value::{CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
 use crate::{
     compile_to_elm_with_sourcemap, compile_to_json, evaluate_elm, explain_compile, explain_parse,
@@ -252,10 +253,10 @@ fn data_provider_from_json(data_json: &str) -> Result<InMemoryDataProvider, Stri
         match resources {
             serde_json::Value::Array(items) => {
                 for item in items {
-                    provider.add_resource(data_type.clone(), json_to_value(item));
+                    provider.add_resource(data_type.clone(), fhir_resource_json_to_cql_value(item));
                 }
             }
-            item => provider.add_resource(data_type, json_to_value(item)),
+            item => provider.add_resource(data_type, fhir_resource_json_to_cql_value(item)),
         }
     }
 
@@ -272,31 +273,8 @@ fn parameters_from_json(parameters_json: &str) -> Result<HashMap<String, Value>,
 
     Ok(map
         .into_iter()
-        .map(|(key, value)| (key, json_to_value(value)))
+        .map(|(key, value)| (key, json_to_cql_value(value)))
         .collect())
-}
-
-fn json_to_value(value: serde_json::Value) -> Value {
-    match value {
-        serde_json::Value::Null => Value::Null,
-        serde_json::Value::Bool(value) => Value::Boolean(value),
-        serde_json::Value::Number(value) => {
-            if let Some(integer) = value.as_i64() {
-                Value::Integer(integer)
-            } else {
-                Value::Decimal(value.as_f64().unwrap_or_default())
-            }
-        }
-        serde_json::Value::String(value) => Value::String(value),
-        serde_json::Value::Array(items) => {
-            Value::List(items.into_iter().map(json_to_value).collect())
-        }
-        serde_json::Value::Object(map) => Value::Tuple(
-            map.into_iter()
-                .map(|(key, value)| (key, json_to_value(value)))
-                .collect(),
-        ),
-    }
 }
 
 fn value_type(value: &Value) -> &'static str {

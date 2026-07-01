@@ -510,8 +510,63 @@ pub fn to_concept(v: &Value) -> Result<Value, EvalError> {
                 display: None,
             }))
         }
+        Value::Tuple(fields) => codeable_concept_to_concept(fields)
+            .ok_or_else(|| err("ToConcept", "cannot convert CodeableConcept to Concept")),
         _ => Err(err("ToConcept", "cannot convert to Concept")),
     }
+}
+
+fn codeable_concept_to_concept(
+    fields: &std::collections::BTreeMap<String, Value>,
+) -> Option<Value> {
+    let display = fields.get("text").and_then(|value| match value {
+        Value::String(text) => Some(text.clone()),
+        _ => None,
+    });
+    let coding = fields.get("coding")?;
+    let mut codes = Vec::new();
+
+    let coding_items: &[Value] = match coding {
+        Value::List(items) => items,
+        item => std::slice::from_ref(item),
+    };
+
+    for item in coding_items {
+        let Value::Tuple(coding_fields) = item else {
+            continue;
+        };
+        let Some(Value::String(code)) = coding_fields.get("code") else {
+            continue;
+        };
+        let Some(Value::String(system)) = coding_fields.get("system") else {
+            continue;
+        };
+        let coding_display = coding_fields.get("display").and_then(|value| match value {
+            Value::String(display) => Some(display.clone()),
+            _ => None,
+        });
+        let version = coding_fields.get("version").and_then(|value| match value {
+            Value::String(version) => Some(version.clone()),
+            _ => None,
+        });
+
+        codes.push(super::super::value::CqlCode {
+            code: code.clone(),
+            system: system.clone(),
+            display: coding_display,
+            version,
+        });
+    }
+
+    if codes.is_empty() {
+        return None;
+    }
+
+    let display = display.or_else(|| codes.iter().find_map(|code| code.display.clone()));
+    Some(Value::Concept(super::super::value::CqlConcept {
+        codes,
+        display,
+    }))
 }
 
 /// `ToList` — wraps a value in a singleton list.
@@ -532,26 +587,67 @@ pub fn to_list(v: &Value) -> Result<Value, EvalError> {
 /// `type_name` should be the simple CQL type name (e.g. `"Integer"`, `"List"`).
 pub fn is_type(v: &Value, type_name: &str) -> Value {
     use Value::*;
+    let type_name = simple_type_name(type_name);
     let result = match (v, type_name) {
         (Null, _) => false,
         (Boolean(_), "Boolean") => true,
+        (Boolean(_), "boolean") => true,
         (Integer(_), "Integer") => true,
+        (Integer(_), "integer" | "unsignedInt" | "positiveInt") => true,
         (Long(_), "Long") => true,
         (Decimal(_), "Decimal") => true,
+        (Decimal(_), "decimal") => true,
         (String(_), "String") => true,
+        (String(_), fhir_string_like) if is_fhir_string_like_primitive(fhir_string_like) => true,
         (Date(_), "Date") => true,
+        (Date(_), "date") => true,
         (DateTime(_), "DateTime") => true,
+        (DateTime(_), "dateTime" | "instant") => true,
         (Time(_), "Time") => true,
+        (Time(_), "time") => true,
         (Quantity(_), "Quantity") => true,
         (Ratio { .. }, "Ratio") => true,
         (Code(_), "Code") => true,
+        (Code(_), "code") => true,
         (Concept(_), "Concept") => true,
         (List(_), "List") => true,
         (Tuple(_), "Tuple") => true,
+        (Tuple(_), fhir_type) if is_fhir_tuple_type(fhir_type) => true,
         (Interval { .. }, "Interval") => true,
         _ => false,
     };
     Value::Boolean(result)
+}
+
+fn simple_type_name(type_name: &str) -> &str {
+    type_name
+        .rsplit_once('.')
+        .map(|(_, name)| name)
+        .unwrap_or(type_name)
+}
+
+fn is_fhir_string_like_primitive(type_name: &str) -> bool {
+    matches!(
+        type_name,
+        "string"
+            | "uri"
+            | "uuid"
+            | "url"
+            | "canonical"
+            | "oid"
+            | "id"
+            | "markdown"
+            | "base64Binary"
+            | "date"
+            | "dateTime"
+            | "instant"
+            | "time"
+            | "code"
+    )
+}
+
+fn is_fhir_tuple_type(type_name: &str) -> bool {
+    rh_hl7_fhir_r4_core::metadata::FHIR_TYPE_REGISTRY.contains_key(type_name)
 }
 
 /// `As` — runtime cast. Returns the value if it matches `type_name`, else `null`.

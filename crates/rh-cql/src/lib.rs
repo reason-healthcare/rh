@@ -148,6 +148,7 @@ pub use eval::context::{
 pub use eval::engine::{
     evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace, TraceEvent,
 };
+pub use eval::fhir_json::{fhir_resource_json_to_cql_value, json_to_cql_value};
 pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use eval::value::{
     cql_equal, cql_equivalent, CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime,
