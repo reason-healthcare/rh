@@ -72,6 +72,8 @@ impl Default for InitOptions {
 /// # Errors
 /// Returns an error if `packager.toml` already exists in `dir`.
 pub fn init_package(dir: &Path, opts: InitOptions) -> Result<Vec<PathBuf>> {
+    crate::canonical::validate_canonical_base(Some(&opts.canonical))?;
+
     std::fs::create_dir_all(dir)?;
 
     let toml_path = dir.join("packager.toml");
@@ -205,7 +207,7 @@ fn build_implementation_guide(
     let canonical_url = format!(
         "{}/ImplementationGuide/{}",
         opts.canonical.trim_end_matches('/'),
-        &opts.name
+        &ig_id
     );
     // Derive a clean id for the dependsOn entry (no dots or hyphens).
     let dep_entry_id = base_dep_id.replace(['.', '-'], "");
@@ -367,8 +369,20 @@ mod tests {
         assert_eq!(ig["packageId"], "com.example.fhir");
         assert_eq!(
             ig["url"],
-            "https://example.org/fhir/ImplementationGuide/com.example.fhir"
+            "https://example.org/fhir/ImplementationGuide/com-example-fhir"
         );
+    }
+
+    #[test]
+    fn rejects_implementation_guide_url_as_canonical() {
+        let dir = TempDir::new().unwrap();
+        let opts = InitOptions {
+            name: "com.example.fhir".to_string(),
+            canonical: "https://example.org/fhir/ImplementationGuide/com-example-fhir".to_string(),
+            ..Default::default()
+        };
+        let err = init_package(dir.path(), opts).unwrap_err();
+        assert!(err.to_string().contains("canonical must be"));
     }
 
     #[test]

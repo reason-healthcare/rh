@@ -213,7 +213,9 @@ impl Default for InputConfig {
 impl PublisherConfig {
     /// Parse a `packager.toml` file from its string contents.
     pub fn from_toml_str(s: &str) -> crate::Result<Self> {
-        Ok(toml::from_str(s)?)
+        let config: Self = toml::from_str(s)?;
+        crate::canonical::validate_canonical_base(config.canonical.as_deref())?;
+        Ok(config)
     }
 }
 
@@ -414,6 +416,15 @@ version      = "1.0.0"
         assert_eq!(cfg.status.as_deref(), Some("active"));
         assert_eq!(cfg.publisher.as_deref(), Some("My Org"));
         assert_eq!(cfg.version.as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn rejects_canonical_that_is_implementation_guide_url() {
+        let toml = r#"
+canonical = "https://example.org/fhir/ImplementationGuide/example.fhir"
+"#;
+        let err = PublisherConfig::from_toml_str(toml).unwrap_err();
+        assert!(err.to_string().contains("canonical must be"));
     }
 
     #[test]

@@ -80,7 +80,7 @@ fn write_fixture(root: &Path) -> PathBuf {
         format!(
             r#"id           = "example.fhir.full"
 version      = "1.0.0"
-canonical    = "http://example.org/fhir/ImplementationGuide/example.fhir.full"
+canonical    = "http://example.org/fhir"
 fhir_version = "4.0.1"
 description  = "Full pipeline test package"
 packages_dir = "{}"
@@ -135,6 +135,7 @@ fn build_runs_all_four_builtin_processors() {
     // --- cql processor: Library resource emitted with base64 CQL content ---
     let library = read_json(&pkg.join("Library-SimpleLib.json"));
     assert_eq!(library["resourceType"], "Library");
+    assert_eq!(library["url"], "http://example.org/fhir/Library/SimpleLib");
     let contents = library["content"].as_array().expect("Library.content");
     assert!(
         contents.iter().any(|c| c["contentType"]
@@ -148,6 +149,7 @@ fn build_runs_all_four_builtin_processors() {
     let vs = read_json(&pkg.join("ValueSet-simple-colors.json"));
     assert_eq!(vs["resourceType"], "ValueSet");
     assert_eq!(vs["id"], "simple-colors");
+    assert_eq!(vs["url"], "http://example.org/fhir/ValueSet/simple-colors");
     let includes = vs["compose"]["include"]
         .as_array()
         .expect("compose.include");
@@ -161,6 +163,8 @@ fn build_runs_all_four_builtin_processors() {
     // --- validate processor: ran without failing the build (asserted by
     // build() returning Ok) and the package manifest exists ---
     assert!(pkg.join("package.json").exists());
+    let package_json = read_json(&pkg.join("package.json"));
+    assert_eq!(package_json["canonical"], "http://example.org/fhir");
     assert!(pkg.join(".index.json").exists());
 }
 

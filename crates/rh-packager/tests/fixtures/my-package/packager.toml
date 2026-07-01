@@ -1,6 +1,6 @@
 id           = "example.fhir.test"
 version      = "1.0.0"
-canonical    = "http://example.org/fhir/ImplementationGuide/example.fhir.test"
+canonical    = "http://example.org/fhir"
 fhir_version = "4.0.1"
 description  = "Example FHIR test package"
 

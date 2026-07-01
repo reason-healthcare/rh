@@ -50,6 +50,11 @@ fn build_produces_output_directory_and_tarball() {
     // ValueSet resource must be in the package.
     assert!(pkg_dir.join("ValueSet-condition-codes.json").exists());
 
+    let package_json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(pkg_dir.join("package.json")).unwrap()).unwrap();
+    assert_eq!(package_json["url"], "http://example.org/fhir");
+    assert_eq!(package_json["canonical"], "http://example.org/fhir");
+
     // Standalone overview.md should be in package/other/.
     assert!(pkg_dir.join("other").join("overview.md").exists());
 }
@@ -96,6 +101,7 @@ fn build_with_cql_creates_library_resource() {
     let content = fs::read_to_string(lib_path).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
     assert_eq!(json["resourceType"], "Library");
+    assert_eq!(json["url"], "http://example.org/fhir/Library/SimpleLib");
 
     let content_arr = json["content"]
         .as_array()
@@ -226,5 +232,27 @@ fn check_fails_on_ig_version_mismatch() {
     assert!(
         msg.contains("version") || msg.contains("sync"),
         "Expected sync error mentioning version, got: {msg}"
+    );
+}
+
+#[test]
+fn check_fails_when_canonical_is_implementation_guide_url() {
+    let tmp = TempDir::new().unwrap();
+    copy_fixture(&tmp);
+
+    fs::write(
+        tmp.path().join("packager.toml"),
+        r#"id           = "example.fhir.test"
+version      = "1.0.0"
+canonical    = "http://example.org/fhir/ImplementationGuide/example.fhir.test"
+fhir_version = "4.0.1"
+"#,
+    )
+    .unwrap();
+
+    let err = check(tmp.path()).unwrap_err();
+    assert!(
+        err.to_string().contains("canonical must be"),
+        "expected canonical base validation error, got: {err}"
     );
 }

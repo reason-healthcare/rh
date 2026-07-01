@@ -15,7 +15,7 @@ use crate::{context::PublishContext, PublisherError, Result};
 /// |---|---|
 /// | `id` | `packageId` |
 /// | `version` | `version` |
-/// | `canonical` | `url` |
+/// | `canonical` | `url` derived as `{canonical}/ImplementationGuide/{ImplementationGuide.id}` |
 /// | `fhir_version` | `fhirVersion[0]` |
 pub fn check_ig_sync(ctx: &PublishContext) -> Result<()> {
     let ig = find_ig(ctx)?;
@@ -36,13 +36,21 @@ pub fn check_ig_sync(ctx: &PublishContext) -> Result<()> {
         ig.get("version").and_then(|v| v.as_str()),
     );
 
-    if let Some(pkg_url) = pkg.url.as_deref() {
-        check_field(
-            &mut mismatches,
-            "url",
-            Some(pkg_url),
-            ig.get("url").and_then(|v| v.as_str()),
-        );
+    if let Some(canonical_base) = pkg.url.as_deref() {
+        if let Some(ig_id) = ig.get("id").and_then(|v| v.as_str()) {
+            let expected_ig_url = crate::canonical::implementation_guide_url(canonical_base, ig_id);
+            check_field(
+                &mut mismatches,
+                "url",
+                Some(&expected_ig_url),
+                ig.get("url").and_then(|v| v.as_str()),
+            );
+        } else {
+            mismatches.push(
+                "  id: ImplementationGuide is missing this field; cannot derive expected url"
+                    .to_string(),
+            );
+        }
     }
 
     // Check first fhirVersion entry if present in both.
@@ -121,6 +129,7 @@ mod tests {
             fhir_versions: pkg_fhir.iter().map(|s| s.to_string()).collect(),
             dependencies: HashMap::new(),
             url: pkg_url.map(|s| s.to_string()),
+            canonical: pkg_url.map(|s| s.to_string()),
             description: None,
             author: None,
             license: None,
@@ -164,7 +173,7 @@ mod tests {
             valid_ig(
                 "example.fhir.pkg",
                 "1.0.0",
-                "http://example.org/fhir",
+                "http://example.org/fhir/ImplementationGuide/test-ig",
                 "4.0.1",
             ),
         );
@@ -220,6 +229,7 @@ mod tests {
             &[],
             json!({
                 "resourceType": "ImplementationGuide",
+                "id": "test-ig",
                 "packageId": "example.fhir.pkg",
                 "version": "1.0.0",
                 "url": "http://wrong.org/fhir",
@@ -258,6 +268,7 @@ mod tests {
             &["4.0.1"],
             json!({
                 "resourceType": "ImplementationGuide",
+                "id": "test-ig",
                 "packageId": "wrong.id",
                 "version": "1.0.0",
                 "url": "http://wrong.org/fhir",
