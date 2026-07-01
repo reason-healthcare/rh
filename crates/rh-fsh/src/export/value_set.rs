@@ -21,9 +21,6 @@ pub fn export_value_set(
     if let Some(v) = &config.version {
         json["version"] = serde_json::Value::String(v.clone());
     }
-    if let Some(fv) = &config.fhir_version {
-        json["fhirVersion"] = serde_json::Value::String(fv.clone());
-    }
 
     if let Some(canonical) = &config.canonical {
         let vs_id = vs.metadata.id.as_deref().unwrap_or(&vs.metadata.name);
@@ -169,5 +166,35 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
             "denominator": fsh_value_to_json_simple(denominator),
         }),
         FshValue::InstanceRef(s) => serde_json::Value::String(s.clone()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn value_set_does_not_emit_root_fhir_version() {
+        let value_set = ValueSet {
+            metadata: VsMetadata {
+                name: "ExampleValueSet".to_string(),
+                id: Some("example-vs".to_string()),
+                title: None,
+                description: None,
+            },
+            components: Vec::new(),
+            caret_rules: Vec::new(),
+        };
+
+        let json = export_value_set(
+            &value_set,
+            &crate::FshConfig {
+                fhir_version: Some("4.0.1".to_string()),
+                ..Default::default()
+            },
+        )
+        .expect("ValueSet exports");
+
+        assert!(json.get("fhirVersion").is_none());
     }
 }

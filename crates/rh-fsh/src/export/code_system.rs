@@ -21,9 +21,6 @@ pub fn export_code_system(
     if let Some(v) = &config.version {
         json["version"] = serde_json::Value::String(v.clone());
     }
-    if let Some(fv) = &config.fhir_version {
-        json["fhirVersion"] = serde_json::Value::String(fv.clone());
-    }
 
     if let Some(canonical) = &config.canonical {
         let cs_id = cs.metadata.id.as_deref().unwrap_or(&cs.metadata.name);
@@ -135,5 +132,30 @@ mod tests {
             .expect("CodeSystem exports");
 
         assert_eq!(json["count"], 2);
+    }
+
+    #[test]
+    fn code_system_does_not_emit_root_fhir_version() {
+        let code_system = CodeSystem {
+            metadata: CsMetadata {
+                name: "ExampleCodeSystem".to_string(),
+                id: Some("example-cs".to_string()),
+                title: None,
+                description: None,
+            },
+            concepts: Vec::new(),
+            caret_rules: Vec::new(),
+        };
+
+        let json = export_code_system(
+            &code_system,
+            &crate::FshConfig {
+                fhir_version: Some("4.0.1".to_string()),
+                ..Default::default()
+            },
+        )
+        .expect("CodeSystem exports");
+
+        assert!(json.get("fhirVersion").is_none());
     }
 }
