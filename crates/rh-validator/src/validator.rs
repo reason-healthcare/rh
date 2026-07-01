@@ -338,9 +338,11 @@ impl FhirValidator {
 
         let resource_type_name = resource_type.unwrap_or("Resource");
 
-        let resource_shape_issues = validate_r4_resource_shape(resource, resource_type_name);
-        for issue in resource_shape_issues {
-            result = result.with_issue(issue);
+        if let Some(resource_type_name) = resource_type {
+            let resource_shape_issues = validate_r4_resource_shape(resource, resource_type_name);
+            for issue in resource_shape_issues {
+                result = result.with_issue(issue);
+            }
         }
 
         // Validate Resource.id format if present (FHIR id regex: [A-Za-z0-9\-\.]{1,64})
