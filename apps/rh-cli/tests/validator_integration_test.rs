@@ -58,6 +58,18 @@ fn test_validate_resource_missing_resource_type() {
 }
 
 #[test]
+fn test_validate_resource_unknown_r4_resource_type_fails() {
+    rh_cmd()
+        .args(["validate", "resource"])
+        .write_stdin(r#"{ "resourceType": "Citation" }"#)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains(
+            "Unknown resourceType 'Citation' for FHIR R4",
+        ));
+}
+
+#[test]
 fn test_validate_resource_json_output() {
     let patient = r#"{
         "resourceType": "Patient",
@@ -342,6 +354,21 @@ fn test_validate_batch_with_invalid() {
         .assert()
         .failure()
         .stdout(predicate::str::contains("Batch Validation Summary"));
+}
+
+#[test]
+fn test_validate_batch_unknown_r4_resource_type_fails() {
+    let ndjson = r#"{"resourceType": "Patient", "id": "1"}
+{"resourceType": "Citation"}"#;
+
+    rh_cmd()
+        .args(["validate", "batch"])
+        .write_stdin(ndjson)
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains(
+            "Unknown resourceType 'Citation' for FHIR R4",
+        ));
 }
 
 #[test]
