@@ -37,6 +37,7 @@ regex = { workspace = true }
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation", version = "0.2.5", features = ["http"] }
 rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.5" }  # FHIRPath invariant validation
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.5" }
 rust_decimal = { workspace = true }
 
 # Caching

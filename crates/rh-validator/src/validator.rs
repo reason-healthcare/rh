@@ -42,6 +42,7 @@
 
 use anyhow::{Context, Result};
 use lru::LruCache;
+use rh_hl7_fhir_r4_core::metadata::FHIR_TYPE_REGISTRY;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::num::NonZeroUsize;
@@ -336,6 +337,11 @@ impl FhirValidator {
         }
 
         let resource_type_name = resource_type.unwrap_or("Resource");
+
+        let resource_shape_issues = validate_r4_resource_shape(resource, resource_type_name);
+        for issue in resource_shape_issues {
+            result = result.with_issue(issue);
+        }
 
         // Validate Resource.id format if present (FHIR id regex: [A-Za-z0-9\-\.]{1,64})
         if let Some(id) = resource.get("id").and_then(|v| v.as_str()) {
@@ -2831,6 +2837,78 @@ fn validate_contained_id_format_without_length(id: &str, path: &str) -> Option<V
     }
 
     None
+}
+
+fn validate_r4_resource_shape(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if !is_known_r4_resource_type(resource_type) {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Unknown resourceType '{resource_type}' for FHIR R4"),
+            )
+            .with_path("resourceType"),
+        );
+        return issues;
+    }
+
+    let Some(fields) = FHIR_TYPE_REGISTRY.get(resource_type) else {
+        return issues;
+    };
+
+    let Some(obj) = resource.as_object() else {
+        return issues;
+    };
+
+    for key in obj.keys() {
+        let path = format!("{resource_type}.{key}");
+
+        if key == "resourceType" {
+            continue;
+        }
+
+        if key.contains("[x]") {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    format!(
+                        "Property '{key}' is not a valid FHIR JSON property name; choice elements must use a typed suffix, not '[x]'"
+                    ),
+                )
+                .with_path(path),
+            );
+            continue;
+        }
+
+        if let Some(base_key) = key.strip_prefix('_') {
+            if fields.contains_key(base_key) {
+                continue;
+            }
+        }
+
+        if !fields.contains_key(key.as_str()) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    format!(
+                        "Property '{key}' is not defined for FHIR R4 resource type '{resource_type}'"
+                    ),
+                )
+                .with_path(path),
+            );
+        }
+    }
+
+    issues
+}
+
+fn is_known_r4_resource_type(resource_type: &str) -> bool {
+    !matches!(
+        resource_type,
+        "Resource" | "DomainResource" | "MetadataResource"
+    ) && !resource_type.contains(char::is_whitespace)
+        && FHIR_TYPE_REGISTRY.contains_key(resource_type)
 }
 
 const MAX_FHIR_STRING_BYTES: usize = 1024 * 1024;
@@ -7003,6 +7081,83 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<Extens
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod r4_shape_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn validator() -> FhirValidator {
+        FhirValidator::new(crate::fhir_version::FhirVersion::R4, None).unwrap()
+    }
+
+    #[test]
+    fn r4_unknown_resource_type_is_error() {
+        let result = validator()
+            .validate(&json!({ "resourceType": "Citation" }))
+            .unwrap();
+
+        assert!(!result.valid);
+        assert!(result.issues.iter().any(|issue| {
+            issue.severity == crate::types::Severity::Error
+                && issue.path.as_deref() == Some("resourceType")
+                && issue.message.contains("Unknown resourceType 'Citation'")
+        }));
+    }
+
+    #[test]
+    fn root_property_not_defined_for_resource_is_error() {
+        let result = validator()
+            .validate(&json!({
+                "resourceType": "Patient",
+                "profile": "http://example.org/fhir/StructureDefinition/patient"
+            }))
+            .unwrap();
+
+        assert!(!result.valid);
+        assert!(result.issues.iter().any(|issue| {
+            issue.severity == crate::types::Severity::Error
+                && issue.path.as_deref() == Some("Patient.profile")
+                && issue.message.contains("not defined")
+        }));
+    }
+
+    #[test]
+    fn literal_choice_placeholder_property_is_error() {
+        let result = validator()
+            .validate(&json!({
+                "resourceType": "ActivityDefinition",
+                "status": "draft",
+                "definition[x]": "http://example.org/PlanDefinition/example"
+            }))
+            .unwrap();
+
+        assert!(!result.valid);
+        assert!(result.issues.iter().any(|issue| {
+            issue.severity == crate::types::Severity::Error
+                && issue.path.as_deref() == Some("ActivityDefinition.definition[x]")
+                && issue
+                    .message
+                    .contains("not a valid FHIR JSON property name")
+        }));
+    }
+
+    #[test]
+    fn suffixed_choice_property_is_allowed() {
+        let result = validator()
+            .validate(&json!({
+                "resourceType": "ClinicalImpression",
+                "status": "completed",
+                "prognosisCodeableConcept": [{ "text": "Good prognosis" }]
+            }))
+            .unwrap();
+
+        assert!(!result.issues.iter().any(|issue| {
+            issue.path.as_deref() == Some("ClinicalImpression.prognosisCodeableConcept")
+                && issue.message.contains("not defined")
+        }));
     }
 }
 
