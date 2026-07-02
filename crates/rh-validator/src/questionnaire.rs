@@ -7,6 +7,7 @@ use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
+use crate::terminology::TerminologyService;
 use crate::types::{IssueCode, ValidationIssue};
 use crate::valueset::ValueSetLoader;
 
@@ -15,7 +16,7 @@ pub struct Questionnaire {
     #[serde(rename = "resourceType")]
     pub resource_type: String,
     pub url: Option<String>,
-    pub status: String,
+    pub status: Option<String>,
     #[serde(default)]
     pub item: Vec<QuestionnaireItem>,
 }
@@ -126,6 +127,8 @@ pub struct Extension {
     pub value_quantity: Option<Quantity>,
     #[serde(rename = "valueCoding")]
     pub value_coding: Option<Coding>,
+    #[serde(rename = "valueCanonical")]
+    pub value_canonical: Option<String>,
 }
 
 pub struct QuestionnaireLoader {
@@ -235,6 +238,7 @@ pub struct QuestionnaireResponseValidator<'a> {
     questionnaire: &'a Questionnaire,
     item_map: HashMap<String, &'a QuestionnaireItem>,
     valueset_loader: Option<&'a ValueSetLoader>,
+    terminology_service: Option<&'a dyn TerminologyService>,
 }
 
 impl<'a> QuestionnaireResponseValidator<'a> {
@@ -245,11 +249,17 @@ impl<'a> QuestionnaireResponseValidator<'a> {
             questionnaire,
             item_map,
             valueset_loader: None,
+            terminology_service: None,
         }
     }
 
     pub fn with_valueset_loader(mut self, loader: &'a ValueSetLoader) -> Self {
         self.valueset_loader = Some(loader);
+        self
+    }
+
+    pub fn with_terminology_service(mut self, service: &'a dyn TerminologyService) -> Self {
+        self.terminology_service = Some(service);
         self
     }
 
@@ -684,6 +694,10 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         });
         let answer_unit = quantity.get("unit").and_then(|v| v.as_str());
         let answer_code = quantity.get("code").and_then(|v| v.as_str());
+        let answer_system = quantity
+            .get("system")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
 
         let Some(answer_val) = answer_value else {
             return; // No value to validate
@@ -721,6 +735,21 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                         "maximum",
                         false, // is_min
                         &unit_converter,
+                        path,
+                        issues,
+                    );
+                }
+            }
+        }
+
+        for ext in &q_item.extension {
+            if ext.url == "http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet" {
+                if let Some(valueset_url) = ext.value_canonical.as_deref() {
+                    self.validate_quantity_unit_value_set(
+                        valueset_url,
+                        answer_system,
+                        answer_code,
+                        quantity,
                         path,
                         issues,
                     );
@@ -773,6 +802,54 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                     );
                 }
             }
+        }
+    }
+
+    fn validate_quantity_unit_value_set(
+        &self,
+        valueset_url: &str,
+        answer_system: &str,
+        answer_code: Option<&str>,
+        quantity: &Value,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let answer_code = answer_code.unwrap_or("");
+        let not_in_valueset = match self.valueset_loader {
+            Some(loader) => {
+                use crate::valueset::CodeInValueSetResult;
+                matches!(
+                    loader.contains_code(valueset_url, answer_system, answer_code),
+                    Ok(CodeInValueSetResult::NotFound)
+                )
+            }
+            None => false,
+        };
+
+        if not_in_valueset {
+            let value = quantity
+                .get("value")
+                .and_then(|v| v.as_f64())
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "(no value)".to_string());
+            let unit = quantity
+                .get("unit")
+                .and_then(|v| v.as_str())
+                .unwrap_or("(no unit)");
+            let code_display = if answer_code.is_empty() {
+                "null"
+            } else {
+                answer_code
+            };
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invariant,
+                    format!(
+                        "The value {value} {unit} (UCUM#{code_display}) has a unit that is not in the unit value set '{valueset_url}'"
+                    ),
+                )
+                .with_path(path),
+            );
         }
     }
 
@@ -1475,6 +1552,7 @@ impl<'a> QuestionnaireResponseValidator<'a> {
         if let Some(coding) = answer.get("valueCoding") {
             let system = coding.get("system").and_then(|v| v.as_str()).unwrap_or("");
             let code = coding.get("code").and_then(|v| v.as_str()).unwrap_or("");
+            let display = coding.get("display").and_then(|v| v.as_str());
 
             if code.is_empty() {
                 return;
@@ -1482,7 +1560,16 @@ impl<'a> QuestionnaireResponseValidator<'a> {
 
             use crate::valueset::CodeInValueSetResult;
             match loader.contains_code(valueset_url, system, code) {
-                Ok(CodeInValueSetResult::Found) => {}
+                Ok(CodeInValueSetResult::Found) => {
+                    self.validate_answer_valueset_display(
+                        valueset_url,
+                        system,
+                        code,
+                        display,
+                        path,
+                        issues,
+                    );
+                }
                 Ok(CodeInValueSetResult::NotFound) => {
                     let valueset_name = valueset_url.rsplit('/').next().unwrap_or(valueset_url);
                     issues.push(
@@ -1525,6 +1612,42 @@ impl<'a> QuestionnaireResponseValidator<'a> {
                     );
                 }
                 Err(_) => {}
+            }
+        }
+    }
+
+    fn validate_answer_valueset_display(
+        &self,
+        valueset_url: &str,
+        system: &str,
+        code: &str,
+        display: Option<&str>,
+        path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let (Some(display), Some(terminology_service)) = (display, self.terminology_service) else {
+            return;
+        };
+
+        if !terminology_service.supports_value_set(valueset_url)
+            && !terminology_service.supports_code_system(system)
+        {
+            return;
+        }
+
+        let result = terminology_service
+            .validate_code_in_valueset(valueset_url, system, code, Some(display))
+            .or_else(|_| {
+                terminology_service.validate_code_in_codesystem(system, code, Some(display))
+            });
+
+        if let Ok(result) = result {
+            if !result.result {
+                let message = result.message.unwrap_or_else(|| {
+                    format!("Wrong Display Name '{display}' for {system}#{code}")
+                });
+                issues
+                    .push(ValidationIssue::error(IssueCode::CodeInvalid, message).with_path(path));
             }
         }
     }

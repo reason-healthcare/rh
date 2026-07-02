@@ -42,7 +42,7 @@
 
 use anyhow::{Context, Result};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -57,6 +57,7 @@ use crate::valueset::ValueSetLoader;
 #[derive(Debug, Clone, Default)]
 pub struct ValidationOptions {
     pub security_checks: bool,
+    pub no_html_in_markdown: bool,
 }
 
 /// FHIR resource validator with profile-based validation support.
@@ -392,7 +393,7 @@ impl FhirValidator {
 
         // Validate strings for HTML-like content (security check)
         let string_security_issues =
-            validate_string_security(resource, resource_type_name, self.options.security_checks);
+            validate_string_security(resource, resource_type_name, &self.options);
         for issue in string_security_issues {
             result = result.with_issue(issue);
         }
@@ -581,6 +582,10 @@ impl FhirValidator {
             .compile(&snapshot)
             .context("Failed to compile validation rules")?;
 
+        for issue in validate_unknown_properties_against_rules(resource, &rules) {
+            result = result.with_issue(issue);
+        }
+
         for rule in &rules.cardinality_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -752,9 +757,13 @@ impl FhirValidator {
                         };
 
                         if matches {
-                            let validator =
+                            let mut validator =
                                 crate::questionnaire::QuestionnaireResponseValidator::new(&q)
                                     .with_valueset_loader(&self.valueset_loader);
+                            if let Some(terminology_service) = self.terminology_service.as_ref() {
+                                validator = validator
+                                    .with_terminology_service(terminology_service.as_ref());
+                            }
                             return validator.validate(resource);
                         }
                     }
@@ -815,8 +824,11 @@ impl FhirValidator {
         }
 
         if let Some(q) = self.questionnaire_loader.load(base_url) {
-            let validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q)
+            let mut validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q)
                 .with_valueset_loader(&self.valueset_loader);
+            if let Some(terminology_service) = self.terminology_service.as_ref() {
+                validator = validator.with_terminology_service(terminology_service.as_ref());
+            }
             return validator.validate(resource);
         }
 
@@ -1848,7 +1860,20 @@ impl FhirValidator {
                     obj.get("system").and_then(|v| v.as_str()),
                     obj.get("code").and_then(|v| v.as_str()),
                 ) {
-                    if self.codesystem_contains_code(system, code) == Some(false) {
+                    if system == "http://snomed.info/sct" && !snomed_code_like(code) {
+                        let current_path = if path.is_empty() {
+                            format!("{resource_type}.code")
+                        } else {
+                            format!("{path}.code")
+                        };
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::CodeInvalid,
+                                format!("SNOMED CT code '{code}' must contain only digits"),
+                            )
+                            .with_path(current_path),
+                        );
+                    } else if self.codesystem_contains_code(system, code) == Some(false) {
                         let current_path = if path.is_empty() {
                             format!("{resource_type}.code")
                         } else {
@@ -2339,6 +2364,9 @@ fn validate_type_at_path(
                 if type_name == "id" && is_contained_path(path) {
                     break;
                 }
+                if expected_types.len() > 1 {
+                    continue;
+                }
                 if let Some(format_error) = validate_primitive_format(value, type_name, path) {
                     issues.push(format_error);
                     break;
@@ -2703,7 +2731,7 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
 fn validate_string_security(
     value: &Value,
     current_path: &str,
-    security_checks_enabled: bool,
+    options: &ValidationOptions,
 ) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
@@ -2724,27 +2752,33 @@ fn validate_string_security(
                     continue;
                 }
 
-                issues.extend(validate_string_security(
-                    v,
-                    &child_path,
-                    security_checks_enabled,
-                ));
+                issues.extend(validate_string_security(v, &child_path, options));
             }
         }
         Value::Array(arr) => {
             for (idx, item) in arr.iter().enumerate() {
                 let child_path = format!("{current_path}[{idx}]");
-                issues.extend(validate_string_security(
-                    item,
-                    &child_path,
-                    security_checks_enabled,
-                ));
+                issues.extend(validate_string_security(item, &child_path, options));
             }
         }
-        Value::String(s)
-            // Check for HTML-like content in strings
-            if contains_html_tags(s) => {
-                let issue = if security_checks_enabled {
+        Value::String(s) => {
+            if options.no_html_in_markdown && is_markdown_path(current_path) {
+                if let Some(tag_start) = markdown_html_tag_start(s) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!(
+                                "The markdown contains content that appears to be an embedded HTML tag starting at '{tag_start}'"
+                            ),
+                        )
+                        .with_path(current_path.to_string()),
+                    );
+                    return issues;
+                }
+            }
+
+            if contains_html_tags(s) {
+                let issue = if options.security_checks {
                     ValidationIssue::error(
                         IssueCode::Invalid,
                         "The string value contains text that looks like embedded HTML tags, which are not allowed for security reasons in this context".to_string(),
@@ -2757,10 +2791,37 @@ fn validate_string_security(
                 };
                 issues.push(issue.with_path(current_path.to_string()));
             }
+        }
         _ => {}
     }
 
     issues
+}
+
+fn is_markdown_path(path: &str) -> bool {
+    matches!(
+        path.rsplit(['.', ']'])
+            .find(|segment| !segment.is_empty())
+            .and_then(|segment| segment.rsplit('[').next()),
+        Some("text")
+    )
+}
+
+fn markdown_html_tag_start(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    for (idx, byte) in bytes.iter().enumerate() {
+        if *byte != b'<' {
+            continue;
+        }
+        let next = bytes.get(idx + 1).copied();
+        if matches!(next, Some(b'/') | Some(b'!') | Some(b'?'))
+            || next.is_some_and(|b| (b as char).is_ascii_alphabetic())
+        {
+            let end = (idx + 2).min(value.len());
+            return Some(value[idx..end].to_string());
+        }
+    }
+    None
 }
 
 fn validate_expression_datatypes(
@@ -4814,6 +4875,9 @@ fn validate_primitive_format(
     path: &str,
 ) -> Option<ValidationIssue> {
     let s = value.as_str()?;
+    if is_matchetype_placeholder(s) {
+        return None;
+    }
 
     match type_name {
         "id" => {
@@ -4885,10 +4949,106 @@ fn validate_primitive_format(
                     format!("The value '{s}' is not a valid Base64 value"),
                 ));
             }
+        "date" if !is_valid_fhir_date(s) => {
+            return Some(ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Not a valid date format: '{s}'"),
+            ));
+        }
+        "dateTime" if !is_valid_fhir_datetime(s) => {
+            return Some(ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Not a valid dateTime format: '{s}'"),
+            ));
+        }
+        "time" if !is_valid_fhir_time(s) => {
+            return Some(ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Not a valid time format: '{s}'"),
+            ));
+        }
         _ => {}
     }
 
     None
+}
+
+fn is_matchetype_placeholder(value: &str) -> bool {
+    value.len() > 2
+        && value.starts_with('$')
+        && value.ends_with('$')
+        && value[1..value.len() - 1]
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+fn is_valid_fhir_date(value: &str) -> bool {
+    if value.len() == 4 {
+        return value.chars().all(|c| c.is_ascii_digit());
+    }
+    if value.len() == 7 {
+        let (year, month) = value.split_at(4);
+        return year.chars().all(|c| c.is_ascii_digit())
+            && month.starts_with('-')
+            && valid_two_digit_range(&month[1..], 1, 12);
+    }
+    if value.len() == 10 {
+        let year = &value[0..4];
+        let month = &value[5..7];
+        let day = &value[8..10];
+        return value.as_bytes()[4] == b'-'
+            && value.as_bytes()[7] == b'-'
+            && year.chars().all(|c| c.is_ascii_digit())
+            && valid_two_digit_range(month, 1, 12)
+            && valid_two_digit_range(day, 1, days_in_month(month));
+    }
+    false
+}
+
+fn is_valid_fhir_datetime(value: &str) -> bool {
+    if is_valid_fhir_date(value) {
+        return true;
+    }
+    let Some((date, time)) = value.split_once('T') else {
+        return false;
+    };
+    is_valid_fhir_date(date) && is_valid_fhir_time(time.trim_end_matches('Z'))
+}
+
+fn is_valid_fhir_time(value: &str) -> bool {
+    let time = value
+        .split_once(['+', '-'])
+        .map(|(time, _)| time)
+        .unwrap_or(value);
+    let parts: Vec<&str> = time.split(':').collect();
+    if parts.len() != 3 {
+        return false;
+    }
+    valid_two_digit_range(parts[0], 0, 23)
+        && valid_two_digit_range(parts[1], 0, 59)
+        && valid_seconds(parts[2])
+}
+
+fn valid_seconds(value: &str) -> bool {
+    let seconds = value.split_once('.').map(|(s, _)| s).unwrap_or(value);
+    valid_two_digit_range(seconds, 0, 59)
+}
+
+fn valid_two_digit_range(value: &str, min: u32, max: u32) -> bool {
+    value.len() == 2
+        && value.chars().all(|c| c.is_ascii_digit())
+        && value
+            .parse::<u32>()
+            .is_ok_and(|number| number >= min && number <= max)
+}
+
+fn days_in_month(month: &str) -> u32 {
+    match month {
+        "01" | "03" | "05" | "07" | "08" | "10" | "12" => 31,
+        "04" | "06" | "09" | "11" => 30,
+        "02" => 29,
+        _ => 0,
+    }
 }
 
 fn is_valid_base64(s: &str) -> bool {
@@ -5123,6 +5283,112 @@ fn should_validate_path(path: &str, resource: &Value) -> bool {
     }
 }
 
+fn validate_unknown_properties_against_rules(
+    resource: &Value,
+    rules: &crate::rules::CompiledValidationRules,
+) -> Vec<ValidationIssue> {
+    let Some(resource_type) = resource.get("resourceType").and_then(Value::as_str) else {
+        return Vec::new();
+    };
+    if !rules.element_paths.iter().any(|path| path == resource_type) {
+        return Vec::new();
+    }
+
+    let mut allowed_children: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut allowed_choice_prefixes: HashMap<String, Vec<String>> = HashMap::new();
+
+    for element_path in &rules.element_paths {
+        let parts: Vec<&str> = element_path.split('.').collect();
+        if parts.len() < 2 || parts[0] != resource_type {
+            continue;
+        }
+
+        let parent = parts[..parts.len() - 1].join(".");
+        let child = parts[parts.len() - 1]
+            .split(':')
+            .next()
+            .unwrap_or(parts[parts.len() - 1]);
+        if let Some(prefix) = child.strip_suffix("[x]") {
+            allowed_choice_prefixes
+                .entry(parent)
+                .or_default()
+                .push(prefix.to_string());
+        } else {
+            allowed_children
+                .entry(parent)
+                .or_default()
+                .insert(child.to_string());
+        }
+    }
+
+    let mut issues = Vec::new();
+    validate_unknown_properties_recursive(
+        resource,
+        resource_type,
+        &allowed_children,
+        &allowed_choice_prefixes,
+        &mut issues,
+    );
+    issues
+}
+
+fn validate_unknown_properties_recursive(
+    value: &Value,
+    path: &str,
+    allowed_children: &HashMap<String, HashSet<String>>,
+    allowed_choice_prefixes: &HashMap<String, Vec<String>>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            let Some(allowed) = allowed_children.get(path) else {
+                return;
+            };
+
+            for (key, child) in obj {
+                if key == "resourceType" || key.starts_with('_') {
+                    continue;
+                }
+                let known_child = allowed.contains(key)
+                    || allowed_choice_prefixes.get(path).is_some_and(|prefixes| {
+                        prefixes
+                            .iter()
+                            .any(|prefix| key.starts_with(prefix) && key.len() > prefix.len())
+                    });
+                if !known_child {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!("Unrecognized property '{key}'"),
+                        )
+                        .with_path(path.to_string()),
+                    );
+                    continue;
+                }
+                validate_unknown_properties_recursive(
+                    child,
+                    &format!("{path}.{key}"),
+                    allowed_children,
+                    allowed_choice_prefixes,
+                    issues,
+                );
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                validate_unknown_properties_recursive(
+                    item,
+                    path,
+                    allowed_children,
+                    allowed_choice_prefixes,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
 fn get_value_at_path<'a>(resource: &'a Value, path: &str) -> Option<&'a Value> {
     let parts: Vec<&str> = path.split('.').collect();
 
@@ -5265,36 +5531,29 @@ impl FhirValidator {
                                 )
                                 .with_path(&current_path),
                             );
-                        } else {
-                            // If display is present, validate it
-                            if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
-                                if ts.supports_code_system(system) {
-                                    match ts.validate_code_in_codesystem(
-                                        system,
-                                        code,
-                                        Some(display),
-                                    ) {
-                                        Ok(result) => {
-                                            if !result.result {
-                                                if let Some(message) = result.message {
-                                                    let current_path = if path.is_empty() {
-                                                        format!("{resource_type}.display")
-                                                    } else {
-                                                        format!("{path}.display")
-                                                    };
-                                                    issues.push(
-                                                        ValidationIssue::error(
-                                                            IssueCode::CodeInvalid,
-                                                            message,
-                                                        )
-                                                        .with_path(&current_path),
-                                                    );
-                                                }
+                        } else if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
+                            if ts.supports_code_system(system) {
+                                match ts.validate_code_in_codesystem(system, code, Some(display)) {
+                                    Ok(result) => {
+                                        if !result.result {
+                                            if let Some(message) = result.message {
+                                                let current_path = if path.is_empty() {
+                                                    format!("{resource_type}.display")
+                                                } else {
+                                                    format!("{path}.display")
+                                                };
+                                                issues.push(
+                                                    ValidationIssue::error(
+                                                        IssueCode::CodeInvalid,
+                                                        message,
+                                                    )
+                                                    .with_path(&current_path),
+                                                );
                                             }
                                         }
-                                        Err(_) => {
-                                            // Terminology service error - skip validation
-                                        }
+                                    }
+                                    Err(_) => {
+                                        // Terminology service error - skip validation
                                     }
                                 }
                             }

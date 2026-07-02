@@ -11,10 +11,12 @@ Latest full R4 run:
 just test-fhir-all
 ```
 
-Current audited full-run agreement after the extension-bucket pass:
+Current audited full-run agreement after the invariant pass:
 
-- No terminology: 381/403 (94.5%) from `just test-fhir-all`
-- With terminology: 387/403 (96.0%) from `just test-fhir-all`
+- No terminology: previous full run 381/403 (94.5%) from `just test-fhir-all`;
+  not rerun after the invariant pass
+- With terminology: 396/403 (98.3%) from
+  `cargo test -p rh-validator --test fhir_test_cases_test test_runner_all_with_terminology --features fhir-test-cases -- --ignored --nocapture`
 
 The 2026-06-30 extension-bucket run produced triage artifacts but the
 `just test-fhir-all` recipe does not currently tee stdout to
@@ -38,30 +40,24 @@ Current triage artifacts:
 - No terminology:
   `target/conformance-triage/r4-java-mismatches-1782827063-no-terminology.csv`
 - With terminology:
-  `target/conformance-triage/r4-java-mismatches-1782827834-with-terminology.csv`
+  `target/conformance-triage/r4-java-mismatches-1782936191-with-terminology.csv`
 
 ## Gap Closure Opportunities
 
 Highest-leverage remaining work, in recommended order:
 
-1. QuestionnaireResponse async/value-set validation. Rows include
-   `choice-async-qr`, `choice-gender-coding-async-qr`,
-   `open-choice-gender-coding-async-qr`, `quantity-min-max-qr`,
-   `quantity-units-not-in-value-set-qr`, and
-   `nested-questionnaire-nested-valueset`. These should be handled as a
-   contained questionnaire lookup and answer-validation subsystem pass.
-2. Resource invariants. Rows include `bad-markdown-no-html`, `ai3`, `ai4`,
-   `obs-temp-code2`, and `supplement-1a`.
-3. Reference/profile/package edge cases. Remaining rows include
+1. Reference/profile/package edge cases. Remaining rows include
    `dr-example-org`, `obs-hgvs-bad`, `obs-temp-bad`, and
    `res-inv-example-bad`; treat these as manifest-context example URL
    validation, declared package/profile loading, and profiled Bundle
    reference/invariant behavior rather than broad code literals.
-4. Profile slicing. Remaining rows are `patient-ig-bad` and
+2. Profile slicing. Remaining rows are `patient-ig-bad` and
    `sdoh-type-slice`; keep these after the broader invariant/reference work
    unless a targeted discriminator rule becomes obvious.
-5. Remaining validation-resource edge case: `ext-derived-circle`, which is
-   still Java-invalid/RH-valid in full runs because the base profile resolves
+3. Remaining validation-resource edge cases: `obs-hgvs-bad` and
+   `ext-derived-circle`. Keep `obs-hgvs-bad` terminology-service driven; do
+   not reintroduce an HGVS literal. `ext-derived-circle` is still
+   Java-invalid/RH-valid in full runs because the base profile resolves
    circularly to itself.
 
 ## Steps
@@ -423,10 +419,68 @@ Completed:
       reference-bundle-contained 3, profile-slicing 2, validation-resource 2.
     There are no remaining `extension` category rows in either fresh triage
     artifact.
+36. Resolve the with-terminology `questionnaire-response` bucket with generic
+    QuestionnaireResponse answer-validation support:
+    - Load Questionnaire fixtures that omit `Questionnaire.status` so answer
+      validation can still run against otherwise usable local definitions.
+    - Validate `Questionnaire.item.extension` `questionnaire-unitValueSet`
+      (`valueCanonical`) for quantity answers using the same ValueSet loader as
+      answerValueSet checks.
+    - Pass terminology services into QuestionnaireResponse answerValueSet
+      validation so wrong Coding displays are fatal when the terminology layer
+      can validate the ValueSet/CodeSystem.
+    - Extend the mock terminology seed with core Questionnaire item-type codes
+      and the ISO 3166 jurisdiction codes exercised by the core Jurisdiction
+      ValueSet tests. This is terminology fixture coverage for standard code
+      systems, not validator hardcoding of resource/profile rows.
+    Full with-terminology agreement after this step is 392/403 (97.3%) with
+    triage artifact
+    `target/conformance-triage/r4-java-mismatches-1782862976-with-terminology.csv`.
+    Current with-terminology mismatch counts are: invariant 4,
+    reference-bundle-contained 3, profile-slicing 2, validation-resource 2.
+    There are no remaining `questionnaire-response` rows in the
+    with-terminology triage.
+    The no-terminology questionnaire module is 79/82 Java agreement; the
+    remaining Java-invalid/RH-valid questionnaire rows are the
+    display-dependent async choice cases (`choice-async-qr`,
+    `choice-gender-coding-async-qr`, and
+    `open-choice-gender-coding-async-qr`), which require terminology display
+    validation to align with Java.
+37. Resolve the `invariant` false-negative bucket with general validation
+    behavior:
+    - Reject unknown resource properties by deriving allowed child names from
+      compiled StructureDefinition snapshot element paths. This covers `ai3`
+      without a Patient-specific field list.
+    - Add primitive date/dateTime/time lexical validation for single-type
+      primitive paths. This covers `ai4` while avoiding broad `value[x]`
+      choice-path false positives.
+    - Parse the manifest `noHtmlInMarkdown` option and route it through
+      `ValidationOptions`, so markdown fields with embedded tag-like content
+      can be rejected when the test/run asks for that stricter Java behavior.
+    - Reject syntactically invalid SNOMED CT identifiers as a code-invalid
+      error. This covers `obs-temp-code2` without expanding sparse mock
+      terminology into broad code-existence enforcement.
+    - Preserve matchetype placeholder tokens such as `$instant$` during
+      primitive lexical validation; these are conformance pattern tokens, not
+      concrete instance values.
+    Focused agreement after this step:
+    - `general`: 39/40; `ai3` and `ai4` now agree. The remaining mismatch is
+      `dr-example-org`.
+    - `xhtml`: 4/4; `bad-markdown-no-html` now agrees.
+    - `tx`: 34/40; `obs-temp-code2` now agrees. Remaining mismatches are
+      existing terminology/package/profile outliers.
+    - `matchetype`: 46/46 after preserving placeholder tokens.
+    Full with-terminology agreement after this step is 396/403 (98.3%) with
+    triage artifact
+    `target/conformance-triage/r4-java-mismatches-1782936191-with-terminology.csv`.
+    Current with-terminology mismatch counts are:
+    reference-bundle-contained 3, profile-slicing 2, validation-resource 2.
+    There are no remaining `invariant` category rows in the with-terminology
+    triage.
 
 Next:
 
-36. Remaining profile/terminology outliers from the former hardcoded-fix set:
+38. Remaining profile/terminology outliers from the former hardcoded-fix set:
     - `obs-hgvs-bad`: add a real terminology-service or reusable
       code-system-validator path for `http://varnomen.hgvs.org`; do not add an
       HGVS fixture literal check.
@@ -436,17 +490,6 @@ Next:
     - `obs-vs-1` and `obs-vs-2`: currently recovered by unresolved HL7 IG
       extension rejection; the cleaner endpoint is CardX package and extension
       definition resolution.
-37. `questionnaire-response` remaining mismatches. Contained dom-3 false
-    positives are resolved; remaining mismatches are unresolved
-    async/value-set/quantity validation: `choice-async-qr`,
-    `choice-gender-coding-async-qr`, `open-choice-gender-coding-async-qr`,
-    `quantity-min-max-qr`, and `quantity-units-not-in-value-set-qr`. Suggested
-    first task: load/resolve the referenced Questionnaire/ValueSet for one
-    async choice case and verify whether failure is terminology expansion or
-    questionnaire lookup.
-38. `invariant` false negatives. Remaining examples are
-    narrative/security-adjacent invariants (`bad-markdown-no-html`, `ai3`,
-    `ai4`, `obs-temp-code2`) plus `supplement-1a`.
 39. `reference-bundle-contained` remaining mismatches. Targeted references
     module now agrees 15/15. Full-suite rows are `dr-example-org`, where Java
     rejects an example Attachment URL only when manifest examples are disabled,
@@ -459,10 +502,12 @@ Next:
     `sdoh-type-slice`. Both are Java-invalid/RH-valid. Keep this after the
     larger validation-resource/invariant/reference work unless a targeted
     discriminator rule is obvious.
-41. Remaining `validation-resource` false negative: `ext-derived-circle` is
+41. Remaining `validation-resource` false negatives: `obs-hgvs-bad` and
+    `ext-derived-circle`. Treat `obs-hgvs-bad` as terminology-service backed
+    HGVS validation, not a literal code check. `ext-derived-circle` is
     Java-invalid/RH-valid in full runs but valid in the targeted `sd` module
     because the supporting base profile changes the circular-base behavior.
-    Treat this as a circular StructureDefinition base resolution edge case.
+    Treat it as a circular StructureDefinition base resolution edge case.
 42. The former `extension` follow-up, `res-inv-example-bad`, is categorized
     under reference-bundle-contained in the current triage. The first fatal
     issue is unresolved reference `Endpoint/examplelabsXX` inside a profile

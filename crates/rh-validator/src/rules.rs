@@ -9,6 +9,7 @@ use std::sync::Mutex;
 #[derive(Debug, Clone)]
 pub struct CompiledValidationRules {
     pub profile_url: String,
+    pub element_paths: Vec<String>,
     pub cardinality_rules: Vec<CardinalityRule>,
     pub type_rules: Vec<TypeRule>,
     pub reference_target_rules: Vec<ReferenceTargetRule>,
@@ -136,10 +137,12 @@ impl RuleCompiler {
         let mut fixed_pattern_rules = Vec::new();
         let mut invariant_rules = Vec::new();
         let mut extension_rules = Vec::new();
+        let mut element_paths = Vec::new();
 
         if let Some(snapshot_data) = &snapshot.snapshot {
             for element in &snapshot_data.element {
                 let path = &element.path;
+                element_paths.push(path.clone());
 
                 if element.min.is_some() || element.max.is_some() {
                     cardinality_rules.push(CardinalityRule {
@@ -295,6 +298,7 @@ impl RuleCompiler {
 
             let rules = CompiledValidationRules {
                 profile_url: profile_url.clone(),
+                element_paths,
                 cardinality_rules,
                 type_rules,
                 reference_target_rules,
@@ -314,6 +318,7 @@ impl RuleCompiler {
 
         let rules = CompiledValidationRules {
             profile_url: profile_url.clone(),
+            element_paths,
             cardinality_rules,
             type_rules,
             reference_target_rules,

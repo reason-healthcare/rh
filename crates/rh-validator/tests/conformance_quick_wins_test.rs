@@ -29,6 +29,7 @@ fn security_checks_enabled_reports_error() {
         None,
         ValidationOptions {
             security_checks: true,
+            ..ValidationOptions::default()
         },
     )
     .unwrap();
@@ -1080,6 +1081,168 @@ fn questionnaire_multiple_enable_when_accepts_enable_behavior() {
         i.severity == Severity::Error
             && i.code == IssueCode::Invariant
             && i.message.contains("qst-2")
+    }));
+}
+
+#[test]
+fn questionnaire_response_allows_questionnaire_without_status_for_answer_validation() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let questionnaire = json!({
+        "resourceType": "Questionnaire",
+        "url": "http://example.org/Questionnaire/quantity-min-max",
+        "item": [
+            {
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-maxQuantity",
+                        "valueQuantity": {
+                            "value": 5,
+                            "unit": "Kg"
+                        }
+                    },
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-minQuantity",
+                        "valueQuantity": {
+                            "value": 50,
+                            "unit": "Kg"
+                        }
+                    }
+                ],
+                "linkId": "q1",
+                "type": "quantity"
+            }
+        ]
+    });
+    validator.register_questionnaire(&questionnaire);
+
+    let response = json!({
+        "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
+        "questionnaire": "http://example.org/Questionnaire/quantity-min-max",
+        "item": [
+            {
+                "linkId": "q1",
+                "answer": [
+                    {
+                        "valueQuantity": {
+                            "value": 10,
+                            "unit": "Kg"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate_auto(&response).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invariant
+            && i.message.contains("cannot be compared")
+    }));
+}
+
+#[test]
+fn questionnaire_response_validates_unit_value_set_extension() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let questionnaire = json!({
+        "resourceType": "Questionnaire",
+        "url": "http://example.org/Questionnaire/unit-valueset",
+        "status": "active",
+        "item": [
+            {
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet",
+                        "valueCanonical": "http://hl7.org/fhir/ValueSet/jurisdiction"
+                    }
+                ],
+                "linkId": "q1",
+                "type": "quantity"
+            }
+        ]
+    });
+    validator.register_questionnaire(&questionnaire);
+
+    let response = json!({
+        "resourceType": "QuestionnaireResponse",
+        "status": "completed",
+        "questionnaire": "http://example.org/Questionnaire/unit-valueset",
+        "item": [
+            {
+                "linkId": "q1",
+                "answer": [
+                    {
+                        "valueQuantity": {
+                            "value": 10,
+                            "unit": "kilometer",
+                            "system": "http://unitsofmeasure.org",
+                            "code": "km"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate_auto(&response).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invariant
+            && i.message.contains("unit that is not in the unit value set")
+    }));
+}
+
+#[test]
+fn questionnaire_response_validates_answer_valueset_display_with_terminology() {
+    let validator =
+        FhirValidator::with_terminology(FhirVersion::R4, None, Some(TerminologyConfig::mock()))
+            .unwrap();
+
+    let questionnaire = json!({
+        "resourceType": "Questionnaire",
+        "url": "http://example.org/Questionnaire/item-type",
+        "status": "active",
+        "item": [
+            {
+                "linkId": "q1",
+                "type": "choice",
+                "answerValueSet": "http://hl7.org/fhir/ValueSet/item-type"
+            }
+        ]
+    });
+    validator.register_questionnaire(&questionnaire);
+
+    let response = json!({
+        "resourceType": "QuestionnaireResponse",
+        "status": "completed",
+        "questionnaire": "http://example.org/Questionnaire/item-type",
+        "item": [
+            {
+                "linkId": "q1",
+                "answer": [
+                    {
+                        "valueCoding": {
+                            "system": "http://hl7.org/fhir/item-type",
+                            "code": "string",
+                            "display": "Australia"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let result = validator.validate_auto(&response).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.message.contains("Wrong Display Name")
     }));
 }
 
@@ -2236,5 +2399,105 @@ fn reference_target_profile_resource_allows_any_resource_type() {
         i.severity == Severity::Error
             && i.message.contains("implied by the reference URL")
             && i.path.as_deref() == Some("Communication.about")
+    }));
+}
+
+#[test]
+fn base_profile_rejects_unknown_resource_property() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "id": "example",
+        "unknownElement": "foo"
+    });
+
+    let result = validator.validate_auto(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("Unrecognized property 'unknownElement'")
+            && i.path.as_deref() == Some("Patient")
+    }));
+}
+
+#[test]
+fn primitive_date_format_rejects_non_date_text() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "id": "example",
+        "birthDate": "not a date"
+    });
+
+    let result = validator.validate_auto(&patient).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message.contains("Not a valid date format: 'not a date'")
+            && i.path.as_deref() == Some("Patient.birthDate")
+    }));
+}
+
+#[test]
+fn no_html_in_markdown_rejects_embedded_tag_like_text() {
+    let validator = FhirValidator::with_options(
+        FhirVersion::R4,
+        None,
+        None,
+        ValidationOptions {
+            no_html_in_markdown: true,
+            ..ValidationOptions::default()
+        },
+    )
+    .unwrap();
+
+    let communication = json!({
+        "resourceType": "Communication",
+        "id": "bad-markdown",
+        "status": "completed",
+        "note": [{
+            "text": "<resource type>\\<id>"
+        }]
+    });
+
+    let result = validator.validate_auto(&communication).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Invalid
+            && i.message.contains("markdown contains content")
+            && i.path.as_deref() == Some("Communication.note[0].text")
+    }));
+}
+
+#[test]
+fn terminology_rejects_unknown_code_in_supported_codesystem() {
+    let validator =
+        FhirValidator::with_terminology(FhirVersion::R4, None, Some(TerminologyConfig::mock()))
+            .unwrap();
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "id": "obs-temp-code2",
+        "status": "final",
+        "code": {
+            "coding": [{
+                "system": "http://snomed.info/sct",
+                "code": "276885007x"
+            }]
+        }
+    });
+
+    let result = validator.validate_auto(&observation).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::CodeInvalid
+            && i.message.contains("276885007x")
+            && i.path.as_deref() == Some("Observation.code.coding[0].code")
     }));
 }
