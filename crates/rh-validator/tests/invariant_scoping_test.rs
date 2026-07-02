@@ -36,6 +36,78 @@ fn patient_profile_with_ext1() -> Value {
                     }]
                 },
                 {
+                    "id": "Patient.id",
+                    "path": "Patient.id",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.active",
+                    "path": "Patient.active",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.gender",
+                    "path": "Patient.gender",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.birthDate",
+                    "path": "Patient.birthDate",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.name",
+                    "path": "Patient.name",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Patient.name.use",
+                    "path": "Patient.name.use",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.name.family",
+                    "path": "Patient.name.family",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.name.given",
+                    "path": "Patient.name.given",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Patient.telecom",
+                    "path": "Patient.telecom",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Patient.telecom.system",
+                    "path": "Patient.telecom.system",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.telecom.value",
+                    "path": "Patient.telecom.value",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
+                    "id": "Patient.telecom.use",
+                    "path": "Patient.telecom.use",
+                    "min": 0,
+                    "max": "1"
+                },
+                {
                     "id": "Patient.contact",
                     "path": "Patient.contact",
                     "min": 0,

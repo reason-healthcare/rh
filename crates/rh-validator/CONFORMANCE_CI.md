@@ -43,6 +43,14 @@ Each CI run publishes:
 
 No trend tooling or historical aggregation is included in this wave.
 
+## Validator Behavior Iterations
+
+For every validator behavior iteration, keep using exact full R4 conformance
+logs as the audit baseline. Record the unfiltered command output from the full
+R4 test-case run before and after each behavior change, and compare exact test
+names, expected outcomes, actual outcomes, error counts, and warning counts
+before relaxing validation or accepting a narrower regression test.
+
 ## Gating Modes
 
 The conformance job supports staged gating via repository variable:

@@ -1,4 +1,5 @@
-use rh_validator::ValueSetLoader;
+use rh_validator::valueset::CodeInValueSetResult;
+use rh_validator::{ValueSet, ValueSetLoader};
 
 #[test]
 fn test_load_extensional_valueset() {
@@ -101,6 +102,35 @@ fn test_contains_code_invalid() {
         rh_validator::valueset::CodeInValueSetResult::NotFound,
         "Code 'INVALID' should not be in yesnodontknow ValueSet"
     );
+}
+
+#[test]
+fn test_system_only_compose_rejects_wrong_system() {
+    let loader = ValueSetLoader::new(vec![], 100);
+    let valueset: ValueSet = serde_json::from_value(serde_json::json!({
+        "resourceType": "ValueSet",
+        "url": "http://example.org/fhir/ValueSet/package-test",
+        "compose": {
+            "include": [
+                {
+                    "system": "http://snomed.info/sct"
+                }
+            ]
+        }
+    }))
+    .expect("test ValueSet should deserialize");
+
+    loader.register_valueset(valueset);
+
+    let result = loader
+        .contains_code(
+            "http://example.org/fhir/ValueSet/package-test",
+            "http://loinc.org",
+            "252829002",
+        )
+        .expect("system-only ValueSet should be locally decidable");
+
+    assert_eq!(result, CodeInValueSetResult::NotFound);
 }
 
 #[test]

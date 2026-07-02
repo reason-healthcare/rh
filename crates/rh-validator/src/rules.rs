@@ -9,9 +9,12 @@ use std::sync::Mutex;
 #[derive(Debug, Clone)]
 pub struct CompiledValidationRules {
     pub profile_url: String,
+    pub element_paths: Vec<String>,
     pub cardinality_rules: Vec<CardinalityRule>,
     pub type_rules: Vec<TypeRule>,
+    pub reference_target_rules: Vec<ReferenceTargetRule>,
     pub binding_rules: Vec<BindingRule>,
+    pub fixed_pattern_rules: Vec<FixedPatternRule>,
     pub invariant_rules: Vec<InvariantRule>,
     pub extension_rules: Vec<ExtensionRule>,
     pub slicing_rules: Vec<SlicingRule>,
@@ -22,6 +25,7 @@ pub struct CardinalityRule {
     pub path: String,
     pub min: Option<u32>,
     pub max: Option<String>,
+    pub slice_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -31,10 +35,25 @@ pub struct TypeRule {
 }
 
 #[derive(Debug, Clone)]
+pub struct ReferenceTargetRule {
+    pub path: String,
+    pub target_profiles: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct BindingRule {
     pub path: String,
     pub value_set_url: String,
     pub strength: String,
+    pub slice_name: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FixedPatternRule {
+    pub path: String,
+    pub value: Value,
+    pub is_fixed: bool,
+    pub slice_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -113,19 +132,24 @@ impl RuleCompiler {
 
         let mut cardinality_rules = Vec::new();
         let mut type_rules = Vec::new();
+        let mut reference_target_rules = Vec::new();
         let mut binding_rules = Vec::new();
+        let mut fixed_pattern_rules = Vec::new();
         let mut invariant_rules = Vec::new();
         let mut extension_rules = Vec::new();
+        let mut element_paths = Vec::new();
 
         if let Some(snapshot_data) = &snapshot.snapshot {
             for element in &snapshot_data.element {
                 let path = &element.path;
+                element_paths.push(path.clone());
 
-                if let (Some(min), Some(max)) = (element.min, &element.max) {
+                if element.min.is_some() || element.max.is_some() {
                     cardinality_rules.push(CardinalityRule {
                         path: path.clone(),
-                        min: Some(min),
-                        max: Some(max.clone()),
+                        min: element.min,
+                        max: element.max.clone(),
+                        slice_name: effective_slice_name(element),
                     });
                 }
 
@@ -137,6 +161,20 @@ impl RuleCompiler {
                             types: type_codes,
                         });
                     }
+
+                    let target_profiles: Vec<String> = types
+                        .iter()
+                        .filter(|type_def| type_def.code == "Reference")
+                        .filter_map(|type_def| type_def.target_profile.as_ref())
+                        .flatten()
+                        .cloned()
+                        .collect();
+                    if !target_profiles.is_empty() {
+                        reference_target_rules.push(ReferenceTargetRule {
+                            path: path.clone(),
+                            target_profiles,
+                        });
+                    }
                 }
 
                 if let Some(binding) = &element.binding {
@@ -145,8 +183,18 @@ impl RuleCompiler {
                             path: path.clone(),
                             value_set_url: vs_url.clone(),
                             strength: binding.strength.clone(),
+                            slice_name: effective_slice_name(element),
                         });
                     }
+                }
+
+                for (key, value) in fixed_or_pattern_entries(&element.additional) {
+                    fixed_pattern_rules.push(FixedPatternRule {
+                        path: path.clone(),
+                        value: value.clone(),
+                        is_fixed: key.starts_with("fixed"),
+                        slice_name: effective_slice_name(element),
+                    });
                 }
 
                 if let Some(constraints) = &element.constraint {
@@ -188,6 +236,8 @@ impl RuleCompiler {
                     }
                 }
             }
+
+            add_differential_binding_rules(snapshot, &mut binding_rules);
 
             let mut slicing_rules = Vec::new();
             for element in &snapshot_data.element {
@@ -248,9 +298,12 @@ impl RuleCompiler {
 
             let rules = CompiledValidationRules {
                 profile_url: profile_url.clone(),
+                element_paths,
                 cardinality_rules,
                 type_rules,
+                reference_target_rules,
                 binding_rules,
+                fixed_pattern_rules,
                 invariant_rules,
                 extension_rules,
                 slicing_rules,
@@ -261,11 +314,16 @@ impl RuleCompiler {
             return Ok(rules);
         }
 
+        add_differential_rules(snapshot, &mut cardinality_rules, &mut binding_rules);
+
         let rules = CompiledValidationRules {
             profile_url: profile_url.clone(),
+            element_paths,
             cardinality_rules,
             type_rules,
+            reference_target_rules,
             binding_rules,
+            fixed_pattern_rules,
             invariant_rules,
             extension_rules,
             slicing_rules: Vec::new(),
@@ -297,6 +355,86 @@ impl RuleCompiler {
         *self.cache_hits.lock().unwrap() = 0;
         *self.cache_misses.lock().unwrap() = 0;
     }
+}
+
+fn add_differential_binding_rules(
+    structure_definition: &StructureDefinition,
+    binding_rules: &mut Vec<BindingRule>,
+) {
+    let Some(differential) = &structure_definition.differential else {
+        return;
+    };
+
+    for element in &differential.element {
+        let Some(binding) = &element.binding else {
+            continue;
+        };
+        let Some(value_set_url) = &binding.value_set else {
+            continue;
+        };
+
+        if binding_rules.iter().any(|rule| {
+            rule.path == element.path
+                && rule.value_set_url == *value_set_url
+                && rule.strength == binding.strength
+        }) {
+            continue;
+        }
+
+        binding_rules.push(BindingRule {
+            path: element.path.clone(),
+            value_set_url: value_set_url.clone(),
+            strength: binding.strength.clone(),
+            slice_name: effective_slice_name(element),
+        });
+    }
+}
+
+fn add_differential_rules(
+    structure_definition: &StructureDefinition,
+    cardinality_rules: &mut Vec<CardinalityRule>,
+    binding_rules: &mut Vec<BindingRule>,
+) {
+    let Some(differential) = &structure_definition.differential else {
+        return;
+    };
+
+    for element in &differential.element {
+        if element.path.split('.').count() == 2 && (element.min.is_some() || element.max.is_some())
+        {
+            cardinality_rules.push(CardinalityRule {
+                path: element.path.clone(),
+                min: element.min,
+                max: element.max.clone(),
+                slice_name: effective_slice_name(element),
+            });
+        }
+
+        if let Some(binding) = &element.binding {
+            if let Some(value_set_url) = &binding.value_set {
+                binding_rules.push(BindingRule {
+                    path: element.path.clone(),
+                    value_set_url: value_set_url.clone(),
+                    strength: binding.strength.clone(),
+                    slice_name: effective_slice_name(element),
+                });
+            }
+        }
+    }
+}
+
+fn effective_slice_name(element: &ElementDefinition) -> Option<String> {
+    if let Some(slice_name) = &element.slice_name {
+        return Some(slice_name.clone());
+    }
+
+    let id = element.id.as_deref()?;
+    id.split('.').find_map(|segment| {
+        segment
+            .split_once(':')
+            .map(|(_, slice)| slice.to_string())
+            .filter(|slice| !slice.is_empty())
+    })
 }
 
 fn collect_discriminator_constraints(
@@ -393,10 +531,15 @@ fn path_matches_discriminator(element_relative_path: &str, discriminator_path: &
 }
 
 fn fixed_or_pattern_values(additional: &HashMap<String, Value>) -> impl Iterator<Item = &Value> {
+    fixed_or_pattern_entries(additional).map(|(_, value)| value)
+}
+
+fn fixed_or_pattern_entries(
+    additional: &HashMap<String, Value>,
+) -> impl Iterator<Item = (&String, &Value)> {
     additional
         .iter()
         .filter(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
-        .map(|(_, value)| value)
 }
 
 impl Default for RuleCompiler {

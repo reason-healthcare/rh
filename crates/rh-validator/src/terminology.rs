@@ -270,6 +270,43 @@ impl MockTerminologyService {
             "Amended",
         );
 
+        // Questionnaire item type
+        self.add_code("http://hl7.org/fhir/item-type", "group", "Group");
+        self.add_code("http://hl7.org/fhir/item-type", "display", "Display");
+        self.add_code("http://hl7.org/fhir/item-type", "question", "Question");
+        self.add_code("http://hl7.org/fhir/item-type", "boolean", "Boolean");
+        self.add_code("http://hl7.org/fhir/item-type", "decimal", "Decimal");
+        self.add_code("http://hl7.org/fhir/item-type", "integer", "Integer");
+        self.add_code("http://hl7.org/fhir/item-type", "date", "Date");
+        self.add_code("http://hl7.org/fhir/item-type", "dateTime", "Date Time");
+        self.add_code("http://hl7.org/fhir/item-type", "time", "Time");
+        self.add_code("http://hl7.org/fhir/item-type", "string", "String");
+        self.add_code("http://hl7.org/fhir/item-type", "text", "Text");
+        self.add_code("http://hl7.org/fhir/item-type", "url", "Url");
+        self.add_code("http://hl7.org/fhir/item-type", "choice", "Choice");
+        self.add_code(
+            "http://hl7.org/fhir/item-type",
+            "open-choice",
+            "Open Choice",
+        );
+        self.add_code("http://hl7.org/fhir/item-type", "attachment", "Attachment");
+        self.add_code("http://hl7.org/fhir/item-type", "reference", "Reference");
+        self.add_code("http://hl7.org/fhir/item-type", "quantity", "Quantity");
+
+        // ISO 3166 country codes used by the core Jurisdiction ValueSet.
+        self.add_code_with_designations(
+            "urn:iso:std:iso:3166",
+            "AU",
+            "Australia",
+            vec![("en-US", "Australia")],
+        );
+        self.add_code_with_designations(
+            "urn:iso:std:iso:3166",
+            "BD",
+            "Bangladesh",
+            vec![("en-US", "Bangladesh")],
+        );
+
         // Some LOINC codes
         self.add_code_with_designations(
             "http://loinc.org",
@@ -302,6 +339,14 @@ impl MockTerminologyService {
             vec![("en-US", "Blood pressure panel with all children optional")],
         );
 
+        // NUCC Provider Taxonomy
+        self.add_code_with_designations(
+            "http://nucc.org/provider-taxonomy",
+            "208D00000X",
+            "General Practice Physician",
+            vec![("en-US", "General Practice Physician")],
+        );
+
         // Some SNOMED CT codes
         self.add_code(
             "http://snomed.info/sct",
@@ -314,6 +359,21 @@ impl MockTerminologyService {
             "Diastolic blood pressure",
         );
         self.add_code("http://snomed.info/sct", "386661006", "Fever");
+        self.add_code_with_designations(
+            "http://snomed.info/sct",
+            "840535000",
+            "Antibody to severe acute respiratory syndrome coronavirus 2",
+            vec![
+                ("en-US", "Antibody to Wuhan coronavirus"),
+                ("en-US", "Antibody to 2019 novel coronavirus"),
+                ("en-US", "Antibody to 2019-nCoV"),
+                ("en-US", "Antibody to SARS-CoV-2"),
+                (
+                    "en-US",
+                    "Severe acute respiratory syndrome coronavirus 2 antibody",
+                ),
+            ],
+        );
 
         // V3 Role codes
         self.add_code(
@@ -399,6 +459,37 @@ impl MockTerminologyService {
                 ("http://hl7.org/fhir/observation-status", "cancelled"),
                 ("http://hl7.org/fhir/observation-status", "entered-in-error"),
                 ("http://hl7.org/fhir/observation-status", "unknown"),
+            ],
+        );
+
+        self.add_value_set(
+            "http://hl7.org/fhir/ValueSet/item-type",
+            vec![
+                ("http://hl7.org/fhir/item-type", "group"),
+                ("http://hl7.org/fhir/item-type", "display"),
+                ("http://hl7.org/fhir/item-type", "question"),
+                ("http://hl7.org/fhir/item-type", "boolean"),
+                ("http://hl7.org/fhir/item-type", "decimal"),
+                ("http://hl7.org/fhir/item-type", "integer"),
+                ("http://hl7.org/fhir/item-type", "date"),
+                ("http://hl7.org/fhir/item-type", "dateTime"),
+                ("http://hl7.org/fhir/item-type", "time"),
+                ("http://hl7.org/fhir/item-type", "string"),
+                ("http://hl7.org/fhir/item-type", "text"),
+                ("http://hl7.org/fhir/item-type", "url"),
+                ("http://hl7.org/fhir/item-type", "choice"),
+                ("http://hl7.org/fhir/item-type", "open-choice"),
+                ("http://hl7.org/fhir/item-type", "attachment"),
+                ("http://hl7.org/fhir/item-type", "reference"),
+                ("http://hl7.org/fhir/item-type", "quantity"),
+            ],
+        );
+
+        self.add_value_set(
+            "http://hl7.org/fhir/ValueSet/jurisdiction",
+            vec![
+                ("urn:iso:std:iso:3166", "AU"),
+                ("urn:iso:std:iso:3166", "BD"),
             ],
         );
 
@@ -1270,6 +1361,24 @@ mod tests {
             .unwrap();
 
         assert!(result.result);
+    }
+
+    #[test]
+    fn test_nucc_provider_taxonomy_display() {
+        let service = MockTerminologyService::with_common_codes();
+
+        let result = service
+            .validate_code_in_codesystem(
+                "http://nucc.org/provider-taxonomy",
+                "208D00000X",
+                Some("General Practice"),
+            )
+            .unwrap();
+
+        assert!(!result.result);
+        let message = result.message.unwrap();
+        assert!(message.contains("Wrong Display Name"));
+        assert!(message.contains("General Practice Physician"));
     }
 
     #[test]

@@ -515,6 +515,13 @@ fn test_extension_missing_url() {
         .collect();
 
     println!("Validation issues: {errors:#?}");
+
+    assert!(
+        errors.iter().any(|i| i
+            .message
+            .contains("Extension is missing required field 'url'")),
+        "Expected error for extension without url, but got: {errors:#?}"
+    );
 }
 
 #[test]
@@ -744,5 +751,50 @@ fn test_unknown_extension_on_medication_request() {
     assert!(
         !unknown_ext_errors.is_empty(),
         "Expected error for unknown extension from non-HL7 source on MedicationRequest"
+    );
+}
+
+#[test]
+fn test_contained_resource_unknown_extension_generates_error() {
+    let validator = FhirValidator::default();
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+            "text": "Contained extension test"
+        },
+        "contained": [{
+            "resourceType": "Patient",
+            "id": "patient-1",
+            "extension": [{
+                "url": "http://fkcfhir.org/fhir/StructureDefinition/contained-unknown-ext",
+                "valueString": "test"
+            }]
+        }],
+        "subject": {
+            "reference": "#patient-1"
+        }
+    });
+
+    let result = validator
+        .validate_auto(&observation)
+        .expect("Validation should succeed");
+
+    let unknown_ext_errors: Vec<_> = result
+        .issues
+        .iter()
+        .filter(|i| i.severity == Severity::Error)
+        .filter(|i| {
+            i.message.contains("could not be found") || i.message.contains("not allowed here")
+        })
+        .collect();
+
+    assert!(
+        unknown_ext_errors.iter().any(|i| i
+            .path
+            .as_deref()
+            .is_some_and(|path| path.contains("contained[0].extension[0]"))),
+        "Expected contained resource extension error with contained path, got: {unknown_ext_errors:#?}"
     );
 }

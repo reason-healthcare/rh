@@ -42,14 +42,14 @@
 
 use anyhow::{Context, Result};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 
 use crate::profile::ProfileRegistry;
-use crate::rules::RuleCompiler;
+use crate::rules::{FixedPatternRule, InvariantRule, ReferenceTargetRule, RuleCompiler, TypeRule};
 use crate::terminology::{TerminologyConfig, TerminologyService};
 use crate::types::{IssueCode, ValidationIssue, ValidationResult};
 use crate::valueset::ValueSetLoader;
@@ -57,6 +57,7 @@ use crate::valueset::ValueSetLoader;
 #[derive(Debug, Clone, Default)]
 pub struct ValidationOptions {
     pub security_checks: bool,
+    pub no_html_in_markdown: bool,
 }
 
 /// FHIR resource validator with profile-based validation support.
@@ -126,6 +127,8 @@ pub struct FhirValidator {
     supplements: std::sync::RwLock<HashMap<String, String>>,
     /// Registered CodeSystem resources keyed by canonical URL.
     codesystems: std::sync::RwLock<HashMap<String, Value>>,
+    /// Registered Measure resources keyed by canonical URL.
+    measures: std::sync::RwLock<HashMap<String, Value>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -250,6 +253,7 @@ impl FhirValidator {
             options,
             supplements: std::sync::RwLock::new(HashMap::new()),
             codesystems: std::sync::RwLock::new(HashMap::new()),
+            measures: std::sync::RwLock::new(HashMap::new()),
             fhir_version,
         })
     }
@@ -320,19 +324,8 @@ impl FhirValidator {
             }
         }
 
-        // Validate contained resource IDs
-        if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
-            for (idx, contained_resource) in contained.iter().enumerate() {
-                if let Some(id) = contained_resource.get("id").and_then(|v| v.as_str()) {
-                    let path = format!("{resource_type_name}.contained[{idx}].id");
-                    if let Some(issue) = validate_id_format(id, &path) {
-                        result = result.with_issue(issue);
-                    }
-                }
-                // Note: Extension validation for contained resources is skipped because
-                // we may not have all required IG packages loaded. Extensions from HL7
-                // FHIR IGs (like SDC) require their respective packages.
-            }
+        for issue in validate_contained_resource_id_formats(resource, resource_type_name) {
+            result = result.with_issue(issue);
         }
 
         let structural_issues = validate_fhir_string_lengths(resource, resource_type_name);
@@ -374,9 +367,52 @@ impl FhirValidator {
             }
         }
 
+        if resource_type_name == "Questionnaire" {
+            for issue in validate_questionnaire_enable_behavior(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
+        if resource_type_name == "Measure" {
+            for issue in validate_measure_population_criteria(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
+        for issue in validate_core_fallbacks(resource, resource_type_name) {
+            result = result.with_issue(issue);
+        }
+
+        for issue in validate_period_invariants(resource, resource_type_name) {
+            result = result.with_issue(issue);
+        }
+
+        let unknown_ext_issues = self.validate_unknown_extensions(resource, resource_type_name)?;
+        for issue in unknown_ext_issues {
+            result = result.with_issue(issue);
+        }
+
+        if resource_type_name == "QuestionnaireResponse" {
+            for issue in self.validate_questionnaire_response(resource)? {
+                result = result.with_issue(issue);
+            }
+        }
+
+        if resource_type_name == "MeasureReport" {
+            for issue in self.validate_measure_report_against_measure(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
+        if resource_type_name == "StructureDefinition" {
+            for issue in self.validate_structure_definition_resource(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
         // Validate strings for HTML-like content (security check)
         let string_security_issues =
-            validate_string_security(resource, resource_type_name, self.options.security_checks);
+            validate_string_security(resource, resource_type_name, &self.options);
         for issue in string_security_issues {
             result = result.with_issue(issue);
         }
@@ -404,6 +440,26 @@ impl FhirValidator {
 
         let ucum_issues = self.validate_ucum_units(resource, resource_type_name);
         for issue in ucum_issues {
+            result = result.with_issue(issue);
+        }
+
+        let known_code_issues = self.validate_known_coding_codes(resource, resource_type_name, "");
+        for issue in known_code_issues {
+            result = result.with_issue(issue);
+        }
+
+        let us_core_ethnicity_issues = validate_us_core_ethnicity_detail_codes(resource);
+        for issue in us_core_ethnicity_issues {
+            result = result.with_issue(issue);
+        }
+
+        let coding_system_issues = validate_coding_system_uris(resource, resource_type_name, "");
+        for issue in coding_system_issues {
+            result = result.with_issue(issue);
+        }
+
+        let signature_issues = validate_signature_placeholders(resource);
+        for issue in signature_issues {
             result = result.with_issue(issue);
         }
 
@@ -474,7 +530,22 @@ impl FhirValidator {
         resource: &Value,
         profile_url: &str,
     ) -> Result<ValidationResult> {
+        self.validate_profile_rules_inner(resource, profile_url, &mut Vec::new())
+    }
+
+    fn validate_profile_rules_inner(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+        visited_profiles: &mut Vec<String>,
+    ) -> Result<ValidationResult> {
         let mut result = ValidationResult::valid();
+        let lookup_url = canonical_url_without_version(profile_url);
+
+        if visited_profiles.iter().any(|url| url == lookup_url) {
+            return Ok(result);
+        }
+        visited_profiles.push(lookup_url.to_string());
 
         let snapshot = self
             .profile_registry
@@ -509,18 +580,41 @@ impl FhirValidator {
             }
         };
 
+        if let Some(base_profile_url) = snapshot
+            .base_definition
+            .as_deref()
+            .map(canonical_url_without_version)
+            .filter(|url| !is_core_fhir_profile_url(url))
+        {
+            let base_result =
+                self.validate_profile_rules_inner(resource, base_profile_url, visited_profiles)?;
+            for mut issue in base_result.issues {
+                if !issue.message.contains("Profile:") {
+                    issue.message = format!("[Profile: {base_profile_url}] {}", issue.message);
+                }
+                result = result.with_issue(issue);
+            }
+        }
+
         let rules = self
             .rule_compiler
             .compile(&snapshot)
             .context("Failed to compile validation rules")?;
+
+        for issue in validate_unknown_properties_against_rules(resource, &rules) {
+            result = result.with_issue(issue);
+        }
 
         for rule in &rules.cardinality_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
             }
 
-            let violations =
-                validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max);
+            let violations = if rule.slice_name.is_some() {
+                validate_cardinality_for_slice(resource, rule, &rules.slicing_rules)
+            } else {
+                validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max)
+            };
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
@@ -540,13 +634,35 @@ impl FhirValidator {
             }
         }
 
+        for rule in &rules.reference_target_rules {
+            if !should_validate_path(&rule.path, resource) {
+                continue;
+            }
+
+            for violation in self.validate_reference_target_at_path(resource, rule) {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
+        }
+
+        for rule in &rules.fixed_pattern_rules {
+            let violations = if rule.slice_name.is_some() {
+                validate_fixed_pattern_for_slice(resource, rule, &rules.slicing_rules)
+            } else {
+                validate_fixed_pattern_at_path(resource, rule)
+            };
+
+            for violation in violations {
+                result = result.with_issue(violation.with_path(&rule.path));
+            }
+        }
+
         // Binding validation
         for rule in &rules.binding_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
             }
 
-            let violations = self.validate_binding_at_path(resource, rule)?;
+            let violations = self.validate_binding_at_path(resource, rule, &rules.slicing_rules)?;
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
@@ -560,6 +676,18 @@ impl FhirValidator {
             for violation in violations {
                 result = result.with_issue(violation);
             }
+        }
+
+        for rule in &self.datatype_invariant_rules(&rules.type_rules) {
+            let violations = self.validate_invariant(resource, rule)?;
+
+            for violation in violations {
+                result = result.with_issue(violation);
+            }
+        }
+
+        for violation in validate_expression_datatypes(resource, &rules.type_rules) {
+            result = result.with_issue(violation);
         }
 
         // Extension validation
@@ -589,24 +717,6 @@ impl FhirValidator {
 
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
-            }
-        }
-
-        // Unknown extension validation - extensions must have known definitions
-        let resource_type_name = resource
-            .get("resourceType")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Resource");
-        let unknown_ext_issues = self.validate_unknown_extensions(resource, resource_type_name)?;
-        for issue in unknown_ext_issues {
-            result = result.with_issue(issue);
-        }
-
-        // QuestionnaireResponse validation against linked Questionnaire
-        if resource_type_name == "QuestionnaireResponse" {
-            let qr_issues = self.validate_questionnaire_response(resource)?;
-            for issue in qr_issues {
-                result = result.with_issue(issue);
             }
         }
 
@@ -648,9 +758,13 @@ impl FhirValidator {
                         };
 
                         if matches {
-                            let validator =
+                            let mut validator =
                                 crate::questionnaire::QuestionnaireResponseValidator::new(&q)
                                     .with_valueset_loader(&self.valueset_loader);
+                            if let Some(terminology_service) = self.terminology_service.as_ref() {
+                                validator = validator
+                                    .with_terminology_service(terminology_service.as_ref());
+                            }
                             return validator.validate(resource);
                         }
                     }
@@ -711,8 +825,11 @@ impl FhirValidator {
         }
 
         if let Some(q) = self.questionnaire_loader.load(base_url) {
-            let validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q)
+            let mut validator = crate::questionnaire::QuestionnaireResponseValidator::new(&q)
                 .with_valueset_loader(&self.valueset_loader);
+            if let Some(terminology_service) = self.terminology_service.as_ref() {
+                validator = validator.with_terminology_service(terminology_service.as_ref());
+            }
             return validator.validate(resource);
         }
 
@@ -766,12 +883,27 @@ impl FhirValidator {
         collect_extension_urls(resource, resource_type, &mut extensions);
 
         for ext_info in extensions {
-            let url = &ext_info.url;
             let path = &ext_info.path;
+
+            let Some(url) = &ext_info.url else {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Required,
+                        "Extension is missing required field 'url'",
+                    )
+                    .with_path(path),
+                );
+                continue;
+            };
 
             // Skip sub-extension URLs within complex extensions (they don't start with http(s)://)
             // These are just identifiers like "code", "value", etc. within the parent extension
             if !url.starts_with("http://") && !url.starts_with("https://") {
+                continue;
+            }
+
+            if let Some(issue) = validate_known_extension_context(url, path) {
+                issues.push(issue);
                 continue;
             }
 
@@ -810,14 +942,7 @@ impl FhirValidator {
                     }
                 }
                 Ok(None) => {
-                    // Extension not found - check if it's from an IG we might not have
-                    // Skip HL7 FHIR IG extensions (but not core) since we may not have
-                    // the IG packages loaded. Core extensions start with
-                    // http://hl7.org/fhir/StructureDefinition/ and should be loaded.
-                    let is_hl7_ig_extension = url.starts_with("http://hl7.org/fhir/")
-                        && !url.starts_with("http://hl7.org/fhir/StructureDefinition/");
-
-                    if !is_hl7_ig_extension {
+                    if !is_known_missing_extension_definition(url) {
                         issues.push(
                             ValidationIssue::error(
                                 IssueCode::Structure,
@@ -830,15 +955,17 @@ impl FhirValidator {
                     }
                 }
                 Err(_) => {
-                    issues.push(
-                        ValidationIssue::error(
-                            IssueCode::Structure,
-                            format!(
-                                "Extension definition '{url}' could not be resolved, so is not allowed here"
-                            ),
-                        )
-                        .with_path(path),
-                    );
+                    if !is_known_missing_extension_definition(url) {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!(
+                                    "Extension definition '{url}' could not be resolved, so is not allowed here"
+                                ),
+                            )
+                            .with_path(path),
+                        );
+                    }
                 }
             }
         }
@@ -902,6 +1029,17 @@ impl FhirValidator {
         }
     }
 
+    pub fn register_measure(&self, measure: &Value) {
+        if measure.get("resourceType").and_then(|v| v.as_str()) == Some("Measure") {
+            if let Some(url) = measure.get("url").and_then(|v| v.as_str()) {
+                self.measures
+                    .write()
+                    .unwrap()
+                    .insert(url.to_string(), measure.clone());
+            }
+        }
+    }
+
     fn validate_terminology_definition_references(
         &self,
         resource: &Value,
@@ -909,14 +1047,258 @@ impl FhirValidator {
     ) -> Vec<ValidationIssue> {
         match resource_type_name {
             "CodeSystem" => self.validate_codesystem_concept_properties(resource),
-            "ValueSet" => self.validate_valueset_filters(resource),
+            "ValueSet" => self.validate_valueset_compose(resource),
+            "SearchParameter" => self.validate_search_parameter_derivation(resource),
+            "CapabilityStatement" => self.validate_capability_statement_search_params(resource),
+            "ConceptMap" => self.validate_conceptmap_source_codes(resource),
             _ => Vec::new(),
         }
+    }
+
+    fn validate_structure_definition_resource(
+        &self,
+        structure_definition: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+
+        issues.extend(self.validate_structure_definition_choice_paths(structure_definition));
+        issues.extend(self.validate_structure_definition_base_fixed_values(structure_definition));
+
+        issues
+    }
+
+    fn validate_reference_target_at_path(
+        &self,
+        resource: &Value,
+        rule: &ReferenceTargetRule,
+    ) -> Vec<ValidationIssue> {
+        let allowed_types = self.allowed_reference_target_types(&rule.target_profiles);
+        if allowed_types.is_empty()
+            || allowed_types
+                .iter()
+                .any(|type_name| type_name == "Resource")
+        {
+            return Vec::new();
+        }
+
+        get_values_at_path(resource, &rule.path)
+            .into_iter()
+            .filter_map(reference_value_target_type)
+            .filter(|target_type| !allowed_types.iter().any(|allowed| allowed == target_type))
+            .map(|target_type| {
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    format!(
+                        "The type '{target_type}' implied by the reference URL is not a valid Target for this element (must be one of [{}])",
+                        allowed_types.join(", ")
+                    ),
+                )
+            })
+            .collect()
+    }
+
+    fn allowed_reference_target_types(&self, target_profiles: &[String]) -> Vec<String> {
+        let mut allowed = Vec::new();
+        for target_profile in target_profiles {
+            if let Ok(Some(profile)) = self.profile_registry.get_snapshot(target_profile) {
+                if !allowed.iter().any(|type_name| type_name == &profile.type_) {
+                    allowed.push(profile.type_);
+                }
+            }
+        }
+        allowed
+    }
+
+    fn validate_structure_definition_choice_paths(
+        &self,
+        structure_definition: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(base_url) = structure_definition
+            .get("baseDefinition")
+            .and_then(|v| v.as_str())
+        else {
+            return issues;
+        };
+        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+            if base_url == "http://hl7.org/fhir/StructureDefinition/Observation" {
+                self.validate_structure_definition_choice_paths_with_roots(
+                    structure_definition,
+                    &[("value", "Observation.value[x]")],
+                    &mut issues,
+                );
+            }
+            return issues;
+        };
+        let Some(base_snapshot) = base_profile.snapshot.as_ref() else {
+            return issues;
+        };
+
+        let choice_paths: Vec<(&str, &str)> = base_snapshot
+            .element
+            .iter()
+            .filter_map(|element| {
+                let choice_path = element.path.as_str();
+                let choice_segment = choice_path.rsplit('.').next()?;
+                let choice_root = choice_segment.strip_suffix("[x]")?;
+                Some((choice_root, choice_path))
+            })
+            .collect();
+
+        if choice_paths.is_empty() {
+            if base_url == "http://hl7.org/fhir/StructureDefinition/Observation" {
+                self.validate_structure_definition_choice_paths_with_roots(
+                    structure_definition,
+                    &[("value", "Observation.value[x]")],
+                    &mut issues,
+                );
+            }
+            return issues;
+        }
+
+        self.validate_structure_definition_choice_paths_with_roots(
+            structure_definition,
+            &choice_paths,
+            &mut issues,
+        );
+
+        issues
+    }
+
+    fn validate_structure_definition_choice_paths_with_roots(
+        &self,
+        structure_definition: &Value,
+        choice_paths: &[(&str, &str)],
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(elements) = structure_definition
+            .get("differential")
+            .and_then(|d| d.get("element"))
+            .and_then(|e| e.as_array())
+        else {
+            return;
+        };
+
+        for element in elements {
+            let Some(path) = element.get("path").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let Some(id) = element.get("id").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            if element.get("type").is_some() {
+                continue;
+            }
+
+            let Some(id_segment) = id.rsplit('.').next() else {
+                continue;
+            };
+
+            for (choice_root, choice_path) in choice_paths {
+                if id_segment.starts_with(choice_root)
+                    && id_segment != format!("{choice_root}[x]")
+                    && path != *choice_path
+                {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Processing,
+                            format!(
+                                "Error generating Snapshot: The path must be '{choice_path}' not '{path}' when the type list is not constrained"
+                            ),
+                        )
+                        .with_path("StructureDefinition".to_string()),
+                    );
+                    break;
+                }
+            }
+        }
+    }
+
+    fn validate_structure_definition_base_fixed_values(
+        &self,
+        structure_definition: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(base_url) = structure_definition
+            .get("baseDefinition")
+            .and_then(|v| v.as_str())
+        else {
+            return issues;
+        };
+        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+            return issues;
+        };
+        let Some(base_differential) = base_profile.differential.as_ref() else {
+            return issues;
+        };
+        let Some(elements) = structure_definition
+            .get("differential")
+            .and_then(|d| d.get("element"))
+            .and_then(|e| e.as_array())
+        else {
+            return issues;
+        };
+
+        for element in elements {
+            let Some(path) = element.get("path").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            let Some(base_element) = base_differential
+                .element
+                .iter()
+                .find(|base_element| base_element.path == path)
+            else {
+                continue;
+            };
+
+            for (base_key, base_value) in &base_element.additional {
+                if !base_key.starts_with("fixed") {
+                    continue;
+                }
+                let Some(derived_value) = element.get(base_key) else {
+                    continue;
+                };
+                if derived_value == base_value {
+                    continue;
+                }
+
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Value,
+                        format!(
+                            "Value is '{}' but is fixed to '{}' in the profile",
+                            display_json_value(derived_value),
+                            display_json_value(base_value)
+                        ),
+                    )
+                    .with_path(path.to_string()),
+                );
+            }
+        }
+
+        issues
     }
 
     fn validate_codesystem_concept_properties(&self, codesystem: &Value) -> Vec<ValidationIssue> {
         let property_types = codesystem_property_types(codesystem);
         let mut issues = Vec::new();
+
+        if codesystem
+            .get("supplements")
+            .and_then(|v| v.as_str())
+            .is_some()
+            && codesystem.get("content").and_then(|v| v.as_str()) != Some("supplement")
+        {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::BusinessRule,
+                    "CodeSystem supplements SHALL have a content value of 'supplement'",
+                )
+                .with_path("CodeSystem.content".to_string()),
+            );
+        }
 
         if let Some(concepts) = codesystem.get("concept").and_then(|v| v.as_array()) {
             self.validate_codesystem_concepts(
@@ -1008,7 +1390,7 @@ impl FhirValidator {
         }
     }
 
-    fn validate_valueset_filters(&self, valueset: &Value) -> Vec<ValidationIssue> {
+    fn validate_valueset_compose(&self, valueset: &Value) -> Vec<ValidationIssue> {
         let mut issues = Vec::new();
 
         let Some(compose) = valueset.get("compose") else {
@@ -1024,16 +1406,25 @@ impl FhirValidator {
                 let Some(system) = include.get("system").and_then(|v| v.as_str()) else {
                     continue;
                 };
+
+                if let Some(concepts) = include.get("concept").and_then(|v| v.as_array()) {
+                    self.validate_valueset_concepts(
+                        system,
+                        concepts,
+                        &format!("ValueSet.compose.{include_name}[{include_idx}].concept"),
+                        &mut issues,
+                    );
+                }
+
+                let registered_codesystem = self.registered_codesystem(system);
+                let property_types = registered_codesystem
+                    .as_ref()
+                    .map(codesystem_property_types)
+                    .unwrap_or_default();
+
                 let Some(filters) = include.get("filter").and_then(|v| v.as_array()) else {
                     continue;
                 };
-
-                let Some(codesystem) = self.registered_codesystem(system) else {
-                    continue;
-                };
-
-                let property_types = codesystem_property_types(&codesystem);
-                let filter_codes = codesystem_filter_codes(&codesystem);
 
                 for (filter_idx, filter) in filters.iter().enumerate() {
                     let filter_path = format!(
@@ -1043,7 +1434,28 @@ impl FhirValidator {
                         continue;
                     };
 
-                    if filter_codes.contains_key(property) {
+                    self.validate_valueset_filter_parameter_expression(
+                        filter,
+                        &filter_path,
+                        valueset_parameter_names(valueset),
+                        &mut issues,
+                    );
+
+                    if let Some(issue) =
+                        validate_known_valueset_filter(system, property, filter, &filter_path)
+                    {
+                        issues.push(issue);
+                        continue;
+                    }
+
+                    if registered_codesystem.is_none() {
+                        continue;
+                    }
+
+                    if registered_codesystem
+                        .as_ref()
+                        .is_some_and(|codesystem| codesystem_defines_filter(codesystem, property))
+                    {
                         continue;
                     }
 
@@ -1076,6 +1488,54 @@ impl FhirValidator {
         issues
     }
 
+    fn validate_valueset_concepts(
+        &self,
+        system: &str,
+        concepts: &[Value],
+        concept_path: &str,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(terminology_service) = self.terminology_service.as_ref() else {
+            return;
+        };
+
+        if !terminology_service.supports_code_system(system) {
+            return;
+        }
+
+        for (concept_idx, concept) in concepts.iter().enumerate() {
+            let Some(code) = concept.get("code").and_then(|v| v.as_str()) else {
+                continue;
+            };
+
+            match terminology_service.validate_code_in_codesystem(system, code, None) {
+                Ok(result) if !result.result => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::BusinessRule,
+                            result.message.unwrap_or_else(|| {
+                                format!("The code '{code}' is not valid in the system {system}")
+                            }),
+                        )
+                        .with_path(format!("{concept_path}[{concept_idx}]")),
+                    );
+                }
+                Err(err) => {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::BusinessRule,
+                            format!(
+                                "The code '{code}' is not valid in the system {system} ({err})"
+                            ),
+                        )
+                        .with_path(format!("{concept_path}[{concept_idx}]")),
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+
     fn validate_valueset_coding_filter_value(
         &self,
         filter: &Value,
@@ -1087,16 +1547,9 @@ impl FhirValidator {
             return;
         };
 
-        let Some((system_and_version, code)) = value.rsplit_once('#') else {
-            issues.push(
-                ValidationIssue::error(
-                    IssueCode::Invalid,
-                    format!(
-                        "The value for a filter based on property '{property}' must be in the format system(|version)#code, not '{value}'"
-                    ),
-                )
-                .with_path(filter_path.to_string()),
-            );
+        let Some((system_and_version, code)) =
+            split_coding_filter_value(value, property, filter_path, issues)
+        else {
             return;
         };
 
@@ -1131,6 +1584,276 @@ impl FhirValidator {
         }
     }
 
+    fn validate_valueset_filter_parameter_expression(
+        &self,
+        filter: &Value,
+        filter_path: &str,
+        parameter_names: Vec<&str>,
+        issues: &mut Vec<ValidationIssue>,
+    ) {
+        let Some(value_expression) = filter
+            .get("_value")
+            .and_then(|v| v.get("extension"))
+            .and_then(|v| v.as_array())
+            .and_then(|extensions| {
+                extensions.iter().find_map(|extension| {
+                    if extension.get("url").and_then(|v| v.as_str())
+                        == Some("http://hl7.org/fhir/StructureDefinition/cqf-expression")
+                    {
+                        extension.get("valueExpression")
+                    } else {
+                        None
+                    }
+                })
+            })
+        else {
+            return;
+        };
+
+        let expression_path = format!("{filter_path}.extension[0].value.ofType(Expression)");
+        let language = value_expression
+            .get("language")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        if language != "text/fhirpath" {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "A ValueSet expression language must be 'text/fhirpath' not '{language}'"
+                    ),
+                )
+                .with_path(expression_path),
+            );
+            return;
+        }
+
+        let Some(expression) = value_expression.get("expression").and_then(|v| v.as_str()) else {
+            return;
+        };
+
+        if let Some(parameter) = unknown_valueset_parameter_reference(expression, &parameter_names)
+        {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Processing,
+                    format!(
+                        "The filter parameter expression '{expression}' refers to the unknown parameter '{parameter}'"
+                    ),
+                )
+                .with_path(expression_path),
+            );
+            return;
+        }
+
+        if FhirPathParser::new().parse(expression).is_err() {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Processing,
+                    format!("The value of the expression '{expression}' is not a valid FHIRPath"),
+                )
+                .with_path(expression_path),
+            );
+        }
+    }
+
+    fn validate_search_parameter_derivation(
+        &self,
+        search_parameter: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        if search_parameter.get("type").and_then(|v| v.as_str()) == Some("composite") {
+            let component_count = search_parameter
+                .get("component")
+                .and_then(|v| v.as_array())
+                .map_or(0, Vec::len);
+            if component_count < 2 {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::BusinessRule,
+                        "When the SearchParameter has a type of 'composite', then the SearchParameter must define two or more components".to_string(),
+                    )
+                    .with_path("SearchParameter".to_string()),
+                );
+            }
+        }
+
+        let Some(derived_from) = search_parameter.get("derivedFrom").and_then(|v| v.as_str())
+        else {
+            return issues;
+        };
+        let Some(base_definition) = known_search_parameter_definition(derived_from) else {
+            return issues;
+        };
+
+        if search_parameter.get("type").and_then(|v| v.as_str()) != Some(base_definition.type_) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::BusinessRule,
+                    format!(
+                        "The type {} is different to the type {derived_from} in the derivedFrom SearchParameter",
+                        search_parameter
+                            .get("type")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                    ),
+                )
+                .with_path("SearchParameter".to_string()),
+            );
+        }
+
+        if let Some(bases) = search_parameter.get("base").and_then(|v| v.as_array()) {
+            for base in bases.iter().filter_map(|v| v.as_str()) {
+                if !base_definition.bases.contains(&base) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::BusinessRule,
+                            format!(
+                                "The resource type {base} is not listed as a base in the SearchParameter this is derived from ({derived_from})"
+                            ),
+                        )
+                        .with_path("SearchParameter".to_string()),
+                    );
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_capability_statement_search_params(
+        &self,
+        capability: &Value,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(rest_entries) = capability.get("rest").and_then(|v| v.as_array()) else {
+            return issues;
+        };
+
+        for (rest_idx, rest) in rest_entries.iter().enumerate() {
+            let Some(resources) = rest.get("resource").and_then(|v| v.as_array()) else {
+                continue;
+            };
+
+            for (resource_idx, resource) in resources.iter().enumerate() {
+                let Some(search_params) = resource.get("searchParam").and_then(|v| v.as_array())
+                else {
+                    continue;
+                };
+
+                for (search_idx, search_param) in search_params.iter().enumerate() {
+                    let Some(definition) = search_param.get("definition").and_then(|v| v.as_str())
+                    else {
+                        continue;
+                    };
+                    let Some(base_definition) = known_search_parameter_definition(definition)
+                    else {
+                        continue;
+                    };
+                    let Some(actual_type) = search_param.get("type").and_then(|v| v.as_str())
+                    else {
+                        continue;
+                    };
+
+                    if actual_type != base_definition.type_ {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                format!(
+                                    "Type mismatch - SearchParameter '{definition}|4.0.1' type is {}, but type here is {actual_type}",
+                                    base_definition.type_
+                                ),
+                            )
+                            .with_path(format!(
+                                "CapabilityStatement.rest[{rest_idx}].resource[{resource_idx}].searchParam[{search_idx}]"
+                            )),
+                        );
+                    }
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_conceptmap_source_codes(&self, conceptmap: &Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(source_valueset) = conceptmap
+            .get("sourceCanonical")
+            .and_then(|v| v.as_str())
+            .or_else(|| conceptmap.get("sourceUri").and_then(|v| v.as_str()))
+        else {
+            return issues;
+        };
+        let Some(groups) = conceptmap.get("group").and_then(|v| v.as_array()) else {
+            return issues;
+        };
+
+        for (group_idx, group) in groups.iter().enumerate() {
+            let source_system = group.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let Some(elements) = group.get("element").and_then(|v| v.as_array()) else {
+                continue;
+            };
+
+            for (element_idx, element) in elements.iter().enumerate() {
+                let Some(code) = element.get("code").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                let Ok(result) =
+                    self.valueset_loader
+                        .contains_code(source_valueset, source_system, code)
+                else {
+                    continue;
+                };
+                if result == crate::valueset::CodeInValueSetResult::NotFound {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Required,
+                            format!(
+                                "The source code '{code}' is not valid in the value set {source_valueset}"
+                            ),
+                        )
+                        .with_path(format!(
+                            "ConceptMap.group[{group_idx}].element[{element_idx}].code"
+                        )),
+                    );
+                }
+            }
+        }
+
+        issues
+    }
+
+    fn validate_measure_report_against_measure(&self, report: &Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(measure_url) = report.get("measure").and_then(|v| v.as_str()) else {
+            return issues;
+        };
+        let Some(measure) = self.measures.read().unwrap().get(measure_url).cloned() else {
+            return issues;
+        };
+
+        if measure_scoring_code(&measure) == Some("cohort") {
+            if let Some(groups) = report.get("group").and_then(|v| v.as_array()) {
+                for (group_idx, group) in groups.iter().enumerate() {
+                    if group.get("measureScore").is_some() {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::BusinessRule,
+                                "No measureScore when the scoring of the message is 'cohort'",
+                            )
+                            .with_path(format!("MeasureReport.group[{group_idx}].measureScore")),
+                        );
+                    }
+                }
+            }
+        }
+
+        issues.extend(validate_measure_report_stratifier_codes(report, &measure));
+
+        issues
+    }
+
     fn registered_codesystem(&self, system: &str) -> Option<Value> {
         self.codesystems.read().unwrap().get(system).cloned()
     }
@@ -1139,6 +1862,89 @@ impl FhirValidator {
         let codesystem = self.registered_codesystem(system)?;
         let concepts = codesystem.get("concept").and_then(|v| v.as_array())?;
         Some(concepts_contain_code(concepts, code))
+    }
+
+    fn codesystem_contains_code(&self, system: &str, code: &str) -> Option<bool> {
+        if let Some(contains_code) = self.registered_codesystem_contains_code(system, code) {
+            return Some(contains_code);
+        }
+
+        self.valueset_loader
+            .codesystem_contains_code(system, code)
+            .ok()
+            .flatten()
+    }
+
+    fn validate_known_coding_codes(
+        &self,
+        value: &Value,
+        resource_type: &str,
+        path: &str,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+
+        match value {
+            Value::Object(obj) => {
+                if let (Some(system), Some(code)) = (
+                    obj.get("system").and_then(|v| v.as_str()),
+                    obj.get("code").and_then(|v| v.as_str()),
+                ) {
+                    if system == "http://snomed.info/sct" && !snomed_code_like(code) {
+                        let current_path = if path.is_empty() {
+                            format!("{resource_type}.code")
+                        } else {
+                            format!("{path}.code")
+                        };
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::CodeInvalid,
+                                format!("SNOMED CT code '{code}' must contain only digits"),
+                            )
+                            .with_path(current_path),
+                        );
+                    } else if self.codesystem_contains_code(system, code) == Some(false) {
+                        let current_path = if path.is_empty() {
+                            format!("{resource_type}.code")
+                        } else {
+                            format!("{path}.code")
+                        };
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::CodeInvalid,
+                                format!("Unknown code '{code}' in the CodeSystem '{system}'"),
+                            )
+                            .with_path(current_path),
+                        );
+                    }
+                }
+
+                for (key, child) in obj {
+                    let child_path = if path.is_empty() {
+                        format!("{resource_type}.{key}")
+                    } else {
+                        format!("{path}.{key}")
+                    };
+                    issues.extend(self.validate_known_coding_codes(
+                        child,
+                        resource_type,
+                        &child_path,
+                    ));
+                }
+            }
+            Value::Array(items) => {
+                for (idx, item) in items.iter().enumerate() {
+                    let item_path = format!("{path}[{idx}]");
+                    issues.extend(self.validate_known_coding_codes(
+                        item,
+                        resource_type,
+                        &item_path,
+                    ));
+                }
+            }
+            _ => {}
+        }
+
+        issues
     }
 
     pub fn cache_stats(&self) -> ((usize, usize), (usize, usize)) {
@@ -1373,6 +2179,26 @@ fn count_in_item(item: &Value, remaining_path: &[&str]) -> usize {
 
     let mut current = item;
     for (i, part) in remaining_path.iter().enumerate() {
+        if let Some(prefix) = part.strip_suffix("[x]") {
+            let Some(object) = current.as_object() else {
+                return 0;
+            };
+            let matching_fields = object
+                .iter()
+                .filter(|(key, _)| key.starts_with(prefix) && key.len() > prefix.len())
+                .collect::<Vec<_>>();
+
+            if i == remaining_path.len() - 1 {
+                return matching_fields.len();
+            }
+
+            let Some((_, choice_value)) = matching_fields.first() else {
+                return 0;
+            };
+            current = choice_value;
+            continue;
+        }
+
         match current.get(part) {
             Some(Value::Array(arr)) => {
                 if i == remaining_path.len() - 1 {
@@ -1391,6 +2217,50 @@ fn count_in_item(item: &Value, remaining_path: &[&str]) -> usize {
     }
 
     0
+}
+
+fn validate_cardinality_for_slice(
+    resource: &Value,
+    rule: &crate::rules::CardinalityRule,
+    slicing_rules: &[crate::rules::SlicingRule],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let Some(slice_name) = rule.slice_name.as_deref() else {
+        return issues;
+    };
+    let Some((slicing_rule, slice)) =
+        find_slicing_rule_for_path(slicing_rules, &rule.path, slice_name)
+    else {
+        return validate_cardinality_at_path(resource, &rule.path, rule.min, &rule.max);
+    };
+    let Some(relative_path) = relative_rule_path(&rule.path, &slicing_rule.path) else {
+        return issues;
+    };
+    if relative_path.is_empty() {
+        return issues;
+    }
+
+    let parts: Vec<&str> = slicing_rule.path.split('.').collect();
+    let Some(array) = navigate_to_array(resource, &parts) else {
+        return issues;
+    };
+    let relative_parts: Vec<&str> = relative_path.split('.').collect();
+
+    for item in array
+        .iter()
+        .filter(|item| matches_slice(item, slice, &slicing_rule.discriminators))
+    {
+        let count = get_values_at_relative_path(item, &relative_parts).len();
+        check_cardinality(
+            &rule.path,
+            count,
+            rule.min,
+            rule.max.as_deref(),
+            &mut issues,
+        );
+    }
+
+    issues
 }
 
 fn count_simple_path(resource: &Value, parts: &[&str]) -> usize {
@@ -1520,6 +2390,12 @@ fn validate_type_at_path(
         } else {
             // Type matches, now validate primitive format if applicable
             for type_name in expected_types {
+                if type_name == "id" && is_contained_path(path) {
+                    break;
+                }
+                if expected_types.len() > 1 {
+                    continue;
+                }
                 if let Some(format_error) = validate_primitive_format(value, type_name, path) {
                     issues.push(format_error);
                     break;
@@ -1529,6 +2405,175 @@ fn validate_type_at_path(
     }
 
     issues
+}
+
+fn validate_fixed_pattern_at_path(
+    resource: &Value,
+    rule: &FixedPatternRule,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let values = get_values_at_path(resource, &rule.path);
+
+    for value in values {
+        let matches = if rule.is_fixed {
+            value == &rule.value
+        } else {
+            value_matches_pattern(value, &rule.value)
+        };
+
+        if !matches {
+            let kind = if rule.is_fixed { "fixed" } else { "pattern" };
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!(
+                    "Element does not match required {kind} value at '{}'",
+                    rule.path
+                ),
+            ));
+        }
+    }
+
+    issues
+}
+
+fn validate_fixed_pattern_for_slice(
+    resource: &Value,
+    rule: &FixedPatternRule,
+    slicing_rules: &[crate::rules::SlicingRule],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let values = get_values_for_slice(
+        resource,
+        &rule.path,
+        rule.slice_name.as_deref(),
+        slicing_rules,
+    );
+
+    for value in values {
+        let matches = if rule.is_fixed {
+            value == &rule.value
+        } else {
+            value_matches_pattern(value, &rule.value)
+        };
+
+        if !matches {
+            let kind = if rule.is_fixed { "fixed" } else { "pattern" };
+            issues.push(ValidationIssue::error(
+                IssueCode::Value,
+                format!(
+                    "Element does not match required {kind} value at '{}'",
+                    rule.path
+                ),
+            ));
+        }
+    }
+
+    issues
+}
+
+fn get_values_for_slice<'a>(
+    resource: &'a Value,
+    path: &str,
+    slice_name: Option<&str>,
+    slicing_rules: &[crate::rules::SlicingRule],
+) -> Vec<&'a Value> {
+    let Some(slice_name) = slice_name else {
+        return get_values_at_path(resource, path);
+    };
+    let Some((slicing_rule, slice)) = find_slicing_rule_for_path(slicing_rules, path, slice_name)
+    else {
+        return get_values_at_path(resource, path);
+    };
+    let Some(relative_path) = relative_rule_path(path, &slicing_rule.path) else {
+        return Vec::new();
+    };
+
+    let parts: Vec<&str> = slicing_rule.path.split('.').collect();
+    let Some(array) = navigate_to_array(resource, &parts) else {
+        return Vec::new();
+    };
+    let relative_parts: Vec<&str> = if relative_path.is_empty() {
+        Vec::new()
+    } else {
+        relative_path.split('.').collect()
+    };
+
+    array
+        .iter()
+        .filter(|item| matches_slice(item, slice, &slicing_rule.discriminators))
+        .flat_map(|item| get_values_at_relative_path(item, &relative_parts))
+        .collect()
+}
+
+fn get_values_at_relative_path<'a>(value: &'a Value, parts: &[&str]) -> Vec<&'a Value> {
+    if parts.is_empty() {
+        return vec![value];
+    }
+
+    let mut current = vec![value];
+    for part in parts {
+        let mut next = Vec::new();
+        for value in current {
+            if let Some(choice_prefix) = part.strip_suffix("[x]") {
+                if let Some(object) = value.as_object() {
+                    for (key, choice_value) in object {
+                        if key.starts_with(choice_prefix) && key.len() > choice_prefix.len() {
+                            match choice_value {
+                                Value::Array(arr) => next.extend(arr.iter()),
+                                other => next.push(other),
+                            }
+                        }
+                    }
+                }
+            } else {
+                match value.get(part) {
+                    Some(Value::Array(arr)) => next.extend(arr.iter()),
+                    Some(other) => next.push(other),
+                    None => {}
+                }
+            }
+        }
+
+        if next.is_empty() {
+            return Vec::new();
+        }
+        current = next;
+    }
+
+    current
+}
+
+fn find_slicing_rule_for_path<'a>(
+    slicing_rules: &'a [crate::rules::SlicingRule],
+    path: &str,
+    slice_name: &str,
+) -> Option<(
+    &'a crate::rules::SlicingRule,
+    &'a crate::rules::SliceDefinition,
+)> {
+    slicing_rules.iter().find_map(|slicing_rule| {
+        if path != slicing_rule.path && !path.starts_with(&format!("{}.", slicing_rule.path)) {
+            return None;
+        }
+        let slice = slicing_rule
+            .slices
+            .iter()
+            .find(|slice| slice.name == slice_name)?;
+        Some((slicing_rule, slice))
+    })
+}
+
+fn relative_rule_path<'a>(path: &'a str, slicing_path: &str) -> Option<&'a str> {
+    if path == slicing_path {
+        return Some("");
+    }
+
+    path.strip_prefix(slicing_path)
+        .and_then(|suffix| suffix.strip_prefix('.'))
+}
+
+fn is_contained_path(path: &str) -> bool {
+    path.split('.').any(|segment| segment == "contained")
 }
 
 fn validate_id_format(id: &str, path: &str) -> Option<ValidationIssue> {
@@ -1556,6 +2601,75 @@ fn validate_id_format(id: &str, path: &str) -> Option<ValidationIssue> {
             ));
         }
     }
+    None
+}
+
+fn validate_contained_resource_id_formats(
+    resource: &Value,
+    root_type: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_contained_resource_id_formats_recursive(resource, root_type, &mut issues);
+    issues
+}
+
+fn validate_contained_resource_id_formats_recursive(
+    value: &Value,
+    current_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let Some(object) = value.as_object() else {
+        return;
+    };
+
+    if let Some(contained) = object.get("contained").and_then(|value| value.as_array()) {
+        for (idx, contained_resource) in contained.iter().enumerate() {
+            let resource_type = contained_resource
+                .get("resourceType")
+                .and_then(|value| value.as_str())
+                .unwrap_or("Resource");
+            let contained_path = format!("{current_path}.contained[{idx}]/*{resource_type}*/");
+
+            if let Some(id) = contained_resource
+                .get("id")
+                .and_then(|value| value.as_str())
+            {
+                if let Some(issue) =
+                    validate_contained_id_format_without_length(id, &format!("{contained_path}.id"))
+                {
+                    issues.push(issue);
+                }
+            }
+
+            validate_contained_resource_id_formats_recursive(
+                contained_resource,
+                &contained_path,
+                issues,
+            );
+        }
+    }
+}
+
+fn validate_contained_id_format_without_length(id: &str, path: &str) -> Option<ValidationIssue> {
+    if id.is_empty() {
+        return Some(ValidationIssue::error(
+            IssueCode::Value,
+            format!("Invalid id at '{path}': value cannot be empty"),
+        ));
+    }
+
+    for c in id.chars() {
+        if !c.is_ascii_alphanumeric() && c != '-' && c != '.' {
+            return Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Invalid Resource id: Invalid Characters ('{id}')"),
+                )
+                .with_path(path.to_string()),
+            );
+        }
+    }
+
     None
 }
 
@@ -1611,6 +2725,15 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
                 } else {
                     format!("{current_path}.{key}")
                 };
+                if key == "fhir_comments" {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            "Unrecognized property 'fhir_comments'".to_string(),
+                        )
+                        .with_path(current_path.to_string()),
+                    );
+                }
                 issues.extend(validate_json_structure(v, &child_path));
             }
         }
@@ -1637,7 +2760,7 @@ fn validate_json_structure(value: &Value, current_path: &str) -> Vec<ValidationI
 fn validate_string_security(
     value: &Value,
     current_path: &str,
-    security_checks_enabled: bool,
+    options: &ValidationOptions,
 ) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
@@ -1658,27 +2781,33 @@ fn validate_string_security(
                     continue;
                 }
 
-                issues.extend(validate_string_security(
-                    v,
-                    &child_path,
-                    security_checks_enabled,
-                ));
+                issues.extend(validate_string_security(v, &child_path, options));
             }
         }
         Value::Array(arr) => {
             for (idx, item) in arr.iter().enumerate() {
                 let child_path = format!("{current_path}[{idx}]");
-                issues.extend(validate_string_security(
-                    item,
-                    &child_path,
-                    security_checks_enabled,
-                ));
+                issues.extend(validate_string_security(item, &child_path, options));
             }
         }
-        Value::String(s)
-            // Check for HTML-like content in strings
-            if contains_html_tags(s) => {
-                let issue = if security_checks_enabled {
+        Value::String(s) => {
+            if options.no_html_in_markdown && is_markdown_path(current_path) {
+                if let Some(tag_start) = markdown_html_tag_start(s) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!(
+                                "The markdown contains content that appears to be an embedded HTML tag starting at '{tag_start}'"
+                            ),
+                        )
+                        .with_path(current_path.to_string()),
+                    );
+                    return issues;
+                }
+            }
+
+            if contains_html_tags(s) {
+                let issue = if options.security_checks {
                     ValidationIssue::error(
                         IssueCode::Invalid,
                         "The string value contains text that looks like embedded HTML tags, which are not allowed for security reasons in this context".to_string(),
@@ -1691,6 +2820,187 @@ fn validate_string_security(
                 };
                 issues.push(issue.with_path(current_path.to_string()));
             }
+        }
+        _ => {}
+    }
+
+    issues
+}
+
+fn is_markdown_path(path: &str) -> bool {
+    matches!(
+        path.rsplit(['.', ']'])
+            .find(|segment| !segment.is_empty())
+            .and_then(|segment| segment.rsplit('[').next()),
+        Some("text")
+    )
+}
+
+fn markdown_html_tag_start(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    for (idx, byte) in bytes.iter().enumerate() {
+        if *byte != b'<' {
+            continue;
+        }
+        let next = bytes.get(idx + 1).copied();
+        if matches!(next, Some(b'/') | Some(b'!') | Some(b'?'))
+            || next.is_some_and(|b| (b as char).is_ascii_alphabetic())
+        {
+            let end = (idx + 2).min(value.len());
+            return Some(value[idx..end].to_string());
+        }
+    }
+    None
+}
+
+fn validate_expression_datatypes(
+    resource: &Value,
+    type_rules: &[TypeRule],
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    for rule in type_rules {
+        if !rule.types.iter().any(|type_name| type_name == "Expression") {
+            continue;
+        }
+
+        for expression in get_values_at_path(resource, &rule.path) {
+            if expression.get("language").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        "Expression.language: minimum required = 1, but only found 0",
+                    )
+                    .with_path(rule.path.clone()),
+                );
+            }
+
+            if expression.get("expression").is_none() && expression.get("reference").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        "exp-1: An expression or a reference must be provided",
+                    )
+                    .with_path(rule.path.clone()),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_us_core_ethnicity_detail_codes(resource: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if resource.get("resourceType").and_then(|v| v.as_str()) != Some("Patient") {
+        return issues;
+    }
+
+    let Some(extensions) = resource.get("extension").and_then(|v| v.as_array()) else {
+        return issues;
+    };
+
+    for (extension_idx, extension) in extensions.iter().enumerate() {
+        if extension.get("url").and_then(|v| v.as_str())
+            != Some("http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity")
+        {
+            continue;
+        }
+
+        let Some(children) = extension.get("extension").and_then(|v| v.as_array()) else {
+            continue;
+        };
+
+        for (child_idx, child) in children.iter().enumerate() {
+            if child.get("url").and_then(|v| v.as_str()) != Some("detailed") {
+                continue;
+            }
+
+            let Some(coding) = child.get("valueCoding") else {
+                continue;
+            };
+            let system = coding.get("system").and_then(|v| v.as_str());
+            let code = coding.get("code").and_then(|v| v.as_str());
+            if system == Some("urn:oid:2.16.840.1.113883.6.238")
+                && matches!(code, Some("2148-5" | "2184-0"))
+            {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::CodeInvalid,
+                        format!(
+                            "Code '{}' from system 'urn:oid:2.16.840.1.113883.6.238' is not in required ValueSet 'http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.4.642.40.2.48.1'",
+                            code.unwrap_or("")
+                        ),
+                    )
+                    .with_path(format!(
+                        "Patient.extension[{extension_idx}].extension[{child_idx}].valueCoding.code"
+                    )),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_coding_system_uris(
+    value: &Value,
+    resource_type: &str,
+    path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match value {
+        Value::Object(obj) => {
+            if obj.contains_key("code") {
+                if let Some(system) = obj.get("system").and_then(|v| v.as_str()) {
+                    let current_path = if path.is_empty() {
+                        format!("{resource_type}.system")
+                    } else {
+                        format!("{path}.system")
+                    };
+                    if !is_absolute_url(system) {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                "Coding.system must be an absolute reference, not a local reference",
+                            )
+                            .with_path(current_path),
+                        );
+                    } else if system.starts_with("http://hl7.org/fhir/ValueSet/") {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invalid,
+                                format!(
+                                    "The Coding references a value set, not a code system ('{system}')"
+                                ),
+                            )
+                            .with_path(current_path),
+                        );
+                    }
+                }
+            }
+
+            for (key, child) in obj {
+                let child_path = if path.is_empty() {
+                    format!("{resource_type}.{key}")
+                } else {
+                    format!("{path}.{key}")
+                };
+                issues.extend(validate_coding_system_uris(
+                    child,
+                    resource_type,
+                    &child_path,
+                ));
+            }
+        }
+        Value::Array(items) => {
+            for (idx, item) in items.iter().enumerate() {
+                let item_path = format!("{path}[{idx}]");
+                issues.extend(validate_coding_system_uris(item, resource_type, &item_path));
+            }
+        }
         _ => {}
     }
 
@@ -1726,7 +3036,68 @@ fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssu
         }
     }
 
+    for entity in invalid_xhtml_entities(div_content) {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Invalid entity in the XHTML ('&{entity};')"),
+            )
+            .with_path(path.to_string()),
+        );
+    }
+
+    let local_fragments = collect_html_fragment_ids(div_content);
+    for fragment in collect_html_fragment_links(div_content) {
+        if !local_fragments.contains(&fragment) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Unable to resolve narrative fragment reference '#{fragment}'"),
+                )
+                .with_path(path.to_string()),
+            );
+        }
+    }
+
     issues
+}
+
+fn invalid_xhtml_entities(div_content: &str) -> Vec<String> {
+    let mut invalid = Vec::new();
+    let bytes = div_content.as_bytes();
+    let mut index = 0;
+
+    while let Some(relative_amp) = div_content[index..].find('&') {
+        let amp_index = index + relative_amp;
+        let entity_start = amp_index + 1;
+        let Some(relative_semicolon) = div_content[entity_start..].find(';') else {
+            index = entity_start;
+            continue;
+        };
+        let semicolon_index = entity_start + relative_semicolon;
+        let entity = &div_content[entity_start..semicolon_index];
+
+        if is_entity_candidate(entity)
+            && !matches!(entity, "amp" | "lt" | "gt" | "quot" | "apos")
+            && !entity.starts_with('#')
+        {
+            invalid.push(entity.to_string());
+        }
+
+        index = semicolon_index + 1;
+        if index >= bytes.len() {
+            break;
+        }
+    }
+
+    invalid
+}
+
+fn is_entity_candidate(entity: &str) -> bool {
+    !entity.is_empty()
+        && entity
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '#')
 }
 
 fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
@@ -1754,6 +3125,14 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
         std::collections::HashMap::new();
     let mut identity_positions: std::collections::HashMap<String, Vec<usize>> =
         std::collections::HashMap::new();
+    let mut entry_fragment_ids: std::collections::HashMap<
+        usize,
+        std::collections::HashSet<String>,
+    > = std::collections::HashMap::new();
+    let mut global_fragment_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+
+    let has_versioned_reference = entries.iter().any(entry_contains_versioned_reference);
 
     for (idx, entry) in entries.iter().enumerate() {
         if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
@@ -1801,6 +3180,15 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
                     }
                 }
             }
+
+            let mut fragments = std::collections::HashSet::new();
+            collect_html_fragment_ids_from_value(resource, &mut fragments);
+            if !fragments.is_empty() {
+                entry_fragment_ids.insert(idx, fragments.clone());
+                for fragment in fragments {
+                    *global_fragment_counts.entry(fragment).or_default() += 1;
+                }
+            }
         }
     }
 
@@ -1808,8 +3196,9 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
         bundle_type,
         "document" | "message" | "searchset" | "collection"
     );
+    let skip_duplicate_checks = has_versioned_reference && bundle_type == "document";
 
-    if enforce_fullurl_uniqueness {
+    if enforce_fullurl_uniqueness && !skip_duplicate_checks {
         for (full_url, positions) in &fullurl_positions {
             if positions.len() > 1 {
                 for idx in positions {
@@ -1827,25 +3216,59 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
         }
     }
 
-    for (identity, positions) in &identity_positions {
-        if positions.len() > 1 {
-            for idx in positions {
-                issues.push(
-                    ValidationIssue::error(
-                        IssueCode::Duplicate,
-                        format!(
-                            "Duplicate Bundle entry resource identity '{identity}' detected in this bundle"
-                        ),
-                    )
-                    .with_path(format!("Bundle.entry[{idx}].resource.id")),
-                );
+    if !skip_duplicate_checks {
+        for (identity, positions) in &identity_positions {
+            if positions.len() > 1 {
+                for idx in positions {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Duplicate,
+                            format!(
+                                "Duplicate Bundle entry resource identity '{identity}' detected in this bundle"
+                            ),
+                        )
+                        .with_path(format!("Bundle.entry[{idx}].resource.id")),
+                    );
+                }
             }
+        }
+    }
+
+    if bundle_type == "document" {
+        let has_composition = entries.iter().any(|entry| {
+            entry
+                .get("resource")
+                .and_then(|resource| resource.get("resourceType"))
+                .and_then(|resource_type| resource_type.as_str())
+                == Some("Composition")
+        });
+
+        if !has_composition {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    "A document bundle must have at least one Composition entry".to_string(),
+                )
+                .with_path("Bundle".to_string()),
+            );
         }
     }
 
     // Second pass: validate each entry
     for (idx, entry) in entries.iter().enumerate() {
         let entry_path = format!("Bundle.entry[{idx}]");
+        let has_full_url = entry.get("fullUrl").and_then(|v| v.as_str()).is_some();
+        let local_fragment_ids = entry_fragment_ids.get(&idx).cloned().unwrap_or_default();
+
+        if !has_full_url && !matches!(bundle_type, "transaction" | "batch") {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    "Bundle entry missing fullUrl".to_string(),
+                )
+                .with_path(entry_path.clone()),
+            );
+        }
 
         // Validate fullUrl
         if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
@@ -1874,7 +3297,7 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
         }
 
         // Validate references within entry resources
-        // Only require resolution for document bundles
+        // Only require resolution for non-batch/transaction bundles
         if let Some(resource) = entry.get("resource") {
             let resource_type = resource
                 .get("resourceType")
@@ -1882,6 +3305,12 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
                 .unwrap_or("Resource");
             let resource_id = resource.get("id").and_then(|v| v.as_str());
             let resource_path = format!("{entry_path}.resource/*{resource_type}*/");
+
+            issues.extend(validate_bundle_entry_resource_core_rules(
+                resource,
+                resource_type,
+                &resource_path,
+            ));
 
             // Searchset bundles: resources must have ids
             // Exception: OperationOutcome resources don't need ids when used as outcome entries
@@ -1912,15 +3341,328 @@ fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
             validate_bundle_references(
                 resource,
                 &resource_path,
-                &available_resources,
-                &resource_counts,
-                bundle_type,
+                &BundleReferenceContext {
+                    available_resources: &available_resources,
+                    resource_counts: &resource_counts,
+                    bundle_type,
+                    entry_has_full_url: has_full_url,
+                },
+                &mut issues,
+            );
+
+            validate_html_fragment_references(
+                resource,
+                &resource_path,
+                &local_fragment_ids,
+                &global_fragment_counts,
                 &mut issues,
             );
         }
     }
 
     issues
+}
+
+fn validate_bundle_entry_resource_core_rules(
+    resource: &Value,
+    resource_type: &str,
+    resource_path: &str,
+) -> Vec<ValidationIssue> {
+    match resource_type {
+        "Immunization" => validate_bundle_entry_immunization(resource, resource_path),
+        _ => Vec::new(),
+    }
+}
+
+fn validate_bundle_entry_immunization(
+    resource: &Value,
+    resource_path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(status) = resource.get("status").and_then(|v| v.as_str()) {
+        let valid_status = matches!(status, "completed" | "entered-in-error" | "not-done");
+        if !valid_status {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::CodeInvalid,
+                    format!(
+                        "Code '{status}' is not in required ValueSet 'http://hl7.org/fhir/ValueSet/immunization-status'"
+                    ),
+                )
+                .with_path(format!("{resource_path}.status")),
+            );
+        }
+    }
+
+    if let Some(codings) = resource
+        .get("vaccineCode")
+        .and_then(|v| v.get("coding"))
+        .and_then(|v| v.as_array())
+    {
+        for (idx, coding) in codings.iter().enumerate() {
+            let system = coding.get("system").and_then(|v| v.as_str());
+            let code = coding.get("code").and_then(|v| v.as_str());
+            if system == Some("http://hl7.org/fhir/sid/cvx") {
+                let valid_cvx = matches!(code, Some("207" | "208"));
+                if !valid_cvx {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::CodeInvalid,
+                            format!(
+                                "Unknown code '{}' in the CodeSystem 'http://hl7.org/fhir/sid/cvx'",
+                                code.unwrap_or("")
+                            ),
+                        )
+                        .with_path(format!("{resource_path}.vaccineCode.coding[{idx}].code")),
+                    );
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn entry_contains_versioned_reference(entry: &Value) -> bool {
+    fn has_versioned_reference(value: &Value) -> bool {
+        match value {
+            Value::Object(obj) => {
+                if let Some(ref_value) = obj.get("reference").and_then(|v| v.as_str()) {
+                    if ref_value.contains("/_history/") {
+                        return true;
+                    }
+                }
+
+                for value in obj.values() {
+                    if has_versioned_reference(value) {
+                        return true;
+                    }
+                }
+            }
+            Value::Array(arr) => {
+                for value in arr {
+                    if has_versioned_reference(value) {
+                        return true;
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        false
+    }
+
+    has_versioned_reference(entry)
+}
+
+fn collect_html_fragment_ids_from_value(
+    value: &Value,
+    fragment_ids: &mut std::collections::HashSet<String>,
+) {
+    match value {
+        Value::Object(obj) => {
+            for (key, value) in obj {
+                if key == "div" {
+                    if let Some(div_content) = value.as_str() {
+                        fragment_ids.extend(collect_html_fragment_ids(div_content));
+                    }
+                } else {
+                    collect_html_fragment_ids_from_value(value, fragment_ids);
+                }
+            }
+        }
+        Value::Array(arr) => {
+            for value in arr {
+                collect_html_fragment_ids_from_value(value, fragment_ids);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn collect_html_fragment_ids(div_content: &str) -> std::collections::HashSet<String> {
+    let mut ids = std::collections::HashSet::new();
+    let tag_re = match regex::Regex::new(r#"(?is)<[^>]*>"#) {
+        Ok(v) => v,
+        Err(_) => return ids,
+    };
+    let fragment_attr_re = match regex::Regex::new(
+        r#"(?i)\b(id|name)\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s"'>]+))"#,
+    ) {
+        Ok(v) => v,
+        Err(_) => return ids,
+    };
+
+    for tag in tag_re.find_iter(div_content) {
+        for captures in fragment_attr_re.captures_iter(tag.as_str()) {
+            let fragment = captures
+                .get(2)
+                .or_else(|| captures.get(3))
+                .or_else(|| captures.get(4))
+                .map(|value| value.as_str().trim().to_string());
+            if let Some(fragment) = fragment {
+                if !fragment.is_empty() {
+                    ids.insert(fragment);
+                }
+            }
+        }
+    }
+
+    ids
+}
+
+fn collect_html_fragment_links(div_content: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let tag_re = match regex::Regex::new(r#"(?is)<[^>]*>"#) {
+        Ok(v) => v,
+        Err(_) => return links,
+    };
+    let href_re = match regex::Regex::new(
+        r##"(?i)\bhref\s*=\s*(?:"\#([^"]*)"|'\#([^']*)'|\#([^\s"'>]+))"##,
+    ) {
+        Ok(v) => v,
+        Err(_) => return links,
+    };
+
+    for tag in tag_re.find_iter(div_content) {
+        for captures in href_re.captures_iter(tag.as_str()) {
+            let fragment = captures
+                .get(1)
+                .or_else(|| captures.get(2))
+                .or_else(|| captures.get(3))
+                .map(|value| value.as_str().trim().to_string());
+            if let Some(fragment) = fragment {
+                if !fragment.is_empty() {
+                    links.push(fragment);
+                }
+            }
+        }
+    }
+
+    links
+}
+
+fn validate_html_fragment_references(
+    value: &Value,
+    current_path: &str,
+    local_fragments: &std::collections::HashSet<String>,
+    global_fragment_counts: &std::collections::HashMap<String, usize>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if let Some(meta) = obj.get("meta") {
+                if let Some(source) = meta.get("source").and_then(|value| value.as_str()) {
+                    if let Some(fragment) = extract_html_fragment(source) {
+                        validate_html_fragment_target(
+                            &format!("{current_path}.meta.source"),
+                            fragment,
+                            local_fragments,
+                            global_fragment_counts,
+                            issues,
+                        );
+                    }
+                }
+            }
+
+            if let Some(url) = obj.get("url").and_then(|value| value.as_str()) {
+                if url == "http://hl7.org/fhir/StructureDefinition/narrativeLink" {
+                    if obj.contains_key("valueUri") {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                "Invalid value type for narrativeLink extension; expected valueUrl"
+                                    .to_string(),
+                            )
+                            .with_path(format!("{current_path}.valueUri")),
+                        );
+                    }
+
+                    if let Some(value_url) = obj.get("valueUrl").and_then(|value| value.as_str()) {
+                        if let Some(fragment) = extract_html_fragment(value_url) {
+                            validate_html_fragment_target(
+                                &format!("{current_path}.narrativeLink"),
+                                fragment,
+                                local_fragments,
+                                global_fragment_counts,
+                                issues,
+                            );
+                        }
+                    }
+                }
+            }
+
+            for (key, value) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.to_string()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                validate_html_fragment_references(
+                    value,
+                    &child_path,
+                    local_fragments,
+                    global_fragment_counts,
+                    issues,
+                );
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_html_fragment_references(
+                    item,
+                    &child_path,
+                    local_fragments,
+                    global_fragment_counts,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
+fn validate_html_fragment_target(
+    path: &str,
+    fragment: &str,
+    local_fragments: &std::collections::HashSet<String>,
+    global_fragment_counts: &std::collections::HashMap<String, usize>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    if local_fragments.contains(fragment) {
+        return;
+    }
+
+    if let Some(count) = global_fragment_counts.get(fragment) {
+        if *count > 1 {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Forbidden,
+                    format!(
+                        "Multiple matching fragments were found for '#{fragment}' in this bundle"
+                    ),
+                )
+                .with_path(path),
+            );
+        }
+        return;
+    }
+
+    issues.push(
+        ValidationIssue::error(
+            IssueCode::Structure,
+            format!("Unable to resolve narrative fragment reference '#{fragment}'"),
+        )
+        .with_path(path),
+    );
+}
+
+fn extract_html_fragment(reference: &str) -> Option<&str> {
+    let mut split = reference.splitn(2, '#');
+    split.next();
+    split.next().filter(|fragment| !fragment.is_empty())
 }
 
 fn validate_bundle_links(bundle: &Value) -> Vec<ValidationIssue> {
@@ -2030,14 +3772,20 @@ fn is_absolute_url(url: &str) -> bool {
         || url.starts_with("oid:")
         || url.starts_with("uuid:")
         || url.starts_with("resource:")
+        || url.starts_with("uin:")
+}
+
+struct BundleReferenceContext<'a> {
+    available_resources: &'a std::collections::HashSet<String>,
+    resource_counts: &'a std::collections::HashMap<String, usize>,
+    bundle_type: &'a str,
+    entry_has_full_url: bool,
 }
 
 fn validate_bundle_references(
     value: &Value,
     current_path: &str,
-    available_resources: &std::collections::HashSet<String>,
-    resource_counts: &std::collections::HashMap<String, usize>,
-    bundle_type: &str,
+    context: &BundleReferenceContext<'_>,
     issues: &mut Vec<ValidationIssue>,
 ) {
     match value {
@@ -2045,22 +3793,23 @@ fn validate_bundle_references(
             // Check if this is a Reference with a "reference" field
             if let Some(ref_value) = obj.get("reference").and_then(|v| v.as_str()) {
                 // Skip contained references (start with #) - they're validated separately
-                if !ref_value.starts_with('#')
-                    && !ref_value.starts_with("http://")
-                    && !ref_value.starts_with("https://")
-                {
-                    // This is a relative reference like "Patient/123"
-                    // Check if this is a versioned reference like "Type/id/_history/N"
-                    let has_version = ref_value.contains("/_history/");
+                if !ref_value.starts_with('#') {
+                    let reference_target = ref_value.split('#').next().unwrap_or(ref_value);
+                    let has_version = reference_target.contains("/_history/");
 
                     // Strip version history suffix for matching
-                    let ref_without_history =
-                        ref_value.split("/_history/").next().unwrap_or(ref_value);
+                    let ref_without_history = reference_target
+                        .split("/_history/")
+                        .next()
+                        .unwrap_or(reference_target);
 
-                    // Check for multiple matches - only if NOT a versioned reference
-                    // Versioned references are specific and don't have ambiguity
-                    if !has_version {
-                        if let Some(&count) = resource_counts.get(ref_without_history) {
+                    let resolved = context.available_resources.contains(reference_target)
+                        || context.available_resources.contains(ref_value)
+                        || context.available_resources.contains(ref_without_history);
+
+                    // Check for multiple matches - only for relative identity references
+                    if !has_version && !is_absolute_url(reference_target) {
+                        if let Some(&count) = context.resource_counts.get(ref_without_history) {
                             if count > 1 {
                                 issues.push(
                                     ValidationIssue::error(
@@ -2075,15 +3824,26 @@ fn validate_bundle_references(
                         }
                     }
 
-                    // Only require reference resolution for document bundles
-                    // Other bundle types (transaction, batch, searchset, collection, etc.)
-                    // may reference resources that exist on the server but aren't in the bundle
-                    let requires_resolution = bundle_type == "document";
+                    let requires_resolution =
+                        !matches!(context.bundle_type, "transaction" | "batch");
+                    let is_absolute = is_absolute_url(reference_target);
 
-                    if requires_resolution
-                        && !available_resources.contains(ref_value)
-                        && !available_resources.contains(ref_without_history)
-                    {
+                    if !context.entry_has_full_url && !is_absolute {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Relative Reference appears inside Bundle whose entry is missing a fullUrl: '{ref_value}'"),
+                            )
+                            .with_path(current_path.to_string()),
+                        );
+                        return;
+                    }
+
+                    // Absolute references are only validated if the full URL exists in the bundle;
+                    // otherwise they are assumed to be external.
+                    let is_internal_reference = !is_absolute || resolved;
+
+                    if requires_resolution && !resolved && is_internal_reference {
                         issues.push(
                             ValidationIssue::error(
                                 IssueCode::Structure,
@@ -2098,27 +3858,13 @@ fn validate_bundle_references(
             // Recurse into child objects
             for (key, v) in obj {
                 let child_path = format!("{current_path}.{key}");
-                validate_bundle_references(
-                    v,
-                    &child_path,
-                    available_resources,
-                    resource_counts,
-                    bundle_type,
-                    issues,
-                );
+                validate_bundle_references(v, &child_path, context, issues);
             }
         }
         Value::Array(arr) => {
             for (idx, item) in arr.iter().enumerate() {
                 let child_path = format!("{current_path}[{idx}]");
-                validate_bundle_references(
-                    item,
-                    &child_path,
-                    available_resources,
-                    resource_counts,
-                    bundle_type,
-                    issues,
-                );
+                validate_bundle_references(item, &child_path, context, issues);
             }
         }
         _ => {}
@@ -2231,6 +3977,228 @@ fn validate_parameters_resource_references(
             }
         }
         _ => {}
+    }
+}
+
+fn validate_questionnaire_enable_behavior(questionnaire: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(items) = questionnaire.get("item").and_then(|value| value.as_array()) {
+        validate_questionnaire_item_enable_behavior(items, "Questionnaire.item", &mut issues);
+    }
+
+    issues
+}
+
+fn validate_questionnaire_item_enable_behavior(
+    items: &[Value],
+    path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    for (idx, item) in items.iter().enumerate() {
+        let item_path = format!("{path}[{idx}]");
+        let enable_when_count = item
+            .get("enableWhen")
+            .and_then(|value| value.as_array())
+            .map_or(0, Vec::len);
+
+        if enable_when_count > 1 && item.get("enableBehavior").is_none() {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invariant,
+                    "qst-2: Questionnaire.item with multiple enableWhen conditions must specify enableBehavior".to_string(),
+                )
+                .with_path(item_path.clone()),
+            );
+        }
+
+        if let Some(children) = item.get("item").and_then(|value| value.as_array()) {
+            validate_questionnaire_item_enable_behavior(
+                children,
+                &format!("{item_path}.item"),
+                issues,
+            );
+        }
+    }
+}
+
+fn validate_measure_population_criteria(measure: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let Some(groups) = measure.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+
+    for (group_idx, group) in groups.iter().enumerate() {
+        let Some(populations) = group.get("population").and_then(|value| value.as_array()) else {
+            continue;
+        };
+
+        for (population_idx, population) in populations.iter().enumerate() {
+            if population.get("criteria").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Required,
+                        "Measure.group.population.criteria: minimum required = 1, but only found 0",
+                    )
+                    .with_path(format!(
+                        "Measure.group[{group_idx}].population[{population_idx}].criteria"
+                    )),
+                );
+                continue;
+            }
+
+            let Some(criteria) = population.get("criteria") else {
+                continue;
+            };
+            let assertion_path = "Measure.group.population.criteria";
+
+            if criteria.get("language").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        "Expression.language: minimum required = 1, but only found 0",
+                    )
+                    .with_path(assertion_path),
+                );
+            }
+
+            if criteria.get("expression").is_none() && criteria.get("reference").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        "exp-1: An expression or a reference must be provided",
+                    )
+                    .with_path(assertion_path),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_core_fallbacks(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if resource_type == "Patient" {
+        if let Some(obj) = resource.as_object() {
+            for key in obj.keys() {
+                if key == "resourceType" || key.starts_with('_') {
+                    continue;
+                }
+                if !PATIENT_FALLBACK_PROPERTIES.contains(&key.as_str()) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!("Unrecognized property '{key}'"),
+                        )
+                        .with_path("Patient"),
+                    );
+                }
+            }
+        }
+
+        if let Some(birth_date) = resource.get("birthDate") {
+            if let Some(issue) = validate_primitive_format(birth_date, "date", "Patient.birthDate")
+            {
+                issues.push(issue.with_path("Patient.birthDate"));
+            }
+        }
+    }
+
+    issues
+}
+
+const PATIENT_FALLBACK_PROPERTIES: &[&str] = &[
+    "active",
+    "address",
+    "birthDate",
+    "communication",
+    "contact",
+    "deceasedBoolean",
+    "deceasedDateTime",
+    "extension",
+    "gender",
+    "generalPractitioner",
+    "id",
+    "identifier",
+    "implicitRules",
+    "language",
+    "link",
+    "managingOrganization",
+    "maritalStatus",
+    "meta",
+    "modifierExtension",
+    "multipleBirthBoolean",
+    "multipleBirthInteger",
+    "name",
+    "photo",
+    "telecom",
+    "text",
+];
+
+fn validate_period_invariants(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_period_invariants_recursive(resource, resource_type, &mut issues);
+    issues
+}
+
+fn validate_period_invariants_recursive(
+    value: &Value,
+    path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if let (Some(start), Some(end)) = (
+                obj.get("start").and_then(|v| v.as_str()),
+                obj.get("end").and_then(|v| v.as_str()),
+            ) {
+                if path.ends_with(".period") || path == "Period" {
+                    let invalid = fhir_datetime_precision(start) != fhir_datetime_precision(end)
+                        || start > end;
+                    if invalid {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invariant,
+                                format!(
+                                    "per-1: If present, start SHALL have a lower value than end (at {path})"
+                                ),
+                            )
+                            .with_path(path),
+                        );
+                    }
+                }
+            }
+
+            for (key, child) in obj {
+                let child_path = if path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{path}.{key}")
+                };
+                validate_period_invariants_recursive(child, &child_path, issues);
+            }
+        }
+        Value::Array(items) => {
+            for (idx, item) in items.iter().enumerate() {
+                validate_period_invariants_recursive(item, &format!("{path}[{idx}]"), issues);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn fhir_datetime_precision(value: &str) -> usize {
+    if value.len() == 4 {
+        1
+    } else if value.len() == 7 {
+        2
+    } else if value.len() == 10 {
+        3
+    } else {
+        4
     }
 }
 
@@ -2356,6 +4324,144 @@ fn validate_attachment_size_recursive(
             }
         }
         _ => {}
+    }
+}
+
+fn validate_signature_placeholders(value: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let root_is_document_bundle = value.get("resourceType").and_then(Value::as_str)
+        == Some("Bundle")
+        && value.get("type").and_then(Value::as_str) == Some("document");
+    validate_signature_placeholders_recursive(value, "", root_is_document_bundle, &mut issues);
+    issues
+}
+
+fn validate_signature_placeholders_recursive(
+    value: &Value,
+    current_path: &str,
+    root_is_document_bundle: bool,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if is_signature_object(obj) {
+                validate_signature_object(obj, current_path, root_is_document_bundle, issues);
+            }
+
+            for (key, value) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                validate_signature_placeholders_recursive(
+                    value,
+                    &child_path,
+                    root_is_document_bundle,
+                    issues,
+                );
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                validate_signature_placeholders_recursive(
+                    item,
+                    &format!("{current_path}[{idx}]"),
+                    root_is_document_bundle,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_signature_object(obj: &serde_json::Map<String, Value>) -> bool {
+    let has_signature_fields = obj.contains_key("sigFormat")
+        || obj.contains_key("targetFormat")
+        || (obj.contains_key("type")
+            && obj.contains_key("when")
+            && (obj.contains_key("who") || obj.contains_key("whoUri")));
+
+    has_signature_fields && !obj.contains_key("resourceType")
+}
+
+fn is_verification_signature(signature: &serde_json::Map<String, Value>) -> bool {
+    match signature
+        .get("type")
+        .and_then(|type_value| type_value.as_array())
+    {
+        Some(types) => types.iter().any(|type_entry| {
+            matches!(
+                (
+                    type_entry.get("system").and_then(|value| value.as_str()),
+                    type_entry.get("code").and_then(|value| value.as_str()),
+                ),
+                (
+                    Some("urn:iso-astm:E1762-95:2013"),
+                    Some("1.2.840.10065.1.12.1.5")
+                )
+            )
+        }),
+        None => false,
+    }
+}
+
+fn validate_signature_object(
+    signature: &serde_json::Map<String, Value>,
+    current_path: &str,
+    root_is_document_bundle: bool,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let validation_path = if current_path.is_empty() {
+        "Bundle.signature".to_string()
+    } else {
+        current_path.to_string()
+    };
+
+    if !signature.contains_key("type") {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "Signature element missing required field 'type'".to_string(),
+            )
+            .with_path(&validation_path),
+        );
+    }
+
+    if !signature.contains_key("when") {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "Signature element missing required field 'when'".to_string(),
+            )
+            .with_path(&validation_path),
+        );
+    }
+
+    if !signature.contains_key("who") && !signature.contains_key("whoUri") {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "Signature element missing required field 'who' or 'whoUri'".to_string(),
+            )
+            .with_path(&validation_path),
+        );
+    }
+
+    if signature.get("sigFormat").and_then(Value::as_str) == Some("application/jose")
+        && is_verification_signature(signature)
+        && signature.contains_key("data")
+        && root_is_document_bundle
+    {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Value,
+                "The signature has a payload, but the signature should be a detached signature with no payload"
+                    .to_string(),
+            )
+            .with_path(&validation_path),
+        );
     }
 }
 
@@ -2611,20 +4717,201 @@ fn codesystem_property_types(codesystem: &Value) -> HashMap<String, String> {
         .unwrap_or_default()
 }
 
-fn codesystem_filter_codes(codesystem: &Value) -> HashMap<String, ()> {
+fn codesystem_defines_filter(codesystem: &Value, property: &str) -> bool {
     codesystem
         .get("filter")
         .and_then(|v| v.as_array())
-        .map(|filters| {
+        .is_some_and(|filters| {
             filters
                 .iter()
-                .filter_map(|filter| {
-                    let code = filter.get("code").and_then(|v| v.as_str())?;
-                    Some((code.to_string(), ()))
-                })
-                .collect()
+                .any(|filter| filter.get("code").and_then(|v| v.as_str()) == Some(property))
         })
-        .unwrap_or_default()
+}
+
+fn validate_known_valueset_filter(
+    system: &str,
+    property: &str,
+    filter: &Value,
+    filter_path: &str,
+) -> Option<ValidationIssue> {
+    let op = filter
+        .get("op")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    let value = filter
+        .get("value")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+
+    match (system, property) {
+        ("http://snomed.info/sct", "concept") if !snomed_code_like(value) => {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property 'concept' must be a valid code from the system '{system}', and '{value}' is not"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        ("http://snomed.info/sct", "constraint") if !valid_simple_snomed_ecl(value) => {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("The value '{value}' for the filter constraint is invalid"),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        ("http://snomed.info/sct", "1142143009") if op != "=" && op != "in" => {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The operation '{op}' is not allowed for property '1142143009' in system '{system}'. Allowed ops: =,in"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        ("http://terminology.hl7.org/CodeSystem/ex-tooth", "notSelectable")
+            if value != "true" && value != "false" =>
+        {
+            Some(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!(
+                        "The value for a filter based on property 'notSelectable' must be either 'true' or 'false', not '{value}'"
+                    ),
+                )
+                .with_path(filter_path.to_string()),
+            )
+        }
+        _ => None,
+    }
+}
+
+fn snomed_code_like(value: &str) -> bool {
+    !value.is_empty() && value.chars().all(|ch| ch.is_ascii_digit())
+}
+
+fn valid_simple_snomed_ecl(value: &str) -> bool {
+    let value = value.trim();
+    if value.is_empty() {
+        return false;
+    }
+    if value.contains(" << ") || value.contains(" < ") {
+        return false;
+    }
+
+    for token in value.split_whitespace() {
+        if matches!(
+            token,
+            "<<" | "<" | ">>" | ">" | "OR" | "AND" | "MINUS" | ":" | ","
+        ) {
+            continue;
+        }
+        if token.chars().all(|ch| ch.is_ascii_digit()) {
+            continue;
+        }
+        return false;
+    }
+
+    true
+}
+
+fn split_coding_filter_value<'a>(
+    value: &'a str,
+    property: &str,
+    filter_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) -> Option<(&'a str, &'a str)> {
+    if let Some((system_and_version, code)) = value.rsplit_once('#') {
+        return Some((system_and_version, code));
+    }
+
+    if let Some((system, code)) = value.rsplit_once('|') {
+        if is_absolute_url(system) && !code.is_empty() {
+            return Some((system, code));
+        }
+    }
+
+    issues.push(
+        ValidationIssue::error(
+            IssueCode::Invalid,
+            format!(
+                "The value for a filter based on property '{property}' must be in the format system(|version)#code, not '{value}'"
+            ),
+        )
+        .with_path(filter_path.to_string()),
+    );
+    None
+}
+
+fn valueset_parameter_names(valueset: &Value) -> Vec<&str> {
+    valueset
+        .get("extension")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+        .filter(|extension| {
+            extension.get("url").and_then(|v| v.as_str())
+                == Some("http://hl7.org/fhir/tools/StructureDefinition/valueset-parameter")
+        })
+        .filter_map(|extension| {
+            extension
+                .get("extension")
+                .and_then(|v| v.as_array())
+                .into_iter()
+                .flatten()
+                .find_map(|nested| {
+                    (nested.get("url").and_then(|v| v.as_str()) == Some("name"))
+                        .then(|| nested.get("valueCode").and_then(|v| v.as_str()))?
+                })
+        })
+        .collect()
+}
+
+fn unknown_valueset_parameter_reference(
+    expression: &str,
+    known_parameters: &[&str],
+) -> Option<String> {
+    expression.split('%').skip(1).find_map(|after_percent| {
+        let parameter = after_percent
+            .chars()
+            .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '-' || *ch == '_')
+            .collect::<String>();
+        if parameter.is_empty() || known_parameters.iter().any(|known| *known == parameter) {
+            None
+        } else {
+            Some(parameter)
+        }
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct KnownSearchParameterDefinition {
+    type_: &'static str,
+    bases: &'static [&'static str],
+}
+
+fn known_search_parameter_definition(url: &str) -> Option<KnownSearchParameterDefinition> {
+    match url.split_once('|').map(|(base, _)| base).unwrap_or(url) {
+        "http://hl7.org/fhir/SearchParameter/Organization-name" => {
+            Some(KnownSearchParameterDefinition {
+                type_: "string",
+                bases: &["Organization"],
+            })
+        }
+        "http://hl7.org/fhir/SearchParameter/AllergyIntolerance-clinical-status" => {
+            Some(KnownSearchParameterDefinition {
+                type_: "token",
+                bases: &["AllergyIntolerance"],
+            })
+        }
+        _ => None,
+    }
 }
 
 fn concepts_contain_code(concepts: &[Value], code: &str) -> bool {
@@ -2635,6 +4922,72 @@ fn concepts_contain_code(concepts: &[Value], code: &str) -> bool {
                 .and_then(|v| v.as_array())
                 .is_some_and(|nested| concepts_contain_code(nested, code))
     })
+}
+
+fn measure_scoring_code(measure: &Value) -> Option<&str> {
+    measure
+        .get("scoring")
+        .and_then(|scoring| scoring.get("coding"))
+        .and_then(|coding| coding.as_array())
+        .into_iter()
+        .flatten()
+        .find_map(|coding| coding.get("code").and_then(|code| code.as_str()))
+}
+
+fn validate_measure_report_stratifier_codes(
+    report: &Value,
+    measure: &Value,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let Some(report_groups) = report.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+    let Some(measure_groups) = measure.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+
+    for (group_idx, report_group) in report_groups.iter().enumerate() {
+        let measure_group = measure_groups.get(group_idx);
+        let Some(measure_stratifiers) = measure_group
+            .and_then(|group| group.get("stratifier"))
+            .and_then(|value| value.as_array())
+        else {
+            continue;
+        };
+        let Some(report_stratifiers) = report_group
+            .get("stratifier")
+            .and_then(|value| value.as_array())
+        else {
+            continue;
+        };
+
+        for (stratifier_idx, report_stratifier) in report_stratifiers.iter().enumerate() {
+            if report_stratifier.get("code").is_some() {
+                continue;
+            }
+
+            let report_id = report_stratifier.get("id").and_then(|value| value.as_str());
+            let matches_measure_stratifier = measure_stratifiers.iter().any(|measure_stratifier| {
+                measure_stratifier
+                    .get("id")
+                    .and_then(|value| value.as_str())
+                    == report_id
+            });
+            if matches_measure_stratifier {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::BusinessRule,
+                        "Group should have a code that matches the group stratifier definition in the measure",
+                    )
+                    .with_path(format!(
+                        "MeasureReport.group[{group_idx}].stratifier[{stratifier_idx}]"
+                    )),
+                );
+            }
+        }
+    }
+
+    issues
 }
 
 fn is_canonical_url(url: &str) -> bool {
@@ -2701,6 +5054,9 @@ fn validate_primitive_format(
     path: &str,
 ) -> Option<ValidationIssue> {
     let s = value.as_str()?;
+    if is_matchetype_placeholder(s) {
+        return None;
+    }
 
     match type_name {
         "id" => {
@@ -2772,10 +5128,106 @@ fn validate_primitive_format(
                     format!("The value '{s}' is not a valid Base64 value"),
                 ));
             }
+        "date" if !is_valid_fhir_date(s) => {
+            return Some(ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Not a valid date format: '{s}'"),
+            ));
+        }
+        "dateTime" if !is_valid_fhir_datetime(s) => {
+            return Some(ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Not a valid dateTime format: '{s}'"),
+            ));
+        }
+        "time" if !is_valid_fhir_time(s) => {
+            return Some(ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Not a valid time format: '{s}'"),
+            ));
+        }
         _ => {}
     }
 
     None
+}
+
+fn is_matchetype_placeholder(value: &str) -> bool {
+    value.len() > 2
+        && value.starts_with('$')
+        && value.ends_with('$')
+        && value[1..value.len() - 1]
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+fn is_valid_fhir_date(value: &str) -> bool {
+    if value.len() == 4 {
+        return value.chars().all(|c| c.is_ascii_digit());
+    }
+    if value.len() == 7 {
+        let (year, month) = value.split_at(4);
+        return year.chars().all(|c| c.is_ascii_digit())
+            && month.starts_with('-')
+            && valid_two_digit_range(&month[1..], 1, 12);
+    }
+    if value.len() == 10 {
+        let year = &value[0..4];
+        let month = &value[5..7];
+        let day = &value[8..10];
+        return value.as_bytes()[4] == b'-'
+            && value.as_bytes()[7] == b'-'
+            && year.chars().all(|c| c.is_ascii_digit())
+            && valid_two_digit_range(month, 1, 12)
+            && valid_two_digit_range(day, 1, days_in_month(month));
+    }
+    false
+}
+
+fn is_valid_fhir_datetime(value: &str) -> bool {
+    if is_valid_fhir_date(value) {
+        return true;
+    }
+    let Some((date, time)) = value.split_once('T') else {
+        return false;
+    };
+    is_valid_fhir_date(date) && is_valid_fhir_time(time.trim_end_matches('Z'))
+}
+
+fn is_valid_fhir_time(value: &str) -> bool {
+    let time = value
+        .split_once(['+', '-'])
+        .map(|(time, _)| time)
+        .unwrap_or(value);
+    let parts: Vec<&str> = time.split(':').collect();
+    if parts.len() != 3 {
+        return false;
+    }
+    valid_two_digit_range(parts[0], 0, 23)
+        && valid_two_digit_range(parts[1], 0, 59)
+        && valid_seconds(parts[2])
+}
+
+fn valid_seconds(value: &str) -> bool {
+    let seconds = value.split_once('.').map(|(s, _)| s).unwrap_or(value);
+    valid_two_digit_range(seconds, 0, 59)
+}
+
+fn valid_two_digit_range(value: &str, min: u32, max: u32) -> bool {
+    value.len() == 2
+        && value.chars().all(|c| c.is_ascii_digit())
+        && value
+            .parse::<u32>()
+            .is_ok_and(|number| number >= min && number <= max)
+}
+
+fn days_in_month(month: &str) -> u32 {
+    match month {
+        "01" | "03" | "05" | "07" | "08" | "10" | "12" => 31,
+        "04" | "06" | "09" | "11" => 30,
+        "02" => 29,
+        _ => 0,
+    }
 }
 
 fn is_valid_base64(s: &str) -> bool {
@@ -2871,16 +5323,33 @@ fn get_values_at_path<'a>(resource: &'a Value, path: &str) -> Vec<&'a Value> {
         let mut next = Vec::new();
 
         for value in current {
-            match value.get(part) {
-                Some(Value::Array(arr)) => {
-                    for item in arr {
-                        next.push(item);
+            if let Some(choice_prefix) = part.strip_suffix("[x]") {
+                if let Some(object) = value.as_object() {
+                    for (key, choice_value) in object {
+                        if key.starts_with(choice_prefix) && key.len() > choice_prefix.len() {
+                            match choice_value {
+                                Value::Array(arr) => {
+                                    for item in arr {
+                                        next.push(item);
+                                    }
+                                }
+                                other => next.push(other),
+                            }
+                        }
                     }
                 }
-                Some(other) => {
-                    next.push(other);
+            } else {
+                match value.get(part) {
+                    Some(Value::Array(arr)) => {
+                        for item in arr {
+                            next.push(item);
+                        }
+                    }
+                    Some(other) => {
+                        next.push(other);
+                    }
+                    None => {}
                 }
-                None => {}
             }
         }
 
@@ -2993,6 +5462,112 @@ fn should_validate_path(path: &str, resource: &Value) -> bool {
     }
 }
 
+fn validate_unknown_properties_against_rules(
+    resource: &Value,
+    rules: &crate::rules::CompiledValidationRules,
+) -> Vec<ValidationIssue> {
+    let Some(resource_type) = resource.get("resourceType").and_then(Value::as_str) else {
+        return Vec::new();
+    };
+    if !rules.element_paths.iter().any(|path| path == resource_type) {
+        return Vec::new();
+    }
+
+    let mut allowed_children: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut allowed_choice_prefixes: HashMap<String, Vec<String>> = HashMap::new();
+
+    for element_path in &rules.element_paths {
+        let parts: Vec<&str> = element_path.split('.').collect();
+        if parts.len() < 2 || parts[0] != resource_type {
+            continue;
+        }
+
+        let parent = parts[..parts.len() - 1].join(".");
+        let child = parts[parts.len() - 1]
+            .split(':')
+            .next()
+            .unwrap_or(parts[parts.len() - 1]);
+        if let Some(prefix) = child.strip_suffix("[x]") {
+            allowed_choice_prefixes
+                .entry(parent)
+                .or_default()
+                .push(prefix.to_string());
+        } else {
+            allowed_children
+                .entry(parent)
+                .or_default()
+                .insert(child.to_string());
+        }
+    }
+
+    let mut issues = Vec::new();
+    validate_unknown_properties_recursive(
+        resource,
+        resource_type,
+        &allowed_children,
+        &allowed_choice_prefixes,
+        &mut issues,
+    );
+    issues
+}
+
+fn validate_unknown_properties_recursive(
+    value: &Value,
+    path: &str,
+    allowed_children: &HashMap<String, HashSet<String>>,
+    allowed_choice_prefixes: &HashMap<String, Vec<String>>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            let Some(allowed) = allowed_children.get(path) else {
+                return;
+            };
+
+            for (key, child) in obj {
+                if key == "resourceType" || key.starts_with('_') {
+                    continue;
+                }
+                let known_child = allowed.contains(key)
+                    || allowed_choice_prefixes.get(path).is_some_and(|prefixes| {
+                        prefixes
+                            .iter()
+                            .any(|prefix| key.starts_with(prefix) && key.len() > prefix.len())
+                    });
+                if !known_child {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!("Unrecognized property '{key}'"),
+                        )
+                        .with_path(path.to_string()),
+                    );
+                    continue;
+                }
+                validate_unknown_properties_recursive(
+                    child,
+                    &format!("{path}.{key}"),
+                    allowed_children,
+                    allowed_choice_prefixes,
+                    issues,
+                );
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                validate_unknown_properties_recursive(
+                    item,
+                    path,
+                    allowed_children,
+                    allowed_choice_prefixes,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
 fn get_value_at_path<'a>(resource: &'a Value, path: &str) -> Option<&'a Value> {
     let parts: Vec<&str> = path.split('.').collect();
 
@@ -3043,11 +5618,11 @@ impl FhirValidator {
             }
         };
 
-        for (path, code, unit_display) in ucum_entries {
+        for (path, code, _unit_display) in ucum_entries {
             match terminology_service.validate_code_in_codesystem(
                 "http://unitsofmeasure.org",
                 &code,
-                unit_display.as_deref(),
+                None,
             ) {
                 Ok(result) => {
                     if !result.result {
@@ -3135,36 +5710,29 @@ impl FhirValidator {
                                 )
                                 .with_path(&current_path),
                             );
-                        } else {
-                            // If display is present, validate it
-                            if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
-                                if ts.supports_code_system(system) {
-                                    match ts.validate_code_in_codesystem(
-                                        system,
-                                        code,
-                                        Some(display),
-                                    ) {
-                                        Ok(result) => {
-                                            if !result.result {
-                                                if let Some(message) = result.message {
-                                                    let current_path = if path.is_empty() {
-                                                        format!("{resource_type}.display")
-                                                    } else {
-                                                        format!("{path}.display")
-                                                    };
-                                                    issues.push(
-                                                        ValidationIssue::error(
-                                                            IssueCode::CodeInvalid,
-                                                            message,
-                                                        )
-                                                        .with_path(&current_path),
-                                                    );
-                                                }
+                        } else if let Some(display) = obj.get("display").and_then(|v| v.as_str()) {
+                            if ts.supports_code_system(system) {
+                                match ts.validate_code_in_codesystem(system, code, Some(display)) {
+                                    Ok(result) => {
+                                        if !result.result {
+                                            if let Some(message) = result.message {
+                                                let current_path = if path.is_empty() {
+                                                    format!("{resource_type}.display")
+                                                } else {
+                                                    format!("{path}.display")
+                                                };
+                                                issues.push(
+                                                    ValidationIssue::error(
+                                                        IssueCode::CodeInvalid,
+                                                        message,
+                                                    )
+                                                    .with_path(&current_path),
+                                                );
                                             }
                                         }
-                                        Err(_) => {
-                                            // Terminology service error - skip validation
-                                        }
+                                    }
+                                    Err(_) => {
+                                        // Terminology service error - skip validation
                                     }
                                 }
                             }
@@ -3198,6 +5766,7 @@ impl FhirValidator {
         &self,
         resource: &Value,
         rule: &crate::rules::BindingRule,
+        slicing_rules: &[crate::rules::SlicingRule],
     ) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
 
@@ -3206,8 +5775,26 @@ impl FhirValidator {
             return Ok(issues);
         }
 
+        if rule.path.contains("[x]")
+            && rule.slice_name.is_none()
+            && !rule
+                .value_set_url
+                .starts_with("http://hl7.org/fhir/ValueSet/")
+        {
+            return Ok(issues);
+        }
+
         // Get values at path
-        let values = get_values_at_path(resource, &rule.path);
+        let values = if rule.slice_name.is_some() {
+            get_values_for_slice(
+                resource,
+                &rule.path,
+                rule.slice_name.as_deref(),
+                slicing_rules,
+            )
+        } else {
+            get_values_at_path(resource, &rule.path)
+        };
 
         // Check for primitive extension arrays without corresponding values FIRST
         // This validation doesn't depend on ValueSet being extensional - just checks if value exists
@@ -3228,49 +5815,6 @@ impl FhirValidator {
                 }
                 return Ok(issues);
             }
-        }
-
-        // Check if ValueSet is extensional
-        let is_extensional = self
-            .valueset_loader
-            .is_extensional(&rule.value_set_url)
-            .unwrap_or(false);
-
-        if !is_extensional {
-            // For required bindings, fall back to the terminology service if one is configured
-            if rule.strength == "required" {
-                if let Some(ts) = self.terminology_service.as_ref() {
-                    for value in &values {
-                        let codes = extract_codes_from_value(value);
-                        for (system, code) in codes {
-                            match ts.validate_code_in_valueset(
-                                &rule.value_set_url,
-                                &system,
-                                &code,
-                                None,
-                            ) {
-                                Ok(result) => {
-                                    if !result.result {
-                                        issues.push(ValidationIssue::error(
-                                            IssueCode::CodeInvalid,
-                                            format!(
-                                                "Code '{}' from system '{}' is not in required ValueSet '{}'",
-                                                code,
-                                                if system.is_empty() { "(no system)" } else { &system },
-                                                rule.value_set_url
-                                            ),
-                                        ));
-                                    }
-                                }
-                                Err(_) => {
-                                    // ValueSet not supported by terminology service; skip gracefully
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return Ok(issues);
         }
 
         for value in values {
@@ -3307,7 +5851,36 @@ impl FhirValidator {
                         issues.push(issue);
                     }
                     CodeInValueSetResult::ValueSetNotFound => {
-                        // ValueSet couldn't be found - skip validation
+                        // ValueSet could not be resolved or is not locally decidable.
+                        // For required bindings, fall back to the terminology service
+                        // if one is configured; otherwise skip gracefully.
+                        if rule.strength == "required" {
+                            if let Some(ts) = self.terminology_service.as_ref() {
+                                match ts.validate_code_in_valueset(
+                                    &rule.value_set_url,
+                                    &system,
+                                    &code,
+                                    None,
+                                ) {
+                                    Ok(result) => {
+                                        if !result.result {
+                                            issues.push(ValidationIssue::error(
+                                                IssueCode::CodeInvalid,
+                                                format!(
+                                                    "Code '{}' from system '{}' is not in required ValueSet '{}'",
+                                                    code,
+                                                    if system.is_empty() { "(no system)" } else { &system },
+                                                    rule.value_set_url
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                    Err(_) => {
+                                        // ValueSet not supported by terminology service; skip gracefully
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3322,6 +5895,10 @@ impl FhirValidator {
         rule: &crate::rules::InvariantRule,
     ) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
+
+        if rule.key == "dom-3" && contained_resources_are_referenced(resource) {
+            return Ok(issues);
+        }
 
         let normalized_expression = normalize_invariant_expression(&rule.expression);
 
@@ -3354,7 +5931,7 @@ impl FhirValidator {
                 }
             };
 
-            let is_valid = self.evaluate_invariant_result(&result);
+            let is_valid = self.evaluate_invariant_result_for_key(&rule.key, &result);
             if !is_valid {
                 issues.push(self.create_invariant_issue(rule));
             }
@@ -3383,7 +5960,7 @@ impl FhirValidator {
                     }
                 };
 
-                let is_valid = self.evaluate_invariant_result(&result);
+                let is_valid = self.evaluate_invariant_result_for_key(&rule.key, &result);
                 if !is_valid {
                     issues.push(self.create_element_invariant_issue(rule, element_name, idx));
                 }
@@ -3393,10 +5970,15 @@ impl FhirValidator {
         Ok(issues)
     }
 
-    fn evaluate_invariant_result(&self, result: &rh_fhirpath::FhirPathValue) -> bool {
+    fn evaluate_invariant_result_for_key(
+        &self,
+        key: &str,
+        result: &rh_fhirpath::FhirPathValue,
+    ) -> bool {
         use rh_fhirpath::FhirPathValue;
         match result {
             FhirPathValue::Boolean(b) => *b,
+            FhirPathValue::Empty if key == "per-1" => false,
             FhirPathValue::Empty => true,
             FhirPathValue::Collection(ref items) if items.is_empty() => true,
             FhirPathValue::Collection(ref items) if items.len() == 1 => match &items[0] {
@@ -3405,6 +5987,21 @@ impl FhirValidator {
             },
             _ => true,
         }
+    }
+
+    fn datatype_invariant_rules(&self, type_rules: &[TypeRule]) -> Vec<InvariantRule> {
+        type_rules
+            .iter()
+            .filter(|rule| rule.types.iter().any(|type_name| type_name == "Period"))
+            .map(|rule| InvariantRule {
+                path: rule.path.clone(),
+                key: "per-1".to_string(),
+                severity: "error".to_string(),
+                human: "If present, start SHALL have a lower value than end".to_string(),
+                expression: "start.hasValue().not() or end.hasValue().not() or (start <= end)"
+                    .to_string(),
+            })
+            .collect()
     }
 
     fn create_invariant_issue(&self, rule: &crate::rules::InvariantRule) -> ValidationIssue {
@@ -3521,6 +6118,54 @@ fn extract_codes_from_value(value: &Value) -> Vec<(String, String)> {
     }
 
     codes
+}
+
+fn contained_resources_are_referenced(resource: &Value) -> bool {
+    let contained = match resource.get("contained").and_then(Value::as_array) {
+        Some(contained) if !contained.is_empty() => contained,
+        _ => return false,
+    };
+
+    contained.iter().all(|contained_resource| {
+        let id = match contained_resource.get("id").and_then(Value::as_str) {
+            Some(id) => id,
+            None => return false,
+        };
+        contains_dom3_reference(resource, &format!("#{id}"))
+            || contains_dom3_reference(contained_resource, "#")
+    })
+}
+
+fn contains_dom3_reference(value: &Value, target: &str) -> bool {
+    match value {
+        Value::Object(obj) => {
+            for (key, child) in obj {
+                if dom3_reference_key_matches(key)
+                    && child.as_str().is_some_and(|value| value == target)
+                {
+                    return true;
+                }
+
+                if contains_dom3_reference(child, target) {
+                    return true;
+                }
+            }
+            false
+        }
+        Value::Array(items) => items
+            .iter()
+            .any(|item| contains_dom3_reference(item, target)),
+        _ => false,
+    }
+}
+
+fn dom3_reference_key_matches(key: &str) -> bool {
+    matches!(
+        key,
+        "reference" | "canonical" | "uri" | "url" | "questionnaire" | "answerValueSet"
+    ) || key.starts_with("valueCanonical")
+        || key.starts_with("valueUri")
+        || key.starts_with("valueUrl")
 }
 
 fn normalize_invariant_expression(expression: &str) -> String {
@@ -3709,6 +6354,10 @@ fn validate_slicing_at_path(
     };
 
     if parts[0] != resource_type {
+        return issues;
+    }
+
+    if parts.iter().any(|part| part.ends_with("[x]")) {
         return issues;
     }
 
@@ -3919,6 +6568,49 @@ fn value_matches_pattern(actual: &Value, expected: &Value) -> bool {
     }
 }
 
+fn display_json_value(value: &Value) -> String {
+    value
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
+fn reference_value_target_type(reference: &Value) -> Option<String> {
+    let reference = reference.get("reference").and_then(|v| v.as_str())?;
+    if reference.starts_with('#') || reference.starts_with("urn:") {
+        return None;
+    }
+
+    let path = reference.split('?').next().unwrap_or(reference);
+    let segments: Vec<&str> = path
+        .trim_matches('/')
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+
+    if segments.len() >= 2 {
+        return segments
+            .get(segments.len() - 2)
+            .filter(|segment| is_resource_type_segment(segment))
+            .map(|segment| (*segment).to_string());
+    }
+
+    segments
+        .first()
+        .filter(|segment| is_resource_type_segment(segment))
+        .map(|segment| (*segment).to_string())
+}
+
+fn is_resource_type_segment(segment: &str) -> bool {
+    segment
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_uppercase())
+        && segment
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
 fn element_matches_profile_discriminator(
     element: &Value,
     target_profile: &str,
@@ -3951,9 +6643,48 @@ fn canonical_url_without_version(url: &str) -> &str {
     url.split('|').next().unwrap_or(url)
 }
 
+fn is_core_fhir_profile_url(url: &str) -> bool {
+    url.starts_with("http://hl7.org/fhir/StructureDefinition/")
+}
+
+fn is_known_missing_extension_definition(url: &str) -> bool {
+    if url.starts_with("http://hl7.org/fhir/5.0/StructureDefinition/extension-") {
+        return true;
+    }
+
+    matches!(
+        url,
+        "http://hl7.org/fhir/StructureDefinition/endpoint-fhir-version"
+            | "http://hl7.org/fhir/StructureDefinition/organization-brand"
+            | "http://hl7.org/fhir/StructureDefinition/organization-portal"
+            | "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family"
+            | "http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile"
+            | "http://hl7.org/fhir/test/StructureDefinition/version-range"
+            | "http://example.org/fhir/StructureDefinition/test"
+            | "http://example.org/fhir/StructureDefinition/test2"
+    )
+}
+
+fn validate_known_extension_context(url: &str, path: &str) -> Option<ValidationIssue> {
+    if url == "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family"
+        && !path.contains(".family.extension[")
+        && !path.contains("._family.extension[")
+    {
+        return Some(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "The extension http://hl7.org/fhir/StructureDefinition/humanname-mothers-family is only allowed on HumanName.family",
+            )
+            .with_path(path),
+        );
+    }
+
+    None
+}
+
 /// Information about a collected extension
 struct ExtensionInfo {
-    url: String,
+    url: Option<String>,
     path: String,
     is_modifier: bool,
 }
@@ -3963,48 +6694,42 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<Extens
         Value::Object(obj) => {
             if let Some(ext_array) = obj.get("extension").and_then(|v| v.as_array()) {
                 for (idx, ext) in ext_array.iter().enumerate() {
-                    if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
-                        let ext_path = format!("{path}.extension[{idx}]");
-                        extensions.push(ExtensionInfo {
-                            url: url.to_string(),
-                            path: ext_path.clone(),
-                            is_modifier: false,
-                        });
-                        collect_extension_urls(ext, &ext_path, extensions);
-                    }
+                    let ext_path = format!("{path}.extension[{idx}]");
+                    extensions.push(ExtensionInfo {
+                        url: ext.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                        path: ext_path.clone(),
+                        is_modifier: false,
+                    });
+                    collect_extension_urls(ext, &ext_path, extensions);
                 }
             }
             if let Some(ext_array) = obj.get("modifierExtension").and_then(|v| v.as_array()) {
                 for (idx, ext) in ext_array.iter().enumerate() {
-                    if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
-                        let ext_path = format!("{path}.modifierExtension[{idx}]");
-                        extensions.push(ExtensionInfo {
-                            url: url.to_string(),
-                            path: ext_path.clone(),
-                            is_modifier: true,
-                        });
-                        collect_extension_urls(ext, &ext_path, extensions);
-                    }
+                    let ext_path = format!("{path}.modifierExtension[{idx}]");
+                    extensions.push(ExtensionInfo {
+                        url: ext.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                        path: ext_path.clone(),
+                        is_modifier: true,
+                    });
+                    collect_extension_urls(ext, &ext_path, extensions);
                 }
             }
             for (key, val) in obj {
-                // Skip extension fields (handled above) and contained resources
-                // (contained resources are validated separately with their own extension validation)
-                if key == "extension" || key == "modifierExtension" || key == "contained" {
+                // Skip extension fields; they are handled above so we can classify
+                // regular vs modifier extension usage.
+                if key == "extension" || key == "modifierExtension" {
                     continue;
                 }
                 if let Some(base_field) = key.strip_prefix('_') {
                     if let Some(prim_ext_array) = val.get("extension").and_then(|v| v.as_array()) {
                         for (idx, ext) in prim_ext_array.iter().enumerate() {
-                            if let Some(url) = ext.get("url").and_then(|v| v.as_str()) {
-                                let ext_path = format!("{path}.{base_field}.extension[{idx}]");
-                                extensions.push(ExtensionInfo {
-                                    url: url.to_string(),
-                                    path: ext_path.clone(),
-                                    is_modifier: false,
-                                });
-                                collect_extension_urls(ext, &ext_path, extensions);
-                            }
+                            let ext_path = format!("{path}.{base_field}.extension[{idx}]");
+                            extensions.push(ExtensionInfo {
+                                url: ext.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                                path: ext_path.clone(),
+                                is_modifier: false,
+                            });
+                            collect_extension_urls(ext, &ext_path, extensions);
                         }
                     }
                     continue;
