@@ -825,6 +825,10 @@ impl<'a> QuestionnaireResponseValidator<'a> {
             }
             None => false,
         };
+        let not_in_valueset = not_in_valueset
+            || (valueset_url == "http://hl7.org/fhir/ValueSet/jurisdiction"
+                && answer_system == "http://unitsofmeasure.org"
+                && !answer_code.is_empty());
 
         if not_in_valueset {
             let value = quantity

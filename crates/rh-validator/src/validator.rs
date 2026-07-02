@@ -379,6 +379,25 @@ impl FhirValidator {
             }
         }
 
+        for issue in validate_core_fallbacks(resource, resource_type_name) {
+            result = result.with_issue(issue);
+        }
+
+        for issue in validate_period_invariants(resource, resource_type_name) {
+            result = result.with_issue(issue);
+        }
+
+        let unknown_ext_issues = self.validate_unknown_extensions(resource, resource_type_name)?;
+        for issue in unknown_ext_issues {
+            result = result.with_issue(issue);
+        }
+
+        if resource_type_name == "QuestionnaireResponse" {
+            for issue in self.validate_questionnaire_response(resource)? {
+                result = result.with_issue(issue);
+            }
+        }
+
         if resource_type_name == "MeasureReport" {
             for issue in self.validate_measure_report_against_measure(resource) {
                 result = result.with_issue(issue);
@@ -701,24 +720,6 @@ impl FhirValidator {
             }
         }
 
-        // Unknown extension validation - extensions must have known definitions
-        let resource_type_name = resource
-            .get("resourceType")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Resource");
-        let unknown_ext_issues = self.validate_unknown_extensions(resource, resource_type_name)?;
-        for issue in unknown_ext_issues {
-            result = result.with_issue(issue);
-        }
-
-        // QuestionnaireResponse validation against linked Questionnaire
-        if resource_type_name == "QuestionnaireResponse" {
-            let qr_issues = self.validate_questionnaire_response(resource)?;
-            for issue in qr_issues {
-                result = result.with_issue(issue);
-            }
-        }
-
         Ok(result)
     }
 
@@ -901,6 +902,11 @@ impl FhirValidator {
                 continue;
             }
 
+            if let Some(issue) = validate_known_extension_context(url, path) {
+                issues.push(issue);
+                continue;
+            }
+
             // First try to resolve the extension
             match self.profile_registry.get_snapshot(url) {
                 Ok(Some(snapshot)) => {
@@ -933,10 +939,6 @@ impl FhirValidator {
                             )
                             .with_path(path),
                         );
-                    }
-
-                    if let Some(issue) = validate_known_extension_context(url, path) {
-                        issues.push(issue);
                     }
                 }
                 Ok(None) => {
@@ -1119,6 +1121,13 @@ impl FhirValidator {
             return issues;
         };
         let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+            if base_url == "http://hl7.org/fhir/StructureDefinition/Observation" {
+                self.validate_structure_definition_choice_paths_with_roots(
+                    structure_definition,
+                    &[("value", "Observation.value[x]")],
+                    &mut issues,
+                );
+            }
             return issues;
         };
         let Some(base_snapshot) = base_profile.snapshot.as_ref() else {
@@ -1137,15 +1146,37 @@ impl FhirValidator {
             .collect();
 
         if choice_paths.is_empty() {
+            if base_url == "http://hl7.org/fhir/StructureDefinition/Observation" {
+                self.validate_structure_definition_choice_paths_with_roots(
+                    structure_definition,
+                    &[("value", "Observation.value[x]")],
+                    &mut issues,
+                );
+            }
             return issues;
         }
 
+        self.validate_structure_definition_choice_paths_with_roots(
+            structure_definition,
+            &choice_paths,
+            &mut issues,
+        );
+
+        issues
+    }
+
+    fn validate_structure_definition_choice_paths_with_roots(
+        &self,
+        structure_definition: &Value,
+        choice_paths: &[(&str, &str)],
+        issues: &mut Vec<ValidationIssue>,
+    ) {
         let Some(elements) = structure_definition
             .get("differential")
             .and_then(|d| d.get("element"))
             .and_then(|e| e.as_array())
         else {
-            return issues;
+            return;
         };
 
         for element in elements {
@@ -1164,7 +1195,7 @@ impl FhirValidator {
                 continue;
             };
 
-            for (choice_root, choice_path) in &choice_paths {
+            for (choice_root, choice_path) in choice_paths {
                 if id_segment.starts_with(choice_root)
                     && id_segment != format!("{choice_root}[x]")
                     && path != *choice_path
@@ -1182,8 +1213,6 @@ impl FhirValidator {
                 }
             }
         }
-
-        issues
     }
 
     fn validate_structure_definition_base_fixed_values(
@@ -4016,11 +4045,161 @@ fn validate_measure_population_criteria(measure: &Value) -> Vec<ValidationIssue>
                         "Measure.group[{group_idx}].population[{population_idx}].criteria"
                     )),
                 );
+                continue;
+            }
+
+            let Some(criteria) = population.get("criteria") else {
+                continue;
+            };
+            let assertion_path = "Measure.group.population.criteria";
+
+            if criteria.get("language").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        "Expression.language: minimum required = 1, but only found 0",
+                    )
+                    .with_path(assertion_path),
+                );
+            }
+
+            if criteria.get("expression").is_none() && criteria.get("reference").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        "exp-1: An expression or a reference must be provided",
+                    )
+                    .with_path(assertion_path),
+                );
             }
         }
     }
 
     issues
+}
+
+fn validate_core_fallbacks(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if resource_type == "Patient" {
+        if let Some(obj) = resource.as_object() {
+            for key in obj.keys() {
+                if key == "resourceType" || key.starts_with('_') {
+                    continue;
+                }
+                if !PATIENT_FALLBACK_PROPERTIES.contains(&key.as_str()) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Structure,
+                            format!("Unrecognized property '{key}'"),
+                        )
+                        .with_path("Patient"),
+                    );
+                }
+            }
+        }
+
+        if let Some(birth_date) = resource.get("birthDate") {
+            if let Some(issue) = validate_primitive_format(birth_date, "date", "Patient.birthDate")
+            {
+                issues.push(issue.with_path("Patient.birthDate"));
+            }
+        }
+    }
+
+    issues
+}
+
+const PATIENT_FALLBACK_PROPERTIES: &[&str] = &[
+    "active",
+    "address",
+    "birthDate",
+    "communication",
+    "contact",
+    "deceasedBoolean",
+    "deceasedDateTime",
+    "extension",
+    "gender",
+    "generalPractitioner",
+    "id",
+    "identifier",
+    "implicitRules",
+    "language",
+    "link",
+    "managingOrganization",
+    "maritalStatus",
+    "meta",
+    "modifierExtension",
+    "multipleBirthBoolean",
+    "multipleBirthInteger",
+    "name",
+    "photo",
+    "telecom",
+    "text",
+];
+
+fn validate_period_invariants(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    validate_period_invariants_recursive(resource, resource_type, &mut issues);
+    issues
+}
+
+fn validate_period_invariants_recursive(
+    value: &Value,
+    path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if let (Some(start), Some(end)) = (
+                obj.get("start").and_then(|v| v.as_str()),
+                obj.get("end").and_then(|v| v.as_str()),
+            ) {
+                if path.ends_with(".period") || path == "Period" {
+                    let invalid = fhir_datetime_precision(start) != fhir_datetime_precision(end)
+                        || start > end;
+                    if invalid {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Invariant,
+                                format!(
+                                    "per-1: If present, start SHALL have a lower value than end (at {path})"
+                                ),
+                            )
+                            .with_path(path),
+                        );
+                    }
+                }
+            }
+
+            for (key, child) in obj {
+                let child_path = if path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{path}.{key}")
+                };
+                validate_period_invariants_recursive(child, &child_path, issues);
+            }
+        }
+        Value::Array(items) => {
+            for (idx, item) in items.iter().enumerate() {
+                validate_period_invariants_recursive(item, &format!("{path}[{idx}]"), issues);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn fhir_datetime_precision(value: &str) -> usize {
+    if value.len() == 4 {
+        1
+    } else if value.len() == 7 {
+        2
+    } else if value.len() == 10 {
+        3
+    } else {
+        4
+    }
 }
 
 fn validate_base64_fields(value: &Value, current_path: &str) -> Vec<ValidationIssue> {
@@ -6478,6 +6657,7 @@ fn is_known_missing_extension_definition(url: &str) -> bool {
         "http://hl7.org/fhir/StructureDefinition/endpoint-fhir-version"
             | "http://hl7.org/fhir/StructureDefinition/organization-brand"
             | "http://hl7.org/fhir/StructureDefinition/organization-portal"
+            | "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family"
             | "http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile"
             | "http://hl7.org/fhir/test/StructureDefinition/version-range"
             | "http://example.org/fhir/StructureDefinition/test"
@@ -6488,6 +6668,7 @@ fn is_known_missing_extension_definition(url: &str) -> bool {
 fn validate_known_extension_context(url: &str, path: &str) -> Option<ValidationIssue> {
     if url == "http://hl7.org/fhir/StructureDefinition/humanname-mothers-family"
         && !path.contains(".family.extension[")
+        && !path.contains("._family.extension[")
     {
         return Some(
             ValidationIssue::error(
