@@ -11,6 +11,7 @@ use crate::modelinfo::{
 use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use std::io::BufRead;
 
 /// Parse a container element whose `xsi:type` identifies a `TypeSpecifier`
@@ -64,7 +65,7 @@ pub(super) fn parse_type_specifier_attrs(e: &BytesStart) -> Result<Option<TypeSp
             let mut spec = ListTypeSpecifier::default();
             for attr in e.attributes().flatten() {
                 let key = std::str::from_utf8(attr.key.as_ref())?;
-                let value = attr.unescape_value()?.into_owned();
+                let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
                 if key == "elementType" {
                     spec.element_type = Some(value);
                 }
@@ -75,7 +76,7 @@ pub(super) fn parse_type_specifier_attrs(e: &BytesStart) -> Result<Option<TypeSp
             let mut spec = IntervalTypeSpecifier::default();
             for attr in e.attributes().flatten() {
                 let key = std::str::from_utf8(attr.key.as_ref())?;
-                let value = attr.unescape_value()?.into_owned();
+                let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
                 if key == "pointType" {
                     spec.point_type = Some(value);
                 }
@@ -92,7 +93,7 @@ pub(super) fn parse_named_type_specifier_attrs(e: &BytesStart) -> Result<NamedTy
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "modelName" => spec.model_name = Some(value),
@@ -115,7 +116,7 @@ pub(super) fn parse_list_type_specifier<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "elementType" {
             spec.element_type = Some(value);
@@ -167,7 +168,7 @@ pub(super) fn parse_interval_type_specifier<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "pointType" {
             spec.point_type = Some(value);

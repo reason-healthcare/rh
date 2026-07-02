@@ -38,6 +38,7 @@
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::{escape::unescape, XmlVersion};
 use rh_cql::{
     compile_with_model, evaluate_elm, CqlDate, CqlDateTime, CqlTime, EvalContextBuilder,
     FixedClock, Value,
@@ -94,15 +95,20 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                     "tests" => {
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"name" {
-                                _suite_name =
-                                    attr.unescape_value().unwrap_or_default().into_owned();
+                                _suite_name = attr
+                                    .normalized_value(XmlVersion::Implicit1_0)
+                                    .unwrap_or_default()
+                                    .into_owned();
                             }
                         }
                     }
                     "group" => {
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"name" {
-                                group_name = attr.unescape_value().unwrap_or_default().into_owned();
+                                group_name = attr
+                                    .normalized_value(XmlVersion::Implicit1_0)
+                                    .unwrap_or_default()
+                                    .into_owned();
                             }
                         }
                     }
@@ -114,7 +120,10 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                         output = None;
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"name" {
-                                test_name = attr.unescape_value().unwrap_or_default().into_owned();
+                                test_name = attr
+                                    .normalized_value(XmlVersion::Implicit1_0)
+                                    .unwrap_or_default()
+                                    .into_owned();
                             }
                         }
                     }
@@ -122,7 +131,10 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                         in_expression = true;
                         for attr in e.attributes().flatten() {
                             if attr.key.as_ref() == b"invalid" {
-                                invalid = attr.unescape_value().unwrap_or_default() == "true";
+                                invalid = attr
+                                    .normalized_value(XmlVersion::Implicit1_0)
+                                    .unwrap_or_default()
+                                    == "true";
                             }
                         }
                     }
@@ -134,7 +146,19 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                 }
             }
             Ok(Event::Text(ref e)) => {
-                let text = e.unescape().unwrap_or_default();
+                let text = e.xml_content(XmlVersion::Implicit1_0).unwrap_or_default();
+                if in_expression {
+                    expression.push_str(&text);
+                } else if in_output {
+                    if let Some(ref mut o) = output {
+                        o.push_str(&text);
+                    }
+                }
+            }
+            Ok(Event::GeneralRef(ref e)) => {
+                let entity = e.decode().unwrap_or_default();
+                let escaped = format!("&{entity};");
+                let text = unescape(&escaped).unwrap_or_default();
                 if in_expression {
                     expression.push_str(&text);
                 } else if in_output {

@@ -33,15 +33,15 @@ glob = "0.3"
 is-terminal = "0.4"
 
 # Local workspace crates
-rh-foundation = { path = "../../crates/rh-foundation", version = "0.2.3", features = ["http"] }
-rh-codegen = { path = "../../crates/rh-codegen", version = "0.2.3" }
-rh-cql = { path = "../../crates/rh-cql", version = "0.2.3", features = ["repl"] }
-rh-fhirpath = { path = "../../crates/rh-fhirpath", version = "0.2.3", features = ["repl"] }
-rh-packager = { path = "../../crates/rh-packager", version = "0.2.3" }
-rh-validator = { path = "../../crates/rh-validator", version = "0.2.3" }
-rh-vcl = { path = "../../crates/rh-vcl", version = "0.2.3", features = ["repl"] }
-rh-hl7-fhir-r4-core = { path = "../../crates/rh-hl7_fhir_r4_core", version = "0.2.3" }
-rh-fsh = { path = "../../crates/rh-fsh", version = "0.2.3" }
+rh-foundation = { path = "../../crates/rh-foundation", version = "0.2.4", features = ["http"] }
+rh-codegen = { path = "../../crates/rh-codegen", version = "0.2.4" }
+rh-cql = { path = "../../crates/rh-cql", version = "0.2.4", features = ["repl"] }
+rh-fhirpath = { path = "../../crates/rh-fhirpath", version = "0.2.4", features = ["repl"] }
+rh-packager = { path = "../../crates/rh-packager", version = "0.2.4" }
+rh-validator = { path = "../../crates/rh-validator", version = "0.2.4" }
+rh-vcl = { path = "../../crates/rh-vcl", version = "0.2.4", features = ["repl"] }
+rh-hl7-fhir-r4-core = { path = "../../crates/rh-hl7_fhir_r4_core", version = "0.2.4" }
+rh-fsh = { path = "../../crates/rh-fsh", version = "0.2.4" }
 
 [dev-dependencies]
 assert_cmd = "2.0"

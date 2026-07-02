@@ -27,6 +27,7 @@ use crate::modelinfo::{ContextInfo, ConversionInfo, ModelInfo, ModelSpecifier};
 use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use std::io::BufRead;
 
 // ---------------------------------------------------------------------------
@@ -75,7 +76,7 @@ fn parse_model_info<R: BufRead>(reader: &mut Reader<R>) -> Result<ModelInfo> {
 fn parse_model_info_attrs(e: &BytesStart, model_info: &mut ModelInfo) -> Result<()> {
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => model_info.name = Some(value),
@@ -155,7 +156,7 @@ fn parse_required_model_info(e: &BytesStart) -> Result<ModelSpecifier> {
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => spec.name = Some(value),
@@ -172,7 +173,7 @@ fn parse_conversion_info(e: &BytesStart) -> Result<ConversionInfo> {
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "fromType" => conv.from_type = Some(value),
@@ -190,7 +191,7 @@ fn parse_context_info(e: &BytesStart) -> Result<ContextInfo> {
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => ctx.name = Some(value),

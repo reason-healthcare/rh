@@ -17,8 +17,10 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use quick_xml::escape::unescape;
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
@@ -124,7 +126,12 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                 }
             }
             Event::Text(t) if in_expression || in_output => {
-                text_buf.push_str(&t.unescape().expect("decode text"));
+                text_buf.push_str(&t.xml_content(XmlVersion::Implicit1_0).expect("decode text"));
+            }
+            Event::GeneralRef(r) if in_expression || in_output => {
+                let entity = r.decode().expect("decode entity reference");
+                let escaped = format!("&{entity};");
+                text_buf.push_str(&unescape(&escaped).expect("unescape entity reference"));
             }
             Event::Text(_) => {}
             Event::End(e) => match e.name().as_ref() {

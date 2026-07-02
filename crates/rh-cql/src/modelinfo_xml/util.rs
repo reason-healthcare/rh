@@ -4,6 +4,7 @@ use crate::modelinfo::{RelationshipInfo, TypeParameterInfo, TypeSpecifier};
 use anyhow::Result;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use std::io::BufRead;
 
 /// Extract the `xsi:type` attribute value from a start element.
@@ -12,7 +13,7 @@ pub(super) fn get_xsi_type(e: &BytesStart) -> Option<String> {
         let key = attr.key.as_ref();
         // Accept `xsi:type` or any `*:type` Clark-notation variant.
         if key == b"xsi:type" || key.ends_with(b":type") {
-            if let Ok(value) = attr.unescape_value() {
+            if let Ok(value) = attr.normalized_value(XmlVersion::Implicit1_0) {
                 return Some(value.into_owned());
             }
         }
@@ -54,7 +55,7 @@ pub(super) fn parse_type_parameter_info<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => info.name = Some(value),
@@ -74,7 +75,7 @@ pub(super) fn parse_relationship_info(e: &BytesStart) -> Result<RelationshipInfo
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "context" => info.context = Some(value),
@@ -122,7 +123,7 @@ pub(super) fn parse_tuple_element_attrs(e: &BytesStart) -> Result<TupleElementDe
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => elem.name = Some(value),

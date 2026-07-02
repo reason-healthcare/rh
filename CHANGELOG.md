@@ -5,6 +5,29 @@ All notable user-facing changes to Reason Health are recorded here.
 This project follows semantic versioning while the public API is still in the
 0.x series. Release dates use `YYYY-MM-DD`.
 
+## [0.2.4] - 2026-07-02
+
+### Changed
+
+- Improved `rh-validator` agreement with Java validator behavior across R4
+  conformance fixtures, including bundle references, contained resources,
+  terminology, StructureDefinition, Questionnaire, Measure, and invariant
+  handling.
+- Expanded `rh-fsh` SUSHI conformance coverage and refactored supporting
+  conformance test infrastructure.
+- Removed unsupported Nix flake, release-hash helper, CI job, and related
+  release/documentation references.
+
+### Fixed
+
+- Fixed validator slicing metadata preservation, versioned profile URL lookup,
+  and value/profile discriminator matching.
+- Fixed validator conformance gaps for FHIR string size limits, terminology
+  filters backed by registered CodeSystems, choice bindings, contained resource
+  id validation, narrative fragment references, and profile reference target
+  types.
+- Made validator CI independent of the local package cache.
+
 ## [0.2.3] - 2026-06-23
 
 ### Added
@@ -35,4 +58,5 @@ This project follows semantic versioning while the public API is still in the
   include resolution consistently with normal compilation.
 - Fixed CQL conformance expected-string handling to avoid double-unescaping.
 
+[0.2.4]: https://github.com/reason-healthcare/rh/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/reason-healthcare/rh/compare/v0.2.2...v0.2.3

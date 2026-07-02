@@ -12,6 +12,7 @@ use crate::modelinfo::{
 use anyhow::Result;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use std::io::BufRead;
 
 /// Dispatch on `xsi:type` and parse the appropriate `TypeInfo` variant.
@@ -67,7 +68,7 @@ fn parse_class_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Resul
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "namespace" => info.namespace = Some(value),
@@ -159,7 +160,7 @@ fn parse_class_info_element_attrs(e: &BytesStart) -> Result<ClassInfoElement> {
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => elem.name = Some(value),
@@ -231,7 +232,7 @@ fn parse_simple_type_info<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "namespace" => info.namespace = Some(value),
@@ -254,7 +255,7 @@ fn parse_profile_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Res
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "namespace" => info.namespace = Some(value),
@@ -305,7 +306,7 @@ fn parse_interval_type_info<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "baseType" => info.base_type = Some(value),
@@ -326,7 +327,7 @@ fn parse_list_type_info<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "baseType" => info.base_type = Some(value),
@@ -351,7 +352,7 @@ fn parse_tuple_type_info<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "baseType" {
             info.base_type = Some(value);
@@ -421,7 +422,7 @@ fn parse_tuple_type_info_element_attrs(e: &BytesStart) -> Result<TupleTypeInfoEl
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
             "name" => elem.name = Some(value),
@@ -446,7 +447,7 @@ fn parse_choice_type_info<R: BufRead>(
 
     for attr in e.attributes().flatten() {
         let key = std::str::from_utf8(attr.key.as_ref())?;
-        let value = attr.unescape_value()?.into_owned();
+        let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "baseType" {
             info.base_type = Some(value);

@@ -42,7 +42,7 @@ regex = "1.0"
 rayon = "1.10"
 
 # XML parsing
-quick-xml = { version = "0.37", features = ["serde", "serialize"] }
+quick-xml = { version = "0.41", features = ["serde", "serialize"] }
 
 # Date and time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -92,4 +92,4 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/reason-healthcare/rh"
 homepage = "https://github.com/reason-healthcare/rh"
 rust-version = "1.91"
-version = "0.2.3"
+version = "0.2.4"
