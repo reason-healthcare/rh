@@ -8,6 +8,10 @@
 
 **Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in Rust. It ships as a cross-platform **CLI**, a set of **Rust library crates**, and **WebAssembly-backed npm packages** — all without the overhead of JVM- or .NET-based stacks.
 
+## Motivation
+
+We built `rh` because we needed clean tooling for non-ballot FHIR use cases, with an excellent CLI experience for humans, agents, and CI/CD pipelines alike. It had to be simple to install, simple to use, and practical for building skill- and agent-driven workflows across our products and services. Existing Java and .NET-based tooling did not meet those requirements.
+
 ---
 
 ## Install the CLI
