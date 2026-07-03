@@ -10,7 +10,13 @@
 
 ## Motivation
 
-We built `rh` because we needed clean tooling for non-ballot FHIR use cases, with an excellent CLI experience for humans, agents, and CI/CD pipelines alike. Healthcare teams are moving more work into automated pipelines and agent-assisted workflows, which only works when the deterministic layers are solid: stable commands, predictable output, conformance checks, and validation that can run repeatedly without becoming the bottleneck. It also had to be simple to install, simple to use, and practical for building skill- and agent-driven workflows across our products and services. Existing Java and .NET-based tooling did not meet those requirements.
+The FHIR ecosystem already has mature tooling, especially in Java and .NET. Those tools are important, widely used, and remain essential for many ballot specification workflows.
+
+`rh` is focused on a different need: fast, portable, deterministic FHIR tooling that works naturally from the command line, in CI/CD, and in agent-assisted development workflows.
+
+As more FHIR work moves into automated pipelines, teams need tools that are easy to install, quick to run, and predictable enough for scripts and agents to depend on. Commands should produce structured output. Validation and conformance checks should be repeatable. Package exploration and artifact generation should fit into everyday development without requiring a heavyweight runtime or publishing workflow.
+
+`rh` is designed as practical FHIR infrastructure for those workflows: pleasant for humans, dependable for automation, and small enough to use wherever FHIR work happens.
 
 ---
 
