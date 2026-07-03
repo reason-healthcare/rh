@@ -4,7 +4,7 @@ use rh_foundation::snapshot::{ElementDefinition, StructureDefinition};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 pub struct CompiledValidationRules {
@@ -105,7 +105,7 @@ pub struct DiscriminatorConstraint {
 }
 
 pub struct RuleCompiler {
-    cache: Mutex<LruCache<String, CompiledValidationRules>>,
+    cache: Mutex<LruCache<String, Arc<CompiledValidationRules>>>,
     cache_hits: Mutex<usize>,
     cache_misses: Mutex<usize>,
 }
@@ -120,12 +120,16 @@ impl RuleCompiler {
         }
     }
 
-    pub fn compile(&self, snapshot: &StructureDefinition) -> Result<CompiledValidationRules> {
+    pub fn compile(&self, snapshot: &StructureDefinition) -> Result<Arc<CompiledValidationRules>> {
         let profile_url = snapshot.url.clone();
 
-        if let Some(cached) = self.cache.lock().unwrap().get(&profile_url) {
+        let cached = {
+            let mut cache = self.cache.lock().unwrap();
+            cache.get(&profile_url).map(Arc::clone)
+        };
+        if let Some(cached) = cached {
             *self.cache_hits.lock().unwrap() += 1;
-            return Ok(cached.clone());
+            return Ok(cached);
         }
 
         *self.cache_misses.lock().unwrap() += 1;
@@ -296,7 +300,7 @@ impl RuleCompiler {
                 }
             }
 
-            let rules = CompiledValidationRules {
+            let rules = Arc::new(CompiledValidationRules {
                 profile_url: profile_url.clone(),
                 element_paths,
                 cardinality_rules,
@@ -307,16 +311,19 @@ impl RuleCompiler {
                 invariant_rules,
                 extension_rules,
                 slicing_rules,
-            };
+            });
 
-            self.cache.lock().unwrap().put(profile_url, rules.clone());
+            self.cache
+                .lock()
+                .unwrap()
+                .put(profile_url, Arc::clone(&rules));
 
             return Ok(rules);
         }
 
         add_differential_rules(snapshot, &mut cardinality_rules, &mut binding_rules);
 
-        let rules = CompiledValidationRules {
+        let rules = Arc::new(CompiledValidationRules {
             profile_url: profile_url.clone(),
             element_paths,
             cardinality_rules,
@@ -327,9 +334,12 @@ impl RuleCompiler {
             invariant_rules,
             extension_rules,
             slicing_rules: Vec::new(),
-        };
+        });
 
-        self.cache.lock().unwrap().put(profile_url, rules.clone());
+        self.cache
+            .lock()
+            .unwrap()
+            .put(profile_url, Arc::clone(&rules));
 
         Ok(rules)
     }

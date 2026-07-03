@@ -1102,7 +1102,7 @@ impl FhirValidator {
         for target_profile in target_profiles {
             if let Ok(Some(profile)) = self.profile_registry.get_snapshot(target_profile) {
                 if !allowed.iter().any(|type_name| type_name == &profile.type_) {
-                    allowed.push(profile.type_);
+                    allowed.push(profile.type_.clone());
                 }
             }
         }
