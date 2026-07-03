@@ -10,7 +10,7 @@
 
 ## Motivation
 
-We built `rh` because we needed clean tooling for non-ballot FHIR use cases, with an excellent CLI experience for humans, agents, and CI/CD pipelines alike. It had to be simple to install, simple to use, and practical for building skill- and agent-driven workflows across our products and services. Existing Java and .NET-based tooling did not meet those requirements.
+We built `rh` because we needed clean tooling for non-ballot FHIR use cases, with an excellent CLI experience for humans, agents, and CI/CD pipelines alike. Healthcare teams are moving more work into automated pipelines and agent-assisted workflows, which only works when the deterministic layers are solid: stable commands, predictable output, conformance checks, and validation that can run repeatedly without becoming the bottleneck. It also had to be simple to install, simple to use, and practical for building skill- and agent-driven workflows across our products and services. Existing Java and .NET-based tooling did not meet those requirements.
 
 ---
 
