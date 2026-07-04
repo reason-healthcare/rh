@@ -11,6 +11,12 @@ Current subcommands:
 
 The validator always runs in FHIR R4 mode today.
 
+`--format human|json|ndjson` is the global CLI output switch. Use
+`--format json` when scripting and you want the standard `rh` JSON envelope.
+
+`--report-format text|json|operationoutcome` is specific to validator report
+rendering and is used only when the global output format is human-readable.
+
 ## `rh validate resource`
 
 Validate a single resource from a file, multiple files, a glob, or standard input.
@@ -22,7 +28,8 @@ rh validate resource [OPTIONS]
 ### Options
 
 - `-i, --input <INPUT>` - Input file path(s) or glob pattern(s). If omitted, reads JSON from stdin.
-- `-f, --format <FORMAT>` - Output format: `text`, `json`, or `operationoutcome`. Default: `text`.
+- `--format <FORMAT>` - Global output format: `human`, `json`, or `ndjson`. Default: `human`.
+- `--report-format <REPORT_FORMAT>` - Validator report format: `text`, `json`, or `operationoutcome`. Default: `text`.
 - `--strict` - Exit non-zero if any issues are reported, including warnings.
 - `--security-checks` - Enable stricter HTML and script-content checks.
 - `--terminology-server <URL>` - Use a FHIR terminology server such as `https://tx.fhir.org/r4`.
@@ -39,7 +46,10 @@ rh validate resource --input patient.json
 rh validate resource --input 'examples/**/*.json'
 
 # Emit OperationOutcome JSON
-rh validate resource --input patient.json --format operationoutcome
+rh validate resource --input patient.json --report-format operationoutcome
+
+# Emit the standard rh JSON envelope for automation
+rh validate resource --input patient.json --format json
 
 # Read from stdin
 cat patient.json | rh validate resource
@@ -61,7 +71,8 @@ rh validate batch [OPTIONS]
 ### Options
 
 - `-i, --input <INPUT>` - NDJSON file path(s) or glob pattern(s). If omitted, reads from stdin.
-- `-f, --format <FORMAT>` - Output format: `text`, `json`, or `operationoutcome`. Default: `text`.
+- `--format <FORMAT>` - Global output format: `human`, `json`, or `ndjson`. Default: `human`.
+- `--report-format <REPORT_FORMAT>` - Validator report format: `text`, `json`, or `operationoutcome`. Default: `text`.
 - `--summary-only` - Hide per-resource issue details in text output.
 - `--strict` - Exit non-zero if any issues are reported, including warnings.
 - `--security-checks` - Enable stricter HTML and script-content checks.
@@ -79,7 +90,10 @@ rh validate batch --input bundle.ndjson
 # Validate NDJSON from stdin
 cat bundle.ndjson | rh validate batch --summary-only
 
-# Emit JSON results for multiple files
+# Emit validator report JSON for multiple files
+rh validate batch --input 'fixtures/*.ndjson' --report-format json
+
+# Emit the standard rh JSON envelope for automation
 rh validate batch --input 'fixtures/*.ndjson' --format json
 ```
 
@@ -92,5 +106,5 @@ rh validate batch --input 'fixtures/*.ndjson' --format json
 ## Related docs
 
 - [`crates/rh-validator/README.md`](../../../crates/rh-validator/README.md)
-- [`openspec/planning/rh-validator/TODO.md`](../../../openspec/planning/rh-validator/TODO.md)
-- [`openspec/planning/rh-validator/PHASE_15_ANALYSIS.md`](../../../openspec/planning/rh-validator/PHASE_15_ANALYSIS.md)
+- [`crates/rh-validator/ARCHITECTURE.md`](../../../crates/rh-validator/ARCHITECTURE.md)
+- [`crates/rh-validator/PERFORMANCE.md`](../../../crates/rh-validator/PERFORMANCE.md)

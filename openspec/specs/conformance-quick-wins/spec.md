@@ -1,7 +1,7 @@
 # conformance-quick-wins Specification
 
 ## Purpose
-TBD - created by archiving change validator-conformance-wave-1. Update Purpose after archive.
+Document bounded validator conformance checks that are implemented as focused structural, terminology, and Bundle validations.
 
 ## Requirements
 ### Requirement: UCUM and unit quick-win checks depend on terminology service availability
@@ -27,7 +27,7 @@ The validator MUST enforce deterministic bundle uniqueness checks for targeted c
 - **THEN** validation reports a deterministic issue without introducing suite-specific exceptions
 
 ### Requirement: Quick-win scope is explicitly bounded to identified failure categories
-The validator SHALL implement only the documented conformance quick-win checks for this wave and MUST not expand to broad terminology parity work.
+The validator SHALL implement only documented conformance quick-win checks in this area and MUST not claim broad terminology parity.
 
 #### Scenario: Out-of-scope terminology parity behavior is not introduced
 - **WHEN** a failing case requires full terminology parity not listed as a quick win

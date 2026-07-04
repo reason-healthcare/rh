@@ -4,7 +4,7 @@ FHIR resource validation for Rust and the `rh` CLI.
 
 ## Overview
 
-`rh-validator` validates JSON FHIR resources against base R4 rules and loaded StructureDefinition profiles. The crate combines structural checks with profile-driven rules, FHIRPath invariant evaluation, terminology hooks, and QuestionnaireResponse validation.
+`rh-validator` validates JSON FHIR resources against base R4 rules and loaded StructureDefinition profiles. The crate combines structural checks with profile-driven rules, FHIRPath invariant evaluation, local ValueSet and CodeSystem checks, optional terminology-service calls, and QuestionnaireResponse validation.
 
 Current library exports include:
 
@@ -18,7 +18,7 @@ Current library exports include:
 
 - Base JSON/FHIR structure such as `resourceType`, empty arrays, ids, attachments, and selected resource-specific rules
 - Profile cardinality, type, slicing, extension, and invariant rules via StructureDefinition snapshots
-- ValueSet bindings and terminology display checks when a terminology service is configured
+- Local ValueSet and CodeSystem membership checks, plus remote terminology display and required-binding checks when a terminology service is configured
 - UCUM unit validation for supported quantity paths
 - QuestionnaireResponse resources against a linked Questionnaire when that Questionnaire can be resolved
 
@@ -154,12 +154,21 @@ The workspace CLI exposes this crate through:
 - `rh validate resource`
 - `rh validate batch`
 
-## Planning and analysis artifacts
+Examples:
 
-Longer-running planning notes and conformance analysis now live under `openspec/planning/rh-validator/`:
+```bash
+# Validate a JSON resource with human-readable output
+rh validate resource --input patient.json
 
-- [`TODO.md`](../../openspec/planning/rh-validator/TODO.md)
-- [`PHASE_14_PLAN.md`](../../openspec/planning/rh-validator/PHASE_14_PLAN.md)
-- [`PHASE_15_ANALYSIS.md`](../../openspec/planning/rh-validator/PHASE_15_ANALYSIS.md)
-- [`PHASE_15_COMPLETE.md`](../../openspec/planning/rh-validator/PHASE_15_COMPLETE.md)
-- [`FALSE_NEGATIVES_ANALYSIS.md`](FALSE_NEGATIVES_ANALYSIS.md)
+# Emit the validator report as FHIR OperationOutcome
+rh validate resource --input patient.json --report-format operationoutcome
+
+# Use the global CLI JSON envelope for automation
+rh validate resource --input patient.json --format json
+```
+
+Durable reference docs:
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`PERFORMANCE.md`](PERFORMANCE.md)
+- [`CONFORMANCE_CI.md`](CONFORMANCE_CI.md)

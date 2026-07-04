@@ -1,18 +1,18 @@
 # conformance-ci-gating Specification
 
 ## Purpose
-TBD - created by archiving change validator-conformance-wave-1. Update Purpose after archive.
+Document the repeatable CI contract for selected validator conformance checks.
 
 ## Requirements
 ### Requirement: CI executes selected conformance subsets repeatably
-Project CI SHALL run selected FHIR conformance test subsets for this change using a repeatable command contract.
+Project CI SHALL run selected FHIR conformance test subsets using a repeatable command contract.
 
 #### Scenario: CI run executes configured subset
 - **WHEN** CI is triggered for a change that includes validator conformance checks
 - **THEN** the configured conformance subset executes with stable inputs and deterministic command parameters
 
 ### Requirement: CI emits pass/fail conformance summaries without trend tooling
-CI MUST publish per-run conformance pass/fail summaries for visibility and gating decisions, and SHALL NOT require historical trend tooling in this wave.
+CI MUST publish per-run conformance pass/fail summaries for visibility and gating decisions, and SHALL NOT require historical trend tooling.
 
 #### Scenario: Per-run summary is available without historical dashboards
 - **WHEN** a conformance CI run completes

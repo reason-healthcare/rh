@@ -1,6 +1,6 @@
 # Conformance CI Subset
 
-This document describes the initial conformance CI setup for `validator-conformance-wave-1`.
+This document describes the validator conformance CI subset and its current gating behavior.
 
 ## Selected Subset
 
@@ -41,7 +41,7 @@ Each CI run publishes:
 - GitHub Step Summary with command and `test result` line
 - `conformance-summary.txt` artifact (`conformance-subset-summary`)
 
-No trend tooling or historical aggregation is included in this wave.
+No trend tooling or historical aggregation is included.
 
 ## Validator Behavior Iterations
 

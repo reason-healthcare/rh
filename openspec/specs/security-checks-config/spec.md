@@ -1,7 +1,7 @@
 # security-checks-config Specification
 
 ## Purpose
-TBD - created by archiving change validator-conformance-wave-1. Update Purpose after archive.
+Document validator runtime behavior for security-sensitive HTML and script-content checks.
 
 ## Requirements
 ### Requirement: Security checks are runtime-configurable

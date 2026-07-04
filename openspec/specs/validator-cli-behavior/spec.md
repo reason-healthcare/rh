@@ -1,7 +1,7 @@
 # validator-cli-behavior Specification
 
 ## Purpose
-TBD - created by archiving change validator-conformance-wave-1. Update Purpose after archive.
+Document the `rh validate` runtime options that control conformance-relevant behavior exposed by `rh-validator`.
 
 ## Requirements
 ### Requirement: Validator CLI accepts conformance runtime options

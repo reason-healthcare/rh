@@ -64,7 +64,7 @@ docker run --rm \
 You can also pin to a specific version:
 
 ```bash
-docker run --rm ghcr.io/reason-healthcare/rh:v0.1.0-beta.1 --version
+docker run --rm ghcr.io/reason-healthcare/rh:v0.2.5 --version
 ```
 
 ## Quick Start
@@ -87,6 +87,9 @@ rh fhirpath eval "Patient.name.family" --data patient.json
 
 # Validate a FHIR resource
 rh validate resource --input patient.json
+
+# Emit a validation report as FHIR OperationOutcome
+rh validate resource --input patient.json --report-format operationoutcome
 
 # Compile CQL to ELM
 rh cql compile library.cql --output library.elm.json
@@ -150,6 +153,24 @@ Options (build/pack):
 ```
 
 See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including the step-by-step guide and `packager.toml` configuration reference.
+
+### `rh validate` subcommands
+
+```
+rh validate resource [OPTIONS]   Validate one or more FHIR JSON resources
+rh validate batch    [OPTIONS]   Validate NDJSON resources
+
+Common options:
+  -i, --input <INPUT>                     Input file path(s) or glob pattern(s); stdin when omitted
+      --report-format <REPORT_FORMAT>     Validator report format: text, json, operationoutcome [default: text]
+      --strict                            Treat any reported issue as a validation failure
+      --security-checks                   Enable strict HTML/script security checks
+      --terminology-server <URL>          Use a FHIR terminology server
+```
+
+Use global `--format json` for the standard `rh` machine-readable envelope, or
+`--report-format json|operationoutcome` for validator-native report rendering.
+See [docs/VALIDATOR.md](docs/VALIDATOR.md) for the full validation command reference.
 
 ## Global Options
 
@@ -222,7 +243,7 @@ parseable error envelope on stdout _and_ prints `error: <message>` on stderr:
 {
   "ok": false,
   "errors": [{ "code": "operational_error", "message": "..." }],
-  "meta": { "version": "0.2.3", "command": "rh" }
+  "meta": { "version": "0.2.5", "command": "rh" }
 }
 ```
 

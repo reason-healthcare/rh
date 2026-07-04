@@ -54,7 +54,10 @@ rh vcl translate "http://loinc.org|718-7*"
 rh cql compile measure.cql
 
 # Validate a FHIR resource
-rh validate resource -i patient.json
+rh validate resource --input patient.json
+
+# Emit a validation report as FHIR OperationOutcome
+rh validate resource --input patient.json --report-format operationoutcome
 
 # Generate a StructureDefinition snapshot
 rh snapshot generate http://hl7.org/fhir/StructureDefinition/Patient
@@ -68,7 +71,7 @@ rh package pack my-package/output/
 Every command supports `--format human|json|ndjson`. Use `--format json` for scripting and automation:
 
 ```json
-{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.3", "command": "rh"}}
+{"ok": true, "result": {}, "errors": [], "meta": {"version": "0.2.5", "command": "rh"}}
 ```
 
 | Exit code | Meaning |
@@ -126,7 +129,7 @@ Each package exports three entry points:
 | [rh-cql](crates/rh-cql/README.md) | CQL-to-ELM compiler, evaluator, explain mode, and source maps | [`@reasonhealth/cql`](https://www.npmjs.com/package/@reasonhealth/cql) |
 | [rh-vcl](crates/rh-vcl/README.md) | ValueSet Compose Language (VCL) parser and translator | [`@reasonhealth/vcl`](https://www.npmjs.com/package/@reasonhealth/vcl) |
 | [rh-fsh](crates/rh-fsh/README.md) | FHIR Shorthand (FSH) compiler | — |
-| [rh-validator](crates/rh-validator/README.md) | Hybrid FHIR R4 validator with snapshot-based profile validation | — |
+| [rh-validator](crates/rh-validator/README.md) | Hybrid FHIR R4 validator with structural, profile, invariant, terminology, and QuestionnaireResponse validation | — |
 | [rh-packager](crates/rh-packager/README.md) | FHIR package assembler with built-in processors | — |
 | [rh-codegen](crates/rh-codegen/README.md) | Code generation from FHIR StructureDefinitions | — |
 | [rh-foundation](crates/rh-foundation/README.md) | Foundation utilities (errors, HTTP, I/O, package loader, snapshot) | — |
