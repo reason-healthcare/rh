@@ -1,6 +1,6 @@
 [package]
 name = "rh-validator"
-version = "0.2.4"
+version = "0.2.5"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -24,6 +24,7 @@ doctest = false
 [features]
 default = []
 fhir-test-cases = ["zip", "tar", "flate2"]
+perf-timings = []
 
 [dependencies]
 # Workspace dependencies
@@ -34,8 +35,8 @@ thiserror = { workspace = true }
 regex = { workspace = true }
 
 # Local workspace crates
-rh-foundation = { path = "../rh-foundation", version = "0.2.4", features = ["http"] }
-rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.4" }  # FHIRPath invariant validation
+rh-foundation = { path = "../rh-foundation", version = "0.2.5", features = ["http"] }
+rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.5" }  # FHIRPath invariant validation
 rust_decimal = { workspace = true }
 
 # Caching
@@ -60,13 +61,17 @@ flate2 = { workspace = true, optional = true }
 
 [dev-dependencies]
 # Testing with generated FHIR types
-rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.4" }
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.5" }
 
 # Benchmarking (to be added in Phase 8)
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
 name = "validation"
+harness = false
+
+[[bench]]
+name = "perf_smoke"
 harness = false
 
 [lints]

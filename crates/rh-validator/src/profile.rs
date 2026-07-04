@@ -5,7 +5,7 @@ use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinition, StructureD
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use crate::fhir_version::FhirVersion;
 
@@ -13,8 +13,8 @@ pub struct ProfileRegistry {
     generator: SnapshotGenerator,
     profiles: HashMap<String, StructureDefinition>,
     /// Dynamically registered profiles (can be added at runtime with &self)
-    dynamic_profiles: RwLock<HashMap<String, StructureDefinition>>,
-    snapshot_cache: RwLock<LruCache<String, StructureDefinition>>,
+    dynamic_profiles: RwLock<HashMap<String, Arc<StructureDefinition>>>,
+    snapshot_cache: RwLock<LruCache<String, Arc<StructureDefinition>>>,
     cache_hits: RwLock<usize>,
     cache_misses: RwLock<usize>,
     #[allow(dead_code)]
@@ -86,28 +86,23 @@ impl ProfileRegistry {
         })
     }
 
-    pub fn get_snapshot(&self, profile_url: &str) -> Result<Option<StructureDefinition>> {
+    pub fn get_snapshot(&self, profile_url: &str) -> Result<Option<Arc<StructureDefinition>>> {
         let lookup_url = canonical_url_without_version(profile_url);
 
         if let Some(cached) = self.snapshot_cache.write().unwrap().get(lookup_url) {
             *self.cache_hits.write().unwrap() += 1;
-            return Ok(Some(cached.clone()));
+            return Ok(Some(Arc::clone(cached)));
         }
 
         *self.cache_misses.write().unwrap() += 1;
 
         // First check dynamically registered profiles
-        if let Some(profile) = self
-            .dynamic_profiles
-            .read()
-            .unwrap()
-            .get(lookup_url)
-            .cloned()
-        {
+        if let Some(profile) = self.dynamic_profiles.read().unwrap().get(lookup_url) {
+            let profile = Arc::clone(profile);
             self.snapshot_cache
                 .write()
                 .unwrap()
-                .put(lookup_url.to_string(), profile.clone());
+                .put(lookup_url.to_string(), Arc::clone(&profile));
             return Ok(Some(profile));
         }
 
@@ -124,11 +119,12 @@ impl ProfileRegistry {
         let profile = self.profiles.get(lookup_url).unwrap().clone();
         let mut profile_with_snapshot = profile;
         profile_with_snapshot.snapshot = Some(std::sync::Arc::unwrap_or_clone(snapshot));
+        let profile_with_snapshot = Arc::new(profile_with_snapshot);
 
         self.snapshot_cache
             .write()
             .unwrap()
-            .put(lookup_url.to_string(), profile_with_snapshot.clone());
+            .put(lookup_url.to_string(), Arc::clone(&profile_with_snapshot));
 
         Ok(Some(profile_with_snapshot))
     }
@@ -157,7 +153,7 @@ impl ProfileRegistry {
         self.dynamic_profiles
             .write()
             .unwrap()
-            .insert(profile.url.clone(), profile);
+            .insert(profile.url.clone(), Arc::new(profile));
     }
 
     pub fn load_profile(&mut self, profile: StructureDefinition) -> Result<()> {

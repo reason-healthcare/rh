@@ -2,9 +2,9 @@ use anyhow::Result;
 use lru::LruCache;
 use rh_foundation::snapshot::{ElementDefinition, StructureDefinition};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::num::NonZeroUsize;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 pub struct CompiledValidationRules {
@@ -18,6 +18,14 @@ pub struct CompiledValidationRules {
     pub invariant_rules: Vec<InvariantRule>,
     pub extension_rules: Vec<ExtensionRule>,
     pub slicing_rules: Vec<SlicingRule>,
+    pub unknown_properties: UnknownPropertyPlan,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnknownPropertyPlan {
+    pub resource_roots: HashSet<String>,
+    pub allowed_children: HashMap<String, HashSet<String>>,
+    pub allowed_choice_prefixes: HashMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -105,7 +113,7 @@ pub struct DiscriminatorConstraint {
 }
 
 pub struct RuleCompiler {
-    cache: Mutex<LruCache<String, CompiledValidationRules>>,
+    cache: Mutex<LruCache<String, Arc<CompiledValidationRules>>>,
     cache_hits: Mutex<usize>,
     cache_misses: Mutex<usize>,
 }
@@ -120,12 +128,16 @@ impl RuleCompiler {
         }
     }
 
-    pub fn compile(&self, snapshot: &StructureDefinition) -> Result<CompiledValidationRules> {
+    pub fn compile(&self, snapshot: &StructureDefinition) -> Result<Arc<CompiledValidationRules>> {
         let profile_url = snapshot.url.clone();
 
-        if let Some(cached) = self.cache.lock().unwrap().get(&profile_url) {
+        let cached = {
+            let mut cache = self.cache.lock().unwrap();
+            cache.get(&profile_url).map(Arc::clone)
+        };
+        if let Some(cached) = cached {
             *self.cache_hits.lock().unwrap() += 1;
-            return Ok(cached.clone());
+            return Ok(cached);
         }
 
         *self.cache_misses.lock().unwrap() += 1;
@@ -296,8 +308,9 @@ impl RuleCompiler {
                 }
             }
 
-            let rules = CompiledValidationRules {
+            let rules = Arc::new(CompiledValidationRules {
                 profile_url: profile_url.clone(),
+                unknown_properties: build_unknown_property_plan(&element_paths),
                 element_paths,
                 cardinality_rules,
                 type_rules,
@@ -307,17 +320,21 @@ impl RuleCompiler {
                 invariant_rules,
                 extension_rules,
                 slicing_rules,
-            };
+            });
 
-            self.cache.lock().unwrap().put(profile_url, rules.clone());
+            self.cache
+                .lock()
+                .unwrap()
+                .put(profile_url, Arc::clone(&rules));
 
             return Ok(rules);
         }
 
         add_differential_rules(snapshot, &mut cardinality_rules, &mut binding_rules);
 
-        let rules = CompiledValidationRules {
+        let rules = Arc::new(CompiledValidationRules {
             profile_url: profile_url.clone(),
+            unknown_properties: build_unknown_property_plan(&element_paths),
             element_paths,
             cardinality_rules,
             type_rules,
@@ -327,9 +344,12 @@ impl RuleCompiler {
             invariant_rules,
             extension_rules,
             slicing_rules: Vec::new(),
-        };
+        });
 
-        self.cache.lock().unwrap().put(profile_url, rules.clone());
+        self.cache
+            .lock()
+            .unwrap()
+            .put(profile_url, Arc::clone(&rules));
 
         Ok(rules)
     }
@@ -354,6 +374,47 @@ impl RuleCompiler {
     pub fn reset_cache_metrics(&self) {
         *self.cache_hits.lock().unwrap() = 0;
         *self.cache_misses.lock().unwrap() = 0;
+    }
+}
+
+fn build_unknown_property_plan(element_paths: &[String]) -> UnknownPropertyPlan {
+    let mut resource_roots = HashSet::new();
+    let mut allowed_children: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut allowed_choice_prefixes: HashMap<String, Vec<String>> = HashMap::new();
+
+    for element_path in element_paths {
+        let parts: Vec<&str> = element_path.split('.').collect();
+        let Some(resource_type) = parts.first() else {
+            continue;
+        };
+        resource_roots.insert((*resource_type).to_string());
+
+        if parts.len() < 2 {
+            continue;
+        }
+
+        let parent = parts[..parts.len() - 1].join(".");
+        let child = parts[parts.len() - 1]
+            .split(':')
+            .next()
+            .unwrap_or(parts[parts.len() - 1]);
+        if let Some(prefix) = child.strip_suffix("[x]") {
+            allowed_choice_prefixes
+                .entry(parent)
+                .or_default()
+                .push(prefix.to_string());
+        } else {
+            allowed_children
+                .entry(parent)
+                .or_default()
+                .insert(child.to_string());
+        }
+    }
+
+    UnknownPropertyPlan {
+        resource_roots,
+        allowed_children,
+        allowed_choice_prefixes,
     }
 }
 

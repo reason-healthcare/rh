@@ -41,13 +41,19 @@
 //! ```
 
 use anyhow::{Context, Result};
+use lru::LruCache;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+#[cfg(feature = "perf-timings")]
+use std::time::Instant;
 
-use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathExpression, FhirPathParser};
 
+#[cfg(feature = "perf-timings")]
+use crate::perf::ValidationTimings;
 use crate::profile::ProfileRegistry;
 use crate::rules::{FixedPatternRule, InvariantRule, ReferenceTargetRule, RuleCompiler, TypeRule};
 use crate::terminology::{TerminologyConfig, TerminologyService};
@@ -120,6 +126,7 @@ pub struct FhirValidator {
     valueset_loader: ValueSetLoader,
     questionnaire_loader: crate::questionnaire::QuestionnaireLoader,
     fhirpath_parser: FhirPathParser,
+    invariant_expression_cache: Mutex<LruCache<String, Result<Arc<FhirPathExpression>, String>>>,
     fhirpath_evaluator: FhirPathEvaluator,
     terminology_service: Option<Arc<dyn TerminologyService>>,
     options: ValidationOptions,
@@ -248,6 +255,7 @@ impl FhirValidator {
             valueset_loader: ValueSetLoader::new(package_dirs.clone(), 100),
             questionnaire_loader: crate::questionnaire::QuestionnaireLoader::new(package_dirs, 50),
             fhirpath_parser: FhirPathParser::new(),
+            invariant_expression_cache: Mutex::new(LruCache::new(NonZeroUsize::new(256).unwrap())),
             fhirpath_evaluator: FhirPathEvaluator::new(),
             terminology_service,
             options,
@@ -298,6 +306,18 @@ impl FhirValidator {
     /// # }
     /// ```
     pub fn validate(&self, resource: &Value) -> Result<ValidationResult> {
+        self.validate_inner(
+            resource,
+            #[cfg(feature = "perf-timings")]
+            None,
+        )
+    }
+
+    fn validate_inner(
+        &self,
+        resource: &Value,
+        #[cfg(feature = "perf-timings")] mut timings: Option<&mut ValidationTimings>,
+    ) -> Result<ValidationResult> {
         let mut result = ValidationResult::valid();
 
         if !resource.is_object() {
@@ -438,24 +458,51 @@ impl FhirValidator {
             }
         }
 
+        #[cfg(feature = "perf-timings")]
+        let local_code_start = Instant::now();
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         let ucum_issues = self.validate_ucum_units(resource, resource_type_name);
         for issue in ucum_issues {
             result = result.with_issue(issue);
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.ucum_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         let known_code_issues = self.validate_known_coding_codes(resource, resource_type_name, "");
         for issue in known_code_issues {
             result = result.with_issue(issue);
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.known_coding_code_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         let us_core_ethnicity_issues = validate_us_core_ethnicity_detail_codes(resource);
         for issue in us_core_ethnicity_issues {
             result = result.with_issue(issue);
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.us_core_ethnicity_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         let coding_system_issues = validate_coding_system_uris(resource, resource_type_name, "");
         for issue in coding_system_issues {
             result = result.with_issue(issue);
+        }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings {
+            timings.coding_system_uri_validation += start.elapsed();
+            timings.known_code_terminology_local_checks += local_code_start.elapsed();
         }
 
         let signature_issues = validate_signature_placeholders(resource);
@@ -525,12 +572,47 @@ impl FhirValidator {
         Ok(result)
     }
 
+    #[cfg(feature = "perf-timings")]
+    pub fn validate_with_profile_timed(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+    ) -> Result<(ValidationResult, ValidationTimings)> {
+        let mut timings = ValidationTimings::default();
+
+        let start = Instant::now();
+        let mut result = self.validate_inner(resource, Some(&mut timings))?;
+        timings.base_validation += start.elapsed();
+
+        let profile_result =
+            self.validate_profile_rules_timed(resource, profile_url, &mut timings)?;
+        result.merge(profile_result);
+
+        Ok((result, timings))
+    }
+
     fn validate_profile_rules(
         &self,
         resource: &Value,
         profile_url: &str,
     ) -> Result<ValidationResult> {
-        self.validate_profile_rules_inner(resource, profile_url, &mut Vec::new())
+        self.validate_profile_rules_inner(
+            resource,
+            profile_url,
+            &mut Vec::new(),
+            #[cfg(feature = "perf-timings")]
+            None,
+        )
+    }
+
+    #[cfg(feature = "perf-timings")]
+    fn validate_profile_rules_timed(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+        timings: &mut ValidationTimings,
+    ) -> Result<ValidationResult> {
+        self.validate_profile_rules_inner(resource, profile_url, &mut Vec::new(), Some(timings))
     }
 
     fn validate_profile_rules_inner(
@@ -538,6 +620,7 @@ impl FhirValidator {
         resource: &Value,
         profile_url: &str,
         visited_profiles: &mut Vec<String>,
+        #[cfg(feature = "perf-timings")] mut timings: Option<&mut ValidationTimings>,
     ) -> Result<ValidationResult> {
         let mut result = ValidationResult::valid();
         let lookup_url = canonical_url_without_version(profile_url);
@@ -547,10 +630,16 @@ impl FhirValidator {
         }
         visited_profiles.push(lookup_url.to_string());
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         let snapshot = self
             .profile_registry
             .get_snapshot(profile_url)
             .context("Failed to get snapshot from registry")?;
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.profile_snapshot_lookup += start.elapsed();
+        }
 
         let snapshot = match snapshot {
             Some(s) => s,
@@ -586,8 +675,13 @@ impl FhirValidator {
             .map(canonical_url_without_version)
             .filter(|url| !is_core_fhir_profile_url(url))
         {
-            let base_result =
-                self.validate_profile_rules_inner(resource, base_profile_url, visited_profiles)?;
+            let base_result = self.validate_profile_rules_inner(
+                resource,
+                base_profile_url,
+                visited_profiles,
+                #[cfg(feature = "perf-timings")]
+                timings.as_deref_mut(),
+            )?;
             for mut issue in base_result.issues {
                 if !issue.message.contains("Profile:") {
                     issue.message = format!("[Profile: {base_profile_url}] {}", issue.message);
@@ -596,15 +690,29 @@ impl FhirValidator {
             }
         }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         let rules = self
             .rule_compiler
             .compile(&snapshot)
             .context("Failed to compile validation rules")?;
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.rule_compilation_cache_lookup += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for issue in validate_unknown_properties_against_rules(resource, &rules) {
             result = result.with_issue(issue);
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.unknown_property_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.cardinality_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -620,8 +728,14 @@ impl FhirValidator {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.cardinality_validation += start.elapsed();
+        }
 
         // Type validation
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.type_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -633,7 +747,13 @@ impl FhirValidator {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.type_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.reference_target_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -643,7 +763,13 @@ impl FhirValidator {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.reference_target_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.fixed_pattern_rules {
             let violations = if rule.slice_name.is_some() {
                 validate_fixed_pattern_for_slice(resource, rule, &rules.slicing_rules)
@@ -655,8 +781,14 @@ impl FhirValidator {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.fixed_pattern_validation += start.elapsed();
+        }
 
         // Binding validation
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.binding_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -668,8 +800,14 @@ impl FhirValidator {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.binding_validation += start.elapsed();
+        }
 
         // Invariant validation
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.invariant_rules {
             let violations = self.validate_invariant(resource, rule)?;
 
@@ -685,12 +823,24 @@ impl FhirValidator {
                 result = result.with_issue(violation);
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.invariant_validation += start.elapsed();
+        }
 
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for violation in validate_expression_datatypes(resource, &rules.type_rules) {
             result = result.with_issue(violation);
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.expression_datatype_validation += start.elapsed();
+        }
 
         // Extension validation
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.extension_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -702,8 +852,14 @@ impl FhirValidator {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
         }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings.as_deref_mut() {
+            timings.extension_validation += start.elapsed();
+        }
 
         // Slicing validation
+        #[cfg(feature = "perf-timings")]
+        let start = Instant::now();
         for rule in &rules.slicing_rules {
             if !should_validate_path(&rule.path, resource) {
                 continue;
@@ -718,6 +874,10 @@ impl FhirValidator {
             for violation in violations {
                 result = result.with_issue(violation.with_path(&rule.path));
             }
+        }
+        #[cfg(feature = "perf-timings")]
+        if let Some(timings) = timings {
+            timings.slicing_validation += start.elapsed();
         }
 
         Ok(result)
@@ -1102,7 +1262,7 @@ impl FhirValidator {
         for target_profile in target_profiles {
             if let Ok(Some(profile)) = self.profile_registry.get_snapshot(target_profile) {
                 if !allowed.iter().any(|type_name| type_name == &profile.type_) {
-                    allowed.push(profile.type_);
+                    allowed.push(profile.type_.clone());
                 }
             }
         }
@@ -5469,43 +5629,20 @@ fn validate_unknown_properties_against_rules(
     let Some(resource_type) = resource.get("resourceType").and_then(Value::as_str) else {
         return Vec::new();
     };
-    if !rules.element_paths.iter().any(|path| path == resource_type) {
+    if !rules
+        .unknown_properties
+        .resource_roots
+        .contains(resource_type)
+    {
         return Vec::new();
-    }
-
-    let mut allowed_children: HashMap<String, HashSet<String>> = HashMap::new();
-    let mut allowed_choice_prefixes: HashMap<String, Vec<String>> = HashMap::new();
-
-    for element_path in &rules.element_paths {
-        let parts: Vec<&str> = element_path.split('.').collect();
-        if parts.len() < 2 || parts[0] != resource_type {
-            continue;
-        }
-
-        let parent = parts[..parts.len() - 1].join(".");
-        let child = parts[parts.len() - 1]
-            .split(':')
-            .next()
-            .unwrap_or(parts[parts.len() - 1]);
-        if let Some(prefix) = child.strip_suffix("[x]") {
-            allowed_choice_prefixes
-                .entry(parent)
-                .or_default()
-                .push(prefix.to_string());
-        } else {
-            allowed_children
-                .entry(parent)
-                .or_default()
-                .insert(child.to_string());
-        }
     }
 
     let mut issues = Vec::new();
     validate_unknown_properties_recursive(
         resource,
         resource_type,
-        &allowed_children,
-        &allowed_choice_prefixes,
+        &rules.unknown_properties.allowed_children,
+        &rules.unknown_properties.allowed_choice_prefixes,
         &mut issues,
     );
     issues
@@ -5902,8 +6039,13 @@ impl FhirValidator {
 
         let normalized_expression = normalize_invariant_expression(&rule.expression);
 
+        if let Some(issues) = self.validate_native_invariant(resource, rule, &normalized_expression)
+        {
+            return Ok(issues);
+        }
+
         // Parse the FHIRPath expression
-        let expression = match self.fhirpath_parser.parse(&normalized_expression) {
+        let expression = match self.parse_cached_invariant_expression(&normalized_expression) {
             Ok(expr) => expr,
             Err(e) => {
                 // Handle parse errors gracefully - skip validation but log
@@ -5968,6 +6110,62 @@ impl FhirValidator {
         }
 
         Ok(issues)
+    }
+
+    fn parse_cached_invariant_expression(
+        &self,
+        normalized_expression: &str,
+    ) -> std::result::Result<Arc<FhirPathExpression>, String> {
+        let cached = {
+            let mut cache = self.invariant_expression_cache.lock().unwrap();
+            cache.get(normalized_expression).cloned()
+        };
+        if let Some(cached) = cached {
+            return cached;
+        }
+
+        let parsed = self
+            .fhirpath_parser
+            .parse(normalized_expression)
+            .map(Arc::new)
+            .map_err(|error| error.to_string());
+
+        self.invariant_expression_cache
+            .lock()
+            .unwrap()
+            .put(normalized_expression.to_string(), parsed.clone());
+
+        parsed
+    }
+
+    fn validate_native_invariant(
+        &self,
+        resource: &Value,
+        rule: &crate::rules::InvariantRule,
+        normalized_expression: &str,
+    ) -> Option<Vec<ValidationIssue>> {
+        let native = NativeInvariant::classify(&rule.key, normalized_expression)?;
+        let elements = get_values_at_path(resource, &rule.path);
+
+        if elements.is_empty() {
+            return Some(Vec::new());
+        }
+
+        let element_name = rule.path.split('.').next_back().unwrap_or("element");
+        let mut issues = Vec::new();
+        for (idx, element) in elements.iter().enumerate() {
+            let is_valid = match native {
+                NativeInvariant::Ele1 => native_ele_1_is_valid(element),
+                NativeInvariant::Ext1 => native_ext_1_is_valid(element),
+                NativeInvariant::Per1 => native_per_1_is_valid(element),
+            };
+
+            if !is_valid {
+                issues.push(self.create_element_invariant_issue(rule, element_name, idx));
+            }
+        }
+
+        Some(issues)
     }
 
     fn evaluate_invariant_result_for_key(
@@ -6179,6 +6377,66 @@ fn normalize_invariant_expression(expression: &str) -> String {
         )
         .replace("descendants().as(uri)", "descendants().ofType(uri)")
         .replace("descendants().as(url)", "descendants().ofType(url)")
+}
+
+#[derive(Debug, Clone, Copy)]
+enum NativeInvariant {
+    Ele1,
+    Ext1,
+    Per1,
+}
+
+impl NativeInvariant {
+    fn classify(key: &str, normalized_expression: &str) -> Option<Self> {
+        match (key, normalized_expression) {
+            ("ele-1", "hasValue() or (children().count() > id.count())") => Some(Self::Ele1),
+            ("ext-1", "extension.exists() != value.exists()") => Some(Self::Ext1),
+            ("per-1", "start.hasValue().not() or end.hasValue().not() or (start <= end)") => {
+                Some(Self::Per1)
+            }
+            _ => None,
+        }
+    }
+}
+
+fn native_ele_1_is_valid(element: &Value) -> bool {
+    match element {
+        Value::Null => false,
+        Value::Bool(_) | Value::Number(_) | Value::String(_) => true,
+        Value::Array(items) => items.iter().all(native_ele_1_is_valid),
+        Value::Object(object) => object.keys().any(|key| key != "id"),
+    }
+}
+
+fn native_ext_1_is_valid(element: &Value) -> bool {
+    let Some(object) = element.as_object() else {
+        return true;
+    };
+
+    let has_nested_extension = object.get("extension").is_some_and(|value| match value {
+        Value::Array(items) => !items.is_empty(),
+        Value::Null => false,
+        _ => true,
+    });
+    let has_value = object.iter().any(|(key, value)| {
+        key.starts_with("value") && key.len() > "value".len() && !value.is_null()
+    });
+
+    has_nested_extension != has_value
+}
+
+fn native_per_1_is_valid(element: &Value) -> bool {
+    let Some(object) = element.as_object() else {
+        return true;
+    };
+    let (Some(start), Some(end)) = (
+        object.get("start").and_then(Value::as_str),
+        object.get("end").and_then(Value::as_str),
+    ) else {
+        return true;
+    };
+
+    fhir_datetime_precision(start) == fhir_datetime_precision(end) && start <= end
 }
 
 /// Check if a primitive field has extension elements (_field) without corresponding values (field).
@@ -6752,5 +7010,41 @@ impl Default for FhirValidator {
     fn default() -> Self {
         Self::new(crate::fhir_version::FhirVersion::default(), None)
             .expect("Failed to initialize FhirValidator")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::native_per_1_is_valid;
+    use serde_json::json;
+
+    #[test]
+    fn native_per_1_accepts_missing_start_or_end() {
+        assert!(native_per_1_is_valid(&json!({"start": "2023-06-21"})));
+        assert!(native_per_1_is_valid(&json!({"end": "2023-06-21"})));
+    }
+
+    #[test]
+    fn native_per_1_rejects_mixed_precision_start_end() {
+        assert!(!native_per_1_is_valid(&json!({
+            "start": "2023-06-21",
+            "end": "2023-06-21T06:20:00Z"
+        })));
+    }
+
+    #[test]
+    fn native_per_1_accepts_ordered_same_precision_start_end() {
+        assert!(native_per_1_is_valid(&json!({
+            "start": "2023-06-21T05:20:00Z",
+            "end": "2023-06-21T06:20:00Z"
+        })));
+    }
+
+    #[test]
+    fn native_per_1_rejects_reversed_same_precision_start_end() {
+        assert!(!native_per_1_is_valid(&json!({
+            "start": "2023-06-21T07:20:00Z",
+            "end": "2023-06-21T06:20:00Z"
+        })));
     }
 }

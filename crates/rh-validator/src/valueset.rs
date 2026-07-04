@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValueSet {
@@ -75,7 +75,7 @@ pub struct CodeSystemConcept {
 }
 
 /// Result of checking if a code is in a ValueSet
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CodeInValueSetResult {
     /// Code is in the ValueSet
     Found,
@@ -87,38 +87,56 @@ pub enum CodeInValueSetResult {
 
 pub struct ValueSetLoader {
     package_dirs: Vec<PathBuf>,
-    cache: Mutex<LruCache<String, ValueSet>>,
+    cache: Mutex<LruCache<String, Arc<ValueSet>>>,
+    membership_cache: Mutex<LruCache<String, CodeInValueSetResult>>,
+    codesystem_membership_cache: Mutex<LruCache<String, Option<bool>>>,
 }
 
 impl ValueSetLoader {
     pub fn new(package_dirs: Vec<PathBuf>, capacity: usize) -> Self {
         let capacity = NonZeroUsize::new(capacity).expect("Capacity must be non-zero");
+        let membership_capacity =
+            NonZeroUsize::new(capacity.get() * 10).expect("Capacity must be non-zero");
         Self {
             package_dirs,
             cache: Mutex::new(LruCache::new(capacity)),
+            membership_cache: Mutex::new(LruCache::new(membership_capacity)),
+            codesystem_membership_cache: Mutex::new(LruCache::new(membership_capacity)),
         }
     }
 
     pub fn register_valueset(&self, valueset: ValueSet) {
         let url = valueset.url.clone();
-        self.cache.lock().unwrap().put(url, valueset);
+        self.cache.lock().unwrap().put(url, Arc::new(valueset));
+        self.membership_cache.lock().unwrap().clear();
     }
 
     pub fn load_valueset(&self, url: &str) -> Result<Option<ValueSet>> {
+        Ok(self
+            .load_valueset_shared(url)?
+            .map(|valueset| valueset.as_ref().clone()))
+    }
+
+    fn load_valueset_shared(&self, url: &str) -> Result<Option<Arc<ValueSet>>> {
         let clean_url = Self::strip_version(url);
 
-        if let Some(cached) = self.cache.lock().unwrap().get(clean_url) {
-            return Ok(Some(cached.clone()));
+        let cached = {
+            let mut cache = self.cache.lock().unwrap();
+            cache.get(clean_url).map(Arc::clone)
+        };
+        if let Some(cached) = cached {
+            return Ok(Some(cached));
         }
 
         for package_dir in &self.package_dirs {
             if let Some(valueset) = self.load_from_directory(package_dir, clean_url)? {
                 // Cache ValueSets that have either expansion or compose (can be validated)
                 if valueset.expansion.is_some() || valueset.compose.is_some() {
+                    let valueset = Arc::new(valueset);
                     self.cache
                         .lock()
                         .unwrap()
-                        .put(clean_url.to_string(), valueset.clone());
+                        .put(clean_url.to_string(), Arc::clone(&valueset));
                     return Ok(Some(valueset));
                 }
             }
@@ -133,7 +151,27 @@ impl ValueSetLoader {
         system: &str,
         code: &str,
     ) -> Result<CodeInValueSetResult> {
-        if let Some(valueset) = self.load_valueset(url)? {
+        let cache_key = membership_cache_key(url, system, code);
+        let cached = {
+            let mut cache = self.membership_cache.lock().unwrap();
+            cache.get(&cache_key).copied()
+        };
+        if let Some(cached) = cached {
+            return Ok(cached);
+        }
+
+        let result = self.contains_code_uncached(url, system, code)?;
+        self.membership_cache.lock().unwrap().put(cache_key, result);
+        Ok(result)
+    }
+
+    fn contains_code_uncached(
+        &self,
+        url: &str,
+        system: &str,
+        code: &str,
+    ) -> Result<CodeInValueSetResult> {
+        if let Some(valueset) = self.load_valueset_shared(url)? {
             let mut can_determine_membership = false;
 
             // First check expansion (pre-expanded codes)
@@ -226,7 +264,7 @@ impl ValueSetLoader {
     }
 
     pub fn contains_string_value(&self, url: &str, value: &str) -> Result<bool> {
-        if let Some(valueset) = self.load_valueset(url)? {
+        if let Some(valueset) = self.load_valueset_shared(url)? {
             // Check expansion
             if let Some(expansion) = &valueset.expansion {
                 if let Some(contains) = &expansion.contains {
@@ -257,7 +295,7 @@ impl ValueSetLoader {
     }
 
     pub fn is_extensional(&self, url: &str) -> Result<bool> {
-        if let Some(valueset) = self.load_valueset(url)? {
+        if let Some(valueset) = self.load_valueset_shared(url)? {
             Ok(valueset.expansion.is_some())
         } else {
             Ok(false)
@@ -303,6 +341,24 @@ impl ValueSetLoader {
         system: &str,
         code: &str,
     ) -> Result<Option<bool>> {
+        let cache_key = codesystem_membership_cache_key(system, code);
+        let cached = {
+            let mut cache = self.codesystem_membership_cache.lock().unwrap();
+            cache.get(&cache_key).copied()
+        };
+        if let Some(cached) = cached {
+            return Ok(cached);
+        }
+
+        let result = self.codesystem_contains_code_uncached(system, code)?;
+        self.codesystem_membership_cache
+            .lock()
+            .unwrap()
+            .put(cache_key, result);
+        Ok(result)
+    }
+
+    fn codesystem_contains_code_uncached(&self, system: &str, code: &str) -> Result<Option<bool>> {
         for package_dir in &self.package_dirs {
             if let Some(codesystem) = self.load_codesystem_from_directory(package_dir, system)? {
                 if let Some(concepts) = &codesystem.concept {
@@ -382,6 +438,20 @@ impl ValueSetLoader {
         let cache = self.cache.lock().unwrap();
         (cache.len(), cache.cap().get())
     }
+}
+
+fn membership_cache_key(url: &str, system: &str, code: &str) -> String {
+    let url = ValueSetLoader::strip_version(url);
+    format!(
+        "{}:{url}{}:{system}{}:{code}",
+        url.len(),
+        system.len(),
+        code.len()
+    )
+}
+
+fn codesystem_membership_cache_key(system: &str, code: &str) -> String {
+    format!("{}:{system}{code}", system.len())
 }
 
 fn concepts_contain_code(concepts: &[CodeSystemConcept], code: &str) -> bool {
