@@ -36,12 +36,67 @@ Completed:
 - A2: changed `RuleCompiler` rule cache to store shared
   `Arc<CompiledValidationRules>` values and avoid holding the rule cache mutex
   while compiling.
+- Gate 1: added feature-gated timing instrumentation with
+  `--features perf-timings`. The default build remains uninstrumented.
+- Binding hot path: changed `ValueSetLoader` to use shared cached ValueSets
+  internally and added a local membership-result cache for repeated
+  `(ValueSet, system, code)` checks. The public `load_valueset()` return type
+  remains unchanged.
+- Complex-patient code-system hot path: added a local CodeSystem
+  membership-result cache for repeated `(CodeSystem, code)` checks during
+  known coding code validation.
+- Invariant hot path: added a validator-level parsed FHIRPath expression cache
+  for normalized invariant expressions and native fast paths for `ele-1` and
+  `ext-1`.
+- Native invariant follow-up: added a native fast path for the `per-1` Period
+  invariant, preserving the existing local precision/order semantics.
+- A4: moved unknown-property allowed-child and choice-prefix maps into
+  `CompiledValidationRules` so warmed validation reuses a precomputed plan.
 
 Validation:
 
 - `cargo test -p rh-validator` passed after Gate 0.
 - `cargo test -p rh-validator` passed after A1.
 - `cargo test -p rh-validator` passed after A2.
+- `cargo test -p rh-validator` passed after Gate 1.
+- `cargo bench -p rh-validator --bench perf_smoke --features perf-timings -- validate_simple_patient`
+  passed and emitted a timing breakdown.
+- `cargo test -p rh-validator` passed after the ValueSet cache and membership
+  cache changes.
+- `cargo bench -p rh-validator --bench perf_smoke` passed after the membership
+  cache changes.
+- `cargo test -p rh-validator` passed after CodeSystem membership caching.
+- `cargo bench -p rh-validator --bench perf_smoke --features perf-timings -- validate_complex_patient`
+  passed and emitted the complex-patient timing breakdown.
+- `cargo bench -p rh-validator --bench perf_smoke` passed after CodeSystem
+  membership caching.
+- Invariant-focused tests passed after invariant parse caching and native
+  `ele-1` / `ext-1` fast paths:
+  `invariant_scoping_test`, `ext1_fix_test`,
+  `invariant_validation_comprehensive_test`, and `extension_test`.
+- `cargo test -p rh-validator` passed after invariant parse caching and native
+  invariant fast paths.
+- `cargo bench -p rh-validator --bench perf_smoke --features perf-timings`
+  passed after invariant parse caching and native invariant fast paths.
+- `cargo bench -p rh-validator --bench perf_smoke` passed after invariant parse
+  caching and native invariant fast paths.
+- `cargo test -p rh-validator native_per_1` passed after the native `per-1`
+  fast path.
+- `cargo test -p rh-validator --test conformance_quick_wins_test period_invariant`
+  passed after the native `per-1` fast path.
+- `cargo bench -p rh-validator --bench perf_smoke --features perf-timings`
+  passed after the native `per-1` fast path.
+- `cargo test -p rh-validator` passed after A4 precomputed unknown-property
+  maps.
+- `cargo bench -p rh-validator --bench perf_smoke --features perf-timings`
+  passed after A4 precomputed unknown-property maps.
+- `cargo bench -p rh-validator --bench perf_smoke` passed after A4
+  precomputed unknown-property maps.
+- `cargo clippy -p rh-validator --all-targets --all-features -- -D warnings`
+  passed after A4 precomputed unknown-property maps.
+- `just check` passed after A4 precomputed unknown-property maps.
+- `cargo bench -p rh-validator --bench validation` passed after A4
+  precomputed unknown-property maps.
 
 Smoke benchmark, Gate 0 plus A1:
 
@@ -69,6 +124,195 @@ Warm cache metrics in the post-A2 smoke run:
 Profile Cache: 6/6 hits (100.0% hit rate)
 Rule Cache: 1/1 hits (100.0% hit rate)
 ```
+
+Gate 1 timed simple-patient breakdown:
+
+| Section | Time |
+|---------|------|
+| Base validation | 0.048 ms |
+| Profile snapshot lookup | 0.001 ms |
+| Rule compilation/cache lookup | 0.005 ms |
+| Unknown-property validation | 0.035 ms |
+| Cardinality validation | 0.025 ms |
+| Type validation | 0.023 ms |
+| Reference target validation | 0.004 ms |
+| Fixed/pattern validation | 0.000 ms |
+| Binding validation | 80.830 ms |
+| Invariant validation | 0.511 ms |
+| Expression datatype validation | 0.000 ms |
+| Extension validation | 0.002 ms |
+| Slicing validation | 0.000 ms |
+| Known-code/terminology local checks within base | 0.008 ms |
+| Total timed sections | 81.485 ms |
+
+The immediate next optimization target should be binding validation, not
+FHIRPath invariants, for the explicit simple US Core Patient case measured
+here.
+
+Smoke benchmark after ValueSet membership caching:
+
+| Benchmark | Mean | Criterion change |
+|-----------|------|------------------|
+| `validate_simple_patient` | 535.39 us | approximately -99.3% from pre-cache binding path |
+| `validate_auto_detect` | 801.16 us | -99.482% |
+| `validate_complex_patient` | 198.07 ms | -67.634% |
+| `warmed_batch_validation/10` | 5.4828 ms | -99.273% |
+| `warmed_batch_validation/50` | 26.673 ms | -99.282% |
+
+Feature-enabled timed simple-patient breakdown after membership caching:
+
+| Section | Time |
+|---------|------|
+| Base validation | 0.045 ms |
+| Profile snapshot lookup | 0.002 ms |
+| Rule compilation/cache lookup | 0.001 ms |
+| Unknown-property validation | 0.034 ms |
+| Cardinality validation | 0.024 ms |
+| Type validation | 0.022 ms |
+| Reference target validation | 0.007 ms |
+| Fixed/pattern validation | 0.000 ms |
+| Binding validation | 0.006 ms |
+| Invariant validation | 0.445 ms |
+| Expression datatype validation | 0.000 ms |
+| Extension validation | 0.001 ms |
+| Slicing validation | 0.000 ms |
+| Known-code/terminology local checks within base | 0.007 ms |
+| Total timed sections | 0.588 ms |
+
+The explicit simple-patient path is now below both the first milestone
+(`<15 ms`) and the target (`<5 ms`) in the smoke benchmark. The next measured
+hot spot for this simple case is invariant validation. Complex patient
+validation remains much slower and should be measured with timing enabled
+before choosing the next complex-resource optimization.
+
+Complex-patient timing before CodeSystem membership caching:
+
+| Section | Time |
+|---------|------|
+| Base validation | 191.294 ms |
+| Known-code/terminology local checks within base | 191.120 ms |
+| Known coding code validation | 191.101 ms |
+| Invariant validation | 1.458 ms |
+| Total timed sections | 192.867 ms |
+
+Smoke benchmark after CodeSystem membership caching:
+
+| Benchmark | Mean |
+|-----------|------|
+| `validate_simple_patient` | 539.20 us |
+| `validate_auto_detect` | 791.21 us |
+| `validate_complex_patient` | 1.6895 ms |
+| `warmed_batch_validation/10` | 5.3037 ms |
+| `warmed_batch_validation/50` | 26.729 ms |
+
+Feature-enabled timed complex-patient breakdown after CodeSystem membership
+caching:
+
+| Section | Time |
+|---------|------|
+| Base validation | 0.205 ms |
+| Known-code/terminology local checks within base | 0.029 ms |
+| Known coding code validation | 0.011 ms |
+| Invariant validation | 1.393 ms |
+| Total timed sections | 1.701 ms |
+
+The complex-patient path is now also below the `<5 ms` single-resource target
+in the smoke benchmark. The next measured hot spot for both simple and complex
+profile validation is invariant validation.
+
+Smoke benchmark after invariant parse caching plus native `ele-1` / `ext-1`:
+
+| Benchmark | Mean |
+|-----------|------|
+| `validate_simple_patient` | 187.95 us |
+| `validate_auto_detect` | 270.36 us |
+| `validate_complex_patient` | 416.31 us |
+| `warmed_batch_validation/10` | 1.8808 ms |
+| `warmed_batch_validation/50` | 9.3392 ms |
+
+Feature-enabled timing after invariant parse caching plus native `ele-1` /
+`ext-1`:
+
+| Section | Simple Patient | Complex Patient |
+|---------|----------------|-----------------|
+| Base validation | 0.049 ms | 0.205 ms |
+| Invariant validation | 0.095 ms | 0.162 ms |
+| Total timed sections | 0.227 ms | 0.479 ms |
+
+At this point, no measured single-resource smoke target is above 0.5 ms. The
+remaining cost is spread across base scanning, invariants, path navigation, and
+small rule loops rather than one dominant bottleneck.
+
+Smoke benchmark after adding native `per-1`:
+
+| Benchmark | Mean | Criterion change |
+|-----------|------|------------------|
+| `validate_simple_patient` | 188.46 us | no material change |
+| `validate_auto_detect` | 268.28 us | no material change |
+| `validate_complex_patient` | 413.94 us | no material change |
+| `warmed_batch_validation/10` | 1.8789 ms | no material change |
+| `warmed_batch_validation/50` | 9.2203 ms | no material change |
+
+Feature-enabled timing after native `per-1`:
+
+| Section | Simple Patient | Complex Patient |
+|---------|----------------|-----------------|
+| Base validation | 0.043 ms | 0.201 ms |
+| Invariant validation | 0.092 ms | 0.161 ms |
+| Total timed sections | 0.218 ms | 0.468 ms |
+
+The `per-1` change is behavior-preserving groundwork for Period-heavy
+resources; the current Patient smoke cases do not exercise enough Period
+validation for a material benchmark shift.
+
+Smoke benchmark after A4 precomputed unknown-property maps:
+
+| Benchmark | Mean | Criterion change |
+|-----------|------|------------------|
+| `validate_simple_patient` | 166.97 us | -9.7695% |
+| `validate_auto_detect` | 240.74 us | -11.065% |
+| `validate_complex_patient` | 396.41 us | -3.9710% |
+| `warmed_batch_validation/10` | 1.6596 ms | -11.423% |
+| `warmed_batch_validation/50` | 8.4175 ms | -11.058% |
+
+Feature-enabled timing after A4:
+
+| Section | Simple Patient | Complex Patient |
+|---------|----------------|-----------------|
+| Base validation | 0.044 ms | 0.199 ms |
+| Unknown-property validation | 0.003 ms | 0.005 ms |
+| Invariant validation | 0.093 ms | 0.157 ms |
+| Total timed sections | 0.196 ms | 0.437 ms |
+
+A4 removed most of the unknown-property setup cost from warmed validation:
+simple Patient unknown-property validation dropped from about 0.026 ms to
+0.003 ms. The next planned path work is A3/C3, but the remaining cost is now
+split across path navigation, invariant checks, base scanning, and small rule
+loops.
+
+Full Criterion benchmark after A4:
+
+| Benchmark | Mean | Approx throughput |
+|-----------|------|-------------------|
+| `validate_simple_patient` | 169.87 us | 5,887/sec |
+| `validate_complex_patient` | 392.87 us | 2,545/sec |
+| `validate_auto_detect` | 245.32 us | 4,076/sec |
+| `batch_validation/10` | 1.7261 ms | 5,793/sec |
+| `batch_validation/50` | 8.6101 ms | 5,807/sec |
+| `batch_validation/100` | 16.987 ms | 5,887/sec |
+| `batch_validation/500` | 85.514 ms | 5,847/sec |
+| `validate_cached_profile` | 171.28 us | 5,838/sec |
+
+Full benchmark cache metrics:
+
+```text
+Profile Cache: 378402/378402 hits (100.0% hit rate)
+Rule Cache: 63067/63067 hits (100.0% hit rate)
+```
+
+The full benchmark confirms the smoke harness was representative for the
+Patient workloads. Batch throughput stays roughly linear through 500 resources
+at about 5.8k resources/sec without batch parallelism.
 
 ## Operating Rules For Implementing Agents
 
@@ -865,6 +1109,14 @@ Add a row after each completed task.
 | Date | Task | Simple explicit | Auto-detect | Complex | Batch 50 throughput | Notes |
 |------|------|-----------------|-------------|---------|---------------------|-------|
 | 2026-07-03 | Baseline from `PERFORMANCE.md` | 82.21 ms | 163.88 ms | 635.67 ms | 12.31/sec | Apple M1 Max, macOS 26.4 |
+| 2026-07-03 | Gate 0 + A1 | 84.125 ms | 166.55 ms | 640.71 ms | 12.79/sec | Fast smoke harness plus shared snapshot cache |
+| 2026-07-03 | A2 | 74.311 ms | 149.39 ms | 611.96 ms | 13.37/sec | Shared compiled-rule cache |
+| 2026-07-03 | ValueSet membership cache | 535.39 us | 801.16 us | 198.07 ms | 1,875/sec | Binding validation no longer dominates simple Patient |
+| 2026-07-03 | CodeSystem membership cache | 539.20 us | 791.21 us | 1.6895 ms | 1,871/sec | Complex known-code checks no longer dominate |
+| 2026-07-03 | Invariant parse cache + native `ele-1`/`ext-1` | 187.95 us | 270.36 us | 416.31 us | 5,354/sec | Invariant hot path mostly removed |
+| 2026-07-03 | Native `per-1` | 188.46 us | 268.28 us | 413.94 us | 5,423/sec | Neutral for Patient smoke cases; Period groundwork |
+| 2026-07-03 | A4 unknown-property plan | 166.97 us | 240.74 us | 396.41 us | 5,940/sec | Precomputed unknown-property maps in compiled rules |
+| 2026-07-03 | A4 full Criterion benchmark | 169.87 us | 245.32 us | 392.87 us | 5,807/sec | Full validation suite, 100 samples, batch through 500 |
 
 ## Suggested First Implementation Sequence
 

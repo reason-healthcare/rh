@@ -2,20 +2,25 @@
 
 ## Current Snapshot
 
-- **Status:** Needs performance work
+- **Status:** Current performance branch meets the documented smoke targets
 - **Measured:** July 3, 2026
 - **Command:** `cargo bench -p rh-validator --bench validation`
 - **Environment:** Apple M1 Max, 10 cores, 32 GiB RAM, macOS 26.4
 
-The current validator is materially slower than the historical December 2024 Phase 8 report. The latest measured simple US Core Patient validation is about **82 ms/resource**, and warmed batch throughput is about **12 resources/sec**.
+The full Criterion baseline from `origin/main` was materially slower than the
+historical December 2024 Phase 8 report: simple US Core Patient validation was
+about **82 ms/resource**, and warmed batch throughput was about **12
+resources/sec**. On the current performance branch, the reduced smoke harness
+measures simple US Core Patient validation at about **170 us/resource** and
+warmed batch-50 throughput at about **5,807 resources/sec**.
 
 ## Performance Targets & Results
 
 | Metric | Target | Latest Result | Status |
 |--------|--------|---------------|--------|
-| Single validation latency | < 5 ms | 82.21 ms | Miss |
-| Auto-detected validation latency | < 5 ms | 163.88 ms | Miss |
-| Batch throughput | > 500 resources/sec | 12.05-12.31 resources/sec | Miss |
+| Single validation latency | < 5 ms | 169.87 us | Pass |
+| Auto-detected validation latency | < 5 ms | 245.32 us | Pass |
+| Batch throughput | > 500 resources/sec | ~5,807 resources/sec | Pass |
 | Cache hit rate after warmup | > 90% | 100.0% | Pass |
 
 ## Benchmark Results
@@ -51,6 +56,122 @@ Warm cache probe from the same smoke run:
 ```text
 Profile Cache: 6/6 hits (100.0% hit rate)
 Rule Cache: 1/1 hits (100.0% hit rate)
+```
+
+### Perf Smoke After ValueSet Membership Caching
+
+Binding validation was the dominant cost in the feature-enabled timing
+breakdown, spending about 80 ms in the explicit simple-patient path. After
+adding a local membership-result cache for repeated `(ValueSet, system, code)`
+checks, the reduced smoke harness measured:
+
+| Benchmark | Mean | Change |
+|-----------|------|--------|
+| `validate_simple_patient` | 535.39 us | approximately -99.3% from pre-cache binding path |
+| `validate_auto_detect` | 801.16 us | -99.482% |
+| `validate_complex_patient` | 198.07 ms | -67.634% |
+| `warmed_batch_validation/10` | 5.4828 ms | -99.273% |
+| `warmed_batch_validation/50` | 26.673 ms | -99.282% |
+
+The feature-enabled simple-patient timing breakdown after this change shows
+binding validation at 0.006 ms and invariant validation as the largest remaining
+simple-patient section at about 0.445 ms.
+
+### Perf Smoke After CodeSystem Membership Caching
+
+Complex Patient timing showed the remaining latency was dominated by
+`validate_known_coding_codes`, which repeatedly checked package CodeSystems.
+After adding a local `(CodeSystem, code)` membership-result cache, the reduced
+smoke harness measured:
+
+| Benchmark | Mean |
+|-----------|------|
+| `validate_simple_patient` | 539.20 us |
+| `validate_auto_detect` | 791.21 us |
+| `validate_complex_patient` | 1.6895 ms |
+| `warmed_batch_validation/10` | 5.3037 ms |
+| `warmed_batch_validation/50` | 26.729 ms |
+
+The feature-enabled complex-patient timing breakdown after this change shows
+base validation at 0.205 ms, known coding code validation at 0.011 ms, and
+invariant validation as the largest section at about 1.393 ms.
+
+### Perf Smoke After Invariant Parse Caching And Native Core Invariants
+
+Invariant validation became the largest measured section after terminology
+membership caching. Adding a validator-level parsed FHIRPath expression cache
+and native fast paths for the common `ele-1` and `ext-1` invariants produced:
+
+| Benchmark | Mean |
+|-----------|------|
+| `validate_simple_patient` | 187.95 us |
+| `validate_auto_detect` | 270.36 us |
+| `validate_complex_patient` | 416.31 us |
+| `warmed_batch_validation/10` | 1.8808 ms |
+| `warmed_batch_validation/50` | 9.3392 ms |
+
+The feature-enabled timing breakdown now shows invariant validation at about
+0.095 ms for simple Patient and 0.162 ms for complex Patient.
+
+### Perf Smoke After Native Period Invariant
+
+Adding a native fast path for the `per-1` Period invariant preserved the
+existing local precision/order semantics. The Patient smoke cases are not
+Period-heavy, so this change was expected to be neutral for the headline
+benchmarks:
+
+| Benchmark | Mean |
+|-----------|------|
+| `validate_simple_patient` | 188.46 us |
+| `validate_auto_detect` | 268.28 us |
+| `validate_complex_patient` | 413.94 us |
+| `warmed_batch_validation/10` | 1.8789 ms |
+| `warmed_batch_validation/50` | 9.2203 ms |
+
+The feature-enabled timing breakdown after this change shows invariant
+validation at about 0.092 ms for simple Patient and 0.161 ms for complex
+Patient.
+
+### Perf Smoke After Precomputed Unknown-Property Maps
+
+Unknown-property validation previously rebuilt allowed-child and choice-prefix
+maps from compiled element paths for every resource validation. Moving those
+maps into `CompiledValidationRules` reduced warmed validation cost:
+
+| Benchmark | Mean | Change |
+|-----------|------|--------|
+| `validate_simple_patient` | 166.97 us | -9.7695% |
+| `validate_auto_detect` | 240.74 us | -11.065% |
+| `validate_complex_patient` | 396.41 us | -3.9710% |
+| `warmed_batch_validation/10` | 1.6596 ms | -11.423% |
+| `warmed_batch_validation/50` | 8.4175 ms | -11.058% |
+
+The feature-enabled timing breakdown after this change shows unknown-property
+validation at about 0.003 ms for simple Patient and 0.005 ms for complex
+Patient.
+
+### Full Criterion Benchmark After A4
+
+The full `benches/validation.rs` Criterion suite was refreshed after the A4
+changes. These measurements use 100 samples and include the larger batch groups
+that the smoke harness omits:
+
+| Benchmark | Mean | Approx throughput |
+|-----------|------|-------------------|
+| `validate_simple_patient` | 169.87 us | 5,887/sec |
+| `validate_complex_patient` | 392.87 us | 2,545/sec |
+| `validate_auto_detect` | 245.32 us | 4,076/sec |
+| `batch_validation/10` | 1.7261 ms | 5,793/sec |
+| `batch_validation/50` | 8.6101 ms | 5,807/sec |
+| `batch_validation/100` | 16.987 ms | 5,887/sec |
+| `batch_validation/500` | 85.514 ms | 5,847/sec |
+| `validate_cached_profile` | 171.28 us | 5,838/sec |
+
+Full benchmark cache metrics:
+
+```text
+Profile Cache: 378402/378402 hits (100.0% hit rate)
+Rule Cache: 63067/63067 hits (100.0% hit rate)
 ```
 
 ### Batch Validation

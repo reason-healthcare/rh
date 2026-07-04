@@ -24,6 +24,7 @@ doctest = false
 [features]
 default = []
 fhir-test-cases = ["zip", "tar", "flate2"]
+perf-timings = []
 
 [dependencies]
 # Workspace dependencies

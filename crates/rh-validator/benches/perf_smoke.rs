@@ -160,6 +160,14 @@ fn print_warm_cache_metrics_once(validator: &FhirValidator, patient: &serde_json
     );
 }
 
+#[cfg(feature = "perf-timings")]
+fn print_timing_breakdown_once(validator: &FhirValidator, patient: &serde_json::Value) {
+    let (_, timings) = validator
+        .validate_with_profile_timed(patient, US_CORE_PATIENT_PROFILE)
+        .unwrap();
+    println!("\n{timings}");
+}
+
 fn bench_simple_patient_validation(c: &mut Criterion) {
     let Some(validator) = setup_validator() else {
         println!("Skipping benchmark: US Core package not found");
@@ -168,6 +176,8 @@ fn bench_simple_patient_validation(c: &mut Criterion) {
 
     let patient = create_simple_patient();
     warm_profile_validation(&validator, &patient);
+    #[cfg(feature = "perf-timings")]
+    print_timing_breakdown_once(&validator, &patient);
 
     c.bench_function("validate_simple_patient", |b| {
         b.iter(|| {
@@ -200,6 +210,8 @@ fn bench_complex_patient_validation(c: &mut Criterion) {
 
     let patient = create_complex_patient();
     warm_profile_validation(&validator, &patient);
+    #[cfg(feature = "perf-timings")]
+    print_timing_breakdown_once(&validator, &patient);
 
     c.bench_function("validate_complex_patient", |b| {
         b.iter(|| {
