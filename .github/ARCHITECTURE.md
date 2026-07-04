@@ -62,7 +62,7 @@ rh-vcl: rh-foundation
 | `rh-cql` | CQL-to-ELM compiler, evaluator, explain mode, source maps, and WASM facade |
 | `rh-fhirpath` | Parser and evaluator for FHIRPath expressions, with R4 type metadata and WASM facade |
 | `rh-fsh` | nom-based FSH parser and FHIR JSON exporter with rayon parallel export |
-| `rh-validator` | Profile-based FHIR R4 validation with snapshot and FHIRPath integration |
+| `rh-validator` | Profile-based FHIR R4 validation with cached snapshots, compiled rules, FHIRPath invariant evaluation, and local terminology checks |
 | `rh-vcl` | ValueSet Compose Language parser, translator, explainer, and WASM facade |
 | `rh-packager` | FHIR Package assembler with built-in snapshot, validate, CQL, and FSH processors |
 | `rh-hl7-fhir-r4-core` | Pre-generated R4 FHIR types, traits, bindings, extensions, and metadata |

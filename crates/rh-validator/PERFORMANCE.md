@@ -25,9 +25,10 @@ warmed batch-50 throughput at about **5,807 resources/sec**.
 
 ## Benchmark Results
 
-### Criterion Benchmarks
+### Origin/Main Baseline
 
-These results come from Criterion estimates saved under `target/criterion/*/new/estimates.json`.
+These results were collected from `origin/main` before the 0.2.5 performance
+work and are retained as the comparison baseline.
 
 | Benchmark | Mean | 95% CI |
 |-----------|------|--------|
@@ -35,7 +36,9 @@ These results come from Criterion estimates saved under `target/criterion/*/new/
 | `validate_complex_patient` | 635.67 ms | 633.51-638.01 ms |
 | `validate_auto_detect` | 163.88 ms | 163.09-164.74 ms |
 
-The full Criterion batch group was not completed because the current timings would require a long run for 100 samples across all batch sizes. Batch measurements below were collected with the same validator setup and simple patient payload after one warmup validation.
+The full Criterion batch group was not completed on the baseline because the
+timings required a long run for 100 samples across all batch sizes. Historical
+batch measurements for that baseline appear below.
 
 ### Perf Smoke After Initial Cache Sharing
 
@@ -174,7 +177,7 @@ Profile Cache: 378402/378402 hits (100.0% hit rate)
 Rule Cache: 63067/63067 hits (100.0% hit rate)
 ```
 
-### Batch Validation
+### Historical Pre-Optimization Batch Validation
 
 | Batch Size | Elapsed | Per Resource | Throughput |
 |------------|---------|--------------|------------|
@@ -183,25 +186,33 @@ Rule Cache: 63067/63067 hits (100.0% hit rate)
 | 100 | 8.24 s | 82.36 ms | 12.14 resources/sec |
 | 500 | 41.50 s | 83.00 ms | 12.05 resources/sec |
 
-**Analysis:** Batch performance is linear and sequential. Cache effectiveness remains strong, but the current hot path is expensive enough that cache hits do not keep validation near the original latency or throughput targets.
+**Analysis:** Before the 0.2.5 optimization work, batch performance was linear
+and sequential but dominated by the same hot path as single-resource validation.
+Cache effectiveness was strong, but cache hits did not keep validation near the
+latency or throughput targets.
 
 ### Cache Performance
 
-Warmed batch probe across 660 measured validations:
+The final full Criterion benchmark after A4 measured:
 
 ```text
-Profile Cache Hit Rate: 100.0% (3960 hits, 0 misses)
-Rule Cache Hit Rate:    100.0% (660 hits, 0 misses)
+Profile Cache: 378402/378402 hits (100.0% hit rate)
+Rule Cache: 63067/63067 hits (100.0% hit rate)
 ```
 
 ## Implementation Details
 
 ### Cache Behavior
 
-The validator still exposes cache instrumentation through `cache_metrics()` and `reset_cache_metrics()`. Current warm-cache measurements show no misses in the measured path:
+The validator still exposes cache instrumentation through `cache_metrics()` and
+`reset_cache_metrics()`. Current warm-cache measurements show no misses in the
+measured profile/rule path:
 
 - Profile/snapshot cache: 100-entry LRU
 - Rule cache: 100-entry LRU
+- Parsed invariant-expression cache: 256-entry LRU
+- ValueSet and CodeSystem membership caches: 10x the ValueSet resource cache
+  capacity
 - Warm validation path: 100% hit rate in the latest batch probe
 
 ### Benchmark Suite
@@ -216,32 +227,40 @@ The Criterion suite lives in `benches/validation.rs` and includes:
 
 ## Performance Characteristics
 
-- **Single-resource latency:** Current simple patient validation is ~82 ms.
-- **Complex profile cost:** Extension-heavy patient validation is ~636 ms.
-- **Auto-detect overhead:** `validate_auto` is about 2x the explicit simple profile path.
-- **Batch scaling:** Per-resource time stays around 81-83 ms across 10 to 500 resources.
-- **Primary bottleneck:** Sequential validation hot path, not cache miss behavior.
+- **Single-resource latency:** Current warmed simple Patient validation is about
+  170 us.
+- **Complex profile cost:** Extension-heavy Patient validation is about 393 us
+  after local terminology and invariant hot-path caching.
+- **Auto-detect overhead:** `validate_auto` is about 245 us, roughly 1.4x the
+  explicit simple profile path.
+- **Batch scaling:** Warmed batch validation stays around 5,800 resources/sec
+  from 10-resource batches through 500-resource batches.
+- **Primary remaining bottleneck:** Generic path traversal and FHIRPath context
+  setup for rules that do not yet have specialized compiled/native execution.
 
 ## Optimization Opportunities
 
-1. **Profile validation hot-path profiling** (High Impact)
-   - Profile where the ~82 ms simple-patient path is spent.
-   - Focus first on snapshot traversal, rule evaluation, and repeated path/FHIRPath work.
+1. **Validation-session path cache** (Medium to High Impact)
+   - Cache repeated path lookups during one resource validation.
+   - Reuse the same lookup results across type, binding, fixed/pattern, and
+     invariant checks.
 
-2. **Auto-detect deduplication** (High Impact)
-   - Investigate why `validate_auto` is roughly 2x explicit profile validation.
+2. **Auto-detect deduplication** (Medium Impact)
    - Avoid duplicate base/profile work when `meta.profile` contains one known profile.
 
-3. **Compiled FHIRPath/rule reuse** (Medium to High Impact)
-   - Cache parsed or compiled invariant expressions where possible.
-   - Avoid repeated construction in warmed validations.
+3. **FHIRPath context allocation reduction** (Medium Impact)
+   - Avoid cloning the full JSON resource for generic invariant evaluation where
+     the FHIRPath API can support borrowed or shared context state.
 
-4. **Parallel batch validation** (High Impact after hot-path work)
+4. **Parallel batch validation** (Medium Impact after single-resource work)
    - Implement rayon-based batch validation once shared evaluator state is thread-safe.
-   - Parallelism can improve throughput, but it will not fix single-resource latency.
+   - Parallelism can improve throughput, but it will not improve single-resource
+     latency.
 
-5. **JSON/path allocation reduction** (Medium Impact)
-   - Audit cloning and temporary allocation in profile traversal and path construction.
+5. **Cold package resource indexing** (Medium Impact)
+   - Index ValueSet and CodeSystem resources in package directories to reduce
+     cache-miss directory scans for workloads with many cold terminology
+     references.
 
 ## Running Benchmarks
 

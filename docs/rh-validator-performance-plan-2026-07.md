@@ -5,9 +5,10 @@
 - **Scope guardrail:** Changes may touch `rh-validator`, `rh-fhirpath`, and `rh-foundation` only when they measurably improve `rh-validator` validation latency or throughput.
 - **Explicit non-goal:** Do not implement parallel batch validation in this plan. Single-resource latency must improve first.
 
-## Current Baseline
+## Original Baseline
 
-Use `crates/rh-validator/PERFORMANCE.md` as the baseline source of truth.
+Use `crates/rh-validator/PERFORMANCE.md` as the benchmark source of truth. The
+original baseline from `origin/main` before this plan was:
 
 | Metric | Current | Target |
 |--------|---------|--------|
@@ -18,6 +19,22 @@ Use `crates/rh-validator/PERFORMANCE.md` as the baseline source of truth.
 | Warm cache hit rate | 100.0% | > 90% |
 
 The batch throughput target cannot be reached by parallelism alone. Even perfect 10-core scaling from 82 ms/resource would only reach about 120 resources/sec. The first milestone is to reduce explicit simple-patient latency to under 15 ms, then under 5 ms.
+
+## Current Status
+
+The A-phase work exceeded the original latency and throughput targets before
+parallel batch validation:
+
+| Metric | Current result | Target | Status |
+|--------|----------------|--------|--------|
+| Explicit simple US Core Patient | 169.87 us | < 5 ms | Exceeds |
+| Auto-detected US Core Patient | 245.32 us | < 5 ms | Exceeds |
+| Complex US Core Patient | 392.87 us | Track down | Improved |
+| Warmed batch throughput | ~5,807 resources/sec | > 500 resources/sec | Exceeds |
+| Warm profile/rule cache hit rate | 100.0% | > 90% | Meets |
+
+Remaining work should be justified by fresh profiles rather than continuing the
+original list mechanically.
 
 ## Progress Log
 
@@ -1118,9 +1135,9 @@ Add a row after each completed task.
 | 2026-07-03 | A4 unknown-property plan | 166.97 us | 240.74 us | 396.41 us | 5,940/sec | Precomputed unknown-property maps in compiled rules |
 | 2026-07-03 | A4 full Criterion benchmark | 169.87 us | 245.32 us | 392.87 us | 5,807/sec | Full validation suite, 100 samples, batch through 500 |
 
-## Suggested First Implementation Sequence
+## Implementation Sequence Status
 
-This is the safest path for a less powerful agent:
+Completed in A-phase:
 
 1. Add `perf_smoke.rs`.
 2. Add timing breakdown instrumentation.
@@ -1131,12 +1148,16 @@ This is the safest path for a less powerful agent:
 7. Add native fast path for `ext-1`.
 8. Add native fast path for `per-1`.
 9. Precompute unknown-property maps.
-10. Introduce `PathSpec` and migrate `should_validate_path`.
-11. Migrate `get_values_at_path` to `PathSpec`.
-12. Add `ValidationSession` with no indexing.
-13. Add path lookup cache to `ValidationSession`.
-14. Dedupe `validate_auto` profile plan.
-15. Refresh `crates/rh-validator/PERFORMANCE.md`.
+10. Refresh `crates/rh-validator/PERFORMANCE.md`.
+
+Candidate next phase, pending a fresh profile showing it is worth the added
+complexity:
+
+1. Introduce `PathSpec` and migrate `should_validate_path`.
+2. Migrate `get_values_at_path` to `PathSpec`.
+3. Add `ValidationSession` with no indexing.
+4. Add path lookup cache to `ValidationSession`.
+5. Dedupe `validate_auto` profile planning.
 
 ## When To Stop And Reassess
 

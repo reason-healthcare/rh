@@ -54,8 +54,8 @@ FHIR `OperationOutcome`.
 |---|---|
 | `validator.rs` | Main orchestrator, base validators, profile-rule execution, FHIRPath invariants, bundle/reference checks, terminology hooks, registration APIs. |
 | `profile.rs` | Loads StructureDefinitions from the default FHIR package directory and optional package directory, generates snapshots, caches snapshots, supports dynamic profile registration. |
-| `rules.rs` | Compiles StructureDefinition snapshot elements into typed rule vectors for cardinality, types, references, bindings, fixed/pattern values, invariants, extensions, and slicing. |
-| `valueset.rs` | Loads and caches ValueSet resources from packages or runtime registration, resolves simple expansion/compose membership, checks local CodeSystem contents. |
+| `rules.rs` | Compiles StructureDefinition snapshot elements into typed rule vectors for cardinality, types, references, bindings, fixed/pattern values, invariants, extensions, slicing, and unknown-property plans. |
+| `valueset.rs` | Loads and caches ValueSet resources from packages or runtime registration, caches ValueSet/CodeSystem membership checks, resolves simple expansion/compose membership, and checks local CodeSystem contents. |
 | `terminology.rs` | Defines the `TerminologyService` trait, mock implementation, blocking HTTP implementation, and cached wrapper with optional disk persistence. |
 | `questionnaire.rs` | Loads and caches Questionnaires, builds a `linkId` map, and validates QuestionnaireResponse items, answer cardinality, answer types, options, and value sets. |
 | `report.rs` | CLI-oriented text, JSON, batch, and OperationOutcome renderers. |
@@ -71,7 +71,8 @@ FHIR `OperationOutcome`.
 3. Create a `ProfileRegistry`, which loads StructureDefinitions into a
    `HashMap` and into `rh-foundation`'s `SnapshotGenerator`.
 4. Create reusable helpers: `RuleCompiler`, `ValueSetLoader`,
-   `QuestionnaireLoader`, `FhirPathParser`, and `FhirPathEvaluator`.
+   `QuestionnaireLoader`, `FhirPathParser`, a parsed invariant-expression LRU,
+   and `FhirPathEvaluator`.
 5. Initialize mutable runtime registries for supplements, CodeSystems, and
    Measures behind `RwLock`s.
 
@@ -152,6 +153,7 @@ It walks `snapshot.element` once to collect:
 - FHIRPath invariant rules
 - extension slice requirements
 - slicing discriminators and slice definitions
+- precomputed allowed-child and choice-prefix maps for unknown-property checks
 
 It also supplements snapshot-derived bindings with differential bindings when
 needed. If a StructureDefinition has no snapshot, it falls back to limited
@@ -165,25 +167,33 @@ typed vectors that can be walked repeatedly without rediscovering rule metadata.
 Invariant rules are evaluated through `rh-fhirpath`:
 
 1. Normalize the invariant expression.
-2. Parse it with `FhirPathParser`.
-3. Evaluate resource-level invariants against the whole resource.
-4. Evaluate element-level invariants once per element found at the rule path,
+2. Try native Rust fast paths for common core invariants (`ele-1`, `ext-1`, and
+   `per-1`).
+3. For remaining expressions, parse through a validator-level LRU keyed by the
+   normalized expression.
+4. Evaluate resource-level invariants against the whole resource.
+5. Evaluate element-level invariants once per element found at the rule path,
    using the full resource as root and the matched element as current context.
-5. Interpret boolean, empty, and singleton collection results according to the
+6. Interpret boolean, empty, and singleton collection results according to the
    validator's invariant semantics.
 
-The parser/evaluator are stored on `FhirValidator` and reused, but parsed
-FHIRPath expressions are not currently cached by `rh-validator`.
+The parser/evaluator are stored on `FhirValidator` and reused. Parsed FHIRPath
+expressions are cached with parse errors as well as successful parses so
+repeated invalid profile constraints do not reparse on every resource.
 
 ### Terminology and ValueSet Flow
 
 Bindings first try local ValueSet resolution through `ValueSetLoader`:
 
 1. Strip any canonical `|version` suffix.
-2. Check the in-memory LRU cache.
+2. Check the in-memory ValueSet resource LRU cache.
 3. Scan configured package directories for matching JSON ValueSet resources.
-4. Decide membership from expansions or simple compose includes.
-5. For required bindings that cannot be decided locally, optionally fall back to
+4. Check the membership-result LRU for repeated `(ValueSet, system, code)`
+   requests.
+5. Decide membership from expansions or simple compose includes.
+6. For compose includes that reference complete CodeSystems, check the
+   `(CodeSystem, code)` membership-result LRU before scanning package files.
+7. For required bindings that cannot be decided locally, optionally fall back to
    the configured `TerminologyService`.
 
 Terminology service calls are trait-based:
@@ -203,17 +213,22 @@ stable set of packages and profiles.
 | Snapshot LRU cache | `ProfileRegistry` | Avoids repeated snapshot generation for the same profile URL. |
 | Compiled rule LRU cache | `RuleCompiler` | Avoids rebuilding rule vectors from snapshots on repeated profile validation. |
 | ValueSet LRU cache | `ValueSetLoader` | Avoids repeated package directory scans and JSON parsing for ValueSets. |
+| ValueSet membership LRU cache | `ValueSetLoader` | Avoids repeated expansion/compose walks for the same binding code checks. |
+| CodeSystem membership LRU cache | `ValueSetLoader` | Avoids repeated package CodeSystem scans for known code checks. |
+| Parsed invariant-expression LRU cache | `FhirValidator` | Avoids reparsing repeated FHIRPath invariant expressions, including parse failures. |
+| Native core invariant fast paths | `validator.rs` | Evaluates common `ele-1`, `ext-1`, and `per-1` constraints without invoking the FHIRPath engine. |
+| Precomputed unknown-property plan | `CompiledValidationRules` | Reuses allowed-child and choice-prefix maps instead of rebuilding them per resource. |
 | Questionnaire LRU cache | `QuestionnaireLoader` | Avoids repeated Questionnaire package lookups and parsing. |
 | Terminology cache | `CachedTerminologyService` | Avoids repeated remote terminology calls and can persist results across runs. |
 | Borrowed JSON traversal | `validator.rs` helpers | Most path lookups return `&Value`, reducing cloning while walking resources. |
 | Typed compiled rules | `rules.rs` | Moves StructureDefinition interpretation out of the hot validation path. |
 | Canonical URL normalization | profile/value set helpers | Improves cache reuse across versioned and unversioned canonical references. |
 
-`PERFORMANCE.md` records the current benchmark profile from the Phase 8 work:
-single-resource validation around 3.9 ms for cached simple Patient validation,
-complex Patient validation around 9.3 ms, and a 100 percent profile/rule cache
-hit rate in the benchmark workload. Batch validation in that benchmark remains
-sequential at about 252 resources per second.
+`PERFORMANCE.md` records the current benchmark profile from the 0.2.5
+performance work: warmed simple US Core Patient validation around 170 us,
+complex Patient validation around 393 us, auto-detect around 245 us, and
+warmed batch throughput around 5,800 resources per second with 100 percent
+profile/rule cache hit rates in the benchmark workload.
 
 ## Rust Features Used For Performance and Safety
 
@@ -242,12 +257,12 @@ sequential at about 252 resources per second.
 - `rh-validator` does not currently expose a parallel `validate_batch()` API.
   The CLI batch path loops over input resources sequentially. The `rayon`
   dependency is present for future batch work.
-- Parsed FHIRPath invariant expressions are not cached in this crate, so repeated
-  invariant-heavy profiles still pay parse cost per validation.
 - ValueSet and CodeSystem package lookup still scans package JSON files on cache
   misses. Workloads with many cold ValueSet references would benefit from an
   indexed package resource catalog.
+- Generic FHIRPath invariant evaluation still clones the root resource and
+  current element into `EvaluationContext`; native invariant fast paths avoid
+  this for the common core constraints implemented so far.
 - Dynamic profiles registered at runtime are stored as provided; they are not
   loaded into `SnapshotGenerator`, so callers should provide profiles with the
   snapshot data needed for full profile validation.
-
