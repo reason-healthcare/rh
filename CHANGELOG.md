@@ -5,6 +5,18 @@ All notable user-facing changes to Reason Health are recorded here.
 This project follows semantic versioning while the public API is still in the
 0.x series. Release dates use `YYYY-MM-DD`.
 
+## [0.2.5] - 2026-07-04
+
+### Changed
+
+- Improved `rh-validator` warmed US Core Patient validation performance by
+  caching repeated ValueSet and CodeSystem membership checks, caching parsed
+  invariant expressions, adding native fast paths for common core invariants,
+  and precomputing unknown-property lookup plans.
+- Added a durable `rh-validator` smoke benchmark and refreshed the validator
+  performance report with full Criterion benchmark results through 500-resource
+  batches.
+
 ## [0.2.4] - 2026-07-02
 
 ### Changed
@@ -58,5 +70,6 @@ This project follows semantic versioning while the public API is still in the
   include resolution consistently with normal compilation.
 - Fixed CQL conformance expected-string handling to avoid double-unescaping.
 
+[0.2.5]: https://github.com/reason-healthcare/rh/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/reason-healthcare/rh/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/reason-healthcare/rh/compare/v0.2.2...v0.2.3
