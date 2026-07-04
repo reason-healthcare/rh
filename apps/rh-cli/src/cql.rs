@@ -10,6 +10,10 @@ use tracing::{error, info};
 
 use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
+use rh_cql::analytics::{
+    data_requirements, format_data_requirements, format_dependencies, format_elm_inspection,
+    format_lower_check, format_relational_plan, inspect_elm, lower_check, relational_plan,
+};
 use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
@@ -61,6 +65,40 @@ pub enum ExplainMode {
         /// Path to CQL file, or "-" to read from stdin
         #[clap(value_name = "FILE")]
         input: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ElmCommands {
+    /// Inspect compiled ELM structure
+    Inspect {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+    /// Show expression, parameter, value set, code, and function dependencies
+    Deps {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
     },
 }
 
@@ -148,6 +186,66 @@ pub enum CqlCommands {
         mode: ExplainMode,
     },
 
+    /// Inspect compiled ELM output
+    #[clap(subcommand)]
+    Elm(ElmCommands),
+
+    /// Extract CQL data requirements from compiled ELM
+    DataRequirements {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Build an inspectable relational plan from compiled ELM
+    Plan {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Planning target label
+        #[clap(long, default_value = "relational")]
+        target: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Report whether compiled ELM can lower to a target
+    LowerCheck {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Lowering target label
+        #[clap(long, default_value = "sql-on-fhir")]
+        target: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
     /// Evaluate a named expression in a compiled CQL library
     Eval {
         /// CQL file to evaluate, or "-" to read from stdin
@@ -232,6 +330,32 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
         }
         CqlCommands::Explain { mode } => {
             run_explain(mode)?;
+        }
+        CqlCommands::Elm(mode) => {
+            run_elm(mode, ctx)?;
+        }
+        CqlCommands::DataRequirements {
+            input,
+            display_format,
+            lib_path,
+        } => {
+            run_data_requirements(&input, &display_format, &lib_path, ctx)?;
+        }
+        CqlCommands::Plan {
+            input,
+            target,
+            display_format,
+            lib_path,
+        } => {
+            run_plan(&input, &target, &display_format, &lib_path, ctx)?;
+        }
+        CqlCommands::LowerCheck {
+            input,
+            target,
+            display_format,
+            lib_path,
+        } => {
+            run_lower_check(&input, &target, &display_format, &lib_path, ctx)?;
         }
         CqlCommands::Eval {
             file,
@@ -584,6 +708,139 @@ fn run_explain(mode: ExplainMode) -> Result<()> {
         }
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// ELM analytics services
+// ---------------------------------------------------------------------------
+
+fn compile_library_for_analysis(
+    input: &str,
+    lib_paths: &[PathBuf],
+) -> Result<rh_cql::elm::Library> {
+    let source = read_source(input)?;
+    let output = compile_with_search_dirs(&source, input, lib_paths, None)?;
+    if !output.result.is_success() {
+        return Err(report_compile_failure(
+            &output.result.errors,
+            &output.result.warnings,
+        ));
+    }
+    Ok(output.result.library)
+}
+
+fn print_analysis<T: Serialize>(
+    ctx: &OutputContext,
+    command: &str,
+    display_format: &str,
+    value: &T,
+    pretty: String,
+) -> Result<()> {
+    if ctx.is_json() {
+        return print_envelope(ctx, &Envelope::ok(value, command));
+    }
+
+    match display_format {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(value)?);
+        }
+        "pretty" => {
+            print!("{pretty}");
+        }
+        other => bail!("Unknown display format '{other}'. Valid values: pretty, json"),
+    }
+
+    Ok(())
+}
+
+fn run_elm(mode: ElmCommands, ctx: &OutputContext) -> Result<()> {
+    match mode {
+        ElmCommands::Inspect {
+            input,
+            display_format,
+            lib_path,
+        } => {
+            let library = compile_library_for_analysis(&input, &lib_path)?;
+            let inspection = inspect_elm(&library);
+            print_analysis(
+                ctx,
+                "cql elm inspect",
+                &display_format,
+                &inspection,
+                format_elm_inspection(&inspection),
+            )?;
+        }
+        ElmCommands::Deps {
+            input,
+            display_format,
+            lib_path,
+        } => {
+            let library = compile_library_for_analysis(&input, &lib_path)?;
+            let inspection = inspect_elm(&library);
+            print_analysis(
+                ctx,
+                "cql elm deps",
+                &display_format,
+                &inspection.dependencies,
+                format_dependencies(&inspection),
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+fn run_data_requirements(
+    input: &str,
+    display_format: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let requirements = data_requirements(&library);
+    print_analysis(
+        ctx,
+        "cql data-requirements",
+        display_format,
+        &requirements,
+        format_data_requirements(&requirements),
+    )
+}
+
+fn run_plan(
+    input: &str,
+    target: &str,
+    display_format: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let plan = relational_plan(&library, target);
+    print_analysis(
+        ctx,
+        "cql plan",
+        display_format,
+        &plan,
+        format_relational_plan(&plan),
+    )
+}
+
+fn run_lower_check(
+    input: &str,
+    target: &str,
+    display_format: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let report = lower_check(&library, target);
+    print_analysis(
+        ctx,
+        "cql lower-check",
+        display_format,
+        &report,
+        format_lower_check(&report),
+    )
 }
 
 // ---------------------------------------------------------------------------

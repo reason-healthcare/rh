@@ -64,6 +64,7 @@
 //! - [`reporting`]: Error reporting with source locations and severity levels
 //! - [`preprocessor`]: Preprocessor for extracting library info from AST
 
+pub mod analytics;
 pub mod compiler;
 pub mod conversion;
 pub mod datatype;

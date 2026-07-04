@@ -399,6 +399,64 @@ define Numbers: { 1, 2 }
 }
 
 // ---------------------------------------------------------------------------
+// analytics tooling
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_elm_inspect_stdin() {
+    rh_cmd()
+        .args(["cql", "elm", "inspect", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Library: SimpleMath"))
+        .stdout(predicate::str::contains("Expressions: 2"));
+}
+
+#[test]
+fn test_elm_deps_json_envelope() {
+    rh_cmd()
+        .args(["--format", "json", "cql", "elm", "deps", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\": true"))
+        .stdout(predicate::str::contains("cql elm deps"));
+}
+
+#[test]
+fn test_data_requirements_stdin() {
+    rh_cmd()
+        .args(["cql", "data-requirements", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("resources: none"));
+}
+
+#[test]
+fn test_relational_plan_stdin() {
+    rh_cmd()
+        .args(["cql", "plan", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Target: relational"))
+        .stdout(predicate::str::contains("X"));
+}
+
+#[test]
+fn test_lower_check_stdin() {
+    rh_cmd()
+        .args(["cql", "lower-check", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Target: sql-on-fhir"))
+        .stdout(predicate::str::contains("Supported:"));
+}
+
+// ---------------------------------------------------------------------------
 // compile – exit code behavior (task 2.4)
 // ---------------------------------------------------------------------------
 

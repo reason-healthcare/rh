@@ -112,6 +112,102 @@ rh cql info library.cql
 
 ---
 
+### `rh cql elm`
+
+Inspect compiled ELM output without writing the full ELM JSON.
+
+**Usage:**
+```bash
+rh cql elm inspect [OPTIONS] <FILE>
+rh cql elm deps [OPTIONS] <FILE>
+```
+
+**Arguments:**
+- `<FILE>` - Path to a CQL file, or `-` to read from stdin
+
+**Options:**
+- `--display-format <FORMAT>` - Display format: `pretty`, `json` [default: `pretty`]
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Examples:**
+
+```bash
+# Summarize compiled ELM structure
+rh cql elm inspect measure.cql
+
+# Show expression, parameter, value set, code, and function dependencies
+rh cql elm deps measure.cql
+```
+
+---
+
+### `rh cql data-requirements`
+
+Extract resource, retrieve, terminology, and parameter requirements from
+compiled ELM.
+
+**Usage:**
+```bash
+rh cql data-requirements [OPTIONS] <FILE>
+```
+
+**Options:**
+- `--display-format <FORMAT>` - Display format: `pretty`, `json` [default: `pretty`]
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Example:**
+
+```bash
+rh cql data-requirements measure.cql
+```
+
+---
+
+### `rh cql plan`
+
+Build a first-pass relational plan from compiled ELM.
+
+**Usage:**
+```bash
+rh cql plan [OPTIONS] <FILE>
+```
+
+**Options:**
+- `--target <TARGET>` - Planning target label [default: `relational`]
+- `--display-format <FORMAT>` - Display format: `pretty`, `json` [default: `pretty`]
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Example:**
+
+```bash
+rh cql plan measure.cql --target relational
+```
+
+---
+
+### `rh cql lower-check`
+
+Report whether compiled ELM can lower to a target backend with the current
+first-pass relational lowerer.
+
+**Usage:**
+```bash
+rh cql lower-check [OPTIONS] <FILE>
+```
+
+**Options:**
+- `--target <TARGET>` - Lowering target label [default: `sql-on-fhir`]
+- `--display-format <FORMAT>` - Display format: `pretty`, `json` [default: `pretty`]
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Example:**
+
+```bash
+rh cql lower-check measure.cql --target sql-on-fhir
+```
+
+---
+
 ### `rh cql eval`
 
 Evaluate a named expression definition in a compiled CQL library.
