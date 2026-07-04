@@ -8,8 +8,8 @@ use tracing::{info, warn};
 
 use rh_codegen::quality::run_quality_checks;
 use rh_codegen::{
-    generate_crate_structure, generate_module_files, parse_package_metadata, CodeGenerator,
-    CodegenConfig, CrateGenerationParams, QualityConfig,
+    generate_crate_readme, generate_crate_structure, generate_module_files, parse_package_metadata,
+    CodeGenerator, CodegenConfig, CrateGenerationParams, QualityConfig,
 };
 use rh_foundation::loader::{LoaderConfig, PackageLoader};
 
@@ -104,6 +104,10 @@ pub struct CodegenArgs {
     /// When not provided, the name is auto-derived from the FHIR package name.
     #[arg(long)]
     pub crate_name: Option<String>,
+
+    /// Refresh README.md for an already generated crate without rewriting sources.
+    #[arg(long, hide = true)]
+    pub refresh_readme: bool,
 }
 
 pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()> {
@@ -140,7 +144,7 @@ pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()
     let output_path = Path::new(&args.output);
 
     // Check if output directory exists and is not empty before doing any work
-    if is_directory_non_empty(output_path)? {
+    if !args.refresh_readme && is_directory_non_empty(output_path)? {
         if !args.force {
             return Err(anyhow::anyhow!(
                 "Output directory '{}' is not empty. Use --force to overwrite existing files.",
@@ -191,7 +195,7 @@ pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()
 
     // Remove existing output directory if --force was specified and directory was non-empty.
     // Preserve hand-authored directories (tests/, examples/) that codegen doesn't touch.
-    if args.force && is_directory_non_empty(output_path)? {
+    if !args.refresh_readme && args.force && is_directory_non_empty(output_path)? {
         info!(
             "Removing existing contents of output directory: {}",
             output_path.display()
@@ -242,6 +246,21 @@ pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()
 
     info!("Using canonical URL from package.json: {}", canonical);
 
+    if args.refresh_readme {
+        generate_crate_readme(&CrateGenerationParams {
+            output: output_path,
+            package: &args.package,
+            version: &version,
+            canonical_url: &canonical,
+            author: &author,
+            description: &description,
+            command_invoked: &command_invoked,
+            crate_name: args.crate_name.as_deref(),
+        })?;
+        info!("Refreshed README.md at: {}", output_path.display());
+        return Ok(());
+    }
+
     // Generate crate structure (Cargo.toml, lib.rs, directory structure) BEFORE processing files
     generate_crate_structure(CrateGenerationParams {
         output: output_path,
@@ -266,6 +285,18 @@ pub async fn handle_command(args: CodegenArgs, ctx: &OutputContext) -> Result<()
 
     // Process JSON files using organized structure (includes enum generation and Phase 3)
     process_json_files_organized(&mut generator, effective_package_dir, output_path)?;
+
+    // Refresh README after generation so package statistics reflect the populated crate.
+    generate_crate_readme(&CrateGenerationParams {
+        output: output_path,
+        package: &args.package,
+        version: &version,
+        canonical_url: &canonical,
+        author: &author,
+        description: &description,
+        command_invoked: &command_invoked,
+        crate_name: args.crate_name.as_deref(),
+    })?;
 
     info!(
         "Successfully generated complete crate at: {}",

@@ -41,7 +41,7 @@ pub mod validation_trait_generator;
 
 // Re-export key functionality
 pub use crate_generator::{
-    generate_crate_structure, parse_package_metadata, CrateGenerationParams,
+    generate_crate_readme, generate_crate_structure, parse_package_metadata, CrateGenerationParams,
 };
 pub use documentation_generator::DocumentationGenerator;
 pub use enum_generator::EnumGenerator;

@@ -315,6 +315,11 @@ regen-r5:
         echo "Warning: R5 extensions package not available, skipping"
     fi
     rm -rf "$EXT_OUTPUT"
+    cargo run -p rh-cli -- codegen hl7.fhir.r5.core 5.0.0 \
+        --output "$OUTPUT" \
+        --crate-name rh-hl7-fhir-r5-core \
+        --force \
+        --refresh-readme
     # Restore tests
     if [ -d "$TEST_BACKUP" ] && [ "$(ls -A "$TEST_BACKUP" 2>/dev/null)" ]; then
         mkdir -p "$OUTPUT/tests"

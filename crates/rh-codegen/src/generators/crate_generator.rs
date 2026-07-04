@@ -34,6 +34,16 @@ pub struct CrateGenerationParams<'a> {
 /// Statistics about generated crate content
 #[derive(Debug, Clone)]
 pub struct CrateStatistics {
+    /// Number of generated resource modules
+    pub num_resources: usize,
+    /// Number of generated datatype modules
+    pub num_datatypes: usize,
+    /// Number of generated profile modules
+    pub num_profiles: usize,
+    /// Number of generated extension modules
+    pub num_extensions: usize,
+    /// Number of generated required-binding enum modules
+    pub num_bindings: usize,
     /// Number of generated structs
     pub num_structs: usize,
     /// Number of generated enums
@@ -66,14 +76,6 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     fs::create_dir_all(&traits_dir)?;
     fs::create_dir_all(&bindings_dir)?;
     fs::create_dir_all(&profiles_dir)?;
-
-    // Generate statistics by counting organized files (if any exist from organized generation)
-    let stats = generate_crate_statistics_from_organized_dirs(
-        &resource_dir,
-        &datatypes_dir,
-        &extensions_dir,
-        &primitives_dir,
-    )?;
 
     // Generate Cargo.toml
     let cargo_toml_content = generate_cargo_toml(
@@ -117,7 +119,30 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
         &profiles_dir,
     )?;
 
-    // Generate README.md
+    // Generate an initial README.md. CLI codegen refreshes this after type generation so
+    // the committed generated crates have accurate statistics.
+    generate_crate_readme(&params)?;
+
+    // Run quality checks as a final step
+    //let quality_config = QualityConfig::default();
+    //run_quality_checks(params.output, &quality_config)
+    //   .map_err(|e| anyhow::anyhow!("Quality checks failed: {e}"))?;
+
+    Ok(())
+}
+
+/// Generate or refresh README.md content for a generated FHIR crate.
+pub fn generate_crate_readme(params: &CrateGenerationParams<'_>) -> Result<()> {
+    let src_dir = params.output.join("src");
+    let stats = generate_crate_statistics_from_organized_dirs(
+        &src_dir.join("resources"),
+        &src_dir.join("datatypes"),
+        &src_dir.join("profiles"),
+        &src_dir.join("extensions"),
+        &src_dir.join("primitives"),
+        &src_dir.join("bindings"),
+    )?;
+
     let readme_content = generate_readme_md(
         params.package,
         params.version,
@@ -130,11 +155,6 @@ pub fn generate_crate_structure(params: CrateGenerationParams) -> Result<()> {
     );
     let readme_path = params.output.join("README.md");
     fs::write(&readme_path, readme_content)?;
-
-    // Run quality checks as a final step
-    //let quality_config = QualityConfig::default();
-    //run_quality_checks(params.output, &quality_config)
-    //   .map_err(|e| anyhow::anyhow!("Quality checks failed: {e}"))?;
 
     Ok(())
 }
@@ -182,7 +202,7 @@ readme = "README.md"
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-phf = {{ version = "0.11", features = ["macros"] }}
+phf = {{ version = "0.14", features = ["macros"] }}
 once_cell = "1.19"
 rh-foundation = {{ path = "{rh_foundation_path}", version = "{rh_foundation_version}" }}
 
@@ -375,13 +395,25 @@ fn generate_mod_rs_for_directory(dir: &Path, description: &str) -> Result<String
 fn generate_crate_statistics_from_organized_dirs(
     resource_dir: &Path,
     datatypes_dir: &Path,
+    profiles_dir: &Path,
     extensions_dir: &Path,
     primitives_dir: &Path,
+    bindings_dir: &Path,
 ) -> Result<CrateStatistics> {
-    let mut num_structs = 0;
+    let num_resources = count_rs_modules(resource_dir)?;
+    let num_datatypes = count_rs_modules(datatypes_dir)?;
+    let num_profiles = count_rs_modules(profiles_dir)?;
+    let num_extensions = count_rs_modules(extensions_dir)?;
+    let num_bindings = count_rs_modules(bindings_dir)?;
 
-    // Count files in each directory
-    for dir in [resource_dir, datatypes_dir, extensions_dir, primitives_dir] {
+    let mut num_structs = 0;
+    for dir in [
+        resource_dir,
+        datatypes_dir,
+        profiles_dir,
+        extensions_dir,
+        primitives_dir,
+    ] {
         if dir.exists() {
             for entry in fs::read_dir(dir)? {
                 let entry = entry?;
@@ -404,11 +436,36 @@ fn generate_crate_statistics_from_organized_dirs(
     }
 
     Ok(CrateStatistics {
+        num_resources,
+        num_datatypes,
+        num_profiles,
+        num_extensions,
+        num_bindings,
         num_structs,
-        num_enums: 0,
-        total_types: num_structs,
+        num_enums: num_bindings,
+        total_types: num_structs + num_bindings,
         canonical_url: "Unknown".to_string(),
     })
+}
+
+fn count_rs_modules(dir: &Path) -> Result<usize> {
+    if !dir.exists() {
+        return Ok(0);
+    }
+
+    let mut count = 0;
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file()
+            && path.extension().is_some_and(|ext| ext == "rs")
+            && path.file_stem().and_then(|s| s.to_str()) != Some("mod")
+        {
+            count += 1;
+        }
+    }
+
+    Ok(count)
 }
 
 /// Generate README.md content with package information and statistics
@@ -448,9 +505,15 @@ fn generate_readme_md(
     content.push_str(&format!("* **Canonical URL** `{canonical_url}`\n\n"));
 
     content.push_str(&format!(
-        "**Statistics: {} structs, {} enums, {} total types**\n\n",
-        stats.num_structs, stats.num_enums, stats.total_types
+        "**Statistics:** {} resources, {} datatypes, {} profiles, {} extensions, and {} required-binding enum modules.\n\n",
+        stats.num_resources,
+        stats.num_datatypes,
+        stats.num_profiles,
+        stats.num_extensions,
+        stats.num_bindings
     ));
+
+    content.push_str(&version_specific_notes(package, version));
 
     content.push_str(&format!("## Description\n\n{description}"));
 
@@ -475,7 +538,10 @@ fn generate_readme_md(
     content.push_str("Add this crate to your `Cargo.toml`:\n\n");
     content.push_str("```toml\n");
     content.push_str("[dependencies]\n");
-    content.push_str(&format!("{crate_name} = \"0.1.0\"\n"));
+    content.push_str(&format!(
+        "{crate_name} = \"{}\"\n",
+        env!("CARGO_PKG_VERSION")
+    ));
     content.push_str("```\n\n");
 
     content.push_str("### Deserializing FHIR Resources\n\n");
@@ -610,6 +676,8 @@ fn generate_readme_md(
     );
     content.push_str("- **metadata/** - Type metadata split by category (resources, datatypes, primitives) for faster incremental compilation\n\n");
 
+    content.push_str(&compatibility_notes(package, version, stats.num_bindings));
+
     content.push_str("## Regenerating This Crate\n\n");
     content.push_str("To regenerate this crate with updated FHIR definitions:\n\n");
     content.push_str("```bash\n");
@@ -630,6 +698,111 @@ fn generate_readme_md(
     ));
 
     content
+}
+
+fn fhir_release_label(package: &str) -> Option<String> {
+    package
+        .split('.')
+        .find(|seg| {
+            seg.len() >= 2 && seg.starts_with('r') && seg[1..].chars().all(|c| c.is_ascii_digit())
+        })
+        .map(|seg| seg.to_ascii_uppercase())
+}
+
+fn version_specific_notes(package: &str, version: &str) -> String {
+    let mut content = String::new();
+    content.push_str("**Version-specific notes:**\n\n");
+
+    match fhir_release_label(package).as_deref() {
+        Some("R4") => {
+            content.push_str(&format!(
+                "- Generated from FHIR R4 `{package}` version `{version}`.\n"
+            ));
+            content.push_str(
+                "- Repeating fields are emitted as `Vec<T>` with serde defaults so missing JSON\n",
+            );
+            content.push_str("  arrays deserialize as empty vectors.\n");
+            content.push_str(
+                "- Metadata is split under `src/metadata/` by resource, datatype, primitive,\n",
+            );
+            content.push_str("  profile, and other categories.\n");
+            content.push_str(
+                "- R4 extension definitions are generated under `src/extensions/`; use the\n",
+            );
+            content.push_str(
+                "  generated `extension_by_url()` helpers from accessor traits to inspect\n",
+            );
+            content.push_str("  extension lists.\n\n");
+        }
+        Some("R5") => {
+            content.push_str(&format!(
+                "- Generated from FHIR R5 `{package}` version `{version}`.\n"
+            ));
+            content.push_str(
+                "- R5-only model shapes such as `integer64` and `CodeableReference` are emitted\n",
+            );
+            content.push_str("  from the package definitions.\n");
+            content.push_str(
+                "- Repeating fields are emitted as `Vec<T>` with serde defaults so missing JSON\n",
+            );
+            content.push_str("  arrays deserialize as empty vectors.\n");
+            content.push_str(
+                "- Metadata is split under `src/metadata/` by resource, datatype, primitive,\n",
+            );
+            content.push_str("  profile, and other categories.\n");
+            content.push_str(
+                "- R5 extension definitions are generated under `src/extensions/`; use the\n",
+            );
+            content.push_str(
+                "  generated `extension_by_url()` helpers from accessor traits to inspect\n",
+            );
+            content.push_str("  extension lists.\n\n");
+        }
+        Some(label) => {
+            content.push_str(&format!(
+                "- Generated from FHIR {label} `{package}` version `{version}`.\n"
+            ));
+            content.push_str(
+                "- Repeating fields are emitted as `Vec<T>` with serde defaults so missing JSON\n",
+            );
+            content.push_str("  arrays deserialize as empty vectors.\n");
+            content.push_str(
+                "- Metadata is split under `src/metadata/` by resource, datatype, primitive,\n",
+            );
+            content.push_str("  profile, and other categories.\n\n");
+        }
+        None => {
+            content.push_str(&format!(
+                "- Generated from FHIR package `{package}` version `{version}`.\n"
+            ));
+            content.push_str(
+                "- Repeating fields are emitted as `Vec<T>` with serde defaults so missing JSON\n",
+            );
+            content.push_str("  arrays deserialize as empty vectors.\n\n");
+        }
+    }
+
+    content
+}
+
+fn compatibility_notes(package: &str, version: &str, num_bindings: usize) -> String {
+    match fhir_release_label(package).as_deref() {
+        Some("R4") => format!(
+            "R4-specific compatibility:\n\n\
+             - The generated model targets FHIR R4 `{version}`; use the R5 crate for R5-only\n\
+             \u{20} datatypes such as `integer64` and `CodeableReference`.\n\
+             - Binding enum modules are generated for required value sets; this crate\n\
+             \u{20} currently has {num_bindings} required-binding modules.\n\n"
+        ),
+        Some("R5") => format!(
+            "R5-specific compatibility:\n\n\
+             - This crate targets FHIR R5 `{version}`; do not use it for R4 validation or R4\n\
+             \u{20} package output.\n\
+             - Binding enum modules are generated for required value sets; this crate\n\
+             \u{20} currently has {num_bindings} required-binding modules.\n\n"
+        ),
+        _ => String::new(),
+    }
 }
 
 /// Generate a prelude module with commonly used trait re-exports
@@ -806,5 +979,41 @@ mod tests {
             assert!(toml.contains(key), "missing workspace inheritance: {key}");
         }
         assert!(toml.contains(r#""fhir-r4""#));
+        assert!(toml.contains(r#"phf = { version = "0.14""#));
+    }
+
+    #[test]
+    fn readme_uses_generated_counts_and_crate_version() {
+        let stats = CrateStatistics {
+            num_resources: 148,
+            num_datatypes: 51,
+            num_profiles: 43,
+            num_extensions: 385,
+            num_bindings: 213,
+            num_structs: 627,
+            num_enums: 213,
+            total_types: 840,
+            canonical_url: "http://hl7.org/fhir".to_string(),
+        };
+        let readme = generate_readme_md(
+            "hl7.fhir.r4.core",
+            "4.0.1",
+            "http://hl7.org/fhir",
+            "HL7 Inc",
+            "FHIR R4",
+            "rh codegen hl7.fhir.r4.core 4.0.1",
+            &stats,
+            Some("rh-hl7-fhir-r4-core"),
+        );
+
+        assert!(readme.contains(
+            "**Statistics:** 148 resources, 51 datatypes, 43 profiles, 385 extensions, and 213 required-binding enum modules."
+        ));
+        assert!(readme.contains(&format!(
+            "rh_hl7_fhir_r4_core = \"{}\"",
+            env!("CARGO_PKG_VERSION")
+        )));
+        assert!(readme.contains("Generated from FHIR R4 `hl7.fhir.r4.core` version `4.0.1`."));
+        assert!(readme.contains("currently has 213 required-binding modules."));
     }
 }
