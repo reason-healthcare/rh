@@ -418,6 +418,9 @@ pub struct MeasureRuntimeParameter {
 pub struct MeasureRuntimeResultDefinition {
     /// Stable measure result name.
     pub name: String,
+    /// Result kind. Current runtime consumers support `population`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
     /// Result source. First slice supports `query`.
     pub source: String,
     /// Query result column to collect.
@@ -1537,6 +1540,7 @@ define "Has Diabetes":
             vec!["views/condition_view.json".to_string()],
             vec![MeasureRuntimeResultDefinition {
                 name: "initialPopulation".to_string(),
+                kind: Some("population".to_string()),
                 source: "query".to_string(),
                 column: "patient_id".to_string(),
             }],
@@ -1549,5 +1553,6 @@ define "Has Diabetes":
         assert_eq!(manifest.views, vec!["views/condition_view.json"]);
         assert_eq!(manifest.parameters[0].name, "measurementperiod");
         assert_eq!(manifest.results[0].name, "initialPopulation");
+        assert_eq!(manifest.results[0].kind.as_deref(), Some("population"));
     }
 }

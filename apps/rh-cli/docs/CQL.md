@@ -675,6 +675,7 @@ Generated `measure-runtime.json`:
   "results": [
     {
       "name": "initialPopulation",
+      "kind": "population",
       "source": "query",
       "column": "patient_id"
     }

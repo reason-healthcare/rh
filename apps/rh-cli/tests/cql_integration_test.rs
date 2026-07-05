@@ -610,6 +610,7 @@ fn test_emit_runtime_writes_measure_runtime_manifest() {
     assert!(manifest.contains("\"views/condition_view.json\""));
     assert!(manifest.contains("\"name\": \"measurementperiod\""));
     assert!(manifest.contains("\"name\": \"initialPopulation\""));
+    assert!(manifest.contains("\"kind\": \"population\""));
     assert!(manifest.contains("\"column\": \"patient_id\""));
 }
 

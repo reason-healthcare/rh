@@ -1198,6 +1198,7 @@ fn parse_runtime_results(specs: &[String]) -> Result<Vec<MeasureRuntimeResultDef
             }
             Ok(MeasureRuntimeResultDefinition {
                 name: name.to_string(),
+                kind: Some("population".to_string()),
                 source: "query".to_string(),
                 column: column.to_string(),
             })
