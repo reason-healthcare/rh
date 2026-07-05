@@ -8,12 +8,13 @@ This plan explores a compiler-style path for population health analytics in RH:
 CQL source
   -> ELM
   -> clinical relational algebra
-  -> SQL-on-FHIR artifacts and/or DataFusion plans
+  -> SQL-on-FHIR artifacts and/or SQL text
 ```
 
-The goal is not to make `rh` a database. The goal is to make RH a healthcare
-analytics toolchain that can parse, inspect, lower, validate, and optionally run
-FHIR-based analytics workflows.
+The goal is not to make `rh` a database. The goal is to make RH the healthcare
+analytics compiler/toolchain that can parse, inspect, lower, validate, and emit
+portable FHIR-based analytics artifacts. Runtime execution belongs in the
+separate ReasonHealth Analytics product.
 
 ## Core Idea
 
@@ -31,15 +32,16 @@ emit multiple targets:
                  | Clinical relational algebra  |
                  +--------------+--------------+
                                 |
-          +---------------------+----------------------+
-          |                     |                      |
-          v                     v                      v
-  SQL-on-FHIR artifacts   DataFusion LogicalPlan   SQL text
-  ViewDefinition+SQLQuery Arrow-native execution  DuckDB/Trino/etc.
+                 +--------------+--------------+
+                 |                             |
+                 v                             v
+          SQL-on-FHIR artifacts             SQL text
+          ViewDefinition+SQLQuery           DuckDB/Trino/etc.
 ```
 
 SQL-on-FHIR should be treated as a portable artifact target, not the internal
-compiler IR. Relational algebra should be the stable internal contract.
+compiler IR. Relational algebra should be the stable internal contract between
+`rh` and downstream runtimes such as ReasonHealth Analytics.
 
 ## Why Relational Algebra
 
@@ -112,7 +114,6 @@ Start with a deliberately narrow CQL subset:
 5. Basic date/dateTime interval comparisons.
 6. SQL-on-FHIR ViewDefinition generation for required resource projections.
 7. SQLQuery generation for joins, filters, set operations, and aggregates.
-8. Optional DataFusion execution for generated tables and queries.
 
 Defer initially:
 
@@ -123,6 +124,8 @@ Defer initially:
 - cross-library optimization;
 - distributed execution;
 - server-managed materialization.
+- local execution and DataFusion-backed runtime behavior, which belong in
+  ReasonHealth Analytics.
 
 ## Incremental Tooling
 
@@ -201,21 +204,33 @@ rh cql emit-sql measure.cql --sql-only
 The first command emits a SQL-on-FHIR SQLQuery Library. The second emits raw SQL
 for review and backend experimentation.
 
-### 7. Local Execution
+### 7. Measure Runtime Manifest
 
 ```bash
-rh sql view run --view views/condition.json --input data.ndjson
-rh sql query run --query query-library.json --view views/*.json --input data/
+rh cql emit-runtime measure.cql --views views/ --query query-library.json --out measure-runtime.json
 ```
 
-This can use generated Arrow tables and DataFusion internally, but execution
-should come after the lowering stages are inspectable and testable.
+This emits the path-oriented runtime manifest consumed by ReasonHealth
+Analytics. The manifest binds generated ViewDefinition and SQLQuery artifacts to
+stable measure result names without linking runtime execution dependencies into
+open-source `rh`.
 
-### 8. Measure Harness
+### 8. Local Execution
 
 ```bash
-rh cql measure run measure.cql --input synthea/ --engine relational
-rh cql measure compare measure.cql --engine evaluator --engine relational
+rh-analytics sql view run --view views/condition.json --input data.ndjson
+rh-analytics sql query run --query query-library.json --view views/*.json --input data/
+```
+
+This belongs in ReasonHealth Analytics. It can use generated Arrow tables and
+DataFusion internally, but execution should come after the `rh` lowering stages
+are inspectable and testable.
+
+### 9. Measure Harness
+
+```bash
+rh-analytics measure run measure.cql --input synthea/ --engine datafusion
+rh-analytics measure compare measure.cql --engine evaluator --engine datafusion
 ```
 
 The compare command keeps relational lowering honest by comparing against the
@@ -223,15 +238,21 @@ existing CQL evaluator where possible.
 
 ## Recommended Build Order
 
+Open-source `rh`:
+
 1. Add ELM inspection tooling.
 2. Add data-requirements extraction.
 3. Add relational algebra IR and `rh cql plan`.
 4. Add lowering support reports.
 5. Add ViewDefinition generation.
 6. Add SQLQuery generation.
-7. Add `rh sql view run`.
-8. Add `rh sql query run` with an optional DataFusion backend.
-9. Add measure execution and comparison harnesses.
+7. Add measure runtime manifest generation.
+
+ReasonHealth Analytics:
+
+8. Add `rh-analytics sql view run`.
+9. Add `rh-analytics sql query run` with a DataFusion backend.
+10. Add measure execution and comparison harnesses.
 
 ## Testing Strategy
 
@@ -256,8 +277,8 @@ construct cases with stable diagnostic output.
   quantities, terminology, and list handling.
 - SQL-on-FHIR ViewDefinitions are intentionally per-resource and do not support
   joins or aggregates; those must stay in SQLQuery.
-- DataFusion is a strong embedded execution option, but RH should isolate it
-  behind a backend trait because its APIs evolve.
+- DataFusion is a strong embedded execution option, but it should live behind
+  the ReasonHealth Analytics runtime boundary because its APIs evolve.
 - Terminology expansion and versioning are outside relational algebra and need a
   first-class service boundary.
 - Some CQL will always require fallback evaluation rather than relational
@@ -274,6 +295,5 @@ ELM -> clinical relational algebra
 Everything after that is a backend:
 
 - SQL-on-FHIR artifacts for portability;
-- DataFusion for embedded execution;
+- DataFusion for embedded execution in ReasonHealth Analytics;
 - SQL text for external engines such as DuckDB, Trino, Postgres, or Spark.
-

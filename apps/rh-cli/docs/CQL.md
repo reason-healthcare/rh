@@ -450,6 +450,240 @@ Notes:
 
 ---
 
+### `rh cql emit-views`
+
+Emit SQL-on-FHIR ViewDefinition JSON artifacts from CQL retrieve
+requirements.
+
+**Usage:**
+```bash
+rh cql emit-views [OPTIONS] <FILE> --out <DIR>
+```
+
+**Options:**
+- `--out <DIR>` - Output directory for generated ViewDefinition JSON files
+- `--canonical-base <URL>` - Canonical base URL for generated ViewDefinitions
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Example:**
+
+```bash
+rh cql emit-views measure.cql --out views/
+```
+
+Output:
+
+```text
+Wrote 1 ViewDefinition file(s) to views/
+  - views/condition_view.json
+```
+
+Generated `views/condition_view.json`:
+
+```json
+{
+  "resourceType": "https://sql-on-fhir.org/ig/StructureDefinition/ViewDefinition",
+  "id": "ConditionView",
+  "url": "https://reason.health/rh/generated/sql-on-fhir/ViewDefinition/condition_view",
+  "name": "condition_view",
+  "status": "draft",
+  "resource": "Condition",
+  "select": [
+    {
+      "column": [
+        {
+          "path": "getResourceKey()",
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "path": "subject.getReferenceKey(Patient)",
+          "name": "patient_id",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "column": [
+        {
+          "path": "system",
+          "name": "system",
+          "type": "uri"
+        },
+        {
+          "path": "code",
+          "name": "code",
+          "type": "code"
+        }
+      ],
+      "forEachOrNull": "code.coding"
+    }
+  ]
+}
+```
+
+---
+
+### `rh cql emit-sql`
+
+Emit a SQL-on-FHIR SQLQuery Library artifact, or raw SQL text, from CQL and
+ViewDefinition metadata.
+
+**Usage:**
+```bash
+rh cql emit-sql [OPTIONS] <FILE>
+```
+
+**Options:**
+- `--views <PATH>` - ViewDefinition JSON file or directory. May be specified multiple times.
+- `--out <PATH>` - Output file path. Defaults to stdout.
+- `--sql-only` - Emit only SQL text instead of a SQLQuery Library JSON artifact
+- `--canonical-base <URL>` - Canonical base URL for generated in-memory ViewDefinitions
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Examples:**
+
+Emit raw SQL:
+
+```bash
+rh cql emit-sql measure.cql --views views/ --sql-only
+```
+
+Output:
+
+```sql
+WITH
+  diabetes_conditions AS (
+    SELECT *
+      FROM condition_view
+      WHERE code IS NOT NULL /* valueSet: Diabetes */
+  )
+SELECT *
+FROM diabetes_conditions;
+```
+
+Write a SQLQuery Library artifact:
+
+```bash
+rh cql emit-sql measure.cql --views views/ --out query-library.json
+```
+
+Output:
+
+```text
+Wrote SQLQuery Library to query-library.json
+```
+
+Generated `query-library.json`:
+
+```json
+{
+  "resourceType": "Library",
+  "id": "diabetesmeasure_sql_query",
+  "name": "DiabetesmeasureSqlQuery",
+  "title": "DiabetesMeasure SQL Query",
+  "status": "draft",
+  "type": {
+    "coding": [
+      {
+        "system": "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes",
+        "code": "sql-query"
+      }
+    ]
+  },
+  "relatedArtifact": [
+    {
+      "type": "depends-on",
+      "label": "condition_view",
+      "resource": "https://reason.health/rh/generated/sql-on-fhir/ViewDefinition/condition_view"
+    }
+  ],
+  "parameter": [
+    {
+      "name": "measurementperiod",
+      "use": "in",
+      "type": "string"
+    }
+  ],
+  "content": [
+    {
+      "contentType": "application/sql",
+      "extension": [
+        {
+          "url": "https://sql-on-fhir.org/ig/StructureDefinition/sql-text",
+          "valueString": "WITH\n  diabetes_conditions AS (\n    SELECT *\n      FROM condition_view\n      WHERE code IS NOT NULL /* valueSet: Diabetes */\n  )\nSELECT *\nFROM diabetes_conditions;\n"
+        }
+      ],
+      "data": "V0lUSAo..."
+    }
+  ]
+}
+```
+
+---
+
+### `rh cql emit-runtime`
+
+Emit a `ReasonHealthMeasureRuntime` manifest that points at generated
+ViewDefinition and SQLQuery artifacts.
+
+**Usage:**
+```bash
+rh cql emit-runtime [OPTIONS] <FILE> --query <PATH> --views <PATH>
+```
+
+**Options:**
+- `--query <PATH>` - SQLQuery Library JSON artifact path to reference
+- `--views <PATH>` - ViewDefinition JSON file or directory. May be specified multiple times.
+- `--out <PATH>` - Output file path. Defaults to stdout.
+- `--result <NAME=COLUMN>` - Result mapping. Defaults to `initialPopulation=patient_id`
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries
+
+**Example:**
+
+```bash
+rh cql emit-runtime measure.cql \
+  --query query-library.json \
+  --views views/ \
+  --out measure-runtime.json
+```
+
+Output:
+
+```text
+Wrote measure runtime manifest to measure-runtime.json
+```
+
+Generated `measure-runtime.json`:
+
+```json
+{
+  "resourceType": "ReasonHealthMeasureRuntime",
+  "id": "diabetesmeasure",
+  "measure": "DiabetesMeasure",
+  "query": "query-library.json",
+  "views": [
+    "views/condition_view.json"
+  ],
+  "parameters": [
+    {
+      "name": "measurementperiod",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "results": [
+    {
+      "name": "initialPopulation",
+      "source": "query",
+      "column": "patient_id"
+    }
+  ]
+}
+```
+
+---
+
 ### `rh cql eval`
 
 Evaluate a named expression definition in a compiled CQL library.

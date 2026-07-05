@@ -1,7 +1,8 @@
 //! Inspectable CQL analytics planning helpers.
 
 use crate::elm::{Expression, Library, StatementDef};
-use serde::Serialize;
+use base64::{engine::general_purpose::STANDARD, Engine};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -227,6 +228,202 @@ pub struct NodeSupport {
     pub count: usize,
 }
 
+/// SQL-on-FHIR ViewDefinition artifact emitted from CQL retrieves.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewDefinitionArtifact {
+    /// Logical model URL used by SQL-on-FHIR examples for ViewDefinition resources.
+    pub resource_type: String,
+    /// Logical id.
+    pub id: String,
+    /// Canonical URL for SQLQuery dependencies.
+    pub url: String,
+    /// SQL-safe view name.
+    pub name: String,
+    /// Draft status for generated artifacts.
+    pub status: String,
+    /// FHIR resource type this view projects.
+    pub resource: String,
+    /// Select clauses.
+    pub select: Vec<ViewSelect>,
+}
+
+/// ViewDefinition select clause.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewSelect {
+    /// Columns selected in this clause.
+    pub column: Vec<ViewColumn>,
+    /// Optional collection expression for row expansion.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub for_each_or_null: Option<String>,
+}
+
+/// ViewDefinition column.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewColumn {
+    /// FHIRPath expression.
+    pub path: String,
+    /// SQL-safe column name.
+    pub name: String,
+    /// Optional FHIR type.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#type: Option<String>,
+}
+
+/// Generated ViewDefinition bundle.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewGeneration {
+    /// Generated ViewDefinition artifacts.
+    pub views: Vec<ViewDefinitionArtifact>,
+}
+
+/// SQLQuery Library artifact emitted from a relational plan.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SqlQueryLibraryArtifact {
+    /// FHIR resource type.
+    pub resource_type: String,
+    /// Logical id.
+    pub id: String,
+    /// Library name.
+    pub name: String,
+    /// Library title.
+    pub title: String,
+    /// Draft status for generated artifacts.
+    pub status: String,
+    /// SQLQuery type coding.
+    pub r#type: CodeableConcept,
+    /// ViewDefinition dependencies.
+    pub related_artifact: Vec<RelatedArtifact>,
+    /// Input parameters.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameter: Vec<ParameterDefinition>,
+    /// SQL content attachments.
+    pub content: Vec<SqlAttachment>,
+}
+
+/// FHIR CodeableConcept fragment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeableConcept {
+    /// Codings.
+    pub coding: Vec<Coding>,
+}
+
+/// FHIR Coding fragment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Coding {
+    /// Code system.
+    pub system: String,
+    /// Code.
+    pub code: String,
+}
+
+/// FHIR RelatedArtifact fragment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelatedArtifact {
+    /// Relationship type.
+    pub r#type: String,
+    /// Table label used by SQL.
+    pub label: String,
+    /// Canonical ViewDefinition URL.
+    pub resource: String,
+}
+
+/// FHIR ParameterDefinition fragment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParameterDefinition {
+    /// Parameter name.
+    pub name: String,
+    /// Use is always `in` for SQLQuery inputs.
+    pub r#use: String,
+    /// FHIR parameter type.
+    pub r#type: String,
+}
+
+/// FHIR Attachment fragment for SQL content.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SqlAttachment {
+    /// SQL content type.
+    pub content_type: String,
+    /// Plain-text SQL extension.
+    pub extension: Vec<SqlTextExtension>,
+    /// Base64-encoded SQL.
+    pub data: String,
+}
+
+/// Plain-text SQL extension.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SqlTextExtension {
+    /// Extension URL.
+    pub url: String,
+    /// Plain SQL text.
+    pub value_string: String,
+}
+
+/// Generated SQLQuery result.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SqlQueryGeneration {
+    /// Plain SQL text.
+    pub sql: String,
+    /// SQLQuery Library artifact.
+    pub library: SqlQueryLibraryArtifact,
+}
+
+/// ReasonHealth measure runtime manifest consumed by downstream runtimes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasureRuntimeManifest {
+    /// Runtime artifact resource type.
+    pub resource_type: String,
+    /// Logical id.
+    pub id: String,
+    /// Source measure/library name.
+    pub measure: String,
+    /// SQLQuery Library artifact path.
+    pub query: String,
+    /// ViewDefinition artifact paths.
+    pub views: Vec<String>,
+    /// Runtime parameters.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parameters: Vec<MeasureRuntimeParameter>,
+    /// Result mappings extracted from query output.
+    pub results: Vec<MeasureRuntimeResultDefinition>,
+}
+
+/// Measure runtime parameter metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasureRuntimeParameter {
+    /// Parameter name.
+    pub name: String,
+    /// FHIR scalar parameter type.
+    pub r#type: String,
+    /// Whether callers must provide the parameter.
+    pub required: bool,
+}
+
+/// Measure runtime result mapping.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasureRuntimeResultDefinition {
+    /// Stable measure result name.
+    pub name: String,
+    /// Result source. First slice supports `query`.
+    pub source: String,
+    /// Query result column to collect.
+    pub column: String,
+}
+
 /// Inspect a compiled ELM library.
 pub fn inspect_elm(library: &Library) -> ElmInspection {
     let mut expression_node_counts = BTreeMap::new();
@@ -353,6 +550,164 @@ pub fn lower_check(library: &Library, target: impl Into<String>) -> LowerCheckRe
         supported_nodes,
         unsupported_nodes,
         notes,
+    }
+}
+
+/// Generate deterministic SQL-on-FHIR ViewDefinitions from CQL retrieve requirements.
+pub fn emit_view_definitions(library: &Library, canonical_base: &str) -> ViewGeneration {
+    let requirements = data_requirements(library);
+    let mut by_resource: BTreeMap<String, Vec<RetrieveRequirement>> = BTreeMap::new();
+    for retrieve in requirements.retrieves {
+        if let Some(resource) = retrieve.resource.clone() {
+            by_resource.entry(resource).or_default().push(retrieve);
+        }
+    }
+
+    let views = by_resource
+        .into_iter()
+        .map(|(resource, retrieves)| {
+            view_definition_for_resource(&resource, &retrieves, canonical_base)
+        })
+        .collect();
+
+    ViewGeneration { views }
+}
+
+/// Generate SQL text from CQL retrieve requirements and emitted views.
+pub fn emit_sql_text(library: &Library, views: &[ViewDefinitionArtifact]) -> String {
+    let requirements = data_requirements(library);
+    let table_by_resource = views
+        .iter()
+        .map(|view| (view.resource.clone(), view.name.clone()))
+        .collect::<BTreeMap<_, _>>();
+    let mut ctes = Vec::new();
+    let mut cte_names = BTreeMap::<String, usize>::new();
+
+    for retrieve in requirements.retrieves {
+        let Some(resource) = retrieve.resource.as_ref() else {
+            continue;
+        };
+        let Some(table) = table_by_resource.get(resource) else {
+            continue;
+        };
+        let cte_name = unique_sql_name(&sql_name(&retrieve.definition), &mut cte_names);
+        let mut sql = format!("SELECT *\n  FROM {table}");
+        if !retrieve.value_set_refs.is_empty() {
+            let refs = retrieve.value_set_refs.join(", ");
+            sql.push_str(&format!(
+                "\n  WHERE code IS NOT NULL /* valueSet: {refs} */"
+            ));
+        }
+        ctes.push((cte_name, sql));
+    }
+
+    if ctes.is_empty() {
+        let first_table = views
+            .first()
+            .map(|view| view.name.as_str())
+            .unwrap_or("generated_view");
+        return format!("SELECT *\nFROM {first_table};\n");
+    }
+
+    let mut out = String::new();
+    out.push_str("WITH\n");
+    for (idx, (name, sql)) in ctes.iter().enumerate() {
+        let suffix = if idx + 1 == ctes.len() { "" } else { "," };
+        out.push_str(&format!(
+            "  {name} AS (\n    {}\n  ){suffix}\n",
+            sql.replace('\n', "\n    ")
+        ));
+    }
+    out.push_str(&format!("SELECT *\nFROM {};\n", ctes[0].0));
+    out
+}
+
+/// Generate a SQLQuery Library artifact from a CQL library and ViewDefinitions.
+pub fn emit_sql_query_library(
+    library: &Library,
+    views: &[ViewDefinitionArtifact],
+    _canonical_base: &str,
+) -> SqlQueryGeneration {
+    let sql = emit_sql_text(library, views);
+    let name = sql_name(&format!(
+        "{}_sql_query",
+        library_name(library).unwrap_or_else(|| "cql".to_string())
+    ));
+    let related_artifact = views
+        .iter()
+        .map(|view| RelatedArtifact {
+            r#type: "depends-on".to_string(),
+            label: view.name.clone(),
+            resource: view.url.clone(),
+        })
+        .collect();
+    let parameter = parameter_summaries(library)
+        .into_iter()
+        .filter_map(|param| {
+            param.name.map(|name| ParameterDefinition {
+                name: sql_name(&name),
+                r#use: "in".to_string(),
+                r#type: fhir_parameter_type(param.type_name.as_deref()),
+            })
+        })
+        .collect();
+    let library = SqlQueryLibraryArtifact {
+        resource_type: "Library".to_string(),
+        id: name.clone(),
+        name: pascal_identifier(&name),
+        title: format!(
+            "{} SQL Query",
+            library_name(library).unwrap_or_else(|| "Generated CQL".to_string())
+        ),
+        status: "draft".to_string(),
+        r#type: CodeableConcept {
+            coding: vec![Coding {
+                system: "https://sql-on-fhir.org/ig/CodeSystem/LibraryTypesCodes".to_string(),
+                code: "sql-query".to_string(),
+            }],
+        },
+        related_artifact,
+        parameter,
+        content: vec![SqlAttachment {
+            content_type: "application/sql".to_string(),
+            extension: vec![SqlTextExtension {
+                url: "https://sql-on-fhir.org/ig/StructureDefinition/sql-text".to_string(),
+                value_string: sql.clone(),
+            }],
+            data: STANDARD.encode(sql.as_bytes()),
+        }],
+    };
+
+    SqlQueryGeneration { sql, library }
+}
+
+/// Generate the ReasonHealth measure runtime manifest for emitted artifacts.
+pub fn emit_measure_runtime_manifest(
+    library: &Library,
+    query: impl Into<String>,
+    views: Vec<String>,
+    results: Vec<MeasureRuntimeResultDefinition>,
+) -> MeasureRuntimeManifest {
+    let measure = library_name(library).unwrap_or_else(|| "GeneratedMeasure".to_string());
+    let parameters = parameter_summaries(library)
+        .into_iter()
+        .filter_map(|param| {
+            param.name.map(|name| MeasureRuntimeParameter {
+                name: sql_name(&name),
+                r#type: fhir_parameter_type(param.type_name.as_deref()),
+                required: false,
+            })
+        })
+        .collect();
+
+    MeasureRuntimeManifest {
+        resource_type: "ReasonHealthMeasureRuntime".to_string(),
+        id: sql_name(&measure),
+        measure,
+        query: query.into(),
+        views,
+        parameters,
+        results,
     }
 }
 
@@ -625,6 +980,146 @@ fn code_system_summaries(library: &Library) -> Vec<CodeSystemSummary> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn view_definition_for_resource(
+    resource: &str,
+    retrieves: &[RetrieveRequirement],
+    canonical_base: &str,
+) -> ViewDefinitionArtifact {
+    let view_name = sql_name(&format!("{resource}_view"));
+    let mut base_columns = vec![ViewColumn {
+        path: "getResourceKey()".to_string(),
+        name: "id".to_string(),
+        r#type: Some("string".to_string()),
+    }];
+
+    if resource != "Patient" {
+        base_columns.push(ViewColumn {
+            path: "subject.getReferenceKey(Patient)".to_string(),
+            name: "patient_id".to_string(),
+            r#type: Some("string".to_string()),
+        });
+    }
+
+    let date_properties = retrieves
+        .iter()
+        .filter_map(|retrieve| retrieve.date_property.clone())
+        .collect::<BTreeSet<_>>();
+    for property in date_properties {
+        base_columns.push(ViewColumn {
+            path: property.clone(),
+            name: sql_name(&property),
+            r#type: Some("dateTime".to_string()),
+        });
+    }
+
+    let mut select = vec![ViewSelect {
+        column: base_columns,
+        for_each_or_null: None,
+    }];
+
+    let code_properties = retrieves
+        .iter()
+        .filter_map(|retrieve| retrieve.code_property.clone())
+        .collect::<BTreeSet<_>>();
+    for property in code_properties {
+        select.push(ViewSelect {
+            column: vec![
+                ViewColumn {
+                    path: "system".to_string(),
+                    name: "system".to_string(),
+                    r#type: Some("uri".to_string()),
+                },
+                ViewColumn {
+                    path: "code".to_string(),
+                    name: "code".to_string(),
+                    r#type: Some("code".to_string()),
+                },
+            ],
+            for_each_or_null: Some(format!("{property}.coding")),
+        });
+    }
+
+    ViewDefinitionArtifact {
+        resource_type: "https://sql-on-fhir.org/ig/StructureDefinition/ViewDefinition".to_string(),
+        id: pascal_identifier(&view_name),
+        url: format!(
+            "{}/ViewDefinition/{}",
+            canonical_base.trim_end_matches('/'),
+            view_name
+        ),
+        name: view_name,
+        status: "draft".to_string(),
+        resource: resource.to_string(),
+        select,
+    }
+}
+
+fn sql_name(value: &str) -> String {
+    let mut out = String::new();
+    let mut previous_underscore = false;
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+            previous_underscore = false;
+        } else if !previous_underscore && !out.is_empty() {
+            out.push('_');
+            previous_underscore = true;
+        }
+    }
+    while out.ends_with('_') {
+        out.pop();
+    }
+    if out.is_empty() || !out.as_bytes()[0].is_ascii_alphabetic() {
+        out.insert_str(0, "cql_");
+    }
+    out
+}
+
+fn unique_sql_name(base: &str, counts: &mut BTreeMap<String, usize>) -> String {
+    let count = counts.entry(base.to_string()).or_default();
+    *count += 1;
+    if *count == 1 {
+        base.to_string()
+    } else {
+        format!("{base}_{count}")
+    }
+}
+
+fn pascal_identifier(value: &str) -> String {
+    let mut out = String::new();
+    for part in value.split('_').filter(|part| !part.is_empty()) {
+        let mut chars = part.chars();
+        if let Some(first) = chars.next() {
+            out.push(first.to_ascii_uppercase());
+            out.extend(chars);
+        }
+    }
+    if out.is_empty() {
+        "Generated".to_string()
+    } else {
+        out
+    }
+}
+
+fn fhir_parameter_type(type_name: Option<&str>) -> String {
+    let Some(type_name) = type_name else {
+        return "string".to_string();
+    };
+    let normalized = normalize_resource_type(type_name);
+    match normalized.as_str() {
+        "Boolean" => "boolean",
+        "Date" => "date",
+        "DateTime" => "dateTime",
+        "Decimal" => "decimal",
+        "Integer" => "integer",
+        "Long" => "integer64",
+        "String" => "string",
+        "Time" => "time",
+        _ => "string",
+    }
+    .to_string()
 }
 
 fn expression_to_value(expression: &Expression) -> Value {
@@ -992,5 +1487,67 @@ define "Has Diabetes":
             .supported_nodes
             .iter()
             .any(|n| n.node_type == "Retrieve"));
+    }
+
+    #[test]
+    fn emit_view_definitions_projects_retrieve_resources() {
+        let generation = emit_view_definitions(&library(), "https://example.org/sql");
+        assert_eq!(generation.views.len(), 1);
+        let view = &generation.views[0];
+        assert_eq!(view.resource, "Condition");
+        assert_eq!(view.name, "condition_view");
+        assert!(view
+            .select
+            .iter()
+            .flat_map(|select| select.column.iter())
+            .any(|column| column.path == "getResourceKey()"));
+        assert!(view
+            .select
+            .iter()
+            .any(|select| select.for_each_or_null.as_deref() == Some("code.coding")));
+    }
+
+    #[test]
+    fn emit_sql_query_library_links_views() {
+        let library = library();
+        let views = emit_view_definitions(&library, "https://example.org/sql").views;
+        let generation = emit_sql_query_library(&library, &views, "https://example.org/sql");
+        assert!(generation.sql.contains("condition_view"));
+        assert_eq!(generation.library.resource_type, "Library");
+        assert_eq!(
+            generation.library.related_artifact[0].label,
+            "condition_view"
+        );
+        assert_eq!(
+            generation.library.r#type.coding[0].code,
+            "sql-query".to_string()
+        );
+        assert_eq!(
+            generation.library.content[0].content_type,
+            "application/sql"
+        );
+    }
+
+    #[test]
+    fn emit_measure_runtime_manifest_references_artifacts() {
+        let library = library();
+        let manifest = emit_measure_runtime_manifest(
+            &library,
+            "query-library.json",
+            vec!["views/condition_view.json".to_string()],
+            vec![MeasureRuntimeResultDefinition {
+                name: "initialPopulation".to_string(),
+                source: "query".to_string(),
+                column: "patient_id".to_string(),
+            }],
+        );
+
+        assert_eq!(manifest.resource_type, "ReasonHealthMeasureRuntime");
+        assert_eq!(manifest.id, "example");
+        assert_eq!(manifest.measure, "Example");
+        assert_eq!(manifest.query, "query-library.json");
+        assert_eq!(manifest.views, vec!["views/condition_view.json"]);
+        assert_eq!(manifest.parameters[0].name, "measurementperiod");
+        assert_eq!(manifest.results[0].name, "initialPopulation");
     }
 }
