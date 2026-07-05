@@ -1,248 +1,519 @@
 # rh-cql Architecture
 
-This document describes the architectural design of the rh-cql CQL-to-ELM compiler,
-highlighting key design choices and their benefits.
+This document describes the current architecture of `rh-cql`: the CQL compiler,
+ELM model, evaluator, and analytics artifact tooling used by `rh`.
 
 ## Overview
 
-The rh-cql compiler transforms Clinical Quality Language (CQL) source code into
-Expression Logical Model (ELM) representation. The architecture follows a strict
-three-stage pipeline: parse, semantic analysis, and ELM emission.
+`rh-cql` has two related responsibilities:
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                            CQL Source                                        │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                   Stage 1 — Parser  (nom combinators)                        │
-│   parser/lexer.rs · parser/statement.rs · parser/expression/*               │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │  CQL AST  (parser/ast.rs)
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│             Stage 2 — Semantic Analysis  (SemanticAnalyzer)                  │
-│        semantics/analyzer.rs · semantics/scope.rs · semantics/typed_ast.rs  │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │  TypedLibrary  (semantics/typed_ast.rs)
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                Stage 3 — ELM Emission  (ElmEmitter)                         │
-│   emit/{literals,operators,queries,conditionals,clinical,references,types}   │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                    │  elm::Library  (elm/)
-                                    ▼
-               ┌───────────────────────────────────────┐
-               │  Source Map  (sourcemap.rs, optional)  │
-               │  JSON output  (output.rs)              │
-               └───────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│              Evaluation Engine  (eval/)  — optional runtime                  │
-│   eval/engine.rs · eval/operators/* · eval/queries.rs · eval/context.rs     │
-└──────────────────────────────────────────────────────────────────────────────┘
+1. Compile Clinical Quality Language (CQL) source into HL7 Expression Logical
+   Model (ELM).
+2. Expose inspectable analysis and artifact boundaries for downstream analytics
+   runtimes.
+
+The core compiler pipeline is:
+
+```text
+CQL source
+  -> parser AST
+  -> semantic analysis / typed AST
+  -> ELM library
+  -> optional source map
 ```
 
-All public functions in `compiler.rs` are thin wrappers over the shared
-`run_compile_pipeline` internal function.
+The analytics pipeline starts from the emitted ELM library:
 
-## Design Principles
-
-### 1. Separation of AST and ELM
-
-The compiler maintains distinct representations for the parsed CQL syntax (AST) and the output format (ELM):
-
-| Layer | Location | Purpose |
-|-------|----------|---------|
-| **CQL AST** | `parser/ast.rs` | Faithful representation of CQL syntax |
-| **ELM** | `elm/*.rs` | HL7 Expression Logical Model output |
-
-**Benefits:**
-- **Language Independence**: CQL syntax changes don't affect ELM output structure
-- **Multiple Backends**: Architecture supports targeting formats other than ELM (e.g., SQL, bytecode)
-- **Clear Responsibilities**: Parser focuses on syntax, translator focuses on semantics
-- **Testability**: Each layer can be tested independently
-
-### 2. Immutable Data Structures
-
-All AST and ELM types are immutable. New structures are created rather than mutating existing ones.
-
-```rust
-// AST nodes are immutable enums
-pub enum Expression {
-    Literal(Literal),
-    Identifier(String),
-    BinaryOp { left: Box<Expression>, op: BinaryOperator, right: Box<Expression> },
-    // ...
-}
-
-// ELM nodes are built fresh, not mutated
-let elm_add = elm::Add {
-    operand: vec![left_elm, right_elm],
-    ..Default::default()
-};
+```text
+ELM library
+  -> inspection and data requirements
+  -> relational algebra plan
+  -> lowering support report
+  -> SQL-on-FHIR ViewDefinition artifacts
+  -> SQLQuery Library artifact or SQL text
+  -> ReasonHealthMeasureRuntime manifest
 ```
 
-**Benefits:**
-- **Thread Safety**: No mutation means no data races
-- **Predictability**: No spooky action at a distance
-- **Debugging**: State doesn't change unexpectedly
-- **Rust Idioms**: Leverages Rust's ownership model naturally
+`rh` owns the compiler and artifact producer boundary. Runtime execution over
+FHIR data, Arrow, DataFusion, and measure comparison belongs outside this crate
+in the analytics runtime.
 
-### 3. Enum-Based Type Dispatch
+## Motivation
 
-Rather than using the visitor pattern common in OOP languages, we use Rust's exhaustive pattern matching on enums.
+`rh-cql` deliberately separates artifact development from production execution.
 
-```rust
-// Instead of visitor classes:
-fn translate_expression(&mut self, expr: &ast::Expression) -> Result<elm::Expression> {
-    match expr {
-        ast::Expression::Literal(lit) => self.translate_literal(lit),
-        ast::Expression::BinaryOp { left, op, right } => {
-            self.translate_binary_op(left, op, right)
-        }
-        ast::Expression::Query(query) => self.translate_query(query),
-        // Compiler ensures all variants are handled
-    }
-}
+The native ELM evaluator exists to support compiler and artifact development.
+It lets us execute CQL/ELM locally, inspect behavior, compare expected results,
+debug source maps and traces, and validate that emitted artifacts preserve the
+clinical intent of a CQL library. That evaluator is valuable engineering
+infrastructure, but it is not the intended production analytics runtime.
+
+The SQL and SQL-on-FHIR tooling is aimed at real-world production execution.
+Production deployments need to run over large FHIR datasets, integrate with
+warehouse/lakehouse/storage choices, use local governance and security models,
+and tune execution for environment-specific cost and performance constraints.
+Those choices are vendor- and environment-specific.
+
+For that reason, open-source `rh` stops at stable, inspectable artifacts:
+
+```text
+CQL / ELM -> relational IR -> ViewDefinition + SQLQuery + runtime manifest
 ```
 
-**Benefits:**
-- **Exhaustiveness**: Compiler catches unhandled cases
-- **No Boilerplate**: No visitor interface or accept methods needed
-- **Locality**: Related code stays together
-- **Performance**: No virtual dispatch overhead
+It does not prescribe or embed the production execution engine. Commercially
+supported products can take those artifacts and provide the environment-specific
+runtime: DataFusion, Spark, DuckDB, Trino, Postgres, cloud warehouses, managed
+terminology services, operational monitoring, validation harnesses, and support
+contracts.
 
-### 4. Single-Pass Translation
+This gives users a portable compiler boundary while leaving production runtime
+decisions where they belong: in the deployment environment and supported
+commercial product layer.
 
-The compiler performs semantic analysis and ELM generation in a single pass over the AST, rather than building an intermediate typed AST.
+## Compiler Pipeline
 
-```rust
-// Type resolution and ELM generation happen together
-fn translate_binary_op(&mut self, left: &ast::Expression, op: &BinaryOperator, right: &ast::Expression) 
-    -> Result<elm::Expression> 
-{
-    let left_elm = self.translate_expression(left)?;
-    let right_elm = self.translate_expression(right)?;
-    
-    // Type checking happens here
-    let result_type = self.resolve_binary_operator_type(op, &left_elm, &right_elm)?;
-    
-    // ELM is generated immediately
-    Ok(self.build_binary_expression(op, left_elm, right_elm, result_type))
-}
+All public compile entry points in `compiler.rs` delegate to a shared internal
+`run_compile_pipeline` function.
+
+```text
+CQL source
+  -> Stage 1: Parser
+     parser/lexer.rs, parser/statement.rs, parser/expression/*
+     output: parser::ast::Library
+  -> Stage 2: Semantic analysis
+     semantics/analyzer.rs, semantics/scope.rs, semantics/typed_ast.rs
+     output: TypedLibrary + diagnostics
+  -> Stage 3: ELM emission
+     emit/mod.rs, emit/{clinical,conditionals,literals,operators,queries,...}
+     output: elm::Library
+  -> Optional source map and output serialization
+     sourcemap.rs, output.rs
 ```
 
-**Benefits:**
-- **Simplicity**: One pass is easier to understand than multiple passes
-- **Performance**: No intermediate allocations for typed AST
-- **Sufficient**: For ELM generation, we don't need a separate type inference phase
+The compiler can also stop after semantic analysis for validate-only and
+explain paths. That is why the shared pipeline has an explicit emit mode:
+`None`, `Elm`, or `ElmWithSourceMap`.
 
-### 5. Builder Pattern for Complex Construction
+## Current Public Surfaces
 
-The `LibraryBuilder` manages compiler state and provides methods for constructing ELM elements:
+The library API exposes:
 
-```rust
-impl LibraryBuilder {
-    pub fn resolve_call(&mut self, name: &str, args: Vec<elm::Expression>) -> Result<elm::Expression>;
-    pub fn add_expression_def(&mut self, def: elm::ExpressionDef);
-    pub fn resolve_type(&mut self, type_name: &str) -> Result<DataType>;
-    // ...
-}
+- `compile`, `compile_with_model`, `compile_with_libraries`, and
+  `compile_to_json` for CQL to ELM.
+- `validate` and `explain_*` paths for parser/compiler diagnostics.
+- `compile_to_elm_with_sourcemap` variants for CQL source to ELM source maps.
+- `evaluate_elm`, `evaluate_elm_with_libraries`, and trace-enabled evaluation.
+- Analytics helper functions in `analytics.rs` for inspection, data
+  requirements, relational planning, lowering reports, and artifact emission.
+
+The CLI exposes these `rh cql` analysis and artifact commands:
+
+```bash
+rh cql compile measure.cql --output measure.elm.json
+rh cql validate measure.cql
+rh cql info measure.cql
+rh cql explain measure.cql
+rh cql elm inspect measure.elm.json
+rh cql elm deps measure.elm.json
+rh cql data-requirements measure.cql --format json
+rh cql plan measure.cql --target relational --display-format pretty
+rh cql plan measure.cql --target relational --display-format json --format json
+rh cql lower-check measure.cql --target sql-on-fhir
+rh cql emit-views measure.cql --out views/
+rh cql emit-sql measure.cql --views views/ --out query-library.json
+rh cql emit-sql measure.cql --sql-only
+rh cql emit-runtime measure.cql --views views/ --query query-library.json --out measure-runtime.json
+rh cql eval measure.cql "Expression Name" --data data.ndjson
 ```
 
-**Benefits:**
-- **Centralized State**: Symbol tables, type resolution, error collection in one place
-- **Encapsulation**: Callers don't need to know internal details
-- **Testability**: Builder can be configured for different test scenarios
+Use global `--format json` when the command output is consumed by tools. The
+CLI wraps JSON results in the standard `rh` envelope.
 
 ## Module Structure
 
-```
+```text
 src/
-├── lib.rs              # Public API
-├── builder.rs          # LibraryBuilder - orchestrates compilation
-├── parser/
-│   ├── mod.rs          # Parser entry point
-│   ├── cql.pest        # PEG grammar for CQL
-│   └── ast.rs          # CQL AST types
-├── elm/
-│   ├── mod.rs          # ELM module exports
-│   ├── expression.rs   # ELM expression types
-│   ├── library.rs      # ELM library structure
-│   ├── types.rs        # ELM type specifiers
-│   └── annotation.rs   # ELM annotations
-├── types/
-│   └── mod.rs          # Type system (DataType, etc.)
-└── system/
-    └── mod.rs          # System library operators
+├── analytics.rs          # Inspection, data requirements, relational IR, artifact emission
+├── compiler.rs           # Public compiler API and shared pipeline
+├── conversion.rs         # FHIRHelpers-style conversion lookup/wrapping
+├── datatype.rs           # Internal semantic type model
+├── elm.rs, elm/          # ELM structs and serialization model
+├── emit/                 # Typed AST -> ELM emission
+├── eval/                 # CQL/ELM evaluator, runtime values, operators, queries
+├── explain/              # Explain helpers
+├── library/              # Library source providers and compiled library management
+├── modelinfo.rs          # ModelInfo model
+├── modelinfo_xml/        # ModelInfo XML loading helpers
+├── operators.rs          # Semantic operator resolution
+├── options.rs            # Compiler options
+├── output.rs             # ELM JSON output
+├── parser/               # CQL parser and parser AST
+├── preprocessor.rs       # Library info extraction
+├── provider.rs           # ModelInfo providers
+├── reporting.rs          # Diagnostics and exception reporting
+├── semantics/            # Semantic analyzer, scopes, typed AST
+├── sourcemap.rs          # CQL source to ELM source maps
+├── types.rs              # Type resolution helpers
+└── wasm.rs               # WASM-specific entry points
 ```
 
-## Comparison to Reference Implementation
+## Design Principles
 
-The Java/Kotlin reference CQL translator (cqframework/clinical_quality_language) is undergoing a similar architectural refactor in [PR #1640](https://github.com/cqframework/clinical_quality_language/pull/1640) to introduce an intermediate AST. Key observations:
+### Separate Syntax, Semantics, and ELM
 
-| Aspect | Reference (Current) | Reference (PR #1640) | rh-cql |
-|--------|---------------------|----------------------|--------|
-| AST/ELM Separation | Mixed in `Cql2ElmVisitor` | Separate CQL AST | ✅ Already separate |
-| Type Inference | During ELM generation | Separate phase | Single pass |
-| Visitor Pattern | Class-based visitors | `AstWalker` class | Enum matching |
-| Mutability | Mutable ELM nodes | Mutable AST nodes | Immutable |
+The parser AST preserves CQL syntax. Semantic analysis resolves names, scopes,
+types, model members, operators, conversions, and diagnostics into a typed AST.
+The ELM emitter consumes the typed AST and produces HL7 ELM.
 
-The rh-cql design anticipated many of the architectural improvements being introduced in the reference implementation.
+This separation matters because later surfaces, such as explain, validation,
+source maps, ELM emission, and analytics inspection, can share earlier pipeline
+stages without coupling to one large translator.
 
-## Extension Points
+### Typed AST Before Emission
 
-### Adding New Expression Types
+The current architecture is not a single-pass AST-to-ELM translator. The typed
+AST is an explicit compiler boundary:
 
-1. Add variant to `ast::Expression` enum
-2. Add case to `translate_expression` match
-3. Add corresponding ELM type if needed
-4. Compiler ensures exhaustiveness
-
-### Supporting New Backends
-
-The AST layer is independent of ELM. To target a different output format:
-
-1. Create new output types (e.g., `sql/*.rs`)
-2. Implement new translator (e.g., `SqlTranslator`)
-3. Reuse existing parser and AST
-
-### Adding Compiler Options
-
-Options are configured via `CompilerOptions`:
-
-```rust
-let options = CompilerOptions::default()
-    .with_annotations(true)
-    .with_detailed_errors(true);
-
-let builder = LibraryBuilder::new(options);
+```text
+parser::ast::Library -> semantics::TypedLibrary -> elm::Library
 ```
 
-## Error Handling
+`TypedNode<T>` carries semantic metadata such as node ids, source spans, result
+types, and resolved expression structure. This makes ELM emission simpler and
+keeps semantic diagnostics independent of output serialization.
 
-Errors are collected with source location information:
+### Explicit ModelInfo Boundary
 
-```rust
-pub struct CompilerError {
-    pub message: String,
-    pub severity: Severity,
-    pub location: Option<SourceLocation>,
+Semantic analysis uses a `ModelInfoProvider`. The default provider is FHIR R4,
+but callers can supply another provider through `CompilationContext` or
+`compile_with_model`.
+
+This keeps model-specific knowledge out of the parser and allows FHIR package
+or custom model resolution to be swapped without changing the syntax layer.
+
+### Serializable Artifacts
+
+Every analytics-facing boundary is JSON-serializable:
+
+- ELM JSON
+- source-map JSON
+- ELM inspection summaries
+- data requirements
+- relational plans
+- lower-check reports
+- ViewDefinition artifacts
+- SQLQuery Library artifacts
+- measure runtime manifests
+
+This is intentional. These artifacts are meant to be reviewed in git, used in
+fixtures, and consumed by runtimes without linking to compiler internals.
+
+## Analytics Tooling
+
+`analytics.rs` is the inspection and artifact layer over compiled ELM. It does
+not execute analytics workloads. It turns compiler output into stable, portable
+contracts intended to scale into production runtimes without requiring those
+runtimes to live in open-source `rh`.
+
+### ELM Inspection
+
+`inspect_elm` summarizes an ELM library for humans and automation:
+
+- library identity and version;
+- using declarations and includes;
+- parameters, value sets, and code systems;
+- expression and function definitions;
+- retrieve requirements;
+- expression node counts;
+- dependency information for named definitions.
+
+The CLI surfaces this through `rh cql elm inspect` and `rh cql elm deps`.
+
+### Data Requirements
+
+`data_requirements` extracts the FHIR resources, retrieves, terminology
+references, code systems, value sets, and parameters needed by a library.
+
+This is the first artifact boundary used by SQL-on-FHIR emission. For example,
+retrieves of `[Condition]` become requirements for a `Condition` view.
+
+### Lowering Support Reports
+
+`lower_check` reports whether the current first-pass relational lowerer
+recognizes the ELM node kinds present in a library. It is intentionally scoped:
+it is not a claim that all CQL semantics are executable as SQL.
+
+The report separates supported and unsupported ELM node kinds, with notes about
+known semantic gaps such as terminology expansion, complete interval precision,
+quantity normalization, and complex list behavior.
+
+## Relational Algebra IR
+
+The relational algebra plan is the inspectable compiler IR between clinical CQL
+semantics and backend artifacts.
+
+```text
+CQL / ELM
+  -> relational algebra IR
+  -> SQL-on-FHIR ViewDefinitions + SQLQuery
+  -> analytics runtime execution
+```
+
+SQL-on-FHIR is an artifact target, not the core internal model. The relational
+IR is the place where CQL retrieves, filters, joins, projections, aggregates,
+and clinical expression predicates are normalized before choosing an output
+target.
+
+### Core Relational Algebra
+
+The core is conventional relational algebra:
+
+| Core node | Meaning | Typical backend mapping |
+|---|---|---|
+| `Scan` | Read a logical source relation | SQL table or generated ViewDefinition table |
+| `Filter` | Keep rows matching a predicate | SQL `WHERE` |
+| `Project` | Shape or select columns/expressions | SQL `SELECT` |
+| `SemiJoin` | Keep left rows that have matching right rows | SQL `EXISTS` or semi join |
+| `AntiJoin` | Keep left rows that do not have matching right rows | SQL `NOT EXISTS` or anti join |
+| `Aggregate` | Group and aggregate rows | SQL `GROUP BY` |
+| `Exists` | Boolean existence over an input relation | SQL `EXISTS` |
+
+The current serialized shape is deliberately simple:
+
+```json
+{
+  "op": "Filter",
+  "detail": {},
+  "inputs": [
+    { "op": "Scan", "detail": { "resource": "Condition" } },
+    { "op": "Expr", "detail": { "kind": "Equal" } }
+  ]
 }
 ```
 
-The compiler continues after errors when possible, collecting multiple errors per compilation for better user experience.
+`RelNode` is an operation name, a string detail map, and child inputs. This
+keeps the first IR stable and easy to inspect while the lowerer matures.
 
-## Future Considerations
+### RH/CQL Extensions
 
-While the current architecture is well-suited for CQL-to-ELM translation, these extensions could be added if needed:
+Clinical CQL needs more than textbook relational algebra. We extend the core
+with CQL/FHIR-aware details and expression placeholders:
 
-1. **Typed AST**: Add explicit type annotations to AST nodes for advanced analysis
-2. **Generic Traversal**: Add walker/visitor utilities for the AST
-3. **Incremental Compilation**: Cache and reuse partial results
-4. **Language Server Protocol**: IDE integration for real-time feedback
+| Extension | Why it exists |
+|---|---|
+| `Scan.detail.dataType` | Preserves the ELM model type such as `{http://hl7.org/fhir}Condition`. |
+| `Scan.detail.resource` | Normalizes FHIR model types to runtime resource/table names such as `Condition`. |
+| `Expr.kind` | Represents clinical predicate and scalar expression nodes without prematurely forcing them into SQL syntax. |
+| `SemiJoin.detail.relationship` | Preserves CQL `with` relationship intent. |
+| `AntiJoin.detail.relationship` | Preserves CQL `without` relationship intent. |
+| `Unsupported.detail.elmType` | Makes lowering gaps explicit and testable instead of silently dropping semantics. |
+| `target` on `RelationalPlan` | Names the backend vocabulary being inspected, such as `relational` or `sql-on-fhir`. |
 
-These would be additive changes that don't require restructuring the core architecture.
+The currently recognized expression kinds include common boolean, comparison,
+terminology, timing, property, literal, and reference forms:
+
+```text
+And, Or, Not,
+Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual,
+InValueSet, AnyInValueSet,
+Overlaps, IncludedIn, Includes,
+Before, After, SameOrBefore, SameOrAfter,
+Property, Literal,
+ValueSetRef, CodeRef, ExpressionRef, ParameterRef, AliasRef
+```
+
+These are serialized as `Expr` nodes today because the first-pass IR is focused
+on making the CQL-to-relational boundary visible and reviewable. As lowering
+becomes more complete, selected `Expr` nodes can be expanded into richer typed
+predicate structs without changing the high-level relational core.
+
+### Why Not Emit SQL Directly?
+
+Direct SQL emission would tie CQL lowering to one backend too early. The
+relational IR gives us:
+
+- an inspectable debugging surface via `rh cql plan`;
+- a stable fixture target for tests;
+- a place to report unsupported semantics before SQL generation;
+- a common source for SQL-on-FHIR, raw SQL, and future runtime-specific
+  backends;
+- a product boundary where open-source `rh` emits artifacts and closed-source
+  analytics runtimes execute them.
+
+### Current Limits
+
+The current relational plan is a first-pass lowerer. It is useful for
+inspection and artifact generation, but it is not a complete CQL semantic model.
+
+Known limits include:
+
+- incomplete terminology expansion semantics;
+- incomplete interval precision handling;
+- incomplete quantity and UCUM normalization;
+- partial list semantics;
+- no full query optimization;
+- simple expression nodes rather than fully typed relational predicates.
+
+Those limits are surfaced by `lower_check` and by `Unsupported` IR nodes.
+
+## SQL-on-FHIR and Runtime Artifacts
+
+The current artifact path is:
+
+```text
+rh cql emit-views
+rh cql emit-sql
+rh cql emit-runtime
+```
+
+### ViewDefinition Emission
+
+`emit_view_definitions` derives deterministic SQL-on-FHIR ViewDefinition
+artifacts from retrieve requirements. Each resource gets a view with stable,
+runtime-friendly columns currently used by analytics fixtures:
+
+- `getResourceKey()` as `id`;
+- `subject.getReferenceKey(Patient)` as `patient_id`;
+- common scalar paths when required;
+- `forEachOrNull: code.coding` with `system` and `code` columns.
+
+The generated view names and paths are deterministic so artifacts can be
+checked into fixtures and reviewed.
+
+### SQLQuery Emission
+
+`emit_sql_text` and `emit_sql_query_library` generate:
+
+- raw SQL text for inspection and backend experiments;
+- a FHIR `Library` artifact containing SQLQuery metadata;
+- `relatedArtifact` dependencies on emitted ViewDefinitions;
+- parameter metadata derived from CQL parameters;
+- SQL text in the SQL-on-FHIR extension plus base64 attachment data.
+
+The initial SQL generator is intentionally conservative and retrieve-oriented.
+More complete relational lowering should happen through the relational IR
+rather than by adding ad hoc SQL generation directly from ELM.
+
+The emitted SQL artifacts are designed as execution contracts, not as a claim
+that `rh` itself is the production execution engine. The same artifacts can be
+run by commercial or local products that choose an appropriate backend for the
+deployment environment.
+
+### Measure Runtime Manifest
+
+`emit_measure_runtime_manifest` writes the first ReasonHealth runtime manifest:
+
+```json
+{
+  "resourceType": "ReasonHealthMeasureRuntime",
+  "id": "examplemeasure",
+  "measure": "ExampleMeasure",
+  "query": "query-library.json",
+  "views": ["views/condition_view.json"],
+  "parameters": [
+    {
+      "name": "condition_code",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "results": [
+    {
+      "name": "initialPopulation",
+      "kind": "population",
+      "source": "query",
+      "column": "patient_id"
+    }
+  ]
+}
+```
+
+The manifest is path-oriented and JSON-serializable. It intentionally references
+artifacts instead of embedding compiler internals. Runtime consumers can load
+the manifest, load the referenced views and query, bind parameters, and collect
+named result populations.
+
+The CLI accepts `--result name=column` to map result names to query result
+columns. If omitted, it defaults to `initialPopulation=patient_id`.
+
+## Evaluation Engine
+
+The `eval/` module provides an optional CQL/ELM runtime used for local
+artifact-development, debugging, and comparison workflows. It includes:
+
+- CQL runtime `Value` types;
+- three-valued logic helpers;
+- arithmetic, comparison, string, temporal, conversion, interval, list, and
+  query operators;
+- `EvalContext` and data/terminology provider traits;
+- trace-enabled evaluation for debugging.
+
+The evaluator is separate from analytics artifact execution. The evaluator
+executes CQL/ELM semantics directly so compiler authors and artifact developers
+can test behavior without a warehouse or commercial runtime. Production
+analytics runtimes execute emitted relational artifacts over projected FHIR
+tables and are expected to make environment-specific backend choices outside
+this crate.
+
+## Error Handling and Diagnostics
+
+Diagnostics flow through `reporting.rs` and carry stage, severity, source
+location, and structured details where available. The compiler collects
+multiple diagnostics when possible instead of stopping at the first recoverable
+problem.
+
+Important diagnostic boundaries:
+
+- parser errors from `parser/`;
+- semantic/type/operator errors from `semantics/`, `types.rs`, and
+  `operators.rs`;
+- emitted diagnostics exposed by `compile`, `validate`, and CLI JSON envelopes;
+- lowerability diagnostics exposed separately by `lower_check`.
+
+## Extension Points
+
+### Adding CQL Syntax
+
+1. Add parser AST support in `parser/ast.rs` and parser modules.
+2. Add semantic analysis and type resolution in `semantics/`, `types.rs`, and
+   `operators.rs`.
+3. Add ELM emission in `emit/`.
+4. Add evaluator support if runtime evaluation is expected.
+5. Add analytics lowering support if the construct should participate in
+   relational artifact emission.
+
+### Adding Relational IR Support
+
+1. Teach `plan_expression` or `plan_query` how to lower the ELM shape.
+2. Preserve CQL/FHIR-specific information in `detail` or a richer serializable
+   node shape.
+3. Update `is_supported_for_first_pass` so `lower_check` reflects the new
+   support.
+4. Add formatted and JSON fixture coverage for `rh cql plan`.
+5. Add SQL-on-FHIR or SQLQuery emission only after the IR representation is
+   reviewable.
+
+### Adding Artifact Targets
+
+New targets should consume the relational IR or data requirements rather than
+re-walking CQL source directly. This keeps the compiler boundary stable:
+
+```text
+CQL -> ELM -> relational IR -> artifact target
+```
+
+## Future Work
+
+Near-term work should focus on:
+
+1. Expanding relational expression nodes beyond `Expr.kind` placeholders.
+2. Lowering more CQL query relationships, projections, and population
+   operations.
+3. Improving terminology and value-set handling at the artifact boundary.
+4. Emitting richer measure runtime manifests for multiple populations directly
+   from CQL measure structure.
+5. Keeping `lower_check` precise as support broadens.
+
+Longer-term work can add optimization, backend-specific planning, richer source
+maps across analytics artifacts, and more complete fallback coordination between
+relational execution and direct CQL evaluation.
