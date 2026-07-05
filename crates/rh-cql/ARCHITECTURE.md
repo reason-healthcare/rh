@@ -38,6 +38,34 @@ ELM library
 FHIR data, Arrow, DataFusion, and measure comparison belongs outside this crate
 in the analytics runtime.
 
+```mermaid
+flowchart LR
+    cql["CQL source"] --> ast["Parser AST"]
+    ast --> typed["Semantic typed AST"]
+    typed --> elm["ELM library"]
+
+    elm --> eval["Native ELM evaluator"]
+    eval --> dev["Artifact development\ntraces, debugging, comparison"]
+
+    elm --> inspect["Inspection + data requirements"]
+    inspect --> rel["Relational algebra IR"]
+    rel --> lower["Lowering support report"]
+    rel --> views["SQL-on-FHIR\nViewDefinitions"]
+    rel --> sql["SQLQuery Library\nor SQL text"]
+    views --> manifest["Measure runtime manifest"]
+    sql --> manifest
+    manifest --> runtime["Commercial / environment-specific\nanalytics runtime"]
+
+    classDef compiler fill:#e8f2ff,stroke:#4b77be,color:#111;
+    classDef dev fill:#f4f4f4,stroke:#777,color:#111;
+    classDef artifact fill:#eaf7ea,stroke:#3f8f46,color:#111;
+    classDef runtime fill:#fff3d6,stroke:#b7791f,color:#111;
+    class cql,ast,typed,elm compiler;
+    class eval,dev dev;
+    class inspect,rel,lower,views,sql,manifest artifact;
+    class runtime runtime;
+```
+
 ## Motivation
 
 `rh-cql` deliberately separates artifact development from production execution.
@@ -70,6 +98,32 @@ This gives users a portable compiler boundary while leaving production runtime
 decisions where they belong: in the deployment environment and supported
 commercial product layer.
 
+```mermaid
+flowchart TB
+    subgraph open["Open-source rh"]
+    cql2["CQL / ELM"]
+    evaluator["Native ELM evaluator"]
+    artifacts["Stable artifacts\nrelational IR, ViewDefinition, SQLQuery, manifest"]
+    cql2 --> evaluator
+    cql2 --> artifacts
+    end
+
+    evaluator --> dev2["Compiler and artifact development\nlocal execution, traces, expected-result checks"]
+    artifacts --> product["Commercially supported runtime products"]
+
+    subgraph env["Deployment environment"]
+    product --> backend["Selected execution backend\nDataFusion, Spark, DuckDB, Trino,\nPostgres, cloud warehouse"]
+    product --> services["Environment-specific services\nterminology, governance, monitoring, support"]
+    end
+
+    classDef open fill:#e8f2ff,stroke:#4b77be,color:#111;
+    classDef artifact fill:#eaf7ea,stroke:#3f8f46,color:#111;
+    classDef runtime fill:#fff3d6,stroke:#b7791f,color:#111;
+    class cql2,evaluator open;
+    class artifacts artifact;
+    class product,backend,services runtime;
+```
+
 ## Compiler Pipeline
 
 All public compile entry points in `compiler.rs` delegate to a shared internal
@@ -93,6 +147,25 @@ CQL source
 The compiler can also stop after semantic analysis for validate-only and
 explain paths. That is why the shared pipeline has an explicit emit mode:
 `None`, `Elm`, or `ElmWithSourceMap`.
+
+```mermaid
+flowchart LR
+    source["CQL source"] --> parser["Parser\nparser::*"]
+    parser --> parsed["parser::ast::Library"]
+    parsed --> sem["SemanticAnalyzer\nsemantics::*"]
+    sem --> typed2["TypedLibrary\nTypedNode metadata"]
+    typed2 --> validate["validate / explain\nemit mode: None"]
+    typed2 --> emitter["ElmEmitter\nemit::*"]
+    emitter --> elm2["elm::Library"]
+    emitter --> smap["SourceMap\noptional side channel"]
+    elm2 --> json["ELM JSON\noutput.rs"]
+    smap --> smap_json["source-map JSON"]
+
+    classDef stage fill:#e8f2ff,stroke:#4b77be,color:#111;
+    classDef artifact fill:#eaf7ea,stroke:#3f8f46,color:#111;
+    class source,parser,sem,emitter stage;
+    class parsed,typed2,validate,elm2,smap,json,smap_json artifact;
+```
 
 ## Current Public Surfaces
 
@@ -263,6 +336,29 @@ SQL-on-FHIR is an artifact target, not the core internal model. The relational
 IR is the place where CQL retrieves, filters, joins, projections, aggregates,
 and clinical expression predicates are normalized before choosing an output
 target.
+
+```mermaid
+flowchart TB
+    elm3["ELM library"] --> plan["rh cql plan\nRelationalPlan"]
+    elm3 --> req["data_requirements\nRetrieveRequirement"]
+
+    plan --> core["Core relational nodes\nScan, Filter, Project,\nSemiJoin, AntiJoin,\nAggregate, Exists"]
+    plan --> expr["CQL/FHIR expression extensions\nExpr.kind, dataType, resource,\nrelationship, Unsupported"]
+
+    req --> views2["rh cql emit-views\nViewDefinition JSON"]
+    plan --> check["rh cql lower-check\nsupported / unsupported nodes"]
+    core --> sql2["rh cql emit-sql\nSQLQuery Library or SQL text"]
+    expr --> sql2
+    views2 --> manifest2["rh cql emit-runtime\nReasonHealthMeasureRuntime"]
+    sql2 --> manifest2
+
+    classDef input fill:#e8f2ff,stroke:#4b77be,color:#111;
+    classDef ir fill:#f4f4f4,stroke:#777,color:#111;
+    classDef artifact fill:#eaf7ea,stroke:#3f8f46,color:#111;
+    class elm3 input;
+    class plan,req,core,expr,check ir;
+    class views2,sql2,manifest2 artifact;
+```
 
 ### Core Relational Algebra
 
