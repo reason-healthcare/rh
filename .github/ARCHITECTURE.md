@@ -41,7 +41,7 @@ against `cargo metadata`.
 ```text
 rh-cli: rh-codegen, rh-cql, rh-fhirpath, rh-foundation, rh-fsh, rh-hl7-fhir-r4-core, rh-packager, rh-validator, rh-vcl
 rh-codegen: rh-foundation
-rh-cql: rh-foundation
+rh-cql: rh-foundation, rh-hl7-fhir-r4-core
 rh-fhirpath: rh-foundation, rh-hl7-fhir-r4-core
 rh-foundation: -
 rh-fsh: rh-foundation, rh-hl7-fhir-r4-core
