@@ -1,6 +1,31 @@
 use rh_validator::{FhirValidator, TerminologyConfig};
 use serde_json::json;
 
+fn register_activity_definition_intent_profile(validator: &FhirValidator) {
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/StructureDefinition/ActivityDefinition",
+        "name": "ActivityDefinition",
+        "type": "ActivityDefinition",
+        "snapshot": {
+            "element": [
+                {"id": "ActivityDefinition", "path": "ActivityDefinition", "min": 0, "max": "*"},
+                {
+                    "id": "ActivityDefinition.intent",
+                    "path": "ActivityDefinition.intent",
+                    "min": 0,
+                    "max": "1",
+                    "type": [{"code": "code"}],
+                    "binding": {
+                        "strength": "required",
+                        "valueSet": "http://example.org/fhir/ValueSet/unavailable-required-binding"
+                    }
+                }
+            ]
+        }
+    }));
+}
+
 #[test]
 fn test_required_binding_valid_code() {
     let packages_dir = dirs::home_dir()
@@ -262,6 +287,32 @@ fn test_system_only_valueset_with_complete_codesystem_reports_invalid_code() {
         !code_invalid_errors.is_empty(),
         "Complete local CodeSystems should make system-only ValueSet membership decidable"
     );
+}
+
+#[test]
+fn test_required_code_binding_without_terminology_warns_when_unvalidated() {
+    let validator =
+        FhirValidator::new(rh_validator::FhirVersion::R4, None).expect("Should create validator");
+    register_activity_definition_intent_profile(&validator);
+
+    let resource = json!({
+        "resourceType": "ActivityDefinition",
+        "intent": "postoperative outcome assessment and documentation"
+    });
+
+    let result = validator.validate_auto(&resource).expect("Should validate");
+
+    assert!(
+        result.valid,
+        "Unavailable required binding validation should warn, not fail: {:?}",
+        result.issues
+    );
+    assert!(result.issues.iter().any(|issue| {
+        issue.severity == rh_validator::Severity::Warning
+            && issue
+                .message
+                .contains("could not be validated against required ValueSet")
+    }));
 }
 
 #[test]

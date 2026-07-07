@@ -6070,7 +6070,8 @@ impl FhirValidator {
                     CodeInValueSetResult::ValueSetNotFound => {
                         // ValueSet could not be resolved or is not locally decidable.
                         // For required bindings, fall back to the terminology service
-                        // if one is configured; otherwise skip gracefully.
+                        // if one is configured; otherwise report that the binding
+                        // could not be validated.
                         if rule.strength == "required" {
                             if let Some(ts) = self.terminology_service.as_ref() {
                                 match ts.validate_code_in_valueset(
@@ -6093,9 +6094,21 @@ impl FhirValidator {
                                         }
                                     }
                                     Err(_) => {
-                                        // ValueSet not supported by terminology service; skip gracefully
+                                        issues.push(Self::unvalidated_required_binding_warning(
+                                            rule,
+                                            &system,
+                                            &code,
+                                            "the terminology service could not validate it",
+                                        ));
                                     }
                                 }
+                            } else {
+                                issues.push(Self::unvalidated_required_binding_warning(
+                                    rule,
+                                    &system,
+                                    &code,
+                                    "no terminology service is configured and the ValueSet could not be found locally",
+                                ));
                             }
                         }
                     }
@@ -6104,6 +6117,25 @@ impl FhirValidator {
         }
 
         Ok(issues)
+    }
+
+    fn unvalidated_required_binding_warning(
+        rule: &crate::rules::BindingRule,
+        system: &str,
+        code: &str,
+        reason: &str,
+    ) -> ValidationIssue {
+        ValidationIssue::warning(
+            IssueCode::CodeInvalid,
+            format!(
+                "Code '{}' from system '{}' could not be validated against required ValueSet '{}' at '{}': {}",
+                code,
+                if system.is_empty() { "(no system)" } else { system },
+                rule.value_set_url,
+                rule.path,
+                reason
+            ),
+        )
     }
 
     fn validate_invariant(
