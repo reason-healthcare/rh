@@ -47,7 +47,7 @@ rh-foundation: -
 rh-fsh: rh-foundation, rh-hl7-fhir-r4-core
 rh-hl7-fhir-r4-core: rh-foundation
 rh-hl7-fhir-r5-core: rh-foundation
-rh-packager: rh-cql, rh-foundation, rh-fsh, rh-validator
+rh-packager: rh-cql, rh-foundation, rh-fsh, rh-hl7-fhir-r4-core, rh-validator
 rh-validator: rh-fhirpath, rh-foundation, rh-hl7-fhir-r4-core
 rh-vcl: rh-foundation
 ```
