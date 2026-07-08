@@ -58,12 +58,6 @@ pub struct TestCase {
         deserialize_with = "deserialize_flexible_bool"
     )]
     pub security_checks: bool,
-    #[serde(
-        rename = "noHtmlInMarkdown",
-        default,
-        deserialize_with = "deserialize_flexible_bool"
-    )]
-    pub no_html_in_markdown: bool,
     #[serde(rename = "use-test", default = "default_true")]
     pub use_test: bool,
     #[serde(default)]

@@ -1,31 +1,49 @@
 //! Canonical URL helpers for package metadata and generated resources.
 
-use crate::{context::PublishContext, PublisherError, Result};
+use crate::context::PublishContext;
 use rh_hl7_fhir_r4_core::metadata::FHIR_TYPE_REGISTRY;
-use serde_json::{json, Value};
+use serde_json::Value;
+use tracing::warn;
 
 const IMPLEMENTATION_GUIDE_SEGMENT: &str = "/ImplementationGuide/";
 
-pub fn validate_canonical_base(canonical_base: Option<&str>) -> Result<()> {
-    let Some(canonical_base) = canonical_base else {
-        return Ok(());
-    };
+fn likely_implementation_guide_resource_url(canonical: &str) -> Option<String> {
+    let canonical = canonical.trim_end_matches('/');
+    let (base, ig_id) = canonical.split_once(IMPLEMENTATION_GUIDE_SEGMENT)?;
 
-    if canonical_base.contains(IMPLEMENTATION_GUIDE_SEGMENT) {
-        return Err(PublisherError::IgSync(format!(
-            "canonical must be the package canonical base URL, not an ImplementationGuide URL: \
-             \"{canonical_base}\". Use the base URL before /ImplementationGuide/."
-        )));
+    if base.is_empty() || ig_id.is_empty() || ig_id.contains('/') {
+        return None;
     }
 
-    Ok(())
+    Some(base.to_string())
 }
 
-pub fn implementation_guide_url(canonical_base: &str, ig_id: &str) -> String {
+pub(crate) fn warn_if_likely_implementation_guide_resource_url(canonical: Option<&str>) {
+    let Some(canonical) = canonical else {
+        return;
+    };
+    let Some(suggested_base) = likely_implementation_guide_resource_url(canonical) else {
+        return;
+    };
+
+    warn!(
+        canonical,
+        suggested_base,
+        "packager.toml canonical looks like an ImplementationGuide resource URL; \
+         it will be used literally as the package canonical base. Did you mean \"{}\"?",
+        suggested_base
+    );
+}
+
+pub(crate) fn implementation_guide_url(canonical_base: &str, ig_id: &str) -> String {
     resource_canonical_url(canonical_base, "ImplementationGuide", ig_id)
 }
 
-pub fn resource_canonical_url(canonical_base: &str, resource_type: &str, id: &str) -> String {
+pub(crate) fn resource_canonical_url(
+    canonical_base: &str,
+    resource_type: &str,
+    id: &str,
+) -> String {
     format!(
         "{}/{}/{}",
         canonical_base.trim_end_matches('/'),
@@ -34,60 +52,47 @@ pub fn resource_canonical_url(canonical_base: &str, resource_type: &str, id: &st
     )
 }
 
-pub fn is_canonical_resource_type(resource_type: &str) -> bool {
+fn is_canonical_resource_type(resource_type: &str) -> bool {
     FHIR_TYPE_REGISTRY
         .get(resource_type)
         .is_some_and(|fields| fields.contains_key("url"))
 }
 
-pub fn normalize_resource_canonical_urls(ctx: &mut PublishContext) {
+pub(crate) fn warn_resource_canonical_url_mismatches(ctx: &PublishContext) {
     let Some(canonical_base) = ctx.package_json.url.as_deref() else {
         return;
     };
 
-    for resource in ctx.resources.values_mut().chain(ctx.examples.values_mut()) {
-        normalize_resource_canonical_url(resource, canonical_base);
+    for (label, resource) in ctx.resources.iter().chain(ctx.examples.iter()) {
+        warn_resource_canonical_url_mismatch(label, resource, canonical_base);
     }
 }
 
-fn normalize_resource_canonical_url(resource: &mut Value, canonical_base: &str) {
+fn warn_resource_canonical_url_mismatch(label: &str, resource: &Value, canonical_base: &str) {
     let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) else {
         return;
     };
-    if !is_canonical_resource_type(resource_type) {
+    if resource_type == "ImplementationGuide" || !is_canonical_resource_type(resource_type) {
         return;
     }
     let Some(id) = resource.get("id").and_then(|v| v.as_str()) else {
         return;
     };
-
-    let expected = if resource_type == "ImplementationGuide" {
-        implementation_guide_url(canonical_base, id)
-    } else {
-        resource_canonical_url(canonical_base, resource_type, id)
+    let Some(actual_url) = resource.get("url").and_then(|v| v.as_str()) else {
+        return;
     };
 
-    let current = resource.get("url").and_then(|v| v.as_str());
-    if current.is_none_or(|url| should_replace_url(url, canonical_base, resource_type, id)) {
-        resource["url"] = json!(expected);
+    let expected_url = resource_canonical_url(canonical_base, resource_type, id);
+    if actual_url != expected_url {
+        warn!(
+            resource = label,
+            resource_type,
+            id,
+            actual_url,
+            expected_url,
+            "Canonical resource url differs from value derived from packager.toml canonical"
+        );
     }
-}
-
-fn should_replace_url(
-    current_url: &str,
-    canonical_base: &str,
-    resource_type: &str,
-    id: &str,
-) -> bool {
-    if current_url.is_empty() {
-        return true;
-    }
-
-    let ig_prefix = format!(
-        "{}/ImplementationGuide/",
-        canonical_base.trim_end_matches('/')
-    );
-    current_url.starts_with(&ig_prefix) && current_url.ends_with(&format!("/{resource_type}/{id}"))
 }
 
 #[cfg(test)]
@@ -108,7 +113,6 @@ mod tests {
                 fhir_versions: vec![],
                 dependencies: HashMap::new(),
                 url: Some("http://example.org/fhir".to_string()),
-                canonical: Some("http://example.org/fhir".to_string()),
                 description: None,
                 author: None,
                 license: None,
@@ -122,12 +126,24 @@ mod tests {
     }
 
     #[test]
-    fn rejects_implementation_guide_url_as_canonical_base() {
-        let err = validate_canonical_base(Some(
-            "http://example.org/fhir/ImplementationGuide/example.fhir",
-        ))
-        .unwrap_err();
-        assert!(err.to_string().contains("canonical must be"));
+    fn detects_likely_implementation_guide_url_canonical_base() {
+        assert_eq!(
+            likely_implementation_guide_resource_url(
+                "http://example.org/fhir/ImplementationGuide/example.fhir"
+            )
+            .as_deref(),
+            Some("http://example.org/fhir")
+        );
+    }
+
+    #[test]
+    fn does_not_warn_for_deeper_implementation_guide_path_canonical_base() {
+        assert_eq!(
+            likely_implementation_guide_resource_url(
+                "http://example.org/fhir/ImplementationGuide/root/ns"
+            ),
+            None
+        );
     }
 
     #[test]
@@ -138,24 +154,19 @@ mod tests {
     }
 
     #[test]
-    fn fills_missing_canonical_resource_url_from_base() {
+    fn ignores_missing_non_ig_canonical_resource_url() {
         let mut resources = HashMap::new();
         resources.insert(
             "Library-logic".to_string(),
             json!({"resourceType":"Library","id":"logic","status":"draft"}),
         );
-        let mut ctx = make_ctx(resources);
+        let ctx = make_ctx(resources);
 
-        normalize_resource_canonical_urls(&mut ctx);
-
-        assert_eq!(
-            ctx.resources["Library-logic"]["url"],
-            "http://example.org/fhir/Library/logic"
-        );
+        warn_resource_canonical_url_mismatches(&ctx);
     }
 
     #[test]
-    fn rewrites_nested_implementation_guide_resource_url() {
+    fn warns_for_nested_implementation_guide_resource_url() {
         let mut resources = HashMap::new();
         resources.insert(
             "ActivityDefinition-assess".to_string(),
@@ -166,18 +177,30 @@ mod tests {
                 "status":"draft"
             }),
         );
-        let mut ctx = make_ctx(resources);
+        let ctx = make_ctx(resources);
 
-        normalize_resource_canonical_urls(&mut ctx);
-
-        assert_eq!(
-            ctx.resources["ActivityDefinition-assess"]["url"],
-            "http://example.org/fhir/ActivityDefinition/assess"
-        );
+        warn_resource_canonical_url_mismatches(&ctx);
     }
 
     #[test]
-    fn preserves_external_or_custom_resource_url() {
+    fn validates_against_implementation_guide_path_canonical_base_literally() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "ActivityDefinition-assess".to_string(),
+            json!({
+                "resourceType":"ActivityDefinition",
+                "id":"assess",
+                "url":"http://example.org/fhir/ImplementationGuide/root/ActivityDefinition/assess",
+                "status":"draft"
+            }),
+        );
+        let mut ctx = make_ctx(resources);
+        ctx.package_json.url = Some("http://example.org/fhir/ImplementationGuide/root".to_string());
+        warn_resource_canonical_url_mismatches(&ctx);
+    }
+
+    #[test]
+    fn warns_for_external_or_custom_url_for_own_canonical_resource() {
         let mut resources = HashMap::new();
         resources.insert(
             "ValueSet-custom".to_string(),
@@ -187,13 +210,8 @@ mod tests {
                 "url":"http://custom.example/ValueSet/custom"
             }),
         );
-        let mut ctx = make_ctx(resources);
+        let ctx = make_ctx(resources);
 
-        normalize_resource_canonical_urls(&mut ctx);
-
-        assert_eq!(
-            ctx.resources["ValueSet-custom"]["url"],
-            "http://custom.example/ValueSet/custom"
-        );
+        warn_resource_canonical_url_mismatches(&ctx);
     }
 }

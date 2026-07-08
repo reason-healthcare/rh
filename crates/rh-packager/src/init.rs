@@ -72,7 +72,7 @@ impl Default for InitOptions {
 /// # Errors
 /// Returns an error if `packager.toml` already exists in `dir`.
 pub fn init_package(dir: &Path, opts: InitOptions) -> Result<Vec<PathBuf>> {
-    crate::canonical::validate_canonical_base(Some(&opts.canonical))?;
+    crate::canonical::warn_if_likely_implementation_guide_resource_url(Some(&opts.canonical));
 
     std::fs::create_dir_all(dir)?;
 
@@ -374,15 +374,30 @@ mod tests {
     }
 
     #[test]
-    fn rejects_implementation_guide_url_as_canonical() {
+    fn accepts_implementation_guide_url_as_canonical() {
         let dir = TempDir::new().unwrap();
         let opts = InitOptions {
             name: "com.example.fhir".to_string(),
             canonical: "https://example.org/fhir/ImplementationGuide/com-example-fhir".to_string(),
             ..Default::default()
         };
-        let err = init_package(dir.path(), opts).unwrap_err();
-        assert!(err.to_string().contains("canonical must be"));
+        init_package(dir.path(), opts).unwrap();
+
+        let toml_str = std::fs::read_to_string(dir.path().join("packager.toml")).unwrap();
+        let cfg: crate::config::PublisherConfig = toml::from_str(&toml_str).unwrap();
+        assert_eq!(
+            cfg.canonical.as_deref(),
+            Some("https://example.org/fhir/ImplementationGuide/com-example-fhir")
+        );
+
+        let ig: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join("ImplementationGuide.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            ig["url"],
+            "https://example.org/fhir/ImplementationGuide/com-example-fhir/ImplementationGuide/com-example-fhir"
+        );
     }
 
     #[test]

@@ -194,7 +194,6 @@ mod tests {
                 name: "test.pkg".to_string(),
                 version: "0.1.0".to_string(),
                 url: Some("https://example.org/fhir".to_string()),
-                canonical: Some("https://example.org/fhir".to_string()),
                 fhir_versions: vec!["4.0.1".to_string()],
                 dependencies: HM::new(),
                 description: None,

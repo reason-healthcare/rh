@@ -187,7 +187,6 @@ mod tests {
                 fhir_versions: vec!["4.0.1".to_string()],
                 dependencies: HashMap::new(),
                 url: None,
-                canonical: None,
                 description: None,
                 author: None,
                 license: None,
