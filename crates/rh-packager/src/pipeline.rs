@@ -1,6 +1,9 @@
 //! High-level pipeline orchestration for `rh package` subcommands.
 
 use crate::{
+    canonical::{
+        warn_if_likely_implementation_guide_resource_url, warn_resource_canonical_url_mismatches,
+    },
     context::PublishContext,
     hooks::{build_registry_with_config, run_stage},
     ig_populate::populate_ig,
@@ -43,6 +46,7 @@ use tracing::{info, warn};
 /// ```
 pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
     let mut ctx = load_source_dir(source_dir, output_dir.to_path_buf())?;
+    warn_if_likely_implementation_guide_resource_url(ctx.package_json.url.as_deref());
     check_ig_sync(&ctx)?;
 
     let registry = build_registry_with_config(&ctx.config);
@@ -72,6 +76,8 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
 
     let after = ctx.config.hooks.after_build.clone();
     run_stage(&registry, &after, &mut ctx)?;
+
+    warn_resource_canonical_url_mismatches(&ctx);
 
     let pkg_dir = write_output_dir(&ctx)?;
 
@@ -128,11 +134,13 @@ pub fn lock(source_dir: &Path, output_dir: &Path) -> Result<()> {
 pub fn check(source_dir: &Path) -> Result<()> {
     let output_dir = source_dir.join("output");
     let mut ctx = load_source_dir(source_dir, output_dir)?;
+    warn_if_likely_implementation_guide_resource_url(ctx.package_json.url.as_deref());
     check_ig_sync(&ctx)?;
 
     let registry = build_registry_with_config(&ctx.config);
     let before = ctx.config.hooks.before_build.clone();
     run_stage(&registry, &before, &mut ctx)?;
+    warn_resource_canonical_url_mismatches(&ctx);
 
     info!("Source directory check passed");
     Ok(())

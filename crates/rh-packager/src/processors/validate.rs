@@ -55,7 +55,7 @@ impl HookProcessor for ValidateProcessor {
         let validator = FhirValidator::new(FhirVersion::R4, Some(packages_dir_str.as_ref()))
             .map_err(|e| PublisherError::ValidationFailed(e.to_string()))?;
 
-        let mut failed = false;
+        let mut errors = Vec::new();
         for (stem, resource) in &ctx.resources {
             let result = validator
                 .validate(resource)
@@ -68,16 +68,18 @@ impl HookProcessor for ValidateProcessor {
                     }
                     Severity::Error => {
                         tracing::error!("[{stem}] {}: {}", issue.severity, issue.message);
-                        failed = true;
+                        errors.push(format!("[{stem}] {}: {}", issue.severity, issue.message));
                     }
                 }
             }
         }
 
-        if failed {
-            return Err(PublisherError::ValidationFailed(
-                "One or more resources failed validation (see errors above)".to_string(),
-            ));
+        if !errors.is_empty() {
+            let mut message = format!("One or more resources failed validation: {}", errors[0]);
+            if errors.len() > 1 {
+                message.push_str(&format!(" (and {} more)", errors.len() - 1));
+            }
+            return Err(PublisherError::ValidationFailed(message));
         }
 
         info!("All {} resource(s) passed validation", ctx.resources.len());
@@ -111,6 +113,7 @@ mod tests {
                 fhir_versions: vec![],
                 dependencies: deps,
                 url: None,
+                canonical: None,
                 description: None,
                 author: None,
                 license: None,

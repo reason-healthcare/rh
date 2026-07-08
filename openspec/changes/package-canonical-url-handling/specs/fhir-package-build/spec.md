@@ -59,13 +59,13 @@ Generated `package.json` SHALL include both `url` and `canonical` when
 - **WHEN** `packager.toml` contains `canonical = "http://example.org/fhir"`
 - **THEN** generated `package.json` contains `"url": "http://example.org/fhir"` and `"canonical": "http://example.org/fhir"`
 
-### Requirement: Canonical resource URL mismatches warn without mutation
+### Requirement: Canonical resource URL mismatches SHALL warn without mutation
 
-For resource types whose R4 metadata defines a root `url` field, package
-commands SHALL derive the expected resource URL as
-`{canonical}/{resourceType}/{id}` for diagnostics. The packager SHALL warn when
-an existing URL differs, SHALL ignore missing URL fields, and SHALL NOT rewrite
-resource URLs.
+Package commands SHALL derive the expected resource URL as
+`{canonical}/{resourceType}/{id}` for diagnostics when a resource type's R4
+metadata defines a root `url` field. The packager SHALL warn when an existing
+URL differs, SHALL ignore missing URL fields, and SHALL NOT rewrite resource
+URLs.
 
 #### Scenario: Existing canonical resource URL mismatch warns
 - **WHEN** a `ValueSet` with `id = "example"` has `"url": "http://other.example/ValueSet/example"` and the package canonical is `http://example.org/fhir`

@@ -5,6 +5,7 @@
 //! descriptive errors for each mismatch found.
 
 use crate::{context::PublishContext, PublisherError, Result};
+use tracing::warn;
 
 /// Validate that the `ImplementationGuide` resource in `ctx.resources` is consistent
 /// with the package manifest (derived from `packager.toml`). All mismatches are
@@ -15,7 +16,7 @@ use crate::{context::PublishContext, PublisherError, Result};
 /// |---|---|
 /// | `id` | `packageId` |
 /// | `version` | `version` |
-/// | `canonical` | `url` |
+/// | `canonical` | `url` derived as `{canonical}/ImplementationGuide/{ImplementationGuide.id}` |
 /// | `fhir_version` | `fhirVersion[0]` |
 pub fn check_ig_sync(ctx: &PublishContext) -> Result<()> {
     let ig = find_ig(ctx)?;
@@ -36,13 +37,17 @@ pub fn check_ig_sync(ctx: &PublishContext) -> Result<()> {
         ig.get("version").and_then(|v| v.as_str()),
     );
 
-    if let Some(pkg_url) = pkg.url.as_deref() {
-        check_field(
-            &mut mismatches,
-            "url",
-            Some(pkg_url),
-            ig.get("url").and_then(|v| v.as_str()),
-        );
+    if let Some(canonical_base) = pkg.url.as_deref() {
+        if let Some(ig_id) = ig.get("id").and_then(|v| v.as_str()) {
+            let expected_ig_url = crate::canonical::implementation_guide_url(canonical_base, ig_id);
+            warn_field_mismatch(
+                "url",
+                Some(&expected_ig_url),
+                ig.get("url").and_then(|v| v.as_str()),
+            );
+        } else {
+            warn!("ImplementationGuide is missing id; cannot derive expected url");
+        }
     }
 
     // Check first fhirVersion entry if present in both.
@@ -100,6 +105,27 @@ fn check_field(
     }
 }
 
+fn warn_field_mismatch(field: &str, expected: Option<&str>, actual: Option<&str>) {
+    match (expected, actual) {
+        (Some(exp), Some(act)) if exp != act => {
+            warn!(
+                field,
+                expected = exp,
+                actual = act,
+                "ImplementationGuide field differs from value derived from packager.toml"
+            );
+        }
+        (Some(exp), None) => {
+            warn!(
+                field,
+                expected = exp,
+                "ImplementationGuide is missing field derived from packager.toml"
+            );
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,6 +147,7 @@ mod tests {
             fhir_versions: pkg_fhir.iter().map(|s| s.to_string()).collect(),
             dependencies: HashMap::new(),
             url: pkg_url.map(|s| s.to_string()),
+            canonical: pkg_url.map(|s| s.to_string()),
             description: None,
             author: None,
             license: None,
@@ -164,7 +191,7 @@ mod tests {
             valid_ig(
                 "example.fhir.pkg",
                 "1.0.0",
-                "http://example.org/fhir",
+                "http://example.org/fhir/ImplementationGuide/test-ig",
                 "4.0.1",
             ),
         );
@@ -212,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn fails_on_url_mismatch() {
+    fn warns_but_passes_on_url_mismatch() {
         let ctx = make_context(
             "example.fhir.pkg",
             "1.0.0",
@@ -226,8 +253,7 @@ mod tests {
                 "status": "draft"
             }),
         );
-        let err = check_ig_sync(&ctx).unwrap_err();
-        assert!(err.to_string().contains("url"));
+        assert!(check_ig_sync(&ctx).is_ok());
     }
 
     #[test]
@@ -269,7 +295,6 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("packageId"));
         assert!(msg.contains("version"));
-        assert!(msg.contains("url"));
         assert!(msg.contains("fhirVersion"));
     }
 }

@@ -202,11 +202,7 @@ fn build_implementation_guide(
     let ig_id = to_ig_id(&opts.name);
     let ig_name = to_pascal_case(&opts.name);
     let title = opts.title.clone().unwrap_or_else(|| ig_name.clone());
-    let canonical_url = format!(
-        "{}/ImplementationGuide/{}",
-        opts.canonical.trim_end_matches('/'),
-        &opts.name
-    );
+    let canonical_url = crate::canonical::implementation_guide_url(&opts.canonical, &ig_id);
     // Derive a clean id for the dependsOn entry (no dots or hyphens).
     let dep_entry_id = base_dep_id.replace(['.', '-'], "");
 
@@ -367,7 +363,7 @@ mod tests {
         assert_eq!(ig["packageId"], "com.example.fhir");
         assert_eq!(
             ig["url"],
-            "https://example.org/fhir/ImplementationGuide/com.example.fhir"
+            "https://example.org/fhir/ImplementationGuide/com-example-fhir"
         );
     }
 
