@@ -1,30 +1,10 @@
 //! Canonical URL helpers for package metadata and generated resources.
 
 use crate::{context::PublishContext, PublisherError, Result};
+use rh_hl7_fhir_r4_core::metadata::FHIR_TYPE_REGISTRY;
 use serde_json::{json, Value};
 
 const IMPLEMENTATION_GUIDE_SEGMENT: &str = "/ImplementationGuide/";
-
-const CANONICAL_RESOURCE_TYPES: &[&str] = &[
-    "ActivityDefinition",
-    "CapabilityStatement",
-    "CodeSystem",
-    "CompartmentDefinition",
-    "ConceptMap",
-    "GraphDefinition",
-    "ImplementationGuide",
-    "Library",
-    "Measure",
-    "MessageDefinition",
-    "NamingSystem",
-    "OperationDefinition",
-    "PlanDefinition",
-    "Questionnaire",
-    "SearchParameter",
-    "StructureDefinition",
-    "TerminologyCapabilities",
-    "ValueSet",
-];
 
 pub fn validate_canonical_base(canonical_base: Option<&str>) -> Result<()> {
     let Some(canonical_base) = canonical_base else {
@@ -55,7 +35,9 @@ pub fn resource_canonical_url(canonical_base: &str, resource_type: &str, id: &st
 }
 
 pub fn is_canonical_resource_type(resource_type: &str) -> bool {
-    CANONICAL_RESOURCE_TYPES.contains(&resource_type)
+    FHIR_TYPE_REGISTRY
+        .get(resource_type)
+        .is_some_and(|fields| fields.contains_key("url"))
 }
 
 pub fn normalize_resource_canonical_urls(ctx: &mut PublishContext) {
@@ -146,6 +128,13 @@ mod tests {
         ))
         .unwrap_err();
         assert!(err.to_string().contains("canonical must be"));
+    }
+
+    #[test]
+    fn canonical_resource_detection_uses_r4_url_metadata() {
+        assert!(is_canonical_resource_type("PlanDefinition"));
+        assert!(is_canonical_resource_type("ValueSet"));
+        assert!(!is_canonical_resource_type("Patient"));
     }
 
     #[test]

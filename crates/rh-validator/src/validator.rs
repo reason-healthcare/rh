@@ -4800,19 +4800,7 @@ fn validate_canonical_urls(resource: &Value, resource_type: &str) -> Vec<Validat
         "CodeSystem" => {
             issues.extend(validate_codesystem_canonical_urls(resource));
         }
-        "StructureDefinition"
-        | "CapabilityStatement"
-        | "OperationDefinition"
-        | "SearchParameter"
-        | "CompartmentDefinition"
-        | "ImplementationGuide"
-        | "GraphDefinition"
-        | "NamingSystem"
-        | "TerminologyCapabilities"
-        | "Questionnaire"
-        | "MessageDefinition"
-        | "ConceptMap"
-        | "ExampleScenario" => {
+        _ if resource_type_has_root_url(resource_type) => {
             if let Some(url) = resource.get("url").and_then(|v| v.as_str()) {
                 if !is_canonical_url(url) {
                     issues.push(
@@ -4838,20 +4826,7 @@ fn validate_canonical_urls(resource: &Value, resource_type: &str) -> Vec<Validat
                 .unwrap_or("Resource");
 
             if let Some(url) = contained_resource.get("url").and_then(|v| v.as_str()) {
-                let requires_absolute = matches!(
-                    contained_type,
-                    "ValueSet"
-                        | "CodeSystem"
-                        | "StructureDefinition"
-                        | "CapabilityStatement"
-                        | "OperationDefinition"
-                        | "SearchParameter"
-                        | "CompartmentDefinition"
-                        | "ImplementationGuide"
-                        | "Questionnaire"
-                        | "MessageDefinition"
-                        | "ConceptMap"
-                );
+                let requires_absolute = resource_type_has_root_url(contained_type);
 
                 let contained_path =
                     format!("{resource_type}.contained[{idx}]/*{contained_type}*/.url");
@@ -4874,6 +4849,12 @@ fn validate_canonical_urls(resource: &Value, resource_type: &str) -> Vec<Validat
     }
 
     issues
+}
+
+fn resource_type_has_root_url(resource_type: &str) -> bool {
+    FHIR_TYPE_REGISTRY
+        .get(resource_type)
+        .is_some_and(|fields| fields.contains_key("url"))
 }
 
 fn validate_valueset_canonical_urls(valueset: &Value) -> Vec<ValidationIssue> {
@@ -7192,6 +7173,13 @@ mod r4_shape_tests {
             issue.path.as_deref() == Some("ClinicalImpression.prognosisCodeableConcept")
                 && issue.message.contains("not defined")
         }));
+    }
+
+    #[test]
+    fn canonical_url_detection_uses_r4_root_url_metadata() {
+        assert!(super::resource_type_has_root_url("PlanDefinition"));
+        assert!(super::resource_type_has_root_url("ValueSet"));
+        assert!(!super::resource_type_has_root_url("Patient"));
     }
 }
 

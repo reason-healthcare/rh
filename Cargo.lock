@@ -2214,6 +2214,7 @@ dependencies = [
  "rh-cql",
  "rh-foundation",
  "rh-fsh",
+ "rh-hl7-fhir-r4-core",
  "rh-validator",
  "serde",
  "serde_json",
