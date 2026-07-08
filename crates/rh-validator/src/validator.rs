@@ -642,7 +642,7 @@ impl FhirValidator {
         let start = Instant::now();
         let snapshot = self
             .profile_registry
-            .get_snapshot(profile_url)
+            .get_snapshot_shared(profile_url)
             .context("Failed to get snapshot from registry")?;
         #[cfg(feature = "perf-timings")]
         if let Some(timings) = timings.as_deref_mut() {
@@ -702,7 +702,7 @@ impl FhirValidator {
         let start = Instant::now();
         let rules = self
             .rule_compiler
-            .compile(&snapshot)
+            .compile_shared(&snapshot)
             .context("Failed to compile validation rules")?;
         #[cfg(feature = "perf-timings")]
         if let Some(timings) = timings.as_deref_mut() {
@@ -1076,7 +1076,7 @@ impl FhirValidator {
             }
 
             // First try to resolve the extension
-            match self.profile_registry.get_snapshot(url) {
+            match self.profile_registry.get_snapshot_shared(url) {
                 Ok(Some(snapshot)) => {
                     // Extension found - check if isModifier matches usage
                     // Get the first element in the differential which contains the extension definition
@@ -1268,7 +1268,7 @@ impl FhirValidator {
     fn allowed_reference_target_types(&self, target_profiles: &[String]) -> Vec<String> {
         let mut allowed = Vec::new();
         for target_profile in target_profiles {
-            if let Ok(Some(profile)) = self.profile_registry.get_snapshot(target_profile) {
+            if let Ok(Some(profile)) = self.profile_registry.get_snapshot_shared(target_profile) {
                 if !allowed.iter().any(|type_name| type_name == &profile.type_) {
                     allowed.push(profile.type_.clone());
                 }
@@ -1288,7 +1288,7 @@ impl FhirValidator {
         else {
             return issues;
         };
-        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot_shared(base_url) else {
             if base_url == "http://hl7.org/fhir/StructureDefinition/Observation" {
                 self.validate_structure_definition_choice_paths_with_roots(
                     structure_definition,
@@ -1394,7 +1394,7 @@ impl FhirValidator {
         else {
             return issues;
         };
-        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot(base_url) else {
+        let Ok(Some(base_profile)) = self.profile_registry.get_snapshot_shared(base_url) else {
             return issues;
         };
         let Some(base_differential) = base_profile.differential.as_ref() else {

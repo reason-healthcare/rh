@@ -86,7 +86,16 @@ impl ProfileRegistry {
         })
     }
 
-    pub fn get_snapshot(&self, profile_url: &str) -> Result<Option<Arc<StructureDefinition>>> {
+    pub fn get_snapshot(&self, profile_url: &str) -> Result<Option<StructureDefinition>> {
+        Ok(self
+            .get_snapshot_shared(profile_url)?
+            .map(|snapshot| snapshot.as_ref().clone()))
+    }
+
+    pub(crate) fn get_snapshot_shared(
+        &self,
+        profile_url: &str,
+    ) -> Result<Option<Arc<StructureDefinition>>> {
         let lookup_url = canonical_url_without_version(profile_url);
 
         if let Some(cached) = self.snapshot_cache.write().unwrap().get(lookup_url) {

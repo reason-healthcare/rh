@@ -128,7 +128,14 @@ impl RuleCompiler {
         }
     }
 
-    pub fn compile(&self, snapshot: &StructureDefinition) -> Result<Arc<CompiledValidationRules>> {
+    pub fn compile(&self, snapshot: &StructureDefinition) -> Result<CompiledValidationRules> {
+        Ok(self.compile_shared(snapshot)?.as_ref().clone())
+    }
+
+    pub(crate) fn compile_shared(
+        &self,
+        snapshot: &StructureDefinition,
+    ) -> Result<Arc<CompiledValidationRules>> {
         let profile_url = snapshot.url.clone();
 
         let cached = {
