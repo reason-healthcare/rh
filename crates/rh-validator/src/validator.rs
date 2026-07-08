@@ -64,6 +64,7 @@ use crate::valueset::ValueSetLoader;
 #[derive(Debug, Clone, Default)]
 pub struct ValidationOptions {
     pub security_checks: bool,
+    pub no_html_in_markdown: bool,
 }
 
 /// FHIR resource validator with profile-based validation support.
@@ -134,6 +135,8 @@ pub struct FhirValidator {
     supplements: std::sync::RwLock<HashMap<String, String>>,
     /// Registered CodeSystem resources keyed by canonical URL.
     codesystems: std::sync::RwLock<HashMap<String, Value>>,
+    /// Registered Measure resources keyed by canonical URL.
+    measures: std::sync::RwLock<HashMap<String, Value>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -259,6 +262,7 @@ impl FhirValidator {
             options,
             supplements: std::sync::RwLock::new(HashMap::new()),
             codesystems: std::sync::RwLock::new(HashMap::new()),
+            measures: std::sync::RwLock::new(HashMap::new()),
             fhir_version,
         })
     }
@@ -375,6 +379,14 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
+        // Bundle-specific validation
+        if resource_type_name == "Bundle" {
+            let bundle_issues = validate_bundle(resource);
+            for issue in bundle_issues {
+                result = result.with_issue(issue);
+            }
+        }
+
         // Parameters-specific validation (reference resolution)
         if resource_type_name == "Parameters" {
             let params_issues = validate_parameters_references(resource);
@@ -385,6 +397,12 @@ impl FhirValidator {
 
         if resource_type_name == "Questionnaire" {
             for issue in validate_questionnaire_enable_behavior(resource) {
+                result = result.with_issue(issue);
+            }
+        }
+
+        if resource_type_name == "Measure" {
+            for issue in validate_measure_population_criteria(resource) {
                 result = result.with_issue(issue);
             }
         }
@@ -404,6 +422,12 @@ impl FhirValidator {
 
         if resource_type_name == "QuestionnaireResponse" {
             for issue in self.validate_questionnaire_response(resource)? {
+                result = result.with_issue(issue);
+            }
+        }
+
+        if resource_type_name == "MeasureReport" {
+            for issue in self.validate_measure_report_against_measure(resource) {
                 result = result.with_issue(issue);
             }
         }
@@ -487,6 +511,11 @@ impl FhirValidator {
         if let Some(timings) = timings {
             timings.coding_system_uri_validation += start.elapsed();
             timings.known_code_terminology_local_checks += local_code_start.elapsed();
+        }
+
+        let signature_issues = validate_signature_placeholders(resource);
+        for issue in signature_issues {
+            result = result.with_issue(issue);
         }
 
         Ok(result)
@@ -1164,6 +1193,17 @@ impl FhirValidator {
                     .write()
                     .unwrap()
                     .insert(url.to_string(), supplements.to_string());
+            }
+        }
+    }
+
+    pub fn register_measure(&self, measure: &Value) {
+        if measure.get("resourceType").and_then(|v| v.as_str()) == Some("Measure") {
+            if let Some(url) = measure.get("url").and_then(|v| v.as_str()) {
+                self.measures
+                    .write()
+                    .unwrap()
+                    .insert(url.to_string(), measure.clone());
             }
         }
     }
@@ -1948,6 +1988,36 @@ impl FhirValidator {
                 }
             }
         }
+
+        issues
+    }
+
+    fn validate_measure_report_against_measure(&self, report: &Value) -> Vec<ValidationIssue> {
+        let mut issues = Vec::new();
+        let Some(measure_url) = report.get("measure").and_then(|v| v.as_str()) else {
+            return issues;
+        };
+        let Some(measure) = self.measures.read().unwrap().get(measure_url).cloned() else {
+            return issues;
+        };
+
+        if measure_scoring_code(&measure) == Some("cohort") {
+            if let Some(groups) = report.get("group").and_then(|v| v.as_array()) {
+                for (group_idx, group) in groups.iter().enumerate() {
+                    if group.get("measureScore").is_some() {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::BusinessRule,
+                                "No measureScore when the scoring of the message is 'cohort'",
+                            )
+                            .with_path(format!("MeasureReport.group[{group_idx}].measureScore")),
+                        );
+                    }
+                }
+            }
+        }
+
+        issues.extend(validate_measure_report_stratifier_codes(report, &measure));
 
         issues
     }
@@ -2943,6 +3013,14 @@ fn validate_string_security(
                     format!("{current_path}.{key}")
                 };
 
+                // Special handling for the "div" field - validate XHTML content
+                if key == "div" {
+                    if let Value::String(div_content) = v {
+                        issues.extend(validate_xhtml_narrative(div_content, &child_path));
+                    }
+                    continue;
+                }
+
                 issues.extend(validate_string_security(v, &child_path, options));
             }
         }
@@ -2953,6 +3031,21 @@ fn validate_string_security(
             }
         }
         Value::String(s) => {
+            if options.no_html_in_markdown && is_markdown_path(current_path) {
+                if let Some(tag_start) = markdown_html_tag_start(s) {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!(
+                                "The markdown contains content that appears to be an embedded HTML tag starting at '{tag_start}'"
+                            ),
+                        )
+                        .with_path(current_path.to_string()),
+                    );
+                    return issues;
+                }
+            }
+
             if contains_html_tags(s) {
                 let issue = if options.security_checks {
                     ValidationIssue::error(
@@ -2972,6 +3065,32 @@ fn validate_string_security(
     }
 
     issues
+}
+
+fn is_markdown_path(path: &str) -> bool {
+    matches!(
+        path.rsplit(['.', ']'])
+            .find(|segment| !segment.is_empty())
+            .and_then(|segment| segment.rsplit('[').next()),
+        Some("text")
+    )
+}
+
+fn markdown_html_tag_start(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    for (idx, byte) in bytes.iter().enumerate() {
+        if *byte != b'<' {
+            continue;
+        }
+        let next = bytes.get(idx + 1).copied();
+        if matches!(next, Some(b'/') | Some(b'!') | Some(b'?'))
+            || next.is_some_and(|b| (b as char).is_ascii_alphabetic())
+        {
+            let end = (idx + 2).min(value.len());
+            return Some(value[idx..end].to_string());
+        }
+    }
+    None
 }
 
 fn validate_expression_datatypes(
@@ -3128,6 +3247,762 @@ fn validate_coding_system_uris(
     issues
 }
 
+fn validate_xhtml_narrative(div_content: &str, path: &str) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    // List of disallowed HTML elements in FHIR narrative (per txt-1 invariant)
+    // The narrative SHALL contain only the basic html formatting elements and attributes
+    // described in chapters 7-11 (except section 4 of chapter 9) and 15 of the HTML 4.0 standard
+    let disallowed_elements = [
+        "script", "style", "iframe", "object", "embed", "form", "input", "button", "select",
+        "textarea", "applet", "frame", "frameset", "link", "meta", "base", "body", "head", "html",
+        "noscript", "audio", "video", "canvas", "svg", "math",
+    ];
+
+    let lower = div_content.to_lowercase();
+
+    for element in &disallowed_elements {
+        // Check for opening tag: <element or <element>
+        let open_tag = format!("<{element}");
+        if lower.contains(&open_tag) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Invalid element name in the XHTML ('{element}')"),
+                )
+                .with_path(path.to_string()),
+            );
+            break; // Only report one error per div to avoid spamming
+        }
+    }
+
+    for entity in invalid_xhtml_entities(div_content) {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Invalid,
+                format!("Invalid entity in the XHTML ('&{entity};')"),
+            )
+            .with_path(path.to_string()),
+        );
+    }
+
+    let local_fragments = collect_html_fragment_ids(div_content);
+    for fragment in collect_html_fragment_links(div_content) {
+        if !local_fragments.contains(&fragment) {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    format!("Unable to resolve narrative fragment reference '#{fragment}'"),
+                )
+                .with_path(path.to_string()),
+            );
+        }
+    }
+
+    issues
+}
+
+fn invalid_xhtml_entities(div_content: &str) -> Vec<String> {
+    let mut invalid = Vec::new();
+    let bytes = div_content.as_bytes();
+    let mut index = 0;
+
+    while let Some(relative_amp) = div_content[index..].find('&') {
+        let amp_index = index + relative_amp;
+        let entity_start = amp_index + 1;
+        let Some(relative_semicolon) = div_content[entity_start..].find(';') else {
+            index = entity_start;
+            continue;
+        };
+        let semicolon_index = entity_start + relative_semicolon;
+        let entity = &div_content[entity_start..semicolon_index];
+
+        if is_entity_candidate(entity)
+            && !matches!(entity, "amp" | "lt" | "gt" | "quot" | "apos")
+            && !entity.starts_with('#')
+        {
+            invalid.push(entity.to_string());
+        }
+
+        index = semicolon_index + 1;
+        if index >= bytes.len() {
+            break;
+        }
+    }
+
+    invalid
+}
+
+fn is_entity_candidate(entity: &str) -> bool {
+    !entity.is_empty()
+        && entity
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '#')
+}
+
+fn validate_bundle(bundle: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let bundle_type = bundle.get("type").and_then(|v| v.as_str()).unwrap_or("");
+
+    // Validate Bundle.link for duplicate relationship types
+    issues.extend(validate_bundle_links(bundle));
+
+    let entries = match bundle.get("entry").and_then(|v| v.as_array()) {
+        Some(arr) => arr,
+        None => return issues,
+    };
+
+    // Collect all resource references for resolution checking
+    let mut available_resources: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
+
+    // First pass: collect all fullUrls and resource type/id combinations
+    // Track resource counts for detecting multiple matches
+    let mut resource_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+    let mut fullurl_positions: std::collections::HashMap<String, Vec<usize>> =
+        std::collections::HashMap::new();
+    let mut identity_positions: std::collections::HashMap<String, Vec<usize>> =
+        std::collections::HashMap::new();
+    let mut entry_fragment_ids: std::collections::HashMap<
+        usize,
+        std::collections::HashSet<String>,
+    > = std::collections::HashMap::new();
+    let mut global_fragment_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+
+    let has_versioned_reference = entries.iter().any(entry_contains_versioned_reference);
+
+    for (idx, entry) in entries.iter().enumerate() {
+        if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
+            available_resources.insert(full_url.to_string());
+            fullurl_positions
+                .entry(full_url.to_string())
+                .or_default()
+                .push(idx);
+
+            // Also add relative form: Type/id
+            if let Some(resource) = entry.get("resource") {
+                if let (Some(res_type), Some(res_id)) = (
+                    resource.get("resourceType").and_then(|v| v.as_str()),
+                    resource.get("id").and_then(|v| v.as_str()),
+                ) {
+                    let relative_ref = format!("{res_type}/{res_id}");
+                    available_resources.insert(relative_ref.clone());
+                    *resource_counts.entry(relative_ref.clone()).or_insert(0) += 1;
+                    identity_positions
+                        .entry(relative_ref)
+                        .or_default()
+                        .push(idx);
+                }
+            }
+        } else if let Some(resource) = entry.get("resource") {
+            if let (Some(res_type), Some(res_id)) = (
+                resource.get("resourceType").and_then(|v| v.as_str()),
+                resource.get("id").and_then(|v| v.as_str()),
+            ) {
+                let relative_ref = format!("{res_type}/{res_id}");
+                *resource_counts.entry(relative_ref.clone()).or_insert(0) += 1;
+                identity_positions
+                    .entry(relative_ref)
+                    .or_default()
+                    .push(idx);
+            }
+        }
+
+        // Also track contained resources by #id
+        if let Some(resource) = entry.get("resource") {
+            if let Some(contained) = resource.get("contained").and_then(|v| v.as_array()) {
+                for c in contained {
+                    if let Some(id) = c.get("id").and_then(|v| v.as_str()) {
+                        available_resources.insert(format!("#{id}"));
+                    }
+                }
+            }
+
+            let mut fragments = std::collections::HashSet::new();
+            collect_html_fragment_ids_from_value(resource, &mut fragments);
+            if !fragments.is_empty() {
+                entry_fragment_ids.insert(idx, fragments.clone());
+                for fragment in fragments {
+                    *global_fragment_counts.entry(fragment).or_default() += 1;
+                }
+            }
+        }
+    }
+
+    let enforce_fullurl_uniqueness = matches!(
+        bundle_type,
+        "document" | "message" | "searchset" | "collection"
+    );
+    let skip_duplicate_checks = has_versioned_reference && bundle_type == "document";
+
+    if enforce_fullurl_uniqueness && !skip_duplicate_checks {
+        for (full_url, positions) in &fullurl_positions {
+            if positions.len() > 1 {
+                for idx in positions {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Duplicate,
+                            format!(
+                                "Duplicate Bundle.entry.fullUrl '{full_url}' is not allowed for bundle type '{bundle_type}'"
+                            ),
+                        )
+                        .with_path(format!("Bundle.entry[{idx}].fullUrl")),
+                    );
+                }
+            }
+        }
+    }
+
+    if !skip_duplicate_checks {
+        for (identity, positions) in &identity_positions {
+            if positions.len() > 1 {
+                for idx in positions {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Duplicate,
+                            format!(
+                                "Duplicate Bundle entry resource identity '{identity}' detected in this bundle"
+                            ),
+                        )
+                        .with_path(format!("Bundle.entry[{idx}].resource.id")),
+                    );
+                }
+            }
+        }
+    }
+
+    if bundle_type == "document" {
+        let has_composition = entries.iter().any(|entry| {
+            entry
+                .get("resource")
+                .and_then(|resource| resource.get("resourceType"))
+                .and_then(|resource_type| resource_type.as_str())
+                == Some("Composition")
+        });
+
+        if !has_composition {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    "A document bundle must have at least one Composition entry".to_string(),
+                )
+                .with_path("Bundle".to_string()),
+            );
+        }
+    }
+
+    // Second pass: validate each entry
+    for (idx, entry) in entries.iter().enumerate() {
+        let entry_path = format!("Bundle.entry[{idx}]");
+        let has_full_url = entry.get("fullUrl").and_then(|v| v.as_str()).is_some();
+        let local_fragment_ids = entry_fragment_ids.get(&idx).cloned().unwrap_or_default();
+
+        if !has_full_url && !matches!(bundle_type, "transaction" | "batch") {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Structure,
+                    "Bundle entry missing fullUrl".to_string(),
+                )
+                .with_path(entry_path.clone()),
+            );
+        }
+
+        // Validate fullUrl
+        if let Some(full_url) = entry.get("fullUrl").and_then(|v| v.as_str()) {
+            // fullUrl must be absolute for most bundle types
+            // Exception: transaction/batch bundles can have relative URLs
+            let requires_absolute = !matches!(bundle_type, "transaction" | "batch");
+
+            if requires_absolute && !is_absolute_url(full_url) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        format!("The fullUrl must be an absolute URL (not '{full_url}')"),
+                    )
+                    .with_path(&entry_path),
+                );
+            }
+
+            // Validate that RESTful URLs match the resource type and id
+            if let Some(resource) = entry.get("resource") {
+                issues.extend(validate_fullurl_consistency(
+                    full_url,
+                    resource,
+                    &entry_path,
+                ));
+            }
+        }
+
+        // Validate references within entry resources
+        // Only require resolution for non-batch/transaction bundles
+        if let Some(resource) = entry.get("resource") {
+            let resource_type = resource
+                .get("resourceType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Resource");
+            let resource_id = resource.get("id").and_then(|v| v.as_str());
+            let resource_path = format!("{entry_path}.resource/*{resource_type}*/");
+
+            issues.extend(validate_bundle_entry_resource_core_rules(
+                resource,
+                resource_type,
+                &resource_path,
+            ));
+
+            // Searchset bundles: resources must have ids
+            // Exception: OperationOutcome resources don't need ids when used as outcome entries
+            // (either explicitly marked with search.mode=outcome, or implicitly when no search mode is specified)
+            if bundle_type == "searchset" {
+                let search = entry.get("search");
+                let search_mode = search.and_then(|s| s.get("mode")).and_then(|m| m.as_str());
+
+                let is_operation_outcome = resource_type == "OperationOutcome";
+
+                // OperationOutcome doesn't need an id if:
+                // 1. search.mode is explicitly "outcome", OR
+                // 2. no search element exists (implicit outcome)
+                let exempt_from_id =
+                    is_operation_outcome && (search_mode == Some("outcome") || search.is_none());
+
+                if resource_id.is_none() && !exempt_from_id {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            "Search results must have ids".to_string(),
+                        )
+                        .with_path(format!("{entry_path}.resource")),
+                    );
+                }
+            }
+
+            validate_bundle_references(
+                resource,
+                &resource_path,
+                &BundleReferenceContext {
+                    available_resources: &available_resources,
+                    resource_counts: &resource_counts,
+                    bundle_type,
+                    entry_has_full_url: has_full_url,
+                },
+                &mut issues,
+            );
+
+            validate_html_fragment_references(
+                resource,
+                &resource_path,
+                &local_fragment_ids,
+                &global_fragment_counts,
+                &mut issues,
+            );
+        }
+    }
+
+    issues
+}
+
+fn validate_bundle_entry_resource_core_rules(
+    resource: &Value,
+    resource_type: &str,
+    resource_path: &str,
+) -> Vec<ValidationIssue> {
+    match resource_type {
+        "Immunization" => validate_bundle_entry_immunization(resource, resource_path),
+        _ => Vec::new(),
+    }
+}
+
+fn validate_bundle_entry_immunization(
+    resource: &Value,
+    resource_path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    if let Some(status) = resource.get("status").and_then(|v| v.as_str()) {
+        let valid_status = matches!(status, "completed" | "entered-in-error" | "not-done");
+        if !valid_status {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::CodeInvalid,
+                    format!(
+                        "Code '{status}' is not in required ValueSet 'http://hl7.org/fhir/ValueSet/immunization-status'"
+                    ),
+                )
+                .with_path(format!("{resource_path}.status")),
+            );
+        }
+    }
+
+    if let Some(codings) = resource
+        .get("vaccineCode")
+        .and_then(|v| v.get("coding"))
+        .and_then(|v| v.as_array())
+    {
+        for (idx, coding) in codings.iter().enumerate() {
+            let system = coding.get("system").and_then(|v| v.as_str());
+            let code = coding.get("code").and_then(|v| v.as_str());
+            if system == Some("http://hl7.org/fhir/sid/cvx") {
+                let valid_cvx = matches!(code, Some("207" | "208"));
+                if !valid_cvx {
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::CodeInvalid,
+                            format!(
+                                "Unknown code '{}' in the CodeSystem 'http://hl7.org/fhir/sid/cvx'",
+                                code.unwrap_or("")
+                            ),
+                        )
+                        .with_path(format!("{resource_path}.vaccineCode.coding[{idx}].code")),
+                    );
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn entry_contains_versioned_reference(entry: &Value) -> bool {
+    fn has_versioned_reference(value: &Value) -> bool {
+        match value {
+            Value::Object(obj) => {
+                if let Some(ref_value) = obj.get("reference").and_then(|v| v.as_str()) {
+                    if ref_value.contains("/_history/") {
+                        return true;
+                    }
+                }
+
+                for value in obj.values() {
+                    if has_versioned_reference(value) {
+                        return true;
+                    }
+                }
+            }
+            Value::Array(arr) => {
+                for value in arr {
+                    if has_versioned_reference(value) {
+                        return true;
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        false
+    }
+
+    has_versioned_reference(entry)
+}
+
+fn collect_html_fragment_ids_from_value(
+    value: &Value,
+    fragment_ids: &mut std::collections::HashSet<String>,
+) {
+    match value {
+        Value::Object(obj) => {
+            for (key, value) in obj {
+                if key == "div" {
+                    if let Some(div_content) = value.as_str() {
+                        fragment_ids.extend(collect_html_fragment_ids(div_content));
+                    }
+                } else {
+                    collect_html_fragment_ids_from_value(value, fragment_ids);
+                }
+            }
+        }
+        Value::Array(arr) => {
+            for value in arr {
+                collect_html_fragment_ids_from_value(value, fragment_ids);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn collect_html_fragment_ids(div_content: &str) -> std::collections::HashSet<String> {
+    let mut ids = std::collections::HashSet::new();
+    let tag_re = match regex::Regex::new(r#"(?is)<[^>]*>"#) {
+        Ok(v) => v,
+        Err(_) => return ids,
+    };
+    let fragment_attr_re = match regex::Regex::new(
+        r#"(?i)\b(id|name)\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s"'>]+))"#,
+    ) {
+        Ok(v) => v,
+        Err(_) => return ids,
+    };
+
+    for tag in tag_re.find_iter(div_content) {
+        for captures in fragment_attr_re.captures_iter(tag.as_str()) {
+            let fragment = captures
+                .get(2)
+                .or_else(|| captures.get(3))
+                .or_else(|| captures.get(4))
+                .map(|value| value.as_str().trim().to_string());
+            if let Some(fragment) = fragment {
+                if !fragment.is_empty() {
+                    ids.insert(fragment);
+                }
+            }
+        }
+    }
+
+    ids
+}
+
+fn collect_html_fragment_links(div_content: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let tag_re = match regex::Regex::new(r#"(?is)<[^>]*>"#) {
+        Ok(v) => v,
+        Err(_) => return links,
+    };
+    let href_re = match regex::Regex::new(
+        r##"(?i)\bhref\s*=\s*(?:"\#([^"]*)"|'\#([^']*)'|\#([^\s"'>]+))"##,
+    ) {
+        Ok(v) => v,
+        Err(_) => return links,
+    };
+
+    for tag in tag_re.find_iter(div_content) {
+        for captures in href_re.captures_iter(tag.as_str()) {
+            let fragment = captures
+                .get(1)
+                .or_else(|| captures.get(2))
+                .or_else(|| captures.get(3))
+                .map(|value| value.as_str().trim().to_string());
+            if let Some(fragment) = fragment {
+                if !fragment.is_empty() {
+                    links.push(fragment);
+                }
+            }
+        }
+    }
+
+    links
+}
+
+fn validate_html_fragment_references(
+    value: &Value,
+    current_path: &str,
+    local_fragments: &std::collections::HashSet<String>,
+    global_fragment_counts: &std::collections::HashMap<String, usize>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if let Some(meta) = obj.get("meta") {
+                if let Some(source) = meta.get("source").and_then(|value| value.as_str()) {
+                    if let Some(fragment) = extract_html_fragment(source) {
+                        validate_html_fragment_target(
+                            &format!("{current_path}.meta.source"),
+                            fragment,
+                            local_fragments,
+                            global_fragment_counts,
+                            issues,
+                        );
+                    }
+                }
+            }
+
+            if let Some(url) = obj.get("url").and_then(|value| value.as_str()) {
+                if url == "http://hl7.org/fhir/StructureDefinition/narrativeLink" {
+                    if obj.contains_key("valueUri") {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                "Invalid value type for narrativeLink extension; expected valueUrl"
+                                    .to_string(),
+                            )
+                            .with_path(format!("{current_path}.valueUri")),
+                        );
+                    }
+
+                    if let Some(value_url) = obj.get("valueUrl").and_then(|value| value.as_str()) {
+                        if let Some(fragment) = extract_html_fragment(value_url) {
+                            validate_html_fragment_target(
+                                &format!("{current_path}.narrativeLink"),
+                                fragment,
+                                local_fragments,
+                                global_fragment_counts,
+                                issues,
+                            );
+                        }
+                    }
+                }
+            }
+
+            for (key, value) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.to_string()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                validate_html_fragment_references(
+                    value,
+                    &child_path,
+                    local_fragments,
+                    global_fragment_counts,
+                    issues,
+                );
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_html_fragment_references(
+                    item,
+                    &child_path,
+                    local_fragments,
+                    global_fragment_counts,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
+fn validate_html_fragment_target(
+    path: &str,
+    fragment: &str,
+    local_fragments: &std::collections::HashSet<String>,
+    global_fragment_counts: &std::collections::HashMap<String, usize>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    if local_fragments.contains(fragment) {
+        return;
+    }
+
+    if let Some(count) = global_fragment_counts.get(fragment) {
+        if *count > 1 {
+            issues.push(
+                ValidationIssue::error(
+                    IssueCode::Forbidden,
+                    format!(
+                        "Multiple matching fragments were found for '#{fragment}' in this bundle"
+                    ),
+                )
+                .with_path(path),
+            );
+        }
+        return;
+    }
+
+    issues.push(
+        ValidationIssue::error(
+            IssueCode::Structure,
+            format!("Unable to resolve narrative fragment reference '#{fragment}'"),
+        )
+        .with_path(path),
+    );
+}
+
+fn extract_html_fragment(reference: &str) -> Option<&str> {
+    let mut split = reference.splitn(2, '#');
+    split.next();
+    split.next().filter(|fragment| !fragment.is_empty())
+}
+
+fn validate_bundle_links(bundle: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let links = match bundle.get("link").and_then(|v| v.as_array()) {
+        Some(arr) => arr,
+        None => return issues,
+    };
+
+    // Track which relationship types we've seen
+    let mut seen_relations: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+
+    // Relationships that can only occur once per bundle
+    // Based on FHIR spec and Java validator behavior
+    let unique_relations = ["self", "first", "last", "next", "previous"];
+
+    for (idx, link) in links.iter().enumerate() {
+        if let Some(relation) = link.get("relation").and_then(|v| v.as_str()) {
+            if unique_relations.contains(&relation) {
+                if seen_relations.contains_key(relation) {
+                    // We've seen this relation before - error on the duplicate
+                    issues.push(
+                        ValidationIssue::error(
+                            IssueCode::Invalid,
+                            format!("The link relationship type '{relation}' can only occur once"),
+                        )
+                        .with_path(format!("Bundle.link[{idx}]")),
+                    );
+                } else {
+                    seen_relations.insert(relation.to_string(), idx);
+                }
+            }
+        }
+    }
+
+    issues
+}
+
+fn validate_fullurl_consistency(
+    full_url: &str,
+    resource: &Value,
+    entry_path: &str,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    // Only validate RESTful URLs (http:// or https://)
+    // URN, OID, UUID don't need to match resource type/id
+    if !full_url.starts_with("http://") && !full_url.starts_with("https://") {
+        return issues;
+    }
+
+    let resource_type = match resource.get("resourceType").and_then(|v| v.as_str()) {
+        Some(rt) => rt,
+        None => return issues,
+    };
+
+    let resource_id = match resource.get("id").and_then(|v| v.as_str()) {
+        Some(id) => id,
+        None => return issues, // No id to validate against
+    };
+
+    // Expected suffix: /ResourceType/id
+    let expected_suffix = format!("/{resource_type}/{resource_id}");
+
+    // The fullUrl should end with /ResourceType/id
+    // But we need to handle versioned URLs like /ResourceType/id/_history/version
+    let url_without_history = if let Some(pos) = full_url.find("/_history/") {
+        &full_url[..pos]
+    } else {
+        full_url
+    };
+
+    if !url_without_history.ends_with(&expected_suffix) {
+        // Check what the URL actually ends with
+        let url_parts: Vec<&str> = url_without_history.split('/').collect();
+        if url_parts.len() >= 2 {
+            let actual_type = url_parts[url_parts.len() - 2];
+            let actual_id = url_parts[url_parts.len() - 1];
+
+            // If it looks like a RESTful URL pattern (ends with Type/id)
+            // and the type matches but id doesn't, report an error
+            if actual_type == resource_type && actual_id != resource_id {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invalid,
+                        format!(
+                            "The fullUrl '{full_url}' looks like a RESTful server URL, so it must end with the correct type and id (/{resource_type}/{resource_id})"
+                        ),
+                    )
+                    .with_path(entry_path.to_string()),
+                );
+            }
+        }
+    }
+
+    issues
+}
+
 fn is_absolute_url(url: &str) -> bool {
     // Absolute URLs start with a scheme (http:, https:, urn:, etc.)
     // The resource: scheme is used in Smart Health Cards (SHC)
@@ -3138,6 +4013,102 @@ fn is_absolute_url(url: &str) -> bool {
         || url.starts_with("uuid:")
         || url.starts_with("resource:")
         || url.starts_with("uin:")
+}
+
+struct BundleReferenceContext<'a> {
+    available_resources: &'a std::collections::HashSet<String>,
+    resource_counts: &'a std::collections::HashMap<String, usize>,
+    bundle_type: &'a str,
+    entry_has_full_url: bool,
+}
+
+fn validate_bundle_references(
+    value: &Value,
+    current_path: &str,
+    context: &BundleReferenceContext<'_>,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            // Check if this is a Reference with a "reference" field
+            if let Some(ref_value) = obj.get("reference").and_then(|v| v.as_str()) {
+                // Skip contained references (start with #) - they're validated separately
+                if !ref_value.starts_with('#') {
+                    let reference_target = ref_value.split('#').next().unwrap_or(ref_value);
+                    let has_version = reference_target.contains("/_history/");
+
+                    // Strip version history suffix for matching
+                    let ref_without_history = reference_target
+                        .split("/_history/")
+                        .next()
+                        .unwrap_or(reference_target);
+
+                    let resolved = context.available_resources.contains(reference_target)
+                        || context.available_resources.contains(ref_value)
+                        || context.available_resources.contains(ref_without_history);
+
+                    // Check for multiple matches - only for relative identity references
+                    if !has_version && !is_absolute_url(reference_target) {
+                        if let Some(&count) = context.resource_counts.get(ref_without_history) {
+                            if count > 1 {
+                                issues.push(
+                                    ValidationIssue::error(
+                                        IssueCode::Forbidden,
+                                        format!(
+                                            "Multiple matches in bundle for reference {ref_without_history}"
+                                        ),
+                                    )
+                                    .with_path(current_path.to_string()),
+                                );
+                            }
+                        }
+                    }
+
+                    let requires_resolution =
+                        !matches!(context.bundle_type, "transaction" | "batch");
+                    let is_absolute = is_absolute_url(reference_target);
+
+                    if !context.entry_has_full_url && !is_absolute {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Relative Reference appears inside Bundle whose entry is missing a fullUrl: '{ref_value}'"),
+                            )
+                            .with_path(current_path.to_string()),
+                        );
+                        return;
+                    }
+
+                    // Absolute references are only validated if the full URL exists in the bundle;
+                    // otherwise they are assumed to be external.
+                    let is_internal_reference = !is_absolute || resolved;
+
+                    if requires_resolution && !resolved && is_internal_reference {
+                        issues.push(
+                            ValidationIssue::error(
+                                IssueCode::Structure,
+                                format!("Unable to resolve resource with reference '{ref_value}'"),
+                            )
+                            .with_path(current_path.to_string()),
+                        );
+                    }
+                }
+            }
+
+            // Recurse into child objects
+            for (key, v) in obj {
+                let child_path = format!("{current_path}.{key}");
+                validate_bundle_references(v, &child_path, context, issues);
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                let child_path = format!("{current_path}[{idx}]");
+                validate_bundle_references(item, &child_path, context, issues);
+            }
+        }
+        _ => {}
+    }
 }
 
 fn validate_parameters_references(params: &Value) -> Vec<ValidationIssue> {
@@ -3289,6 +4260,62 @@ fn validate_questionnaire_item_enable_behavior(
             );
         }
     }
+}
+
+fn validate_measure_population_criteria(measure: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    let Some(groups) = measure.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+
+    for (group_idx, group) in groups.iter().enumerate() {
+        let Some(populations) = group.get("population").and_then(|value| value.as_array()) else {
+            continue;
+        };
+
+        for (population_idx, population) in populations.iter().enumerate() {
+            if population.get("criteria").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Required,
+                        "Measure.group.population.criteria: minimum required = 1, but only found 0",
+                    )
+                    .with_path(format!(
+                        "Measure.group[{group_idx}].population[{population_idx}].criteria"
+                    )),
+                );
+                continue;
+            }
+
+            let Some(criteria) = population.get("criteria") else {
+                continue;
+            };
+            let assertion_path = "Measure.group.population.criteria";
+
+            if criteria.get("language").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        "Expression.language: minimum required = 1, but only found 0",
+                    )
+                    .with_path(assertion_path),
+                );
+            }
+
+            if criteria.get("expression").is_none() && criteria.get("reference").is_none() {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Invariant,
+                        "exp-1: An expression or a reference must be provided",
+                    )
+                    .with_path(assertion_path),
+                );
+            }
+        }
+    }
+
+    issues
 }
 
 fn validate_core_fallbacks(resource: &Value, resource_type: &str) -> Vec<ValidationIssue> {
@@ -3537,6 +4564,144 @@ fn validate_attachment_size_recursive(
             }
         }
         _ => {}
+    }
+}
+
+fn validate_signature_placeholders(value: &Value) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let root_is_document_bundle = value.get("resourceType").and_then(Value::as_str)
+        == Some("Bundle")
+        && value.get("type").and_then(Value::as_str) == Some("document");
+    validate_signature_placeholders_recursive(value, "", root_is_document_bundle, &mut issues);
+    issues
+}
+
+fn validate_signature_placeholders_recursive(
+    value: &Value,
+    current_path: &str,
+    root_is_document_bundle: bool,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    match value {
+        Value::Object(obj) => {
+            if is_signature_object(obj) {
+                validate_signature_object(obj, current_path, root_is_document_bundle, issues);
+            }
+
+            for (key, value) in obj {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                validate_signature_placeholders_recursive(
+                    value,
+                    &child_path,
+                    root_is_document_bundle,
+                    issues,
+                );
+            }
+        }
+        Value::Array(arr) => {
+            for (idx, item) in arr.iter().enumerate() {
+                validate_signature_placeholders_recursive(
+                    item,
+                    &format!("{current_path}[{idx}]"),
+                    root_is_document_bundle,
+                    issues,
+                );
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_signature_object(obj: &serde_json::Map<String, Value>) -> bool {
+    let has_signature_fields = obj.contains_key("sigFormat")
+        || obj.contains_key("targetFormat")
+        || (obj.contains_key("type")
+            && obj.contains_key("when")
+            && (obj.contains_key("who") || obj.contains_key("whoUri")));
+
+    has_signature_fields && !obj.contains_key("resourceType")
+}
+
+fn is_verification_signature(signature: &serde_json::Map<String, Value>) -> bool {
+    match signature
+        .get("type")
+        .and_then(|type_value| type_value.as_array())
+    {
+        Some(types) => types.iter().any(|type_entry| {
+            matches!(
+                (
+                    type_entry.get("system").and_then(|value| value.as_str()),
+                    type_entry.get("code").and_then(|value| value.as_str()),
+                ),
+                (
+                    Some("urn:iso-astm:E1762-95:2013"),
+                    Some("1.2.840.10065.1.12.1.5")
+                )
+            )
+        }),
+        None => false,
+    }
+}
+
+fn validate_signature_object(
+    signature: &serde_json::Map<String, Value>,
+    current_path: &str,
+    root_is_document_bundle: bool,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let validation_path = if current_path.is_empty() {
+        "Bundle.signature".to_string()
+    } else {
+        current_path.to_string()
+    };
+
+    if !signature.contains_key("type") {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "Signature element missing required field 'type'".to_string(),
+            )
+            .with_path(&validation_path),
+        );
+    }
+
+    if !signature.contains_key("when") {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "Signature element missing required field 'when'".to_string(),
+            )
+            .with_path(&validation_path),
+        );
+    }
+
+    if !signature.contains_key("who") && !signature.contains_key("whoUri") {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Structure,
+                "Signature element missing required field 'who' or 'whoUri'".to_string(),
+            )
+            .with_path(&validation_path),
+        );
+    }
+
+    if signature.get("sigFormat").and_then(Value::as_str) == Some("application/jose")
+        && is_verification_signature(signature)
+        && signature.contains_key("data")
+        && root_is_document_bundle
+    {
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Value,
+                "The signature has a payload, but the signature should be a detached signature with no payload"
+                    .to_string(),
+            )
+            .with_path(&validation_path),
+        );
     }
 }
 
@@ -3997,6 +5162,72 @@ fn concepts_contain_code(concepts: &[Value], code: &str) -> bool {
                 .and_then(|v| v.as_array())
                 .is_some_and(|nested| concepts_contain_code(nested, code))
     })
+}
+
+fn measure_scoring_code(measure: &Value) -> Option<&str> {
+    measure
+        .get("scoring")
+        .and_then(|scoring| scoring.get("coding"))
+        .and_then(|coding| coding.as_array())
+        .into_iter()
+        .flatten()
+        .find_map(|coding| coding.get("code").and_then(|code| code.as_str()))
+}
+
+fn validate_measure_report_stratifier_codes(
+    report: &Value,
+    measure: &Value,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+    let Some(report_groups) = report.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+    let Some(measure_groups) = measure.get("group").and_then(|value| value.as_array()) else {
+        return issues;
+    };
+
+    for (group_idx, report_group) in report_groups.iter().enumerate() {
+        let measure_group = measure_groups.get(group_idx);
+        let Some(measure_stratifiers) = measure_group
+            .and_then(|group| group.get("stratifier"))
+            .and_then(|value| value.as_array())
+        else {
+            continue;
+        };
+        let Some(report_stratifiers) = report_group
+            .get("stratifier")
+            .and_then(|value| value.as_array())
+        else {
+            continue;
+        };
+
+        for (stratifier_idx, report_stratifier) in report_stratifiers.iter().enumerate() {
+            if report_stratifier.get("code").is_some() {
+                continue;
+            }
+
+            let report_id = report_stratifier.get("id").and_then(|value| value.as_str());
+            let matches_measure_stratifier = measure_stratifiers.iter().any(|measure_stratifier| {
+                measure_stratifier
+                    .get("id")
+                    .and_then(|value| value.as_str())
+                    == report_id
+            });
+            if matches_measure_stratifier {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::BusinessRule,
+                        "Group should have a code that matches the group stratifier definition in the measure",
+                    )
+                    .with_path(format!(
+                        "MeasureReport.group[{group_idx}].stratifier[{stratifier_idx}]"
+                    )),
+                );
+            }
+        }
+    }
+
+    issues
 }
 
 fn is_canonical_url(url: &str) -> bool {

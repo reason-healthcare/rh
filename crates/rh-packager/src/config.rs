@@ -214,9 +214,7 @@ impl PublisherConfig {
     /// Parse a `packager.toml` file from its string contents.
     pub fn from_toml_str(s: &str) -> crate::Result<Self> {
         let config: Self = toml::from_str(s)?;
-        crate::canonical::warn_if_likely_implementation_guide_resource_url(
-            config.canonical.as_deref(),
-        );
+        crate::canonical::validate_canonical_base(config.canonical.as_deref())?;
         Ok(config)
     }
 }
@@ -421,15 +419,12 @@ version      = "1.0.0"
     }
 
     #[test]
-    fn accepts_canonical_that_is_implementation_guide_url() {
+    fn rejects_canonical_that_is_implementation_guide_url() {
         let toml = r#"
 canonical = "https://example.org/fhir/ImplementationGuide/example.fhir"
 "#;
-        let cfg = PublisherConfig::from_toml_str(toml).unwrap();
-        assert_eq!(
-            cfg.canonical.as_deref(),
-            Some("https://example.org/fhir/ImplementationGuide/example.fhir")
-        );
+        let err = PublisherConfig::from_toml_str(toml).unwrap_err();
+        assert!(err.to_string().contains("canonical must be"));
     }
 
     #[test]

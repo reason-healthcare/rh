@@ -13,7 +13,7 @@ use tempfile::TempDir;
 const BASE_SD: &str = r#"{
   "resourceType": "StructureDefinition",
   "id": "BasePatient",
-  "url": "http://example.org/fhir/StructureDefinition/BasePatient",
+  "url": "http://example.org/StructureDefinition/BasePatient",
   "name": "BasePatient",
   "status": "draft",
   "kind": "resource",
@@ -31,13 +31,13 @@ const BASE_SD: &str = r#"{
 const PROFILE_SD: &str = r#"{
   "resourceType": "StructureDefinition",
   "id": "MyPatient",
-  "url": "http://example.org/fhir/StructureDefinition/MyPatient",
+  "url": "http://example.org/StructureDefinition/MyPatient",
   "name": "MyPatient",
   "status": "draft",
   "kind": "resource",
   "abstract": false,
   "type": "Patient",
-  "baseDefinition": "http://example.org/fhir/StructureDefinition/BasePatient",
+  "baseDefinition": "http://example.org/StructureDefinition/BasePatient",
   "differential": {
     "element": [
       { "path": "Patient.identifier", "min": 1, "max": "1" }
@@ -164,8 +164,7 @@ fn build_runs_all_four_builtin_processors() {
     // build() returning Ok) and the package manifest exists ---
     assert!(pkg.join("package.json").exists());
     let package_json = read_json(&pkg.join("package.json"));
-    assert_eq!(package_json["url"], "http://example.org/fhir");
-    assert!(package_json.get("canonical").is_none());
+    assert_eq!(package_json["canonical"], "http://example.org/fhir");
     assert!(pkg.join(".index.json").exists());
 }
 

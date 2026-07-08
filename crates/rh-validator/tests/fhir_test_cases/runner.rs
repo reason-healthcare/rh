@@ -230,12 +230,13 @@ impl TestRunner {
         } else {
             None
         };
-        let mut option_validator =
-            if !has_package_resources && (test.security_checks || has_local_supporting_resources) {
-                Some(self.build_option_validator(test)?)
-            } else {
-                None
-            };
+        let mut option_validator = if !has_package_resources
+            && (test.security_checks || test.no_html_in_markdown || has_local_supporting_resources)
+        {
+            Some(self.build_option_validator(test)?)
+        } else {
+            None
+        };
         let validator = package_validator
             .as_mut()
             .or(option_validator.as_mut())
@@ -266,6 +267,9 @@ impl TestRunner {
                             }
                             Some("CodeSystem") => {
                                 validator.register_codesystem(&json);
+                            }
+                            Some("Measure") => {
+                                validator.register_measure(&json);
                             }
                             _ => {}
                         }
@@ -431,6 +435,7 @@ impl TestRunner {
             terminology_config,
             ValidationOptions {
                 security_checks: test.security_checks,
+                no_html_in_markdown: test.no_html_in_markdown,
             },
         )
         .context("Failed to create option-backed FhirValidator")
@@ -1335,6 +1340,7 @@ mod tests {
             for_publication: false,
             allow_comments: false,
             security_checks: false,
+            no_html_in_markdown: false,
             use_test: true,
             java: None,
             firely_sdk_current: None,

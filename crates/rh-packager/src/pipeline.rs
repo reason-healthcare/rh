@@ -1,7 +1,7 @@
 //! High-level pipeline orchestration for `rh package` subcommands.
 
 use crate::{
-    canonical::warn_resource_canonical_url_mismatches,
+    canonical::normalize_resource_canonical_urls,
     context::PublishContext,
     hooks::{build_registry_with_config, run_stage},
     ig_populate::populate_ig,
@@ -74,7 +74,7 @@ pub fn build(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
     let after = ctx.config.hooks.after_build.clone();
     run_stage(&registry, &after, &mut ctx)?;
 
-    warn_resource_canonical_url_mismatches(&ctx);
+    normalize_resource_canonical_urls(&mut ctx);
 
     let pkg_dir = write_output_dir(&ctx)?;
 
@@ -136,7 +136,6 @@ pub fn check(source_dir: &Path) -> Result<()> {
     let registry = build_registry_with_config(&ctx.config);
     let before = ctx.config.hooks.before_build.clone();
     run_stage(&registry, &before, &mut ctx)?;
-    warn_resource_canonical_url_mismatches(&ctx);
 
     info!("Source directory check passed");
     Ok(())
