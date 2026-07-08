@@ -433,10 +433,7 @@ fn build_validator(
     security_checks: bool,
     terminology_server: Option<&str>,
 ) -> Result<FhirValidator> {
-    let options = ValidationOptions {
-        security_checks,
-        ..ValidationOptions::default()
-    };
+    let options = ValidationOptions { security_checks };
     let terminology_config = terminology_server.map(TerminologyConfig::with_server);
 
     FhirValidator::with_options(

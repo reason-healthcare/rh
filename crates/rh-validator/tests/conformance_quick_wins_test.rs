@@ -29,7 +29,6 @@ fn security_checks_enabled_reports_error() {
         None,
         ValidationOptions {
             security_checks: true,
-            ..ValidationOptions::default()
         },
     )
     .unwrap();

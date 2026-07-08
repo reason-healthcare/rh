@@ -2952,21 +2952,19 @@ fn validate_string_security(
                 issues.extend(validate_string_security(item, &child_path, options));
             }
         }
-        Value::String(s) => {
-            if contains_html_tags(s) {
-                let issue = if options.security_checks {
-                    ValidationIssue::error(
-                        IssueCode::Invalid,
-                        "The string value contains text that looks like embedded HTML tags, which are not allowed for security reasons in this context".to_string(),
-                    )
-                } else {
-                    ValidationIssue::info(
-                        IssueCode::Informational,
-                        "The string value contains text that looks like embedded HTML tags. Security checks are disabled for this run, so this is informational.".to_string(),
-                    )
-                };
-                issues.push(issue.with_path(current_path.to_string()));
-            }
+        Value::String(s) if contains_html_tags(s) => {
+            let issue = if options.security_checks {
+                ValidationIssue::error(
+                    IssueCode::Invalid,
+                    "The string value contains text that looks like embedded HTML tags, which are not allowed for security reasons in this context".to_string(),
+                )
+            } else {
+                ValidationIssue::info(
+                    IssueCode::Informational,
+                    "The string value contains text that looks like embedded HTML tags. Security checks are disabled for this run, so this is informational.".to_string(),
+                )
+            };
+            issues.push(issue.with_path(current_path.to_string()));
         }
         _ => {}
     }
