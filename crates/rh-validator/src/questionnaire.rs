@@ -16,7 +16,7 @@ pub struct Questionnaire {
     #[serde(rename = "resourceType")]
     pub resource_type: String,
     pub url: Option<String>,
-    pub status: Option<String>,
+    pub status: String,
     #[serde(default)]
     pub item: Vec<QuestionnaireItem>,
 }

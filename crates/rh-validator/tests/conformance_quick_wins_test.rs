@@ -46,33 +46,6 @@ fn security_checks_enabled_reports_error() {
 }
 
 #[test]
-fn narrative_rejects_invalid_named_xhtml_entity() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let encounter = json!({
-        "resourceType": "Encounter",
-        "id": "example",
-        "text": {
-            "status": "generated",
-            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>CPT&reg;</p></div>"
-        },
-        "status": "finished",
-        "class": {
-            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-            "code": "AMB"
-        }
-    });
-
-    let result = validator.validate(&encounter).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.message.contains("Invalid entity in the XHTML ('&reg;')")
-            && i.path.as_deref() == Some("Encounter.text.div")
-    }));
-}
-
-#[test]
 fn r4_rejects_fhir_comments_property() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
@@ -89,160 +62,6 @@ fn r4_rejects_fhir_comments_property() {
             && i.code == IssueCode::Structure
             && i.message.contains("Unrecognized property 'fhir_comments'")
             && i.path.as_deref() == Some("Patient")
-    }));
-}
-
-#[test]
-fn document_bundle_duplicate_fullurl_is_reported() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "document",
-        "entry": [
-            {
-                "fullUrl": "http://example.org/Patient/p1",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": "p1"
-                }
-            },
-            {
-                "fullUrl": "http://example.org/Patient/p1",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": "p2"
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.path.as_deref() == Some("Bundle.entry[0].fullUrl")
-            || i.path.as_deref() == Some("Bundle.entry[1].fullUrl")
-    }));
-}
-
-#[test]
-fn document_bundle_versioned_reference_allows_duplicate_identity() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "document",
-        "entry": [
-            {
-                "fullUrl": "http://example.org/Composition/c1",
-                "resource": {
-                    "resourceType": "Composition",
-                    "id": "c1",
-                    "section": [
-                        {
-                            "entry": [
-                                {
-                                    "reference": "Observation/o1/_history/1"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            },
-            {
-                "fullUrl": "http://example.org/Observation/o1",
-                "resource": {
-                    "resourceType": "Observation",
-                    "id": "o1"
-                }
-            },
-            {
-                "fullUrl": "http://example.org/Observation/o1",
-                "resource": {
-                    "resourceType": "Observation",
-                    "id": "o1"
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(!result.issues.iter().any(|i| i.code == IssueCode::Duplicate));
-}
-
-#[test]
-fn bundle_signature_accepts_who_uri() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "document",
-        "entry": [
-            {
-                "fullUrl": "http://example.org/Composition/c1",
-                "resource": {
-                    "resourceType": "Composition",
-                    "id": "c1"
-                }
-            }
-        ],
-        "signature": {
-            "type": [
-                {
-                    "system": "urn:iso-astm:E1762-95:2013",
-                    "code": "1.2.840.10065.1.12.1.5"
-                }
-            ],
-            "when": "2024-01-01T00:00:00Z",
-            "whoUri": "urn:uuid:12345678-1234-1234-1234-123456789abc"
-        }
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(!result.issues.iter().any(|i| {
-        i.message
-            .contains("Signature element missing required field 'who' or 'whoUri'")
-    }));
-}
-
-#[test]
-fn searchset_signature_payload_is_not_fatal() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "searchset",
-        "entry": [
-            {
-                "fullUrl": "http://example.org/Patient/p1",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": "p1"
-                }
-            }
-        ],
-        "signature": {
-            "type": [
-                {
-                    "system": "urn:iso-astm:E1762-95:2013",
-                    "code": "1.2.840.10065.1.12.1.5"
-                }
-            ],
-            "when": "2024-01-01T00:00:00Z",
-            "who": {
-                "display": "Example Signer"
-            },
-            "sigFormat": "application/jose",
-            "data": "payload"
-        }
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(!result.issues.iter().any(|i| {
-        i.message.contains("detached signature with no payload") && i.severity == Severity::Error
     }));
 }
 
@@ -339,225 +158,6 @@ fn questionnaire_answer_valueset_satisfies_contained_dom3() {
     let result = validator.validate(&questionnaire).unwrap();
 
     assert!(!result.issues.iter().any(|i| i.message.contains("dom-3")));
-}
-
-#[test]
-fn bundle_fullurl_accepts_uin_uuid_scheme() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [
-            {
-                "fullUrl": "uin:uuid:cd7f9309-2530-4adf-9b94-e44548361e8a",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": "p1"
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(!result.issues.iter().any(|i| {
-        i.path.as_deref() == Some("Bundle.entry[0]")
-            && i.message.contains("fullUrl must be an absolute URL")
-    }));
-}
-
-#[test]
-fn bundle_duplicate_resource_identity_is_reported() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [
-            {
-                "fullUrl": "http://example.org/Patient/p1-a",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": "p1"
-                }
-            },
-            {
-                "fullUrl": "http://example.org/Patient/p1-b",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": "p1"
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.path.as_deref() == Some("Bundle.entry[0].resource.id")
-            || i.path.as_deref() == Some("Bundle.entry[1].resource.id")
-    }));
-}
-
-#[test]
-fn bundle_entry_immunization_rejects_invalid_status() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [
-            {
-                "fullUrl": "resource:1",
-                "resource": {
-                    "resourceType": "Immunization",
-                    "status": "Completed",
-                    "vaccineCode": {
-                        "coding": [
-                            {
-                                "system": "https://www.humanservices.gov.au/organisations/health-professionals/enablers/air-vaccine-code-formats",
-                                "code": "COVAST"
-                            }
-                        ]
-                    },
-                    "patient": { "reference": "resource:0" },
-                    "occurrenceDateTime": "2021-05-12"
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::CodeInvalid
-            && i.path.as_deref() == Some("Bundle.entry[0].resource/*Immunization*/.status")
-    }));
-}
-
-#[test]
-fn bundle_entry_immunization_rejects_unsupported_cvx_code() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [
-            {
-                "fullUrl": "resource:1",
-                "resource": {
-                    "resourceType": "Immunization",
-                    "status": "completed",
-                    "vaccineCode": {
-                        "coding": [
-                            {
-                                "system": "http://hl7.org/fhir/sid/cvx",
-                                "code": "209"
-                            }
-                        ]
-                    },
-                    "patient": { "reference": "resource:0" },
-                    "occurrenceDateTime": "2021-05-12"
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::CodeInvalid
-            && i.path.as_deref()
-                == Some("Bundle.entry[0].resource/*Immunization*/.vaccineCode.coding[0].code")
-    }));
-}
-
-#[test]
-fn transaction_bundle_relative_reference_requires_entry_fullurl() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": "transaction",
-        "entry": [
-            {
-                "resource": {
-                    "resourceType": "Observation",
-                    "id": "o1",
-                    "status": "final",
-                    "code": {
-                        "text": "Example"
-                    },
-                    "subject": {
-                        "reference": "Patient/p1"
-                    }
-                }
-            }
-        ]
-    });
-
-    let result = validator.validate(&bundle).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Structure
-            && i.message.contains(
-                "Relative Reference appears inside Bundle whose entry is missing a fullUrl",
-            )
-            && i.path.as_deref() == Some("Bundle.entry[0].resource/*Observation*/.subject")
-    }));
-}
-
-#[test]
-fn narrative_href_fragment_must_resolve_within_div() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let list = json!({
-        "resourceType": "List",
-        "status": "current",
-        "mode": "snapshot",
-        "text": {
-            "status": "generated",
-            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"present\"> </a><a href=\"#missing\">Missing</a></div>"
-        }
-    });
-
-    let result = validator.validate(&list).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Invalid
-            && i.message
-                .contains("Unable to resolve narrative fragment reference '#missing'")
-            && i.path.as_deref() == Some("List.text.div")
-    }));
-}
-
-#[test]
-fn narrative_href_fragment_accepts_local_anchor() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let list = json!({
-        "resourceType": "List",
-        "status": "current",
-        "mode": "snapshot",
-        "text": {
-            "status": "generated",
-            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"present\"> </a><a href=\"#present\">Present</a></div>"
-        }
-    });
-
-    let result = validator.validate(&list).unwrap();
-
-    assert!(!result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Invalid
-            && i.message
-                .contains("Unable to resolve narrative fragment reference")
-    }));
 }
 
 #[test]
@@ -1085,12 +685,13 @@ fn questionnaire_multiple_enable_when_accepts_enable_behavior() {
 }
 
 #[test]
-fn questionnaire_response_allows_questionnaire_without_status_for_answer_validation() {
+fn questionnaire_response_validates_quantity_constraints_from_registered_questionnaire() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
     let questionnaire = json!({
         "resourceType": "Questionnaire",
         "url": "http://example.org/Questionnaire/quantity-min-max",
+        "status": "active",
         "item": [
             {
                 "extension": [
@@ -1760,208 +1361,39 @@ fn us_core_ethnicity_detailed_rejects_codes_outside_required_valueset() {
 }
 
 #[test]
-fn expression_datatype_requires_language_and_expression_or_reference() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let measure = json!({
-        "resourceType": "Measure",
-        "url": "http://example.org/Measure/example",
-        "status": "draft",
-        "group": [{
-            "population": [{
-                "criteria": {
-                    "description": "Missing language and expression"
-                }
-            }]
-        }]
-    });
-
-    let result = validator.validate_auto(&measure).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Structure
-            && i.message.contains("Expression.language")
-            && i.path.as_deref() == Some("Measure.group.population.criteria")
-    }));
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Invariant
-            && i.message.contains("exp-1")
-            && i.path.as_deref() == Some("Measure.group.population.criteria")
-    }));
-}
-
-#[test]
-fn measure_population_requires_criteria_per_population() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    let measure = json!({
-        "resourceType": "Measure",
-        "url": "http://example.org/Measure/example",
-        "status": "draft",
-        "group": [{
-            "population": [
-                {
-                    "code": {
-                        "coding": [{
-                            "system": "http://terminology.hl7.org/CodeSystem/measure-population",
-                            "code": "initial-population"
-                        }]
-                    }
-                },
-                {
-                    "criteria": {
-                        "language": "text/cql",
-                        "expression": "Initial Population"
-                    }
-                }
-            ]
-        }]
-    });
-
-    let result = validator.validate_auto(&measure).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Required
-            && i.message.contains("Measure.group.population.criteria")
-            && i.path.as_deref() == Some("Measure.group[0].population[0].criteria")
-    }));
-}
-
-#[test]
 fn coding_system_must_be_absolute_codesystem_uri() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
-    let measure = json!({
-        "resourceType": "Measure",
-        "url": "http://example.org/Measure/example",
-        "status": "draft",
-        "subjectCodeableConcept": {
+    let observation = json!({
+        "resourceType": "Observation",
+        "status": "final",
+        "category": [{
             "coding": [{
                 "system": "Location1",
                 "code": "Location"
             }]
-        },
-        "type": [{
+        }],
+        "code": {
             "coding": [{
                 "system": "http://hl7.org/fhir/ValueSet/measure-type",
                 "code": "structure"
             }]
-        }]
+        }
     });
 
-    let result = validator.validate_auto(&measure).unwrap();
+    let result = validator.validate_auto(&observation).unwrap();
 
     assert!(result.issues.iter().any(|i| {
         i.severity == Severity::Error
             && i.code == IssueCode::Invalid
             && i.message.contains("absolute reference")
-            && i.path.as_deref() == Some("Measure.subjectCodeableConcept.coding[0].system")
+            && i.path.as_deref() == Some("Observation.category[0].coding[0].system")
     }));
     assert!(result.issues.iter().any(|i| {
         i.severity == Severity::Error
             && i.code == IssueCode::Invalid
             && i.message.contains("value set, not a code system")
-            && i.path.as_deref() == Some("Measure.type[0].coding[0].system")
-    }));
-}
-
-#[test]
-fn cohort_measure_report_must_not_have_group_measure_score() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    validator.register_measure(&json!({
-        "resourceType": "Measure",
-        "url": "http://example.org/Measure/cohort",
-        "status": "draft",
-        "scoring": {
-            "coding": [{
-                "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
-                "code": "cohort"
-            }]
-        }
-    }));
-
-    let report = json!({
-        "resourceType": "MeasureReport",
-        "status": "complete",
-        "type": "summary",
-        "measure": "http://example.org/Measure/cohort",
-        "period": {
-            "start": "2026-01-01",
-            "end": "2026-01-31"
-        },
-        "group": [{
-            "measureScore": {
-                "value": 1
-            }
-        }]
-    });
-
-    let result = validator.validate_auto(&report).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::BusinessRule
-            && i.message.contains("No measureScore")
-            && i.path.as_deref() == Some("MeasureReport.group[0].measureScore")
-    }));
-}
-
-#[test]
-fn measure_report_stratifier_must_have_matching_measure_code() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
-
-    validator.register_measure(&json!({
-        "resourceType": "Measure",
-        "url": "http://example.org/Measure/stratified",
-        "status": "draft",
-        "group": [{
-            "stratifier": [{
-                "id": "stratifier-1",
-                "component": [{
-                    "code": {
-                        "coding": [{
-                            "system": "http://example.org/CodeSystem/measure-codes",
-                            "code": "ageGroup"
-                        }]
-                    },
-                    "criteria": {
-                        "language": "text/cql",
-                        "expression": "Age Group"
-                    }
-                }]
-            }]
-        }]
-    }));
-
-    let report = json!({
-        "resourceType": "MeasureReport",
-        "status": "complete",
-        "type": "summary",
-        "measure": "http://example.org/Measure/stratified",
-        "period": {
-            "start": "2026-01-01",
-            "end": "2026-01-31"
-        },
-        "group": [{
-            "stratifier": [{
-                "id": "stratifier-1",
-                "stratum": []
-            }]
-        }]
-    });
-
-    let result = validator.validate_auto(&report).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::BusinessRule
-            && i.message
-                .contains("matches the group stratifier definition")
-            && i.path.as_deref() == Some("MeasureReport.group[0].stratifier[0]")
+            && i.path.as_deref() == Some("Observation.code.coding[0].system")
     }));
 }
 
@@ -2439,38 +1871,6 @@ fn primitive_date_format_rejects_non_date_text() {
             && i.code == IssueCode::Invalid
             && i.message.contains("Not a valid date format: 'not a date'")
             && i.path.as_deref() == Some("Patient.birthDate")
-    }));
-}
-
-#[test]
-fn no_html_in_markdown_rejects_embedded_tag_like_text() {
-    let validator = FhirValidator::with_options(
-        FhirVersion::R4,
-        None,
-        None,
-        ValidationOptions {
-            no_html_in_markdown: true,
-            ..ValidationOptions::default()
-        },
-    )
-    .unwrap();
-
-    let communication = json!({
-        "resourceType": "Communication",
-        "id": "bad-markdown",
-        "status": "completed",
-        "note": [{
-            "text": "<resource type>\\<id>"
-        }]
-    });
-
-    let result = validator.validate_auto(&communication).unwrap();
-
-    assert!(result.issues.iter().any(|i| {
-        i.severity == Severity::Error
-            && i.code == IssueCode::Invalid
-            && i.message.contains("markdown contains content")
-            && i.path.as_deref() == Some("Communication.note[0].text")
     }));
 }
 

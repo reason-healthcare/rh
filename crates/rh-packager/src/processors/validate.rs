@@ -113,7 +113,6 @@ mod tests {
                 fhir_versions: vec![],
                 dependencies: deps,
                 url: None,
-                canonical: None,
                 description: None,
                 author: None,
                 license: None,

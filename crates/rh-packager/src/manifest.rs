@@ -26,10 +26,6 @@ pub struct PackageJson {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
 
-    /// Canonical base URL alias for tools that consume this field name.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub canonical: Option<String>,
-
     /// Human-readable package description.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -66,7 +62,6 @@ impl PackageJson {
                 .unwrap_or_default(),
             dependencies: config.dependencies.clone(),
             url: config.canonical.clone(),
-            canonical: config.canonical.clone(),
             description: config.description.clone(),
             author: config.author.clone(),
             license: config.license.clone(),
@@ -116,10 +111,13 @@ mod tests {
     fn deserializes_full_package_json() {
         let pkg: PackageJson = serde_json::from_str(FULL_JSON).unwrap();
         assert_eq!(pkg.url.as_deref(), Some("http://example.org/fhir"));
-        assert_eq!(pkg.canonical.as_deref(), Some("http://example.org/fhir"));
         assert_eq!(pkg.description.as_deref(), Some("An example package"));
         assert_eq!(pkg.author.as_deref(), Some("Example Author"));
         assert_eq!(pkg.license.as_deref(), Some("CC0-1.0"));
+        assert_eq!(
+            pkg.extra.get("canonical").and_then(|v| v.as_str()),
+            Some("http://example.org/fhir")
+        );
         assert!(pkg.extra.contains_key("someExtension"));
     }
 
@@ -131,7 +129,7 @@ mod tests {
         assert_eq!(pkg.name, pkg2.name);
         assert_eq!(pkg.version, pkg2.version);
         assert_eq!(pkg.url, pkg2.url);
-        assert_eq!(pkg.canonical, pkg2.canonical);
+        assert_eq!(pkg.extra.get("canonical"), pkg2.extra.get("canonical"));
         assert_eq!(
             pkg.extra.get("someExtension"),
             pkg2.extra.get("someExtension")
@@ -173,10 +171,6 @@ license      = "CC0-1.0"
         assert_eq!(pkg.version, "6.1.0");
         assert_eq!(pkg.fhir_versions, vec!["4.0.1"]);
         assert_eq!(pkg.url.as_deref(), Some("http://hl7.org/fhir/us/core"));
-        assert_eq!(
-            pkg.canonical.as_deref(),
-            Some("http://hl7.org/fhir/us/core")
-        );
         assert_eq!(pkg.description.as_deref(), Some("US Core IG"));
         assert_eq!(pkg.author.as_deref(), Some("HL7 US Realm"));
         assert_eq!(pkg.license.as_deref(), Some("CC0-1.0"));
@@ -197,6 +191,5 @@ license      = "CC0-1.0"
         assert!(pkg.fhir_versions.is_empty());
         assert!(pkg.dependencies.is_empty());
         assert!(pkg.url.is_none());
-        assert!(pkg.canonical.is_none());
     }
 }

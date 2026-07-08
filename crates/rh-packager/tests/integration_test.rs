@@ -53,7 +53,7 @@ fn build_produces_output_directory_and_tarball() {
     let package_json: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(pkg_dir.join("package.json")).unwrap()).unwrap();
     assert_eq!(package_json["url"], "http://example.org/fhir");
-    assert_eq!(package_json["canonical"], "http://example.org/fhir");
+    assert!(package_json.get("canonical").is_none());
 
     // Standalone overview.md should be in package/other/.
     assert!(pkg_dir.join("other").join("overview.md").exists());
@@ -236,7 +236,7 @@ fn check_fails_on_ig_version_mismatch() {
 }
 
 #[test]
-fn check_fails_when_canonical_is_implementation_guide_url() {
+fn check_accepts_canonical_as_implementation_guide_url() {
     let tmp = TempDir::new().unwrap();
     copy_fixture(&tmp);
 
@@ -250,9 +250,52 @@ fhir_version = "4.0.1"
     )
     .unwrap();
 
-    let err = check(tmp.path()).unwrap_err();
-    assert!(
-        err.to_string().contains("canonical must be"),
-        "expected canonical base validation error, got: {err}"
+    let ig_path = tmp.path().join("input").join("ImplementationGuide.json");
+    let mut ig: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&ig_path).unwrap()).unwrap();
+    ig["url"] = serde_json::Value::String(
+        "http://example.org/fhir/ImplementationGuide/example.fhir.test/ImplementationGuide/example.fhir.test"
+            .to_string(),
     );
+    fs::write(&ig_path, serde_json::to_string_pretty(&ig).unwrap()).unwrap();
+
+    let valueset_path = tmp
+        .path()
+        .join("input")
+        .join("ValueSet-condition-codes.json");
+    let mut valueset: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&valueset_path).unwrap()).unwrap();
+    valueset["url"] = serde_json::Value::String(
+        "http://example.org/fhir/ImplementationGuide/example.fhir.test/ValueSet/condition-codes"
+            .to_string(),
+    );
+    fs::write(
+        &valueset_path,
+        serde_json::to_string_pretty(&valueset).unwrap(),
+    )
+    .unwrap();
+
+    check(tmp.path()).unwrap();
+}
+
+#[test]
+fn check_warns_but_passes_on_resource_url_mismatch() {
+    let tmp = TempDir::new().unwrap();
+    copy_fixture(&tmp);
+
+    let valueset_path = tmp
+        .path()
+        .join("input")
+        .join("ValueSet-condition-codes.json");
+    let mut valueset: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&valueset_path).unwrap()).unwrap();
+    valueset["url"] =
+        serde_json::Value::String("http://wrong.example/ValueSet/condition-codes".to_string());
+    fs::write(
+        &valueset_path,
+        serde_json::to_string_pretty(&valueset).unwrap(),
+    )
+    .unwrap();
+
+    check(tmp.path()).unwrap();
 }

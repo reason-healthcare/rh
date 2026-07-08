@@ -79,7 +79,11 @@ impl HookProcessor for CqlProcessor {
                         "No Library resource found for '{stem}'; auto-creating Library-{stem}. \
                          Consider adding Library-{stem}.json to your source directory."
                     );
-                    e.insert(create_minimal_library(&stem, content));
+                    e.insert(create_minimal_library(
+                        &stem,
+                        ctx.package_json.url.as_deref(),
+                        content,
+                    ));
                 }
             }
 
@@ -105,14 +109,24 @@ fn ensure_logic_library_type(resource: &mut Value) {
     }
 }
 
-fn create_minimal_library(name: &str, content: Value) -> Value {
-    json!({
+fn create_minimal_library(name: &str, canonical_base: Option<&str>, content: Value) -> Value {
+    let mut library = json!({
         "resourceType": "Library",
         "id": name,
         "status": "draft",
         "type": logic_library_type_value(),
         "content": content
-    })
+    });
+
+    if let Some(canonical_base) = canonical_base {
+        library["url"] = json!(crate::canonical::resource_canonical_url(
+            canonical_base,
+            "Library",
+            name
+        ));
+    }
+
+    library
 }
 
 fn logic_library_type_value() -> Value {
@@ -147,7 +161,6 @@ mod tests {
                 fhir_versions: vec![],
                 dependencies: HashMap::new(),
                 url: None,
-                canonical: None,
                 description: None,
                 author: None,
                 license: None,

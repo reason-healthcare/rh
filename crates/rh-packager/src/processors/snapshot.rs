@@ -126,7 +126,6 @@ mod tests {
                 fhir_versions: vec![],
                 dependencies: HashMap::new(),
                 url: None,
-                canonical: None,
                 description: None,
                 author: None,
                 license: None,
