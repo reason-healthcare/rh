@@ -165,7 +165,7 @@ fn build_runs_all_four_builtin_processors() {
     assert!(pkg.join("package.json").exists());
     let package_json = read_json(&pkg.join("package.json"));
     assert_eq!(package_json["url"], "http://example.org/fhir");
-    assert!(package_json.get("canonical").is_none());
+    assert_eq!(package_json["canonical"], "http://example.org/fhir");
     assert!(pkg.join(".index.json").exists());
 }
 

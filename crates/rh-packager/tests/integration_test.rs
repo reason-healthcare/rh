@@ -53,7 +53,7 @@ fn build_produces_output_directory_and_tarball() {
     let package_json: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(pkg_dir.join("package.json")).unwrap()).unwrap();
     assert_eq!(package_json["url"], "http://example.org/fhir");
-    assert!(package_json.get("canonical").is_none());
+    assert_eq!(package_json["canonical"], "http://example.org/fhir");
 
     // Standalone overview.md should be in package/other/.
     assert!(pkg_dir.join("other").join("overview.md").exists());

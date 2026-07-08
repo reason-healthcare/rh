@@ -147,6 +147,7 @@ mod tests {
             fhir_versions: pkg_fhir.iter().map(|s| s.to_string()).collect(),
             dependencies: HashMap::new(),
             url: pkg_url.map(|s| s.to_string()),
+            canonical: pkg_url.map(|s| s.to_string()),
             description: None,
             author: None,
             license: None,

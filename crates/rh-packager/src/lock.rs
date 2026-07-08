@@ -449,6 +449,7 @@ mod tests {
                 fhir_versions: vec![],
                 dependencies: deps,
                 url: pkg_url.map(|s| s.to_string()),
+                canonical: pkg_url.map(|s| s.to_string()),
                 description: None,
                 author: None,
                 license: None,
