@@ -145,7 +145,7 @@ pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result
                             anyhow::anyhow!(
                                 "Could not derive a package name from '{}'. \
                              Provide --name explicitly (e.g. --name hl7.fhir.us.core).",
-                                &args.canonical
+                                args.canonical
                             )
                         })?;
                     info!("Name derived from canonical: {derived}");
