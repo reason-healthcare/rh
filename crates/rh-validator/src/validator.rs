@@ -6587,10 +6587,7 @@ fn navigate_to_extensions<'a>(resource: &'a Value, parts: &[&str]) -> Option<&'a
     let mut current = resource;
 
     for part in &parts[1..] {
-        match current.get(part) {
-            Some(value) => current = value,
-            None => return None,
-        }
+        current = current.get(part)?;
     }
 
     current.as_array()
@@ -6700,10 +6697,7 @@ fn navigate_to_array<'a>(resource: &'a Value, parts: &[&str]) -> Option<&'a Vec<
     let mut current = resource;
 
     for part in &parts[1..] {
-        match current.get(part) {
-            Some(value) => current = value,
-            None => return None,
-        }
+        current = current.get(part)?;
     }
 
     current.as_array()
