@@ -49,6 +49,12 @@ package pipeline diagnostics.
 
    Rationale: the checks belong in `rh-validator`, but `rh-packager` should own
    package-specific orchestration, context loading, and error reporting.
+   Resource-shape checks such as unknown R4 resource types, unknown properties,
+   and invalid concrete choice fields are core validator behavior and therefore
+   apply anywhere `rh-validator` validates a resource, including standalone
+   resource validation and package validation. Package-local context loading is
+   not core validator behavior; it is performed by the package validate
+   processor because only that path has the package's in-memory resource set.
 
    Alternative considered: implement package-only checks in `rh-packager`. That
    would duplicate validator logic and leave the CLI/library validator behind.

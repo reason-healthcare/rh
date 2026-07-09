@@ -22,6 +22,9 @@ the checks most relevant when building and checking FHIR packages.
   matching.
 - Preserve existing severity behavior: ERROR issues fail the validate processor;
   WARNING issues are surfaced but do not fail the package pipeline.
+- Keep R4 resource-shape validation in core `rh-validator` behavior so it
+  applies to both standalone resource validation and package validation, while
+  keeping package-local resource loading in the package validate processor only.
 - Exclude broad Measure, MeasureReport, Bundle, and narrative validation
   expansion from this proposal unless a separate OpenSpec change scopes them.
 - Avoid public Rust API churn unless needed; prefer internal cached structures

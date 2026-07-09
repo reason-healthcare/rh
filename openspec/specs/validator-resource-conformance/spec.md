@@ -7,7 +7,9 @@ TBD - created by archiving change package-validation-coverage. Update Purpose af
 
 The validator SHALL report deterministic issues for unknown R4 resource types,
 unknown properties on known R4 resource types, and invalid use of FHIR choice
-elements.
+elements. These checks SHALL be core validator behavior and apply whenever
+`rh-validator` validates an R4 resource, including standalone resource
+validation and package validation.
 
 #### Scenario: Unknown resource type is reported
 - **WHEN** a resource has a `resourceType` that is not an R4 resource type
@@ -70,7 +72,9 @@ slices.
 
 The validator SHALL validate QuestionnaireResponse resources against their
 referenced Questionnaire when that Questionnaire is available locally or from
-loaded package context.
+loaded package context. Standalone validation SHALL NOT implicitly scan sibling
+files or package resources for Questionnaire context; callers that need local
+context SHALL register or otherwise load that context explicitly.
 
 #### Scenario: Missing required answer is reported
 - **WHEN** a Questionnaire item requires an answer and the QuestionnaireResponse omits it
@@ -93,7 +97,10 @@ loaded package context.
 The validator SHALL use package-local and dependency-loaded ValueSet resources
 for binding checks when the binding ValueSet can be resolved without remote
 terminology access. Versioned and unversioned references to the same ValueSet
-canonical SHALL match for local lookup.
+canonical SHALL match for local lookup. Standalone validation SHALL NOT
+implicitly scan sibling files or package resources for ValueSet context; callers
+that need local context SHALL register or otherwise load that context
+explicitly.
 
 #### Scenario: Local expansion contains code
 - **WHEN** a required binding references a local ValueSet expansion that contains the resource code
@@ -128,4 +135,3 @@ validation code.
 #### Scenario: Narrative validation is not expanded
 - **WHEN** this change is implemented
 - **THEN** no new narrative validation category is claimed by this capability
-

@@ -63,7 +63,9 @@ to control validation behaviour.
 
 The `validate` processor SHALL make package-local resources available as
 validation context for checks that can resolve resources locally, including
-StructureDefinitions, Questionnaires, and ValueSets.
+StructureDefinitions, Questionnaires, and ValueSets. This package-local context
+loading is specific to the validate processor and SHALL NOT imply that
+standalone resource validation discovers sibling package resources implicitly.
 
 #### Scenario: Local ValueSet is available for binding validation
 - **WHEN** a package contains a ValueSet and a profile binding references that ValueSet by canonical URL
@@ -86,4 +88,3 @@ issues do not fail the processor.
 #### Scenario: New warning remains non-blocking
 - **WHEN** package validation detects an issue classified as WARNING
 - **THEN** the validate processor prints the warning and continues if no ERROR issues exist
-

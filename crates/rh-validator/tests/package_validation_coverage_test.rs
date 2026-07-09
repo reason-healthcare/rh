@@ -303,3 +303,35 @@ fn questionnaire_response_resolves_registered_questionnaire() {
         .iter()
         .any(|issue| issue.message.contains("could not be resolved")));
 }
+
+#[test]
+fn standalone_questionnaire_response_does_not_load_package_local_context() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let response = json!({
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": "http://example.org/fhir/Questionnaire/intake",
+        "status": "completed",
+        "item": [{
+            "linkId": "required-question",
+            "answer": [{ "valueInteger": 1 }]
+        }]
+    });
+
+    let result = validator.validate(&response).unwrap();
+    assert!(
+        result.issues.iter().any(|issue| {
+            issue.severity == Severity::Warning && issue.message.contains("could not be resolved")
+        }),
+        "expected unresolved Questionnaire warning without registered/package context, got: {:?}",
+        result.issues
+    );
+    assert!(
+        !result
+            .issues
+            .iter()
+            .any(|issue| issue.message.contains("Answer value must be of the type")),
+        "standalone validation should not validate answers without loaded Questionnaire context: {:?}",
+        result.issues
+    );
+}
