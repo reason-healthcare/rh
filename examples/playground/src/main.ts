@@ -14,9 +14,16 @@ import {
 } from "@reasonhealth/vcl/web";
 import {
   compile as compileCql,
+  dataRequirements as cqlDataRequirements,
+  emitSql as cqlEmitSql,
+  emitSqlQueryLibrary as cqlEmitSqlQueryLibrary,
+  emitViewDefinitions as cqlEmitViewDefinitions,
   explainCompile as explainCqlCompile,
   explainParse as explainCqlParse,
   initCql,
+  inspect as inspectCql,
+  lowerCheck as cqlLowerCheck,
+  relationalPlan as cqlRelationalPlan,
   version as cqlVersion
 } from "@reasonhealth/cql/web";
 import "./styles.css";
@@ -127,6 +134,13 @@ app.innerHTML = `
             <button type="submit">Compile</button>
 <button type="button" class="secondary" id="cql-explain-compile">Explain Compile</button>
 <button type="button" class="secondary" id="cql-explain-parse">Explain Parse</button>
+<button type="button" class="secondary" id="cql-inspect">Inspect</button>
+<button type="button" class="secondary" id="cql-data-requirements">Data Requirements</button>
+<button type="button" class="secondary" id="cql-plan">Plan</button>
+<button type="button" class="secondary" id="cql-lower-check">Lower Check</button>
+<button type="button" class="secondary" id="cql-emit-views">Emit Views</button>
+<button type="button" class="secondary" id="cql-emit-sql">Emit SQL</button>
+<button type="button" class="secondary" id="cql-emit-sql-library">SQL Library</button>
             <label class="toggle"><input type="checkbox" id="cql-source-map" /> Source map</label>
           </div>
         </form>
@@ -328,26 +342,64 @@ function bindVcl(): void {
 }
 
 function bindCql(): void {
+  const cqlSourceText = () => textValue("cql-source");
+  const compileOptions = () => ({
+    sourceMap: requiredElement<HTMLInputElement>("cql-source-map").checked
+  });
+
   requiredElement<HTMLFormElement>("cql-form").addEventListener("submit", (event) => {
     event.preventDefault();
     renderResult(
       "cql-output",
-      compileCql(textValue("cql-source"), {
-        sourceMap: requiredElement<HTMLInputElement>("cql-source-map").checked
-      }),
+      compileCql(cqlSourceText(), compileOptions()),
       { title: "CQL ELM output" }
     );
   });
   requiredElement<HTMLButtonElement>("cql-explain-compile").addEventListener("click", () => {
     renderResult(
       "cql-output",
-      explainCqlCompile(textValue("cql-source"), { sourceMap: requiredElement<HTMLInputElement>("cql-source-map").checked }),
+      explainCqlCompile(cqlSourceText(), compileOptions()),
       { title: "CQL compile explanation" }
     );
   });
   requiredElement<HTMLButtonElement>("cql-explain-parse").addEventListener("click", () => {
-    renderResult("cql-output", explainCqlParse(textValue("cql-source")), {
+    renderResult("cql-output", explainCqlParse(cqlSourceText()), {
       title: "CQL parse explanation"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-inspect").addEventListener("click", () => {
+    renderResult("cql-output", inspectCql(cqlSourceText()), {
+      title: "CQL inspection"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-data-requirements").addEventListener("click", () => {
+    renderResult("cql-output", cqlDataRequirements(cqlSourceText()), {
+      title: "CQL data requirements"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-plan").addEventListener("click", () => {
+    renderResult("cql-output", cqlRelationalPlan(cqlSourceText()), {
+      title: "CQL relational plan"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-lower-check").addEventListener("click", () => {
+    renderResult("cql-output", cqlLowerCheck(cqlSourceText()), {
+      title: "SQL-on-FHIR lower check"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-emit-views").addEventListener("click", () => {
+    renderResult("cql-output", cqlEmitViewDefinitions(cqlSourceText()), {
+      title: "SQL-on-FHIR ViewDefinitions"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-emit-sql").addEventListener("click", () => {
+    renderResult("cql-output", cqlEmitSql(cqlSourceText()), {
+      title: "SQL-on-FHIR SQL"
+    });
+  });
+  requiredElement<HTMLButtonElement>("cql-emit-sql-library").addEventListener("click", () => {
+    renderResult("cql-output", cqlEmitSqlQueryLibrary(cqlSourceText()), {
+      title: "SQLQuery Library"
     });
   });
 }
@@ -443,6 +495,15 @@ function renderPayload(payload: unknown): string {
   if (isElmLibraryPayload(payload)) {
     return renderElmLibrary(payload);
   }
+  if (isSqlTextPayload(payload)) {
+    return renderSqlTextPayload(payload);
+  }
+  if (isLowerCheckPayload(payload)) {
+    return renderLowerCheckPayload(payload);
+  }
+  if (isViewGenerationPayload(payload)) {
+    return renderViewGenerationPayload(payload);
+  }
   if (isValueSetComposePayload(payload)) {
     return renderValueSetCompose(payload);
   }
@@ -535,6 +596,54 @@ function renderValueSetCompose(payload: { include?: unknown[]; exclude?: unknown
   `;
 }
 
+function renderLowerCheckPayload(payload: { target: string; supported: boolean; supportedNodes?: unknown[]; unsupportedNodes?: unknown[]; notes?: unknown[] }): string {
+  const unsupported = Array.isArray(payload.unsupportedNodes) ? payload.unsupportedNodes : [];
+  const supported = Array.isArray(payload.supportedNodes) ? payload.supportedNodes : [];
+  const notes = Array.isArray(payload.notes) ? payload.notes : [];
+  const rows = [...supported.map((node) => renderSupportRow("supported", node)), ...unsupported.map((node) => renderSupportRow("unsupported", node))].join("");
+
+  return `
+    <section class="rendered-block ${payload.supported ? "success" : "danger"}">
+      <h3>${escapeHtml(payload.target)} lower check</h3>
+      <p>${payload.supported ? "All encountered node kinds are supported by the first-pass lowerer." : `${unsupported.length} unsupported node kind${unsupported.length === 1 ? "" : "s"} found.`}</p>
+      ${rows ? `<table><thead><tr><th>Status</th><th>ELM node</th><th>Count</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
+      ${notes.length ? `<ul>${notes.map((note) => `<li>${escapeHtml(String(note))}</li>`).join("")}</ul>` : ""}
+    </section>
+  `;
+}
+
+function renderSupportRow(status: string, node: unknown): string {
+  const row = isRecord(node) ? node : {};
+  return `<tr><td>${escapeHtml(status)}</td><td>${escapeHtml(String(row.nodeType ?? ""))}</td><td>${escapeHtml(String(row.count ?? ""))}</td></tr>`;
+}
+
+function renderViewGenerationPayload(payload: { views: unknown[] }): string {
+  const rows = payload.views.map((view) => {
+    const row = isRecord(view) ? view : {};
+    return `<tr><td>${escapeHtml(String(row.name ?? ""))}</td><td>${escapeHtml(String(row.resource ?? ""))}</td><td>${escapeHtml(String(row.url ?? ""))}</td></tr>`;
+  }).join("");
+
+  return `
+    <section class="rendered-block">
+      <h3>SQL-on-FHIR ViewDefinitions</h3>
+      <p>${payload.views.length} view${payload.views.length === 1 ? "" : "s"} generated from CQL retrieves.</p>
+      ${rows ? `<table><thead><tr><th>Name</th><th>Resource</th><th>Canonical URL</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
+    </section>
+  `;
+}
+
+function renderSqlTextPayload(payload: { sql: string; views?: unknown[]; library?: unknown }): string {
+  const views = Array.isArray(payload.views) ? payload.views : [];
+  const title = isRecord(payload.library) ? "SQLQuery Library" : "SQL-on-FHIR SQL";
+  return `
+    <section class="rendered-block">
+      <h3>${title}</h3>
+      <p>${views.length} ViewDefinition dependenc${views.length === 1 ? "y" : "ies"}.</p>
+      <pre class="explanation-pre">${escapeHtml(payload.sql)}</pre>
+    </section>
+  `;
+}
+
 function renderComposeRow(mode: string, entry: unknown): string {
   const row = isRecord(entry) ? entry : {};
   const filters = Array.isArray(row.filter)
@@ -613,6 +722,18 @@ function isCqlSourceMapPayload(value: unknown): value is { library: unknown; sou
 
 function isValueSetComposePayload(value: unknown): value is { include?: unknown[]; exclude?: unknown[] } {
   return isRecord(value) && (Array.isArray(value.include) || Array.isArray(value.exclude));
+}
+
+function isLowerCheckPayload(value: unknown): value is { target: string; supported: boolean; supportedNodes?: unknown[]; unsupportedNodes?: unknown[]; notes?: unknown[] } {
+  return isRecord(value) && typeof value.target === "string" && typeof value.supported === "boolean";
+}
+
+function isViewGenerationPayload(value: unknown): value is { views: unknown[] } {
+  return isRecord(value) && Array.isArray(value.views) && !("sql" in value);
+}
+
+function isSqlTextPayload(value: unknown): value is { sql: string; views?: unknown[]; library?: unknown } {
+  return isRecord(value) && typeof value.sql === "string";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

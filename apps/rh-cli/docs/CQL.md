@@ -4,6 +4,12 @@
 
 The `rh cql` command provides tools for working with CQL (Clinical Quality Language), compiling CQL source files to ELM (Expression Logical Model) JSON, evaluating expressions, and inspecting compilation details.
 
+It also includes first-pass SQL-on-FHIR helpers for retrieve-centric measure
+logic: `data-requirements`, `plan`, `lower-check`, `emit-views`, `emit-sql`,
+and `emit-runtime`. These commands expose what a CQL library needs, whether its
+ELM nodes are supported by the current relational lowerer, and the generated
+ViewDefinition, SQLQuery Library, and runtime manifest artifacts.
+
 See the [CQL crate README](../../../crates/rh-cql/README.md) for library-level documentation.
 
 ## Commands
