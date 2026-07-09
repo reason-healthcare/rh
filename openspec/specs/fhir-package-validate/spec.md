@@ -3,18 +3,22 @@
 ## Purpose
 
 Defines the behaviour of the `validate` lifecycle hook processor, which runs `rh-validator` over all FHIR resources in the in-memory resource map during a publish pipeline.
-
 ## Requirements
-
 ### Requirement: validate processor runs rh-validator over all source FHIR resources
 
-When the `validate` processor is invoked as a lifecycle hook, it SHALL run `rh-validator` over
-every FHIR resource in the in-memory resource map and fail the pipeline if any resource has an
-issue of ERROR severity.
+When the `validate` processor is invoked as a lifecycle hook, it SHALL run
+`rh-validator` over every FHIR resource in the in-memory resource map and fail
+the pipeline if any resource has an issue of ERROR severity. When failing, the
+processor SHALL return an error message that includes the first concrete
+validation error and indicate when additional errors were found.
 
 #### Scenario: Resource with ERROR severity fails the pipeline
 - **WHEN** the `validate` processor runs and rh-validator produces an ERROR-severity issue for any resource
-- **THEN** the processor returns an error, the pipeline aborts, and the error details are printed to stderr
+- **THEN** the processor returns an error, the pipeline aborts, and the returned error includes the resource label and first validation error
+
+#### Scenario: Multiple ERROR severity issues summarize remaining errors
+- **WHEN** the `validate` processor runs and rh-validator produces multiple ERROR-severity issues
+- **THEN** the returned error includes the first validation error and reports how many additional errors were found
 
 #### Scenario: Resource with WARNING severity does not fail the pipeline
 - **WHEN** the `validate` processor runs and rh-validator produces only WARNING-severity issues
@@ -53,3 +57,4 @@ to control validation behaviour.
 #### Scenario: Default configuration when [validate] block is absent
 - **WHEN** `publisher.toml` has no `[validate]` block
 - **THEN** the `validate` processor runs with default rh-validator settings (no terminology server, invariants enabled)
+

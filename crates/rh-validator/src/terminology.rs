@@ -1026,10 +1026,9 @@ impl TerminologyConfig {
     pub fn build(&self) -> Option<Arc<dyn TerminologyService>> {
         let base_service: Arc<dyn TerminologyService> = if self.use_mock {
             Arc::new(MockTerminologyService::with_common_codes())
-        } else if let Some(ref url) = self.server_url {
-            Arc::new(HttpTerminologyService::new(url))
         } else {
-            return None;
+            let url = self.server_url.as_ref()?;
+            Arc::new(HttpTerminologyService::new(url))
         };
 
         // Wrap with cache if path is configured

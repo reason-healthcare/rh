@@ -228,3 +228,68 @@ fn check_fails_on_ig_version_mismatch() {
         "Expected sync error mentioning version, got: {msg}"
     );
 }
+
+#[test]
+fn check_accepts_canonical_that_looks_like_implementation_guide_url() {
+    let tmp = TempDir::new().unwrap();
+    copy_fixture(&tmp);
+
+    fs::write(
+        tmp.path().join("packager.toml"),
+        r#"id           = "example.fhir.test"
+version      = "1.0.0"
+canonical    = "http://example.org/fhir/ImplementationGuide/example.fhir.test"
+fhir_version = "4.0.1"
+"#,
+    )
+    .unwrap();
+
+    let ig_path = tmp.path().join("input").join("ImplementationGuide.json");
+    let mut ig: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&ig_path).unwrap()).unwrap();
+    ig["url"] = serde_json::Value::String(
+        "http://example.org/fhir/ImplementationGuide/example.fhir.test/ImplementationGuide/example.fhir.test"
+            .to_string(),
+    );
+    fs::write(&ig_path, serde_json::to_string_pretty(&ig).unwrap()).unwrap();
+
+    let valueset_path = tmp
+        .path()
+        .join("input")
+        .join("ValueSet-condition-codes.json");
+    let mut valueset: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&valueset_path).unwrap()).unwrap();
+    valueset["url"] = serde_json::Value::String(
+        "http://example.org/fhir/ImplementationGuide/example.fhir.test/ValueSet/condition-codes"
+            .to_string(),
+    );
+    fs::write(
+        &valueset_path,
+        serde_json::to_string_pretty(&valueset).unwrap(),
+    )
+    .unwrap();
+
+    check(tmp.path()).unwrap();
+}
+
+#[test]
+fn check_warns_but_passes_on_resource_url_mismatch() {
+    let tmp = TempDir::new().unwrap();
+    copy_fixture(&tmp);
+
+    let valueset_path = tmp
+        .path()
+        .join("input")
+        .join("ValueSet-condition-codes.json");
+    let mut valueset: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&valueset_path).unwrap()).unwrap();
+    valueset["url"] =
+        serde_json::Value::String("http://wrong.example/ValueSet/condition-codes".to_string());
+    fs::write(
+        &valueset_path,
+        serde_json::to_string_pretty(&valueset).unwrap(),
+    )
+    .unwrap();
+
+    check(tmp.path()).unwrap();
+}

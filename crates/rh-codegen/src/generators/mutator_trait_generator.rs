@@ -211,11 +211,11 @@ impl MutatorTraitGenerator {
         let snake_name = crate::naming::Naming::to_snake_case(&struct_name);
         let struct_import = format!(
             "{crate_name}::{module}::{snake_name}::{struct_name}",
-            crate_name = &self.crate_name
+            crate_name = self.crate_name
         );
         let trait_import = format!(
             "{crate_name}::traits::{snake_name}::{struct_name}Mutators",
-            crate_name = &self.crate_name
+            crate_name = self.crate_name
         );
 
         // Basic constructor with no parameters - supports method chaining
