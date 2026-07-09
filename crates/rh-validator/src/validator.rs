@@ -6757,10 +6757,7 @@ fn navigate_to_discriminator_value<'a>(element: &'a Value, path: &str) -> Option
     let mut current = element;
 
     for part in parts {
-        match current.get(part) {
-            Some(value) => current = value,
-            None => return None,
-        }
+        current = current.get(part)?;
     }
 
     Some(current)
