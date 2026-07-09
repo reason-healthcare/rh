@@ -146,13 +146,17 @@ impl QuestionnaireLoader {
     }
 
     pub fn load(&self, url: &str) -> Option<Questionnaire> {
-        if let Some(cached) = self.cache.write().ok()?.get(url) {
+        let clean_url = strip_version(url);
+        if let Some(cached) = self.cache.write().ok()?.get(clean_url) {
             return Some(cached.clone());
         }
 
         for dir in &self.package_dirs {
-            if let Some(q) = self.load_from_directory(url, dir) {
-                self.cache.write().ok()?.put(url.to_string(), q.clone());
+            if let Some(q) = self.load_from_directory(clean_url, dir) {
+                self.cache
+                    .write()
+                    .ok()?
+                    .put(clean_url.to_string(), q.clone());
                 return Some(q);
             }
         }
@@ -167,7 +171,7 @@ impl QuestionnaireLoader {
     pub fn register(&self, questionnaire: Questionnaire) {
         if let Some(url) = &questionnaire.url {
             if let Ok(mut cache) = self.cache.write() {
-                cache.put(url.clone(), questionnaire);
+                cache.put(strip_version(url).to_string(), questionnaire);
             }
         }
     }
@@ -195,7 +199,11 @@ impl QuestionnaireLoader {
             let Ok(value) = serde_json::from_str::<Value>(&content) else {
                 continue;
             };
-            if value.get("url").and_then(|v| v.as_str()) == Some(url) {
+            if value
+                .get("url")
+                .and_then(|v| v.as_str())
+                .is_some_and(|candidate| urls_match(candidate, url))
+            {
                 return value
                     .get("resourceType")
                     .and_then(|v| v.as_str())
@@ -223,7 +231,11 @@ impl QuestionnaireLoader {
             if value.get("resourceType").and_then(|v| v.as_str()) != Some("Questionnaire") {
                 continue;
             }
-            if value.get("url").and_then(|v| v.as_str()) == Some(url) {
+            if value
+                .get("url")
+                .and_then(|v| v.as_str())
+                .is_some_and(|candidate| urls_match(candidate, url))
+            {
                 if let Ok(q) = serde_json::from_value(value) {
                     return Some(q);
                 }
@@ -232,6 +244,16 @@ impl QuestionnaireLoader {
 
         None
     }
+}
+
+fn strip_version(url: &str) -> &str {
+    url.split_once('|')
+        .map(|(base, _version)| base)
+        .unwrap_or(url)
+}
+
+fn urls_match(candidate: &str, requested: &str) -> bool {
+    strip_version(candidate) == strip_version(requested)
 }
 
 pub struct QuestionnaireResponseValidator<'a> {

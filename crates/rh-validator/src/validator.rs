@@ -42,6 +42,7 @@
 
 use anyhow::{Context, Result};
 use lru::LruCache;
+use rh_hl7_fhir_r4_core::metadata::FHIR_TYPE_REGISTRY;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::num::NonZeroUsize;
@@ -337,6 +338,11 @@ impl FhirValidator {
 
         let resource_type_name = resource_type.unwrap_or("Resource");
 
+        let shape_issues = self.validate_r4_resource_shape(resource, resource_type_name);
+        for issue in shape_issues {
+            result = result.with_issue(issue);
+        }
+
         // Validate Resource.id format if present (FHIR id regex: [A-Za-z0-9\-\.]{1,64})
         if let Some(id) = resource.get("id").and_then(|v| v.as_str()) {
             if let Some(issue) = validate_id_format(id, &format!("{resource_type_name}.id")) {
@@ -510,7 +516,82 @@ impl FhirValidator {
             result = result.with_issue(issue);
         }
 
+        if resource_type_name == "QuestionnaireResponse" {
+            let qr_issues = self.validate_questionnaire_response(resource)?;
+            for issue in qr_issues {
+                result = result.with_issue(issue);
+            }
+        }
+
         Ok(result)
+    }
+
+    fn validate_r4_resource_shape(
+        &self,
+        resource: &Value,
+        resource_type: &str,
+    ) -> Vec<ValidationIssue> {
+        let Some(fields) = FHIR_TYPE_REGISTRY.get(resource_type) else {
+            return vec![ValidationIssue::error(
+                IssueCode::Structure,
+                format!("Unknown R4 resource type '{resource_type}'"),
+            )
+            .with_path("resourceType")];
+        };
+
+        let Some(obj) = resource.as_object() else {
+            return Vec::new();
+        };
+
+        let mut issues = Vec::new();
+        for key in obj.keys() {
+            if key == "resourceType" {
+                continue;
+            }
+
+            if key.contains("[x]") {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        format!("Choice element '{key}' must use a concrete FHIR JSON field name"),
+                    )
+                    .with_path(format!("{resource_type}.{key}")),
+                );
+                continue;
+            }
+
+            if fields.contains_key(key.as_str()) {
+                continue;
+            }
+
+            if is_valid_primitive_extension_field(resource_type, key)
+                || is_valid_choice_field(resource_type, key)
+            {
+                continue;
+            }
+
+            if choice_prefix_exists(resource_type, key) {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        format!(
+                            "Choice element '{key}' is not a valid R4 choice field on {resource_type}"
+                        ),
+                    )
+                    .with_path(format!("{resource_type}.{key}")),
+                );
+            } else {
+                issues.push(
+                    ValidationIssue::error(
+                        IssueCode::Structure,
+                        format!("Unknown property '{key}' on R4 resource {resource_type}"),
+                    )
+                    .with_path(format!("{resource_type}.{key}")),
+                );
+            }
+        }
+
+        issues
     }
 
     /// Returns cache performance metrics.
@@ -1160,6 +1241,16 @@ impl FhirValidator {
             serde_json::from_value::<rh_foundation::snapshot::StructureDefinition>(profile.clone())
         {
             self.profile_registry.register_profile(sd);
+        }
+    }
+
+    pub fn register_package_resource(&self, resource: &Value) {
+        match resource.get("resourceType").and_then(|v| v.as_str()) {
+            Some("StructureDefinition") => self.register_profile(resource),
+            Some("Questionnaire") => self.register_questionnaire(resource),
+            Some("ValueSet") => self.register_valueset(resource),
+            Some("CodeSystem") => self.register_codesystem(resource),
+            _ => {}
         }
     }
 
@@ -2228,6 +2319,96 @@ fn validate_cardinality_at_path(
     }
 
     issues
+}
+
+fn is_valid_primitive_extension_field(resource_type: &str, field_name: &str) -> bool {
+    let Some(base_name) = field_name.strip_prefix('_') else {
+        return false;
+    };
+
+    FHIR_TYPE_REGISTRY.get(resource_type).is_some_and(|fields| {
+        fields.contains_key(base_name) || is_valid_choice_field(resource_type, base_name)
+    })
+}
+
+fn is_valid_choice_field(resource_type: &str, field_name: &str) -> bool {
+    let Some(fields) = FHIR_TYPE_REGISTRY.get(resource_type) else {
+        return false;
+    };
+
+    fields.entries().any(|(choice_name, field_info)| {
+        field_info.is_choice_type
+            && choice_field_key_matches(choice_name, field_name)
+            && field_name
+                .strip_prefix(choice_name.trim_end_matches("[x]"))
+                .is_some_and(is_known_choice_suffix)
+    })
+}
+
+fn choice_prefix_exists(resource_type: &str, field_name: &str) -> bool {
+    let Some(fields) = FHIR_TYPE_REGISTRY.get(resource_type) else {
+        return false;
+    };
+
+    fields.entries().any(|(choice_name, field_info)| {
+        field_info.is_choice_type && choice_field_key_matches(choice_name, field_name)
+    })
+}
+
+fn choice_field_key_matches(choice_name: &str, field_name: &str) -> bool {
+    let prefix = choice_name.trim_end_matches("[x]");
+    field_name.starts_with(prefix)
+        && field_name.len() > prefix.len()
+        && field_name[prefix.len()..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_uppercase())
+}
+
+fn is_known_choice_suffix(suffix: &str) -> bool {
+    matches!(
+        suffix,
+        "Base64Binary"
+            | "Boolean"
+            | "Canonical"
+            | "Code"
+            | "Date"
+            | "DateTime"
+            | "Decimal"
+            | "Id"
+            | "Instant"
+            | "Integer"
+            | "Markdown"
+            | "Oid"
+            | "PositiveInt"
+            | "String"
+            | "Time"
+            | "UnsignedInt"
+            | "Uri"
+            | "Url"
+            | "Uuid"
+            | "Address"
+            | "Age"
+            | "Annotation"
+            | "Attachment"
+            | "CodeableConcept"
+            | "Coding"
+            | "ContactPoint"
+            | "Count"
+            | "Distance"
+            | "Duration"
+            | "HumanName"
+            | "Identifier"
+            | "Money"
+            | "Period"
+            | "Quantity"
+            | "Range"
+            | "Ratio"
+            | "Reference"
+            | "SampledData"
+            | "Signature"
+            | "Timing"
+    )
 }
 
 fn check_must_be_array(resource: &Value, parts: &[&str]) -> Option<ValidationIssue> {
@@ -5483,11 +5664,17 @@ fn get_values_at_path<'a>(resource: &'a Value, path: &str) -> Vec<&'a Value> {
         let mut next = Vec::new();
 
         for value in current {
-            if let Some(choice_prefix) = part.strip_suffix("[x]") {
-                if let Some(object) = value.as_object() {
-                    for (key, choice_value) in object {
-                        if key.starts_with(choice_prefix) && key.len() > choice_prefix.len() {
-                            match choice_value {
+            if let Some(prefix) = part.strip_suffix("[x]") {
+                if let Some(obj) = value.as_object() {
+                    for (key, candidate) in obj {
+                        if key.starts_with(prefix)
+                            && key.len() > prefix.len()
+                            && key[prefix.len()..]
+                                .chars()
+                                .next()
+                                .is_some_and(|c| c.is_ascii_uppercase())
+                        {
+                            match candidate {
                                 Value::Array(arr) => {
                                     for item in arr {
                                         next.push(item);
@@ -5912,11 +6099,19 @@ impl FhirValidator {
             return Ok(issues);
         }
 
+        // Locally enumerable package ValueSets can be checked without remote terminology,
+        // including bindings on choice elements such as Observation.value[x].
+        let has_enumerated_codes = self
+            .valueset_loader
+            .has_enumerated_codes(&rule.value_set_url)
+            .unwrap_or(false);
+
         if rule.path.contains("[x]")
             && rule.slice_name.is_none()
             && !rule
                 .value_set_url
                 .starts_with("http://hl7.org/fhir/ValueSet/")
+            && !has_enumerated_codes
         {
             return Ok(issues);
         }
@@ -5952,6 +6147,43 @@ impl FhirValidator {
                 }
                 return Ok(issues);
             }
+        }
+
+        if !has_enumerated_codes {
+            // For required bindings, fall back to the terminology service if one is configured
+            if rule.strength == "required" {
+                if let Some(ts) = self.terminology_service.as_ref() {
+                    for value in &values {
+                        let codes = extract_codes_from_value(value);
+                        for (system, code) in codes {
+                            match ts.validate_code_in_valueset(
+                                &rule.value_set_url,
+                                &system,
+                                &code,
+                                None,
+                            ) {
+                                Ok(result) => {
+                                    if !result.result {
+                                        issues.push(ValidationIssue::error(
+                                            IssueCode::CodeInvalid,
+                                            format!(
+                                                "Code '{}' from system '{}' is not in required ValueSet '{}'",
+                                                code,
+                                                if system.is_empty() { "(no system)" } else { &system },
+                                                rule.value_set_url
+                                            ),
+                                        ));
+                                    }
+                                }
+                                Err(_) => {
+                                    // ValueSet not supported by terminology service; skip gracefully
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return Ok(issues);
         }
 
         for value in values {

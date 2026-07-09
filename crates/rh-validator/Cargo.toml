@@ -37,6 +37,7 @@ regex = { workspace = true }
 # Local workspace crates
 rh-foundation = { path = "../rh-foundation", version = "0.2.5", features = ["http"] }
 rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.5" }  # FHIRPath invariant validation
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.5" }
 rust_decimal = { workspace = true }
 
 # Caching
@@ -58,10 +59,6 @@ dirs = "5.0"
 zip = { version = "0.6", optional = true }
 tar = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
-
-[dev-dependencies]
-# Testing with generated FHIR types
-rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.5" }
 
 # Benchmarking (to be added in Phase 8)
 criterion = { version = "0.5", features = ["html_reports"] }

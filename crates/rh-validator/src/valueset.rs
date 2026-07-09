@@ -106,7 +106,7 @@ impl ValueSetLoader {
     }
 
     pub fn register_valueset(&self, valueset: ValueSet) {
-        let url = valueset.url.clone();
+        let url = Self::strip_version(&valueset.url).to_string();
         self.cache.lock().unwrap().put(url, Arc::new(valueset));
         self.membership_cache.lock().unwrap().clear();
     }
@@ -300,6 +300,28 @@ impl ValueSetLoader {
         } else {
             Ok(false)
         }
+    }
+
+    pub fn has_enumerated_codes(&self, url: &str) -> Result<bool> {
+        let Some(valueset) = self.load_valueset(url)? else {
+            return Ok(false);
+        };
+
+        if valueset.expansion.is_some() {
+            return Ok(true);
+        }
+
+        let has_compose_concepts = valueset
+            .compose
+            .as_ref()
+            .and_then(|compose| compose.include.as_ref())
+            .is_some_and(|includes| {
+                includes
+                    .iter()
+                    .any(|include| include.concept.as_ref().is_some_and(|c| !c.is_empty()))
+            });
+
+        Ok(has_compose_concepts)
     }
 
     pub fn is_valueset_url(&self, url: &str) -> bool {

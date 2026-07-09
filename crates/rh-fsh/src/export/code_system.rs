@@ -21,9 +21,6 @@ pub fn export_code_system(
     if let Some(v) = &config.version {
         json["version"] = serde_json::Value::String(v.clone());
     }
-    if let Some(fv) = &config.fhir_version {
-        json["fhirVersion"] = serde_json::Value::String(fv.clone());
-    }
 
     if let Some(canonical) = &config.canonical {
         let cs_id = cs.metadata.id.as_deref().unwrap_or(&cs.metadata.name);

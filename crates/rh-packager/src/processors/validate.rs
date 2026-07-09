@@ -55,10 +55,13 @@ impl HookProcessor for ValidateProcessor {
         let validator = FhirValidator::new(FhirVersion::R4, Some(packages_dir_str.as_ref()))
             .map_err(|e| PublisherError::ValidationFailed(e.to_string()))?;
 
+        for resource in ctx.resources.values() {
+            validator.register_package_resource(resource);
+        }
+
         let mut errors = Vec::new();
         for (stem, resource) in &ctx.resources {
-            let result = validator
-                .validate(resource)
+            let result = validate_resource(&validator, resource)
                 .map_err(|e| PublisherError::ValidationFailed(e.to_string()))?;
 
             for issue in &result.issues {
@@ -75,16 +78,36 @@ impl HookProcessor for ValidateProcessor {
         }
 
         if !errors.is_empty() {
-            let mut message = format!("One or more resources failed validation: {}", errors[0]);
-            if errors.len() > 1 {
-                message.push_str(&format!(" (and {} more)", errors.len() - 1));
-            }
+            let message = validation_failure_message(&errors).expect("errors is not empty");
             return Err(PublisherError::ValidationFailed(message));
         }
 
         info!("All {} resource(s) passed validation", ctx.resources.len());
         Ok(())
     }
+}
+
+fn validate_resource(
+    validator: &FhirValidator,
+    resource: &serde_json::Value,
+) -> anyhow::Result<rh_validator::ValidationResult> {
+    // Local StructureDefinitions are registered above so they can validate package resources.
+    // Running base-profile invariants against generated/minimal StructureDefinitions themselves
+    // is substantially noisier than the package-facing validation this hook is responsible for.
+    if resource.get("resourceType").and_then(|v| v.as_str()) == Some("StructureDefinition") {
+        validator.validate(resource)
+    } else {
+        validator.validate_auto(resource)
+    }
+}
+
+fn validation_failure_message(errors: &[String]) -> Option<String> {
+    let first = errors.first()?;
+    let mut message = format!("One or more resources failed validation: {first}");
+    if errors.len() > 1 {
+        message.push_str(&format!(" (and {} more)", errors.len() - 1));
+    }
+    Some(message)
 }
 
 #[cfg(test)]
@@ -165,5 +188,126 @@ mod tests {
                 "Should not get MissingPackage when no deps declared"
             );
         }
+    }
+
+    #[test]
+    fn failure_message_includes_first_error_and_additional_count() {
+        let errors = vec![
+            "[Patient-a] error: first".to_string(),
+            "[Patient-b] error: second".to_string(),
+            "[Patient-c] error: third".to_string(),
+        ];
+
+        assert_eq!(
+            validation_failure_message(&errors).as_deref(),
+            Some("One or more resources failed validation: [Patient-a] error: first (and 2 more)")
+        );
+    }
+
+    #[test]
+    fn warning_only_diagnostics_do_not_create_failure_message() {
+        assert_eq!(validation_failure_message(&[]), None);
+    }
+
+    #[test]
+    fn package_local_questionnaire_is_available_to_questionnaire_response_validation() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "Questionnaire-intake".to_string(),
+            json!({
+                "resourceType": "Questionnaire",
+                "id": "intake",
+                "url": "http://example.org/fhir/Questionnaire/intake",
+                "status": "active",
+                "item": [{
+                    "linkId": "required-question",
+                    "type": "string",
+                    "required": true
+                }]
+            }),
+        );
+        resources.insert(
+            "QuestionnaireResponse-intake-response".to_string(),
+            json!({
+                "resourceType": "QuestionnaireResponse",
+                "id": "intake-response",
+                "questionnaire": "http://example.org/fhir/Questionnaire/intake|1.0.0",
+                "status": "completed",
+                "item": [{
+                    "linkId": "required-question",
+                    "answer": [{ "valueInteger": 1 }]
+                }]
+            }),
+        );
+
+        let (mut ctx, tmp) = make_ctx(resources, HashMap::new());
+        ctx.config.validate.packages_dir = Some(tmp.path().to_string_lossy().to_string());
+
+        let err = ValidateProcessor.run(&mut ctx).unwrap_err();
+        assert!(
+            matches!(err, PublisherError::ValidationFailed(ref message) if message.contains("Answer value must be of the type string")),
+            "expected local Questionnaire validation failure, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn package_local_valueset_is_available_to_questionnaire_response_validation() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "Questionnaire-coded".to_string(),
+            json!({
+                "resourceType": "Questionnaire",
+                "id": "coded",
+                "url": "http://example.org/fhir/Questionnaire/coded",
+                "status": "active",
+                "item": [{
+                    "linkId": "coded-question",
+                    "type": "choice",
+                    "answerValueSet": "http://example.org/fhir/ValueSet/local-codes|1.0.0"
+                }]
+            }),
+        );
+        resources.insert(
+            "ValueSet-local-codes".to_string(),
+            json!({
+                "resourceType": "ValueSet",
+                "id": "local-codes",
+                "url": "http://example.org/fhir/ValueSet/local-codes",
+                "status": "active",
+                "compose": {
+                    "include": [{
+                        "system": "http://example.org/codes",
+                        "concept": [{ "code": "allowed" }]
+                    }]
+                }
+            }),
+        );
+        resources.insert(
+            "QuestionnaireResponse-coded-response".to_string(),
+            json!({
+                "resourceType": "QuestionnaireResponse",
+                "id": "coded-response",
+                "questionnaire": "http://example.org/fhir/Questionnaire/coded",
+                "status": "completed",
+                "item": [{
+                    "linkId": "coded-question",
+                    "answer": [{
+                        "valueCoding": {
+                            "system": "http://example.org/codes",
+                            "code": "missing"
+                        }
+                    }]
+                }]
+            }),
+        );
+
+        let (mut ctx, tmp) = make_ctx(resources, HashMap::new());
+        ctx.config.validate.packages_dir = Some(tmp.path().to_string_lossy().to_string());
+
+        let err = ValidateProcessor.run(&mut ctx).unwrap_err();
+        assert!(
+            matches!(err, PublisherError::ValidationFailed(ref message) if message.contains("is not in the options value set")),
+            "expected local ValueSet binding validation failure, got: {err:?}"
+        );
     }
 }
