@@ -2100,6 +2100,7 @@ name = "rh-cql"
 version = "0.2.5"
 dependencies = [
  "anyhow",
+ "base64",
  "console_error_panic_hook",
  "criterion",
  "js-sys",

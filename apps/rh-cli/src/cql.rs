@@ -10,6 +10,13 @@ use tracing::{error, info};
 
 use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
 
+use rh_cql::analytics::{
+    data_requirements, emit_measure_runtime_manifest, emit_sql_query_library, emit_sql_text,
+    emit_view_definitions, format_data_requirements, format_dependencies, format_elm_inspection,
+    format_lower_check, format_relational_plan, inspect_elm, lower_check, relational_plan,
+    MeasureRuntimeManifest, MeasureRuntimeResultDefinition, SqlQueryLibraryArtifact,
+    ViewDefinitionArtifact,
+};
 use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
@@ -24,6 +31,32 @@ struct CqlDiagnostic {
     file: String,
     valid: bool,
     errors: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmitViewsOutput {
+    count: usize,
+    files: Vec<String>,
+    views: Vec<ViewDefinitionArtifact>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmitSqlOutput {
+    sql: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    library: Option<SqlQueryLibraryArtifact>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmitRuntimeOutput {
+    manifest: MeasureRuntimeManifest,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output: Option<String>,
 }
 
 fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
@@ -61,6 +94,40 @@ pub enum ExplainMode {
         /// Path to CQL file, or "-" to read from stdin
         #[clap(value_name = "FILE")]
         input: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ElmCommands {
+    /// Inspect compiled ELM structure
+    Inspect {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+    /// Show expression, parameter, value set, code, and function dependencies
+    Deps {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
     },
 }
 
@@ -148,6 +215,143 @@ pub enum CqlCommands {
         mode: ExplainMode,
     },
 
+    /// Inspect compiled ELM output
+    #[clap(subcommand)]
+    Elm(ElmCommands),
+
+    /// Extract CQL data requirements from compiled ELM
+    DataRequirements {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Build an inspectable relational plan from compiled ELM
+    Plan {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Planning target label
+        #[clap(long, default_value = "relational")]
+        target: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Report whether compiled ELM can lower to a target
+    LowerCheck {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Lowering target label
+        #[clap(long, default_value = "sql-on-fhir")]
+        target: String,
+
+        /// Display format: pretty, json
+        #[clap(long = "display-format", default_value = "pretty")]
+        display_format: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Emit SQL-on-FHIR ViewDefinition JSON artifacts from CQL retrieves
+    EmitViews {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// Output directory for generated ViewDefinition JSON files
+        #[clap(long, value_name = "DIR")]
+        out: PathBuf,
+
+        /// Canonical base URL for generated ViewDefinition artifacts
+        #[clap(long, default_value = "https://reason.health/rh/generated/sql-on-fhir")]
+        canonical_base: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Emit a SQL-on-FHIR SQLQuery Library or raw SQL from CQL
+    EmitSql {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// ViewDefinition JSON file or directory. May be specified multiple times.
+        /// If omitted, views are generated in memory from the CQL retrieves.
+        #[clap(long, value_name = "PATH", num_args = 1)]
+        views: Vec<PathBuf>,
+
+        /// Output file path. Defaults to stdout.
+        #[clap(long, value_name = "PATH")]
+        out: Option<PathBuf>,
+
+        /// Emit only SQL text instead of a SQLQuery Library JSON artifact
+        #[clap(long)]
+        sql_only: bool,
+
+        /// Canonical base URL for generated in-memory ViewDefinition artifacts
+        #[clap(long, default_value = "https://reason.health/rh/generated/sql-on-fhir")]
+        canonical_base: String,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
+    /// Emit a ReasonHealth measure runtime manifest from generated artifacts
+    EmitRuntime {
+        /// Path to CQL file, or "-" to read from stdin
+        #[clap(value_name = "FILE")]
+        input: String,
+
+        /// SQLQuery Library JSON artifact path to reference from the manifest
+        #[clap(long, value_name = "PATH")]
+        query: PathBuf,
+
+        /// ViewDefinition JSON file or directory. May be specified multiple times.
+        #[clap(long, value_name = "PATH", num_args = 1, required = true)]
+        views: Vec<PathBuf>,
+
+        /// Output file path. Defaults to stdout.
+        #[clap(long, value_name = "PATH")]
+        out: Option<PathBuf>,
+
+        /// Result mapping as name=column. May be specified multiple times.
+        #[clap(long = "result", value_name = "NAME=COLUMN")]
+        result: Vec<String>,
+
+        /// Additional directory to search for included CQL libraries.
+        /// May be specified multiple times.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
     /// Evaluate a named expression in a compiled CQL library
     Eval {
         /// CQL file to evaluate, or "-" to read from stdin
@@ -232,6 +436,76 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
         }
         CqlCommands::Explain { mode } => {
             run_explain(mode)?;
+        }
+        CqlCommands::Elm(mode) => {
+            run_elm(mode, ctx)?;
+        }
+        CqlCommands::DataRequirements {
+            input,
+            display_format,
+            lib_path,
+        } => {
+            run_data_requirements(&input, &display_format, &lib_path, ctx)?;
+        }
+        CqlCommands::Plan {
+            input,
+            target,
+            display_format,
+            lib_path,
+        } => {
+            run_plan(&input, &target, &display_format, &lib_path, ctx)?;
+        }
+        CqlCommands::LowerCheck {
+            input,
+            target,
+            display_format,
+            lib_path,
+        } => {
+            run_lower_check(&input, &target, &display_format, &lib_path, ctx)?;
+        }
+        CqlCommands::EmitViews {
+            input,
+            out,
+            canonical_base,
+            lib_path,
+        } => {
+            run_emit_views(&input, &out, &canonical_base, &lib_path, ctx)?;
+        }
+        CqlCommands::EmitSql {
+            input,
+            views,
+            out,
+            sql_only,
+            canonical_base,
+            lib_path,
+        } => {
+            run_emit_sql(
+                &input,
+                &views,
+                out.as_deref(),
+                sql_only,
+                &canonical_base,
+                &lib_path,
+                ctx,
+            )?;
+        }
+        CqlCommands::EmitRuntime {
+            input,
+            query,
+            views,
+            out,
+            result,
+            lib_path,
+        } => {
+            run_emit_runtime(
+                &input,
+                &query,
+                &views,
+                out.as_deref(),
+                &result,
+                &lib_path,
+                ctx,
+            )?;
         }
         CqlCommands::Eval {
             file,
@@ -584,6 +858,393 @@ fn run_explain(mode: ExplainMode) -> Result<()> {
         }
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// ELM analytics services
+// ---------------------------------------------------------------------------
+
+fn compile_library_for_analysis(
+    input: &str,
+    lib_paths: &[PathBuf],
+) -> Result<rh_cql::elm::Library> {
+    let source = read_source(input)?;
+    let output = compile_with_search_dirs(&source, input, lib_paths, None)?;
+    if !output.result.is_success() {
+        return Err(report_compile_failure(
+            &output.result.errors,
+            &output.result.warnings,
+        ));
+    }
+    Ok(output.result.library)
+}
+
+fn print_analysis<T: Serialize>(
+    ctx: &OutputContext,
+    command: &str,
+    display_format: &str,
+    value: &T,
+    pretty: String,
+) -> Result<()> {
+    if ctx.is_json() {
+        return print_envelope(ctx, &Envelope::ok(value, command));
+    }
+
+    match display_format {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(value)?);
+        }
+        "pretty" => {
+            print!("{pretty}");
+        }
+        other => bail!("Unknown display format '{other}'. Valid values: pretty, json"),
+    }
+
+    Ok(())
+}
+
+fn run_elm(mode: ElmCommands, ctx: &OutputContext) -> Result<()> {
+    match mode {
+        ElmCommands::Inspect {
+            input,
+            display_format,
+            lib_path,
+        } => {
+            let library = compile_library_for_analysis(&input, &lib_path)?;
+            let inspection = inspect_elm(&library);
+            print_analysis(
+                ctx,
+                "cql elm inspect",
+                &display_format,
+                &inspection,
+                format_elm_inspection(&inspection),
+            )?;
+        }
+        ElmCommands::Deps {
+            input,
+            display_format,
+            lib_path,
+        } => {
+            let library = compile_library_for_analysis(&input, &lib_path)?;
+            let inspection = inspect_elm(&library);
+            print_analysis(
+                ctx,
+                "cql elm deps",
+                &display_format,
+                &inspection.dependencies,
+                format_dependencies(&inspection),
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+fn run_data_requirements(
+    input: &str,
+    display_format: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let requirements = data_requirements(&library);
+    print_analysis(
+        ctx,
+        "cql data-requirements",
+        display_format,
+        &requirements,
+        format_data_requirements(&requirements),
+    )
+}
+
+fn run_plan(
+    input: &str,
+    target: &str,
+    display_format: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let plan = relational_plan(&library, target);
+    print_analysis(
+        ctx,
+        "cql plan",
+        display_format,
+        &plan,
+        format_relational_plan(&plan),
+    )
+}
+
+fn run_lower_check(
+    input: &str,
+    target: &str,
+    display_format: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let report = lower_check(&library, target);
+    print_analysis(
+        ctx,
+        "cql lower-check",
+        display_format,
+        &report,
+        format_lower_check(&report),
+    )
+}
+
+fn run_emit_views(
+    input: &str,
+    out: &Path,
+    canonical_base: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let generation = emit_view_definitions(&library, canonical_base);
+    fs::create_dir_all(out)
+        .with_context(|| format!("Failed to create output directory {}", out.display()))?;
+
+    let mut files = Vec::new();
+    for view in &generation.views {
+        let path = out.join(format!("{}.json", view.name));
+        let json = serde_json::to_string_pretty(view)?;
+        fs::write(&path, json)
+            .with_context(|| format!("Failed to write ViewDefinition to {}", path.display()))?;
+        files.push(path.display().to_string());
+    }
+
+    let result = EmitViewsOutput {
+        count: generation.views.len(),
+        files,
+        views: generation.views,
+    };
+
+    if ctx.is_json() {
+        print_envelope(ctx, &Envelope::ok(result, "cql emit-views"))?;
+    } else {
+        println!(
+            "Wrote {} ViewDefinition file(s) to {}",
+            result.count,
+            out.display()
+        );
+        for file in &result.files {
+            println!("  - {file}");
+        }
+    }
+
+    Ok(())
+}
+
+fn run_emit_sql(
+    input: &str,
+    view_paths: &[PathBuf],
+    out: Option<&Path>,
+    sql_only: bool,
+    canonical_base: &str,
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let views = if view_paths.is_empty() {
+        emit_view_definitions(&library, canonical_base).views
+    } else {
+        load_view_definitions(view_paths)?
+    };
+
+    if sql_only {
+        let sql = emit_sql_text(&library, &views);
+        if let Some(path) = out {
+            write_output_file(path, &sql)?;
+        }
+        let result = EmitSqlOutput {
+            sql: sql.clone(),
+            library: None,
+            output: out.map(|path| path.display().to_string()),
+        };
+        if ctx.is_json() {
+            print_envelope(ctx, &Envelope::ok(result, "cql emit-sql"))?;
+        } else if out.is_none() {
+            print!("{sql}");
+        } else if let Some(path) = out {
+            println!("Wrote SQL to {}", path.display());
+        }
+        return Ok(());
+    }
+
+    let generation = emit_sql_query_library(&library, &views, canonical_base);
+    let json = serde_json::to_string_pretty(&generation.library)?;
+    if let Some(path) = out {
+        write_output_file(path, &json)?;
+    }
+
+    let result = EmitSqlOutput {
+        sql: generation.sql,
+        library: Some(generation.library),
+        output: out.map(|path| path.display().to_string()),
+    };
+    if ctx.is_json() {
+        print_envelope(ctx, &Envelope::ok(result, "cql emit-sql"))?;
+    } else if out.is_none() {
+        println!("{json}");
+    } else if let Some(path) = out {
+        println!("Wrote SQLQuery Library to {}", path.display());
+    }
+
+    Ok(())
+}
+
+fn run_emit_runtime(
+    input: &str,
+    query_path: &Path,
+    view_paths: &[PathBuf],
+    out: Option<&Path>,
+    result_specs: &[String],
+    lib_paths: &[PathBuf],
+    ctx: &OutputContext,
+) -> Result<()> {
+    let library = compile_library_for_analysis(input, lib_paths)?;
+    let view_files = collect_view_definition_files(view_paths)?;
+    let query_reference = manifest_path_reference(out, query_path)?;
+    let view_references = view_files
+        .iter()
+        .map(|path| manifest_path_reference(out, path))
+        .collect::<Result<Vec<_>>>()?;
+    let results = parse_runtime_results(result_specs)?;
+    let manifest =
+        emit_measure_runtime_manifest(&library, query_reference, view_references, results);
+    let json = serde_json::to_string_pretty(&manifest)?;
+
+    if let Some(path) = out {
+        write_output_file(path, &json)?;
+    }
+
+    let result = EmitRuntimeOutput {
+        manifest,
+        output: out.map(|path| path.display().to_string()),
+    };
+
+    if ctx.is_json() {
+        print_envelope(ctx, &Envelope::ok(result, "cql emit-runtime"))?;
+    } else if out.is_none() {
+        println!("{json}");
+    } else if let Some(path) = out {
+        println!("Wrote measure runtime manifest to {}", path.display());
+    }
+
+    Ok(())
+}
+
+fn load_view_definitions(paths: &[PathBuf]) -> Result<Vec<ViewDefinitionArtifact>> {
+    let files = collect_view_definition_files(paths)?;
+    let mut views = Vec::new();
+    for file in files {
+        let contents = fs::read_to_string(&file)
+            .with_context(|| format!("Failed to read ViewDefinition {}", file.display()))?;
+        let view = serde_json::from_str::<ViewDefinitionArtifact>(&contents)
+            .with_context(|| format!("Failed to parse ViewDefinition {}", file.display()))?;
+        views.push(view);
+    }
+
+    if views.is_empty() {
+        bail!("No ViewDefinition JSON files were found");
+    }
+    Ok(views)
+}
+
+fn collect_view_definition_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for path in paths {
+        if path.is_dir() {
+            let mut entries = fs::read_dir(path)
+                .with_context(|| format!("Failed to read view directory {}", path.display()))?
+                .map(|entry| entry.map(|entry| entry.path()))
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .with_context(|| format!("Failed to read view directory {}", path.display()))?;
+            entries.sort();
+            files.extend(
+                entries
+                    .into_iter()
+                    .filter(|entry| entry.extension().is_some_and(|ext| ext == "json")),
+            );
+        } else {
+            files.push(path.clone());
+        }
+    }
+    files.sort();
+    files.dedup();
+
+    if files.is_empty() {
+        bail!("No ViewDefinition JSON files were found");
+    }
+    Ok(files)
+}
+
+fn parse_runtime_results(specs: &[String]) -> Result<Vec<MeasureRuntimeResultDefinition>> {
+    let specs = if specs.is_empty() {
+        vec!["initialPopulation=patient_id".to_string()]
+    } else {
+        specs.to_vec()
+    };
+
+    specs
+        .iter()
+        .map(|spec| {
+            let (name, column) = spec
+                .split_once('=')
+                .with_context(|| format!("Invalid result mapping {spec}; expected name=column"))?;
+            if name.is_empty() || column.is_empty() {
+                bail!("Invalid result mapping {spec}; name and column are required");
+            }
+            Ok(MeasureRuntimeResultDefinition {
+                name: name.to_string(),
+                kind: Some("population".to_string()),
+                source: "query".to_string(),
+                column: column.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn manifest_path_reference(out: Option<&Path>, artifact_path: &Path) -> Result<String> {
+    let cwd = std::env::current_dir().context("Failed to read current directory")?;
+    let artifact = if artifact_path.is_absolute() {
+        artifact_path.to_path_buf()
+    } else {
+        cwd.join(artifact_path)
+    };
+
+    let Some(out) = out else {
+        return Ok(path_to_slash_string(artifact_path));
+    };
+    let out_dir = out.parent().unwrap_or_else(|| Path::new("."));
+    let base = if out_dir.is_absolute() {
+        out_dir.to_path_buf()
+    } else {
+        cwd.join(out_dir)
+    };
+
+    if let Ok(relative) = artifact.strip_prefix(&base) {
+        Ok(path_to_slash_string(relative))
+    } else {
+        Ok(path_to_slash_string(&artifact))
+    }
+}
+
+fn path_to_slash_string(path: &Path) -> String {
+    path.to_string_lossy()
+        .replace(std::path::MAIN_SEPARATOR, "/")
+}
+
+fn write_output_file(path: &Path, contents: &str) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create output directory {}", parent.display())
+            })?;
+        }
+    }
+    fs::write(path, contents).with_context(|| format!("Failed to write {}", path.display()))
 }
 
 // ---------------------------------------------------------------------------

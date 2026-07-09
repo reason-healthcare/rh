@@ -27,6 +27,20 @@ define IsTrue: true
 define IsFalse: false
 "#;
 
+/// Minimal CQL library with a FHIR retrieve for SQL-on-FHIR emission.
+const FHIR_RETRIEVE_CQL: &str = r#"library DiabetesMeasure version '1.0.0'
+using FHIR version '4.0.1'
+valueset "Diabetes": 'http://example.org/ValueSet/diabetes'
+parameter MeasurementPeriod Interval<DateTime>
+context Patient
+
+define "Diabetes Conditions":
+  [Condition: "Diabetes"]
+
+define "Has Diabetes":
+  exists "Diabetes Conditions"
+"#;
+
 // ---------------------------------------------------------------------------
 // explain parse
 // ---------------------------------------------------------------------------
@@ -396,6 +410,241 @@ define Numbers: { 1, 2 }
         .success()
         .stdout(predicate::str::contains("resultTypeSpecifier").not())
         .stdout(predicate::str::contains("EnableResultTypes").not());
+}
+
+// ---------------------------------------------------------------------------
+// analytics tooling
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_elm_inspect_stdin() {
+    rh_cmd()
+        .args(["cql", "elm", "inspect", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Library: SimpleMath"))
+        .stdout(predicate::str::contains("Expressions: 2"));
+}
+
+#[test]
+fn test_elm_deps_json_envelope() {
+    rh_cmd()
+        .args(["--format", "json", "cql", "elm", "deps", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\": true"))
+        .stdout(predicate::str::contains("cql elm deps"));
+}
+
+#[test]
+fn test_data_requirements_stdin() {
+    rh_cmd()
+        .args(["cql", "data-requirements", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("resources: none"));
+}
+
+#[test]
+fn test_relational_plan_stdin() {
+    rh_cmd()
+        .args(["cql", "plan", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Target: relational"))
+        .stdout(predicate::str::contains("X"));
+}
+
+#[test]
+fn test_lower_check_stdin() {
+    rh_cmd()
+        .args(["cql", "lower-check", "-"])
+        .write_stdin(SIMPLE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Target: sql-on-fhir"))
+        .stdout(predicate::str::contains("Supported:"));
+}
+
+#[test]
+fn test_emit_views_writes_view_definition_files() {
+    let dir = TempDir::new().unwrap();
+    let cql_path = dir.path().join("measure.cql");
+    let out_dir = dir.path().join("views");
+    fs::write(&cql_path, FHIR_RETRIEVE_CQL).unwrap();
+
+    rh_cmd()
+        .args([
+            "cql",
+            "emit-views",
+            cql_path.to_str().unwrap(),
+            "--out",
+            out_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Wrote 1 ViewDefinition"));
+
+    let view_path = out_dir.join("condition_view.json");
+    assert!(view_path.exists(), "ViewDefinition file should exist");
+    let view = fs::read_to_string(view_path).unwrap();
+    assert!(view.contains("\"resource\": \"Condition\""));
+    assert!(view.contains("getResourceKey()"));
+}
+
+#[test]
+fn test_emit_views_json_envelope() {
+    let dir = TempDir::new().unwrap();
+    let cql_path = dir.path().join("measure.cql");
+    let out_dir = dir.path().join("views");
+    fs::write(&cql_path, FHIR_RETRIEVE_CQL).unwrap();
+
+    rh_cmd()
+        .args([
+            "--format",
+            "json",
+            "cql",
+            "emit-views",
+            cql_path.to_str().unwrap(),
+            "--out",
+            out_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\": true"))
+        .stdout(predicate::str::contains("\"count\": 1"));
+}
+
+#[test]
+fn test_emit_sql_sql_only_outputs_sql() {
+    rh_cmd()
+        .args(["cql", "emit-sql", "-", "--sql-only"])
+        .write_stdin(FHIR_RETRIEVE_CQL)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("WITH"))
+        .stdout(predicate::str::contains("condition_view"));
+}
+
+#[test]
+fn test_emit_sql_writes_sql_query_library() {
+    let dir = TempDir::new().unwrap();
+    let cql_path = dir.path().join("measure.cql");
+    let out_path = dir.path().join("query-library.json");
+    fs::write(&cql_path, FHIR_RETRIEVE_CQL).unwrap();
+
+    rh_cmd()
+        .args([
+            "cql",
+            "emit-sql",
+            cql_path.to_str().unwrap(),
+            "--out",
+            out_path.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Wrote SQLQuery Library"));
+
+    let library = fs::read_to_string(out_path).unwrap();
+    assert!(library.contains("\"resourceType\": \"Library\""));
+    assert!(library.contains("\"code\": \"sql-query\""));
+    assert!(library.contains("application/sql"));
+}
+
+#[test]
+fn test_emit_runtime_writes_measure_runtime_manifest() {
+    let dir = TempDir::new().unwrap();
+    let cql_path = dir.path().join("measure.cql");
+    let views_dir = dir.path().join("views");
+    let query_path = dir.path().join("query-library.json");
+    let runtime_path = dir.path().join("measure-runtime.json");
+    fs::write(&cql_path, FHIR_RETRIEVE_CQL).unwrap();
+
+    rh_cmd()
+        .args([
+            "cql",
+            "emit-views",
+            cql_path.to_str().unwrap(),
+            "--out",
+            views_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    rh_cmd()
+        .args([
+            "cql",
+            "emit-sql",
+            cql_path.to_str().unwrap(),
+            "--views",
+            views_dir.to_str().unwrap(),
+            "--out",
+            query_path.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    rh_cmd()
+        .args([
+            "cql",
+            "emit-runtime",
+            cql_path.to_str().unwrap(),
+            "--query",
+            query_path.to_str().unwrap(),
+            "--views",
+            views_dir.to_str().unwrap(),
+            "--out",
+            runtime_path.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Wrote measure runtime manifest"));
+
+    let manifest = fs::read_to_string(runtime_path).unwrap();
+    assert!(manifest.contains("\"resourceType\": \"ReasonHealthMeasureRuntime\""));
+    assert!(manifest.contains("\"query\": \"query-library.json\""));
+    assert!(manifest.contains("\"views\": ["));
+    assert!(manifest.contains("\"views/condition_view.json\""));
+    assert!(manifest.contains("\"name\": \"measurementperiod\""));
+    assert!(manifest.contains("\"name\": \"initialPopulation\""));
+    assert!(manifest.contains("\"kind\": \"population\""));
+    assert!(manifest.contains("\"column\": \"patient_id\""));
+}
+
+#[test]
+fn test_emit_runtime_json_envelope() {
+    let dir = TempDir::new().unwrap();
+    let cql_path = dir.path().join("measure.cql");
+    let view_path = dir.path().join("condition_view.json");
+    let query_path = dir.path().join("query-library.json");
+    fs::write(&cql_path, FHIR_RETRIEVE_CQL).unwrap();
+    fs::write(&view_path, "{}").unwrap();
+    fs::write(&query_path, "{}").unwrap();
+
+    rh_cmd()
+        .args([
+            "--format",
+            "json",
+            "cql",
+            "emit-runtime",
+            cql_path.to_str().unwrap(),
+            "--query",
+            query_path.to_str().unwrap(),
+            "--views",
+            view_path.to_str().unwrap(),
+            "--result",
+            "denominator=patient_id",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\": true"))
+        .stdout(predicate::str::contains(
+            "\"command\": \"cql emit-runtime\"",
+        ))
+        .stdout(predicate::str::contains("\"name\": \"denominator\""));
 }
 
 // ---------------------------------------------------------------------------
