@@ -292,12 +292,17 @@ where
     };
 
     if !result.is_success() {
-        let response = json!({
-            "success": false,
-            "errors": result.errors.iter().map(diagnostic_to_json).collect::<Vec<_>>(),
-            "warnings": result.warnings.iter().map(diagnostic_to_json).collect::<Vec<_>>(),
+        let message = result
+            .errors
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        return WasmResult::err(if message.is_empty() {
+            "Failed to compile CQL".to_string()
+        } else {
+            format!("Failed to compile CQL: {message}")
         });
-        return json_result(response, pretty);
     }
 
     json_result(json!(f(&result.library)), pretty)
