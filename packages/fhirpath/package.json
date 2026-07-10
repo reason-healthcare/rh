@@ -1,6 +1,6 @@
 {
   "name": "@reasonhealth/fhirpath",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Typed TypeScript wrappers for the Reason Health FHIRPath WebAssembly package.",
   "license": "MIT OR Apache-2.0",
   "type": "module",

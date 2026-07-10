@@ -5,6 +5,25 @@ All notable user-facing changes to Reason Health are recorded here.
 This project follows semantic versioning while the public API is still in the
 0.x series. Release dates use `YYYY-MM-DD`.
 
+## [0.2.6] - 2026-07-10
+
+### Added
+
+- Added SQL-on-FHIR relational projection support to `rh cql`, including CLI
+  documentation, integration coverage, and the supporting `rh-cql` analytics
+  module.
+- Expanded the CQL WebAssembly and TypeScript package helpers with node, web,
+  and bundler entry points, tests, and playground integration.
+- Added canonical URL handling for package build and validation workflows,
+  including manifest support and integration tests.
+
+### Changed
+
+- Consolidated duplicated `rh cql compile` and `rh cql validate` CLI handling
+  while preserving command behavior.
+- Reorganized `rh-cql` architecture documentation and cleaned up validator
+  documentation to reflect the current conformance workflow.
+
 ## [0.2.5] - 2026-07-04
 
 ### Changed
@@ -70,6 +89,7 @@ This project follows semantic versioning while the public API is still in the
   include resolution consistently with normal compilation.
 - Fixed CQL conformance expected-string handling to avoid double-unescaping.
 
+[0.2.6]: https://github.com/reason-healthcare/rh/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/reason-healthcare/rh/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/reason-healthcare/rh/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/reason-healthcare/rh/compare/v0.2.2...v0.2.3
