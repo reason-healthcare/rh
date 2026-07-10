@@ -209,6 +209,7 @@ pub enum SdRule {
 pub enum InstanceRule {
     Assignment(AssignmentRule),
     Insert(InsertRule),
+    Path(PathRule),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -353,6 +354,7 @@ pub enum FshValue {
     Quantity {
         value: f64,
         unit: String,
+        display: Option<String>,
     },
     Ratio {
         numerator: Box<FshValue>,
@@ -443,7 +445,7 @@ impl std::fmt::Display for FshPath {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FshPathSegment {
     Name(String),
     Index(u32),

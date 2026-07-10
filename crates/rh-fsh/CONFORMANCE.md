@@ -33,30 +33,29 @@ Report files:
 
 | Project | Status | Threshold | FSH files | SUSHI resources | rh-fsh resources | Missing | Extra | Mismatch |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | different | pass | 71 | 134 | 134 | 0 | 0 | 86 |
-| mCODE | different | pass | 57 | 350 | 350 | 0 | 0 | 307 |
-| Da Vinci CRD | different | pass | 69 | 85 | 85 | 0 | 0 | 70 |
-| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 54 |
-| Da Vinci PAS | different | pass | 20 | 158 | 158 | 0 | 0 | 133 |
-| IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 103 |
+| CARIN Blue Button | different | pass | 71 | 134 | 134 | 0 | 0 | 80 |
+| mCODE | different | pass | 57 | 350 | 350 | 0 | 0 | 172 |
+| Da Vinci CRD | different | pass | 69 | 85 | 85 | 0 | 0 | 62 |
+| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 52 |
+| Da Vinci PAS | different | pass | 20 | 158 | 158 | 0 | 0 | 128 |
+| IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 81 |
 
 All six projects pass their lowered regression thresholds, but none is yet
 SUSHI-identical. Across 379 FSH files, both tools emit the same 920 resource
-identities: there are zero missing and zero extra resources. Of those, 167
-match exactly after normalization and 753 have at least one JSON difference.
-Two consecutive full runs produced identical counts and category maps.
+identities: there are zero missing and zero extra resources. Of those, 345
+match exactly after normalization and 575 have at least one JSON difference.
 
 Categorized latest results:
 
 | Project | Resource identity | JSON shape | StructureDefinition | Metadata | Terminology | IG generation | Other |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | 0 | 42 | 16 | 1 | 0 | 1 | 26 |
-| mCODE | 0 | 250 | 53 | 1 | 1 | 1 | 1 |
-| Da Vinci CRD | 0 | 24 | 27 | 1 | 3 | 1 | 14 |
-| Da Vinci DTR | 0 | 17 | 25 | 3 | 0 | 1 | 8 |
-| Da Vinci PAS | 0 | 39 | 81 | 3 | 1 | 1 | 8 |
-| IPS | 0 | 62 | 32 | 0 | 0 | 1 | 8 |
-| **Total** | **0** | **434** | **234** | **9** | **5** | **6** | **65** |
+| CARIN Blue Button | 0 | 36 | 16 | 1 | 0 | 1 | 26 |
+| mCODE | 0 | 108 | 53 | 6 | 2 | 1 | 2 |
+| Da Vinci CRD | 0 | 15 | 27 | 2 | 3 | 1 | 14 |
+| Da Vinci DTR | 0 | 10 | 25 | 8 | 0 | 1 | 8 |
+| Da Vinci PAS | 0 | 22 | 81 | 13 | 1 | 1 | 10 |
+| IPS | 0 | 40 | 32 | 0 | 0 | 1 | 8 |
+| **Total** | **0** | **231** | **234** | **30** | **6** | **6** | **68** |
 
 Categories count missing, extra, and mismatched resources. Each mismatched
 resource is assigned from its first observed JSON difference, so the categories
@@ -72,7 +71,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 **Total: 61 fixtures** (plan target was ≥60)
 
 Latest run: all 61 fixtures passed against reviewed SUSHI goldens; none failed
-or remained unverified. The library unit suite passes all 93 tests.
+or remained unverified. The library unit suite passes all 103 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
@@ -112,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (93 cases) cover parser, resolver, dependency loading, definition
+Unit tests (103 cases) cover parser, resolver, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---

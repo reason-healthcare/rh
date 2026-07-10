@@ -20,6 +20,15 @@ pub struct DependencyStructureDefinition {
     pub type_: Option<String>,
     pub base_definition: Option<String>,
     pub derivation: Option<String>,
+    pub fixed_values: Vec<DependencyFixedValue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DependencyFixedValue {
+    pub path: String,
+    pub slice_name: Option<String>,
+    pub value: serde_json::Value,
+    pub required: bool,
 }
 
 /// Dependency definitions available to the compiler.
@@ -41,6 +50,24 @@ struct RawStructureDefinition {
     type_: Option<String>,
     base_definition: Option<String>,
     derivation: Option<String>,
+    differential: Option<RawDifferential>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawDifferential {
+    #[serde(default)]
+    element: Vec<RawElementDefinition>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawElementDefinition {
+    id: Option<String>,
+    path: String,
+    slice_name: Option<String>,
+    min: Option<u32>,
+    #[serde(flatten)]
+    properties: serde_json::Map<String, serde_json::Value>,
 }
 
 /// Load StructureDefinition metadata for dependency packages from the default FHIR cache.
@@ -140,6 +167,44 @@ fn load_package_structure_definitions(
                 ),
             })?;
 
+        let fixed_values = raw
+            .differential
+            .map(|differential| {
+                let required_paths = differential
+                    .element
+                    .iter()
+                    .filter(|element| element.min.is_some_and(|min| min > 0))
+                    .filter_map(|element| element.id.clone())
+                    .collect::<std::collections::HashSet<_>>();
+                differential
+                    .element
+                    .into_iter()
+                    .filter_map(|element| {
+                        element
+                            .properties
+                            .into_iter()
+                            .find(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
+                            .map(|(_, value)| {
+                                let path = element.id.unwrap_or(element.path);
+                                let parts = path.split('.').collect::<Vec<_>>();
+                                let required_path = parts
+                                    .iter()
+                                    .position(|part| part.contains(':'))
+                                    .map(|index| parts[..=index].join("."))
+                                    .or_else(|| (parts.len() > 2).then(|| parts[..2].join(".")));
+                                DependencyFixedValue {
+                                    path,
+                                    slice_name: element.slice_name,
+                                    value,
+                                    required: required_path
+                                        .is_none_or(|path| required_paths.contains(&path)),
+                                }
+                            })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         definitions
             .structure_definitions
             .push(DependencyStructureDefinition {
@@ -154,6 +219,7 @@ fn load_package_structure_definitions(
                 type_: raw.type_,
                 base_definition: raw.base_definition,
                 derivation: raw.derivation,
+                fixed_values,
             });
     }
 
@@ -200,7 +266,18 @@ mod tests {
               "kind": "resource",
               "type": "Patient",
               "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
-              "derivation": "constraint"
+              "derivation": "constraint",
+              "differential": {
+                "element": [
+                  {
+                    "id": "Patient.communication:required.language",
+                    "path": "Patient.communication.language",
+                    "patternCodeableConcept": {
+                      "coding": [{"system": "urn:ietf:bcp:47", "code": "en"}]
+                    }
+                  }
+                ]
+              }
             }"#,
         )
         .expect("write structure definition");
@@ -238,6 +315,12 @@ mod tests {
             definition.base_definition.as_deref(),
             Some("http://hl7.org/fhir/StructureDefinition/Patient")
         );
+        assert_eq!(definition.fixed_values.len(), 1);
+        assert_eq!(
+            definition.fixed_values[0].path,
+            "Patient.communication:required.language"
+        );
+        assert_eq!(definition.fixed_values[0].value["coding"][0]["code"], "en");
 
         fs::remove_dir_all(packages_dir).ok();
     }

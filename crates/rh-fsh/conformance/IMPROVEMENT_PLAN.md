@@ -6,9 +6,9 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-10)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 93 passing tests. Shared-resource mismatches are down
-from 838 to 753. Phases 2–4 remain in progress; Phase 5 has begun with stable,
-lowered per-project thresholds and two identical consecutive full runs.
+and the library suite has 103 passing tests. Shared-resource mismatches are down
+from 838 to 575. Phases 2–4 remain in progress; Phase 5 continues with lowered
+per-project thresholds.
 
 ## Success Criteria
 
@@ -66,9 +66,10 @@ identity-category gaps and 106 other-category gaps.
 ## Phase 2: Introduce Schema-informed Instance Export
 
 **Status**: In progress. BackboneElement metadata, cardinality-aware arrays,
-CodeableConcept wrapping, choice slices, primitive shadows, and recursive inline
-export are implemented. The fixture milestone is complete; project shape work
-continues.
+CodeableConcept wrapping, dynamic choice typing, primitive shadows, recursive
+inline export, indentation contexts, dependency fixed/pattern defaults, and
+named/repeated slice materialization are implemented. JSON-shape leading gaps
+are down from 434 to 231; the below-100 milestone remains open.
 
 **Goal**: stop inferring JSON shape from assignment syntax alone.
 
@@ -146,9 +147,9 @@ full runs produced identical results.
    improvement.
 5. Require two consecutive clean full runs before declaring project parity.
 
-**Current stable baseline**: 920/920 resource identities match; 167/920 match
-normalized content. Remaining mismatches: CARIN 86, mCODE 307, CRD 70, DTR 54,
-PAS 133, and IPS 103.
+**Current checkpoint**: 920/920 resource identities match; 345/920 match
+normalized content. Remaining mismatches: CARIN 80, mCODE 172, CRD 62, DTR 52,
+PAS 128, and IPS 81.
 
 **Next delivery order**:
 

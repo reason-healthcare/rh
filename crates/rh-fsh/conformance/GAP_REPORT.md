@@ -7,15 +7,13 @@
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 93 library tests pass, and rh-fsh emits the
+61 fixture comparisons pass, all 103 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
-Content parity remains incomplete. Of the 920 shared resources, 167 (18.2%)
-match exactly after normalization and 753 (81.8%) have at least one JSON
-difference. Two consecutive full runs produced identical project counts and
-category maps after deterministic resource sorting and insertion-ordered
-ValueSet grouping were added.
+Content parity remains incomplete. Of the 920 shared resources, 345 (37.5%)
+match exactly after normalization and 575 (62.5%) have at least one JSON
+difference.
 
 A project passing its threshold means it did not regress past this checked-in
 baseline. It does not mean that the project is fully conformant.
@@ -50,7 +48,7 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 93 | 0 | 0 | 93 |
+| Library unit tests | 103 | 0 | 0 | 103 |
 | SUSHI golden fixtures | 61 | 0 | 0 | 61 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
@@ -62,13 +60,13 @@ workflow explicitly runs the ignored compatibility suite.
 
 | Project | FSH files | SUSHI | rh-fsh | Missing | Extra | Mismatch | Exact match |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | 71 | 134 | 134 | 0 | 0 | 86 | 48 |
-| mCODE | 57 | 350 | 350 | 0 | 0 | 307 | 43 |
-| Da Vinci CRD | 69 | 85 | 85 | 0 | 0 | 70 | 15 |
-| Da Vinci DTR | 39 | 75 | 75 | 0 | 0 | 54 | 21 |
-| Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 133 | 25 |
-| IPS | 123 | 118 | 118 | 0 | 0 | 103 | 15 |
-| **Total** | **379** | **920** | **920** | **0** | **0** | **753** | **167** |
+| CARIN Blue Button | 71 | 134 | 134 | 0 | 0 | 80 | 54 |
+| mCODE | 57 | 350 | 350 | 0 | 0 | 172 | 178 |
+| Da Vinci CRD | 69 | 85 | 85 | 0 | 0 | 62 | 23 |
+| Da Vinci DTR | 39 | 75 | 75 | 0 | 0 | 52 | 23 |
+| Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 128 | 30 |
+| IPS | 123 | 118 | 118 | 0 | 0 | 81 | 37 |
+| **Total** | **379** | **920** | **920** | **0** | **0** | **575** | **345** |
 
 ## Closed Gaps
 
@@ -92,7 +90,7 @@ The rerun and implementation work closed the following high-impact gaps:
   records complete counts, and no longer accepts missing goldens as passes.
 
 These fixes reduced the original 43 missing, 149 extra, and 838 mismatched
-resources to 0 missing, 0 extra, and 753 mismatched resources.
+resources to 0 missing, 0 extra, and 575 mismatched resources.
 
 ## Remaining Gap Categories
 
@@ -101,18 +99,18 @@ difference. Counts therefore measure affected resources, not all bad fields.
 
 | Category | Count | Share | Primary remaining work |
 |---|---:|---:|---|
-| JSON shape | 434 | 57.6% | Recursive extension arrays, Bundle entries, Parameters parts, repeated BackboneElements, CodeableConcept/Coding distinctions, and primitive shadow alignment |
-| StructureDefinition | 234 | 31.1% | Root constraints, context, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
-| Other | 65 | 8.6% | Nested rule context, reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
-| Metadata | 9 | 1.2% | Resource-specific defaults, names, descriptions, and derived metadata |
-| IG generation | 6 | 0.8% | Page trees, grouping, globals, parameters, and definition resource metadata |
-| Terminology | 5 | 0.7% | Concept properties and remaining CodeSystem/ValueSet canonical/compose differences |
+| JSON shape | 231 | 40.2% | Extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
+| StructureDefinition | 234 | 40.7% | Root constraints, context, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
+| Other | 68 | 11.8% | Reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
+| Metadata | 30 | 5.2% | Resource-specific defaults, names, descriptions, and derived metadata |
+| IG generation | 6 | 1.0% | Page trees, grouping, globals, parameters, and definition resource metadata |
+| Terminology | 6 | 1.0% | Concept properties and remaining CodeSystem/ValueSet canonical/compose differences |
 | Resource identity | 0 | 0.0% | Closed for the pinned corpus |
 
-### JSON shape: 434 resources
+### JSON shape: 231 resources
 
-This is the largest remaining group and is concentrated in mCODE (250), IPS
-(62), CARIN (42), and PAS (39). Repeated first differences include:
+This group has fallen by 203 resources and is now concentrated in mCODE (108),
+IPS (40), CARIN (36), and PAS (22). Repeated first differences include:
 
 - extensions emitted at the wrong nesting level or without aligned primitive
   `_field` companions;

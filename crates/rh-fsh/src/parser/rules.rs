@@ -61,6 +61,7 @@ pub fn parse_instance_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<Instanc
     let (input, rule) = alt((
         map(parse_insert_rule_inner, InstanceRule::Insert),
         map(parse_assignment_rule_inner, InstanceRule::Assignment),
+        map(parse_path_rule_inner, InstanceRule::Path),
     ))(input)?;
 
     let (input, _) = take_while(|c| c != '\n')(input)?;

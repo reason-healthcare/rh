@@ -162,7 +162,21 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
             }
             reference
         }
-        FshValue::Quantity { value, unit } => serde_json::json!({ "value": value, "unit": unit }),
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
+            let mut quantity = serde_json::json!({
+                "value": value,
+                "system": "http://unitsofmeasure.org",
+                "code": unit,
+            });
+            if let Some(display) = display {
+                quantity["unit"] = serde_json::Value::String(display.clone());
+            }
+            quantity
+        }
         FshValue::Ratio {
             numerator,
             denominator,

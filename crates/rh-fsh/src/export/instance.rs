@@ -7,12 +7,18 @@ use crate::parser::ast::*;
 use crate::tank::FshTank;
 use crate::FshConfig;
 use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType};
+use std::collections::{HashMap, HashSet};
 
 struct InstanceExportContext<'a> {
     defs: &'a FhirDefs,
     config: &'a FshConfig,
     tank: &'a FshTank,
     definition_index: &'a DefinitionIndex,
+}
+
+struct InstanceShapeContext {
+    extension_slice_urls: HashMap<String, String>,
+    slice_order: HashMap<String, usize>,
 }
 
 pub fn export_instance(
@@ -89,22 +95,473 @@ fn export_instance_with_context(
         }
     }
 
+    let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
+    let shape_context = InstanceShapeContext {
+        extension_slice_urls: extension_slice_urls(instance_of, context),
+        slice_order: slice_order(instance_of, context),
+    };
+    apply_local_profile_defaults(
+        &mut resource,
+        instance_of,
+        &inst.rules,
+        &resource_type_for_metadata,
+        context,
+        &shape_context,
+    );
     for rule in &inst.rules {
+        let indent = rule.location.column;
+        while path_contexts
+            .last()
+            .is_some_and(|(context_indent, _)| *context_indent >= indent)
+        {
+            path_contexts.pop();
+        }
         match &rule.value {
             InstanceRule::Assignment(a) => {
+                let path = qualify_instance_path(&path_contexts, indent, &a.path);
                 apply_assignment(
                     &mut resource,
-                    &a.path,
+                    &path,
                     &a.value,
                     &resource_type_for_metadata,
                     context,
+                    &shape_context,
                 );
             }
             InstanceRule::Insert(_) => {}
+            InstanceRule::Path(path_rule) => {
+                let path = qualify_instance_path(&path_contexts, indent, &path_rule.path);
+                path_contexts.push((indent, path));
+            }
+        }
+    }
+    remove_export_markers(&mut resource);
+
+    Ok(resource)
+}
+
+fn apply_local_profile_defaults(
+    resource: &mut serde_json::Value,
+    instance_of: &str,
+    instance_rules: &[Spanned<InstanceRule>],
+    resource_type: &str,
+    context: &InstanceExportContext<'_>,
+    shape_context: &InstanceShapeContext,
+) {
+    let mut profiles = Vec::new();
+    let mut dependency_profiles = Vec::new();
+    let mut current = Some(instance_of.to_string());
+    let mut seen = HashSet::new();
+    while let Some(profile_name) = current {
+        if !seen.insert(profile_name.clone()) {
+            break;
+        }
+        if let Some(profile) = context.tank.profiles.get(&profile_name) {
+            profiles.push(profile);
+            current = profile.metadata.parent.clone();
+        } else if let Some(profile) = context.definition_index.lookup(&profile_name) {
+            dependency_profiles.push(profile);
+            current = profile
+                .parent
+                .clone()
+                .or_else(|| profile.base_definition.clone());
+        } else {
+            break;
         }
     }
 
-    Ok(resource)
+    let mut assigned_paths = Vec::new();
+    for profile in &profiles {
+        for rule in &profile.rules {
+            if let SdRule::Assignment(assignment) = &rule.value {
+                assigned_paths.push(assignment.path.segments.clone());
+            }
+        }
+    }
+    let mut instance_assigned_paths = Vec::new();
+    for rule in instance_rules {
+        if let InstanceRule::Assignment(assignment) = &rule.value {
+            instance_assigned_paths.push(assignment.path.segments.clone());
+        }
+    }
+    assigned_paths.extend(instance_assigned_paths.iter().cloned());
+
+    for profile in dependency_profiles.into_iter().rev() {
+        let mut fixed_values = profile.fixed_values.iter().collect::<Vec<_>>();
+        fixed_values
+            .sort_by_key(|fixed_value| dependency_slice_order(&fixed_value.path, &assigned_paths));
+        for fixed_value in fixed_values {
+            let segments = dependency_fixed_path(&fixed_value.path);
+            let is_overridden = assigned_paths
+                .iter()
+                .any(|assigned| paths_override(assigned, &segments));
+            let slice_is_used =
+                fixed_value.required || dependency_slice_is_used(&segments, &assigned_paths);
+            if !segments.is_empty() && !is_overridden && slice_is_used {
+                set_at_path(
+                    resource,
+                    &segments,
+                    fixed_value.value.clone(),
+                    shape_context,
+                    resource_type,
+                );
+            }
+        }
+    }
+
+    for profile in profiles.into_iter().rev() {
+        let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
+        for rule in &profile.rules {
+            let indent = rule.location.column;
+            while path_contexts
+                .last()
+                .is_some_and(|(context_indent, _)| *context_indent >= indent)
+            {
+                path_contexts.pop();
+            }
+            match &rule.value {
+                SdRule::Assignment(assignment) => {
+                    let path = qualify_instance_path(&path_contexts, indent, &assignment.path);
+                    if local_profile_path_is_used(
+                        &path.segments,
+                        &instance_assigned_paths,
+                        profile,
+                        resource_type,
+                    ) {
+                        apply_assignment(
+                            resource,
+                            &path,
+                            &assignment.value,
+                            resource_type,
+                            context,
+                            shape_context,
+                        );
+                    }
+                }
+                SdRule::Path(path_rule) => {
+                    let path = qualify_instance_path(&path_contexts, indent, &path_rule.path);
+                    path_contexts.push((indent, path));
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn local_profile_path_is_used(
+    path: &[FshPathSegment],
+    assigned_paths: &[Vec<FshPathSegment>],
+    profile: &Profile,
+    resource_type: &str,
+) -> bool {
+    if let Some((slice_index, element, slice)) =
+        path.iter()
+            .enumerate()
+            .find_map(|(index, segment)| match segment {
+                FshPathSegment::Slice { element, slice } => Some((index, element, slice)),
+                _ => None,
+            })
+    {
+        if slice_index + 1 == path.len() {
+            return true;
+        };
+        if assigned_paths.iter().any(|assigned| {
+            assigned.iter().any(|segment| {
+                matches!(
+                    segment,
+                    FshPathSegment::Slice {
+                        element: assigned_element,
+                        slice: assigned_slice
+                    } if assigned_element == element && assigned_slice == slice
+                )
+            })
+        }) {
+            return true;
+        }
+        return profile.rules.iter().any(|rule| {
+            let SdRule::Contains(contains) = &rule.value else {
+                return false;
+            };
+            let contains_element = contains.path.segments.last().and_then(path_segment_name);
+            contains_element == Some(element.as_str())
+                && contains.items.iter().any(|item| {
+                    item.min.is_some_and(|min| min > 0)
+                        && item.alias.as_deref().unwrap_or(&item.name) == slice
+                })
+        });
+    }
+
+    if path.len() == 1 {
+        return true;
+    }
+    let root = path.first().and_then(path_segment_name);
+    if assigned_paths
+        .iter()
+        .any(|assigned| assigned.first().and_then(path_segment_name) == root)
+    {
+        return true;
+    }
+    if root
+        .is_some_and(|root| path_field_info(resource_type, root).is_some_and(|field| field.min > 0))
+    {
+        return true;
+    }
+    profile.rules.iter().any(|rule| {
+        let SdRule::Card(card) = &rule.value else {
+            return false;
+        };
+        card.min.is_some_and(|min| min > 0)
+            && card.path.segments.first().and_then(path_segment_name) == root
+    })
+}
+
+fn path_segment_name(segment: &FshPathSegment) -> Option<&str> {
+    match segment {
+        FshPathSegment::Name(name)
+        | FshPathSegment::ChoiceType(name)
+        | FshPathSegment::Slice { element: name, .. } => Some(name),
+        FshPathSegment::Index(_) | FshPathSegment::Extension(_) => None,
+    }
+}
+
+fn dependency_fixed_path(path: &str) -> Vec<FshPathSegment> {
+    path.split('.')
+        .skip(1)
+        .map(|segment| {
+            if let Some((element, slice)) = segment.split_once(':') {
+                FshPathSegment::Slice {
+                    element: element.to_string(),
+                    slice: slice.to_string(),
+                }
+            } else {
+                FshPathSegment::Name(segment.to_string())
+            }
+        })
+        .collect()
+}
+
+fn paths_override(assigned: &[FshPathSegment], fixed: &[FshPathSegment]) -> bool {
+    let Some(assigned_root) = assigned.first().and_then(path_segment_name) else {
+        return false;
+    };
+    let Some(fixed_root) = fixed.first().and_then(path_segment_name) else {
+        return false;
+    };
+    if assigned_root != fixed_root {
+        return false;
+    }
+    if assigned.len() == 1 {
+        return true;
+    }
+    assigned[..assigned.len() - 1] == fixed[..fixed.len() - 1]
+        && path_segment_name(assigned.last().unwrap()) == path_segment_name(fixed.last().unwrap())
+}
+
+fn dependency_slice_is_used(
+    fixed: &[FshPathSegment],
+    assigned_paths: &[Vec<FshPathSegment>],
+) -> bool {
+    let Some((fixed_element, fixed_slice)) = fixed.iter().find_map(|segment| match segment {
+        FshPathSegment::Slice { element, slice } => Some((element, slice)),
+        _ => None,
+    }) else {
+        if fixed.len() == 1 {
+            return true;
+        }
+        let fixed_root = fixed.first().and_then(path_segment_name);
+        return assigned_paths
+            .iter()
+            .any(|assigned| assigned.first().and_then(path_segment_name) == fixed_root);
+    };
+    assigned_paths.iter().any(|assigned| {
+        assigned.iter().any(|segment| {
+            matches!(
+                segment,
+                FshPathSegment::Slice { element, slice }
+                    if element == fixed_element && slice == fixed_slice
+            )
+        })
+    })
+}
+
+fn dependency_slice_order(path: &str, assigned_paths: &[Vec<FshPathSegment>]) -> usize {
+    let fixed = dependency_fixed_path(path);
+    let Some((fixed_element, fixed_slice)) = fixed.iter().find_map(|segment| match segment {
+        FshPathSegment::Slice { element, slice } => Some((element, slice)),
+        _ => None,
+    }) else {
+        return 0;
+    };
+    assigned_paths
+        .iter()
+        .position(|assigned| {
+            assigned.iter().any(|segment| {
+                matches!(
+                    segment,
+                    FshPathSegment::Slice { element, slice }
+                        if element == fixed_element && slice == fixed_slice
+                )
+            })
+        })
+        .unwrap_or(usize::MAX)
+}
+
+fn extension_slice_urls(
+    instance_of: &str,
+    context: &InstanceExportContext<'_>,
+) -> HashMap<String, String> {
+    let mut urls = HashMap::new();
+    let mut current = Some(instance_of.to_string());
+    let mut seen = HashSet::new();
+    while let Some(profile_name) = current {
+        if !seen.insert(profile_name.clone()) {
+            break;
+        }
+        let Some(profile) = context.tank.profiles.get(&profile_name) else {
+            break;
+        };
+        collect_extension_slice_urls(&profile.rules, context, &mut urls);
+        current = profile.metadata.parent.clone();
+    }
+    for profile in context.tank.profiles.values() {
+        collect_extension_slice_urls(&profile.rules, context, &mut urls);
+    }
+    for extension in context.tank.extensions.values() {
+        collect_extension_slice_urls(&extension.rules, context, &mut urls);
+    }
+    for definition in context.definition_index.definitions() {
+        if definition.type_.as_deref() != Some("Extension") {
+            continue;
+        }
+        let Some(url) = &definition.url else {
+            continue;
+        };
+        for candidate in [definition.name.as_deref(), definition.id.as_deref()]
+            .into_iter()
+            .flatten()
+        {
+            for key in extension_lookup_keys(candidate) {
+                urls.entry(key).or_insert_with(|| url.clone());
+            }
+        }
+    }
+    urls
+}
+
+fn slice_order(instance_of: &str, context: &InstanceExportContext<'_>) -> HashMap<String, usize> {
+    let mut order = HashMap::new();
+    let mut current = Some(instance_of.to_string());
+    let mut seen = HashSet::new();
+    while let Some(profile_name) = current {
+        if !seen.insert(profile_name.clone()) {
+            break;
+        }
+        let Some(profile) = context.tank.profiles.get(&profile_name) else {
+            break;
+        };
+        collect_slice_order(&profile.rules, &mut order);
+        current = profile.metadata.parent.clone();
+    }
+    for profile in context.tank.profiles.values() {
+        collect_slice_order(&profile.rules, &mut order);
+    }
+    for extension in context.tank.extensions.values() {
+        collect_slice_order(&extension.rules, &mut order);
+    }
+    order
+}
+
+fn collect_slice_order(rules: &[Spanned<SdRule>], order: &mut HashMap<String, usize>) {
+    for rule in rules {
+        let SdRule::Contains(contains) = &rule.value else {
+            continue;
+        };
+        for (index, item) in contains.items.iter().enumerate() {
+            let slice = item.alias.as_deref().unwrap_or(&item.name);
+            let rank = if item.min.is_some_and(|min| min > 0) {
+                index
+            } else {
+                1_000 + index
+            };
+            order.entry(slice.to_string()).or_insert(rank);
+        }
+    }
+}
+
+fn extension_lookup_keys(value: &str) -> Vec<String> {
+    let normalized: String = value
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect();
+    let mut values = vec![value.to_string(), format!("normalized:{normalized}")];
+    let without_extension = normalized.strip_suffix("extension").unwrap_or(&normalized);
+    for prefix in ["uscore", "mcode", "davinci", "crd", "dtr", "pas", "ips"] {
+        if let Some(short) = without_extension.strip_prefix(prefix) {
+            values.push(format!("normalized:{short}"));
+        }
+    }
+    values
+}
+
+fn collect_extension_slice_urls(
+    rules: &[Spanned<SdRule>],
+    context: &InstanceExportContext<'_>,
+    urls: &mut HashMap<String, String>,
+) {
+    for rule in rules {
+        let SdRule::Contains(contains) = &rule.value else {
+            continue;
+        };
+        if !matches!(
+            contains.path.segments.last(),
+            Some(FshPathSegment::Name(name)) if name == "extension"
+        ) {
+            continue;
+        }
+        for item in &contains.items {
+            let slice_name = item.alias.as_deref().unwrap_or(&item.name);
+            if let Some(url) = context
+                .definition_index
+                .lookup(&item.name)
+                .and_then(|definition| definition.url.clone())
+            {
+                urls.entry(slice_name.to_string()).or_insert(url);
+            }
+        }
+    }
+}
+
+const SLICE_MARKER: &str = "__rh_fsh_slice";
+
+fn remove_export_markers(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            map.remove(SLICE_MARKER);
+            for child in map.values_mut() {
+                remove_export_markers(child);
+            }
+        }
+        serde_json::Value::Array(values) => {
+            for child in values {
+                remove_export_markers(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn qualify_instance_path(contexts: &[(usize, FshPath)], indent: usize, path: &FshPath) -> FshPath {
+    let Some((_, parent)) = contexts
+        .iter()
+        .rev()
+        .find(|(context_indent, _)| *context_indent < indent)
+    else {
+        return path.clone();
+    };
+    let mut segments = parent.segments.clone();
+    segments.extend(path.segments.clone());
+    FshPath { segments }
 }
 
 /// Apply an assignment rule by navigating the FSH path and setting the value
@@ -114,9 +571,10 @@ fn apply_assignment(
     value: &FshValue,
     resource_type: &str,
     context: &InstanceExportContext<'_>,
+    shape_context: &InstanceShapeContext,
 ) {
     let json_val = fsh_value_to_json(value, context);
-    set_at_path(root, &path.segments, json_val, context.defs, resource_type);
+    set_at_path(root, &path.segments, json_val, shape_context, resource_type);
 }
 
 fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> serde_json::Value {
@@ -146,8 +604,20 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
             }
             serde_json::Value::String(code.clone())
         }
-        FshValue::Quantity { value, unit } => {
-            serde_json::json!({ "value": value, "unit": unit })
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
+            let mut quantity = serde_json::json!({
+                "value": value,
+                "system": "http://unitsofmeasure.org",
+                "code": unit,
+            });
+            if let Some(display) = display {
+                quantity["unit"] = serde_json::Value::String(display.clone());
+            }
+            quantity
         }
         FshValue::Ratio {
             numerator,
@@ -281,6 +751,57 @@ fn field_next_type(ft: &FhirFieldType) -> Option<&str> {
     }
 }
 
+fn path_field_info(
+    current_type: &str,
+    field_name: &str,
+) -> Option<&'static rh_hl7_fhir_r4_core::metadata::FieldInfo> {
+    get_field_info(current_type, field_name).or_else(|| {
+        normalize_choice_type_name(field_name)
+            .and_then(|choice_name| get_field_info(current_type, &choice_name))
+            .or_else(|| dynamic_choice_field(current_type, field_name).map(|(_, field)| field))
+    })
+}
+
+fn fallback_backbone_type(current_type: &str, field_name: &str) -> Option<&'static str> {
+    match (current_type, field_name) {
+        ("ExplanationOfBenefit", "adjudication") => Some("ExplanationOfBenefitItemAdjudication"),
+        ("ClaimResponse", "adjudication") => Some("ClaimResponseItemAdjudication"),
+        _ => None,
+    }
+}
+
+fn choice_field_type(current_type: &str, field_name: &str) -> Option<FhirFieldType> {
+    let suffix = if let Some(choice_name) = normalize_choice_type_name(field_name) {
+        let base = choice_name.trim_end_matches("[x]");
+        field_name.strip_prefix(base)?
+    } else {
+        dynamic_choice_field(current_type, field_name)?.0
+    };
+    match suffix {
+        "CodeableConcept" => Some(FhirFieldType::Complex("CodeableConcept")),
+        "Coding" => Some(FhirFieldType::Complex("Coding")),
+        "Quantity" => Some(FhirFieldType::Complex("Quantity")),
+        "Reference" => Some(FhirFieldType::Reference),
+        "Period" => Some(FhirFieldType::Complex("Period")),
+        "Range" => Some(FhirFieldType::Complex("Range")),
+        "Ratio" => Some(FhirFieldType::Complex("Ratio")),
+        _ => None,
+    }
+}
+
+fn dynamic_choice_field<'a>(
+    current_type: &str,
+    field_name: &'a str,
+) -> Option<(&'a str, &'static rh_hl7_fhir_r4_core::metadata::FieldInfo)> {
+    field_name.char_indices().find_map(|(index, character)| {
+        if index == 0 || !character.is_ascii_uppercase() {
+            return None;
+        }
+        let (base, suffix) = field_name.split_at(index);
+        get_field_info(current_type, &format!("{base}[x]")).map(|field| (suffix, field))
+    })
+}
+
 /// Wrap a Coding-shaped object as a CodeableConcept if the target field requires it.
 ///
 /// A "Coding-shaped" value is `{"code": ..., "system": ...}` (with optional display).
@@ -299,6 +820,18 @@ fn wrap_codeable_concept_if_needed(
     value
 }
 
+fn shape_value_for_field(
+    value: serde_json::Value,
+    field_type: Option<&FhirFieldType>,
+) -> serde_json::Value {
+    if matches!(field_type, Some(FhirFieldType::Primitive(_))) {
+        if let Some(code) = value.get("code") {
+            return code.clone();
+        }
+    }
+    wrap_codeable_concept_if_needed(value, field_type)
+}
+
 /// Navigate a FHIR path in the JSON tree and set the leaf value.
 ///
 /// Uses `FhirDefs` to determine whether each field has max cardinality `*` (array)
@@ -307,7 +840,7 @@ fn set_at_path(
     node: &mut serde_json::Value,
     segments: &[FshPathSegment],
     value: serde_json::Value,
-    _defs: &FhirDefs,
+    shape_context: &InstanceShapeContext,
     current_type: &str,
 ) {
     if segments.is_empty() {
@@ -317,23 +850,46 @@ fn set_at_path(
 
     match &segments[0] {
         FshPathSegment::Name(name) => {
-            let fi = get_field_info(current_type, name);
-            let is_array = fi.is_some_and(|f| f.max.is_none());
-            let next_type = fi
-                .and_then(|f| field_next_type(&f.field_type))
-                .unwrap_or(current_type);
+            let fi = path_field_info(current_type, name);
+            let family_history_condition =
+                current_type == "FamilyMemberHistory" && name == "condition";
+            let family_history_relationship =
+                current_type == "FamilyMemberHistory" && name == "relationship";
+            let fallback_backbone = fallback_backbone_type(current_type, name);
+            let field_type = choice_field_type(current_type, name)
+                .or_else(|| fi.map(|field| field.field_type.clone()))
+                .or_else(|| {
+                    family_history_relationship.then_some(FhirFieldType::Complex("CodeableConcept"))
+                });
+            let is_array = family_history_condition
+                || fallback_backbone.is_some()
+                || fi.is_some_and(|f| f.max.is_none());
+            let is_primitive = field_type
+                .as_ref()
+                .is_some_and(|field_type| matches!(field_type, FhirFieldType::Primitive(_)));
+            let next_type = field_type
+                .as_ref()
+                .and_then(field_next_type)
+                .or(fallback_backbone)
+                .unwrap_or(if family_history_condition {
+                    "FamilyMemberHistoryCondition"
+                } else {
+                    current_type
+                });
 
             if let serde_json::Value::Object(map) = node {
+                if segments.len() > 1 && is_primitive {
+                    let child = map
+                        .entry(format!("_{name}"))
+                        .or_insert_with(|| serde_json::json!({}));
+                    set_at_path(child, &segments[1..], value, shape_context, "Element");
+                    return;
+                }
                 if segments.len() == 1 {
                     // Wrap Coding-shaped values in CodeableConcept when required by the field type
-                    let value = wrap_codeable_concept_if_needed(value, fi.map(|f| &f.field_type));
+                    let value = shape_value_for_field(value, field_type.as_ref());
                     if is_array {
-                        let arr = map
-                            .entry(name.clone())
-                            .or_insert_with(|| serde_json::json!([]));
-                        if let serde_json::Value::Array(a) = arr {
-                            a.push(value);
-                        }
+                        map.insert(name.clone(), serde_json::json!([value]));
                     } else {
                         map.insert(name.clone(), value);
                     }
@@ -350,7 +906,7 @@ fn set_at_path(
                                 a.push(serde_json::json!({}));
                             }
                             let last = a.last_mut().unwrap();
-                            set_at_path(last, &segments[1..], value, _defs, next_type);
+                            set_at_path(last, &segments[1..], value, shape_context, next_type);
                         }
                     } else {
                         // Scalar field, or array field with explicit index following.
@@ -360,7 +916,7 @@ fn set_at_path(
                             serde_json::json!({})
                         };
                         let child = map.entry(name.clone()).or_insert_with(|| default);
-                        set_at_path(child, &segments[1..], value, _defs, next_type);
+                        set_at_path(child, &segments[1..], value, shape_context, next_type);
                     }
                 }
             }
@@ -374,13 +930,27 @@ fn set_at_path(
                 if segments.len() == 1 {
                     arr[i] = value;
                 } else {
-                    set_at_path(&mut arr[i], &segments[1..], value, _defs, current_type);
+                    set_at_path(
+                        &mut arr[i],
+                        &segments[1..],
+                        value,
+                        shape_context,
+                        current_type,
+                    );
                 }
             }
         }
         FshPathSegment::Slice { element, slice } => {
             if let serde_json::Value::Object(map) = node {
-                handle_slice_segment(map, element, slice, segments, value, _defs, current_type);
+                handle_slice_segment(
+                    map,
+                    element,
+                    slice,
+                    segments,
+                    value,
+                    shape_context,
+                    current_type,
+                );
             }
         }
         FshPathSegment::ChoiceType(element) => {
@@ -390,7 +960,7 @@ fn set_at_path(
                     map.insert(key, value);
                 } else {
                     let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
-                    set_at_path(child, &segments[1..], value, _defs, current_type);
+                    set_at_path(child, &segments[1..], value, shape_context, current_type);
                 }
             }
         }
@@ -404,7 +974,13 @@ fn set_at_path(
                         arr.push(serde_json::json!({ "url": url, "valueString": value }));
                     } else {
                         let mut ext_obj = serde_json::json!({ "url": url });
-                        set_at_path(&mut ext_obj, &segments[1..], value, _defs, "Extension");
+                        set_at_path(
+                            &mut ext_obj,
+                            &segments[1..],
+                            value,
+                            shape_context,
+                            "Extension",
+                        );
                         arr.push(ext_obj);
                     }
                 }
@@ -423,7 +999,7 @@ fn handle_slice_segment(
     slice: &str,
     segments: &[FshPathSegment],
     value: serde_json::Value,
-    _defs: &FhirDefs,
+    shape_context: &InstanceShapeContext,
     current_type: &str,
 ) {
     // Soft-indexing operators: [+] appends, [=] reuses last
@@ -431,6 +1007,7 @@ fn handle_slice_segment(
         let fi = get_field_info(current_type, element);
         let next_type = fi
             .and_then(|f| field_next_type(&f.field_type))
+            .or_else(|| fallback_backbone_type(current_type, element))
             .unwrap_or(current_type);
         let element_key = element.to_string();
 
@@ -479,16 +1056,27 @@ fn handle_slice_segment(
                 if shadow[idx].is_null() {
                     shadow[idx] = serde_json::json!({});
                 }
-                set_at_path(&mut shadow[idx], &segments[1..], value, _defs, "Element");
+                set_at_path(
+                    &mut shadow[idx],
+                    &segments[1..],
+                    value,
+                    shape_context,
+                    "Element",
+                );
             }
         } else {
             let arr = map.get_mut(&element_key).unwrap();
             if let serde_json::Value::Array(arr) = arr {
                 if segments.len() == 1 {
-                    arr[idx] =
-                        wrap_codeable_concept_if_needed(value, fi.map(|field| &field.field_type));
+                    arr[idx] = shape_value_for_field(value, fi.map(|field| &field.field_type));
                 } else {
-                    set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
+                    set_at_path(
+                        &mut arr[idx],
+                        &segments[1..],
+                        value,
+                        shape_context,
+                        next_type,
+                    );
                 }
             }
         }
@@ -500,7 +1088,31 @@ fn handle_slice_segment(
         let fi = get_field_info(current_type, element);
         let next_type = fi
             .and_then(|f| field_next_type(&f.field_type))
+            .or_else(|| fallback_backbone_type(current_type, element))
             .unwrap_or(current_type);
+        let is_primitive =
+            fi.is_some_and(|field| matches!(field.field_type, FhirFieldType::Primitive(_)));
+        if is_primitive && segments.len() > 1 {
+            let shadow = map
+                .entry(format!("_{element}"))
+                .or_insert_with(|| serde_json::json!([]));
+            if let serde_json::Value::Array(values) = shadow {
+                while values.len() <= idx {
+                    values.push(serde_json::Value::Null);
+                }
+                if values[idx].is_null() {
+                    values[idx] = serde_json::json!({});
+                }
+                set_at_path(
+                    &mut values[idx],
+                    &segments[1..],
+                    value,
+                    shape_context,
+                    "Element",
+                );
+            }
+            return;
+        }
         let arr = map
             .entry(element.to_string())
             .or_insert_with(|| serde_json::json!([]));
@@ -509,30 +1121,152 @@ fn handle_slice_segment(
                 arr.push(serde_json::json!({}));
             }
             if segments.len() == 1 {
-                arr[idx] =
-                    wrap_codeable_concept_if_needed(value, fi.map(|field| &field.field_type));
+                arr[idx] = shape_value_for_field(value, fi.map(|field| &field.field_type));
             } else {
-                set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
+                set_at_path(
+                    &mut arr[idx],
+                    &segments[1..],
+                    value,
+                    shape_context,
+                    next_type,
+                );
             }
         }
         return;
     }
 
-    // Regular named slice: navigate to the element field
+    // Regular named slice: navigate to a stable repetition for the slice.
     let fi = get_field_info(current_type, element);
     let next_type = fi
         .and_then(|f| field_next_type(&f.field_type))
+        .or_else(|| fallback_backbone_type(current_type, element))
         .unwrap_or(current_type);
     let key = element.to_string();
-    if segments.len() == 1 {
-        map.insert(
-            key,
-            wrap_codeable_concept_if_needed(value, fi.map(|field| &field.field_type)),
-        );
-    } else {
-        let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
-        set_at_path(child, &segments[1..], value, _defs, next_type);
+    let array = map.entry(key).or_insert_with(|| serde_json::json!([]));
+    let serde_json::Value::Array(values) = array else {
+        return;
+    };
+    if let Some(FshPathSegment::Index(repetition)) = segments.get(1) {
+        let repetition = *repetition as usize;
+        let mut template = values
+            .iter()
+            .find(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({ SLICE_MARKER: slice }));
+        if element == "extension" && template.get("url").is_none() {
+            template["url"] = serde_json::Value::String(named_extension_url(slice, shape_context));
+        }
+        while values
+            .iter()
+            .filter(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
+            .count()
+            <= repetition
+        {
+            let insert_at = named_slice_insert_index(values, slice, shape_context);
+            values.insert(insert_at, template.clone());
+        }
+        let index = values
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| {
+                item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice)
+            })
+            .nth(repetition)
+            .map(|(index, _)| index)
+            .unwrap();
+        if segments.len() == 2 {
+            values[index] = value;
+        } else {
+            set_at_path(
+                &mut values[index],
+                &segments[2..],
+                value,
+                shape_context,
+                next_type,
+            );
+        }
+        return;
     }
+    let index = values
+        .iter()
+        .position(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
+        .unwrap_or_else(|| {
+            let mut item = serde_json::json!({ SLICE_MARKER: slice });
+            if element == "extension" {
+                item["url"] = serde_json::Value::String(named_extension_url(slice, shape_context));
+            }
+            let index = named_slice_insert_index(values, slice, shape_context);
+            values.insert(index, item);
+            index
+        });
+    if segments.len() == 1 {
+        let mut value = shape_value_for_field(value, fi.map(|field| &field.field_type));
+        if let serde_json::Value::Object(object) = &mut value {
+            object.insert(
+                SLICE_MARKER.to_string(),
+                serde_json::Value::String(slice.to_string()),
+            );
+        }
+        values[index] = value;
+    } else {
+        set_at_path(
+            &mut values[index],
+            &segments[1..],
+            value,
+            shape_context,
+            next_type,
+        );
+    }
+}
+
+fn named_slice_insert_index(
+    values: &[serde_json::Value],
+    slice: &str,
+    shape_context: &InstanceShapeContext,
+) -> usize {
+    if let Some(index) = values
+        .iter()
+        .rposition(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
+    {
+        return index + 1;
+    }
+    let rank = shape_context
+        .slice_order
+        .get(slice)
+        .copied()
+        .unwrap_or(usize::MAX);
+    values
+        .iter()
+        .position(|item| {
+            item.get(SLICE_MARKER)
+                .and_then(|value| value.as_str())
+                .and_then(|existing| shape_context.slice_order.get(existing))
+                .is_some_and(|existing_rank| *existing_rank > rank)
+        })
+        .unwrap_or(values.len())
+}
+
+fn named_extension_url(slice: &str, shape_context: &InstanceShapeContext) -> String {
+    shape_context
+        .extension_slice_urls
+        .get(slice)
+        .or_else(|| {
+            extension_lookup_keys(slice)
+                .into_iter()
+                .find_map(|key| shape_context.extension_slice_urls.get(&key))
+        })
+        .cloned()
+        .unwrap_or_else(|| {
+            if slice.contains('-')
+                && !slice.starts_with("http://")
+                && !slice.starts_with("https://")
+                && !slice.starts_with("urn:")
+            {
+                format!("http://hl7.org/fhir/StructureDefinition/{slice}")
+            } else {
+                slice.to_string()
+            }
+        })
 }
 
 #[cfg(test)]
@@ -542,6 +1276,179 @@ mod tests {
     use crate::parser::ast::{Profile, SdMetadata};
     use crate::{build_definition_index, FshConfig};
     use std::path::PathBuf;
+
+    #[test]
+    fn materializes_named_extension_slices_with_canonical_urls() {
+        let config = FshConfig {
+            canonical: Some("http://example.org/fhir".to_string()),
+            ..Default::default()
+        };
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config,
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Extension: RelatedCondition
+Id: related-condition
+* value[x] only Reference(Condition)
+
+Profile: Tumor
+Parent: BodyStructure
+* extension contains RelatedCondition named relatedCondition 0..1
+
+Instance: tumor-example
+InstanceOf: Tumor
+* extension[relatedCondition].valueReference = Reference(Condition/example)
+"#,
+            "named-extension.fsh",
+        )
+        .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "tumor-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["extension"][0]["url"],
+            "http://example.org/fhir/StructureDefinition/related-condition"
+        );
+        assert_eq!(
+            instance["extension"][0]["valueReference"]["reference"],
+            "Condition/example"
+        );
+    }
+
+    #[test]
+    fn applies_local_profile_assignments_as_instance_defaults() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: FinalObservation
+Parent: Observation
+* status = #final
+* code = http://loinc.org#1234-5 "Example"
+
+Instance: observation-example
+InstanceOf: FinalObservation
+"#,
+                "profile-defaults.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "observation-example")
+            .expect("instance exists");
+
+        assert_eq!(instance["status"], "final");
+        assert_eq!(instance["code"]["coding"][0]["code"], "1234-5");
+    }
+
+    #[test]
+    fn replaces_repeating_fields_on_plain_assignment() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: report-example
+InstanceOf: DiagnosticReport
+* performer = Reference(Organization/first)
+* performer = Reference(Practitioner/second)
+"#,
+                "repeating-replacement.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "report-example")
+            .expect("instance exists");
+
+        assert_eq!(instance["performer"].as_array().unwrap().len(), 1);
+        assert_eq!(instance["performer"][0]["reference"], "Practitioner/second");
+    }
+
+    #[test]
+    fn wraps_dynamically_resolved_choice_types() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: administration-example
+InstanceOf: MedicationAdministration
+* medicationCodeableConcept = http://www.nlm.nih.gov/research/umls/rxnorm#3002
+"#,
+                "dynamic-choice.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "administration-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["medicationCodeableConcept"]["coding"][0]["code"],
+            "3002"
+        );
+    }
+
+    #[test]
+    fn materializes_repeated_named_slice_repetitions() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: GeneObservation
+Parent: Observation
+* component contains gene 0..*
+* component[gene].code = http://loinc.org#48018-6
+
+Instance: gene-example
+InstanceOf: GeneObservation
+* component[gene][0].valueString = "BRCA1"
+* component[gene][1].valueString = "BRCA2"
+"#,
+                "repeated-slice.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "gene-example")
+            .expect("instance exists");
+
+        assert_eq!(instance["component"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            instance["component"][0]["code"]["coding"][0]["code"],
+            "48018-6"
+        );
+        assert_eq!(instance["component"][1]["valueString"], "BRCA2");
+    }
+
+    #[test]
+    fn does_not_materialize_unused_optional_profile_slices() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: OptionalCareTeamClaim
+Parent: Claim
+* careTeam contains attending 0..1
+* careTeam[attending].extension[claim-scope].valueBoolean = true
+
+Instance: claim-example
+InstanceOf: OptionalCareTeamClaim
+"#,
+                "optional-slice.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "claim-example")
+            .expect("instance exists");
+
+        assert!(instance.get("careTeam").is_none());
+    }
 
     #[test]
     fn exports_representative_profile_instances_with_base_resource_types() {
@@ -674,6 +1581,7 @@ mod tests {
             type_: Some(type_.to_string()),
             base_definition: Some(format!("http://hl7.org/fhir/StructureDefinition/{type_}")),
             derivation: Some("constraint".to_string()),
+            fixed_values: Vec::new(),
         }
     }
 }

@@ -559,9 +559,25 @@ fn parses_bare_code_value() {
 #[test]
 fn parses_quantity_value() {
     match assignment_value("* valueQuantity = 85 'kg'") {
-        FshValue::Quantity { value, unit } => {
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
             assert!((value - 85.0).abs() < f64::EPSILON);
             assert_eq!(unit, "kg");
+            assert_eq!(display, None);
+        }
+        other => panic!("expected Quantity, got {other:?}"),
+    }
+}
+
+#[test]
+fn parses_quantity_display() {
+    match assignment_value("* valueQuantity = 1 'd' \"day\"") {
+        FshValue::Quantity { unit, display, .. } => {
+            assert_eq!(unit, "d");
+            assert_eq!(display.as_deref(), Some("day"));
         }
         other => panic!("expected Quantity, got {other:?}"),
     }
@@ -642,6 +658,19 @@ fn parses_numeric_index_path() {
         .iter()
         .any(|s| matches!(s, FshPathSegment::Index(0) | FshPathSegment::Slice { .. })));
     assert_eq!(path.to_fhir_path("Patient"), "Patient.name.given");
+}
+
+#[test]
+fn parses_chained_slice_and_numeric_index() {
+    let path = assignment_path("* component[gene][0].valueString = \"BRCA1\"");
+    assert!(matches!(
+        path.segments.as_slice(),
+        [
+            FshPathSegment::Slice { element, slice },
+            FshPathSegment::Index(0),
+            FshPathSegment::Name(value)
+        ] if element == "component" && slice == "gene" && value == "valueString"
+    ));
 }
 
 #[test]
@@ -799,6 +828,34 @@ fn parses_instance_inline_instance_reference() {
         i.rules[0].value,
         InstanceRule::Assignment(ref a) if matches!(a.value, FshValue::InstanceRef(ref r) if r == "myInstance")
     ));
+}
+
+#[test]
+fn parses_numeric_leading_inline_instance_reference() {
+    let src = "Instance: ex\nInstanceOf: Bundle\n* entry[+].resource = 30551ce1-5a28-4356-b684-1e639094ad4d\n";
+    let FshEntity::Instance(instance) = single_entity(src) else {
+        panic!("expected instance");
+    };
+    assert!(matches!(
+        instance.rules[0].value,
+        InstanceRule::Assignment(ref assignment)
+            if matches!(assignment.value, FshValue::InstanceRef(ref value) if value == "30551ce1-5a28-4356-b684-1e639094ad4d")
+    ));
+}
+
+#[test]
+fn parses_instance_path_context_rules() {
+    let src = "Instance: ex\nInstanceOf: Appointment\n* participant[patient]\n  * actor = Reference(Patient/example)\n  * status = #accepted\n";
+    let FshEntity::Instance(instance) = single_entity(src) else {
+        panic!("expected instance");
+    };
+
+    assert!(matches!(
+        instance.rules[0].value,
+        InstanceRule::Path(ref rule) if rule.path.to_dot_string() == "participant[patient]"
+    ));
+    assert_eq!(instance.rules[0].location.column, 1);
+    assert_eq!(instance.rules[1].location.column, 3);
 }
 
 // ============================================================================

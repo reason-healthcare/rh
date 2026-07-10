@@ -1,6 +1,8 @@
 //! StructureDefinition lookup index for local FSH definitions and package dependencies.
 
-use crate::dependencies::{DependencyDefinitionSet, DependencyStructureDefinition};
+use crate::dependencies::{
+    DependencyDefinitionSet, DependencyFixedValue, DependencyStructureDefinition,
+};
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::SdMetadata;
 use crate::tank::FshTank;
@@ -35,6 +37,7 @@ pub struct IndexedStructureDefinition {
     pub base_definition: Option<String>,
     pub parent: Option<String>,
     pub source: DefinitionSource,
+    pub fixed_values: Vec<DependencyFixedValue>,
 }
 
 /// Lookup index keyed by FSH name, id, canonical URL, aliases, and URL tail.
@@ -206,6 +209,7 @@ fn index_local_sd(
         base_definition: None,
         parent: metadata.parent.clone(),
         source: DefinitionSource::Local { kind },
+        fixed_values: Vec::new(),
     }
 }
 
@@ -223,6 +227,7 @@ fn index_dependency_sd(definition: &DependencyStructureDefinition) -> IndexedStr
             package_id: definition.package_id.clone(),
             version: definition.version.clone(),
         },
+        fixed_values: definition.fixed_values.clone(),
     }
 }
 
@@ -317,6 +322,7 @@ mod tests {
                     "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                 ),
                 derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
             }],
             warnings: vec!["missing other package".to_string()],
         };
@@ -356,6 +362,7 @@ mod tests {
                     "http://hl7.org/fhir/StructureDefinition/Practitioner".to_string(),
                 ),
                 derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
             }],
             warnings: Vec::new(),
         };
@@ -394,6 +401,7 @@ mod tests {
                     "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                 ),
                 derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
             }],
             warnings: Vec::new(),
         };

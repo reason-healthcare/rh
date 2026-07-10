@@ -245,6 +245,16 @@ pub fn fsh_path(input: Span<'_>) -> IResult<Span<'_>, FshPath> {
     let mut remaining = input;
 
     loop {
+        if remaining.fragment().starts_with('[') {
+            let (input, _) = char('[')(remaining)?;
+            let (input, index) = take_while1(|character: char| character.is_ascii_digit())(input)?;
+            let (input, _) = char(']')(input)?;
+            segments.push(FshPathSegment::Index(
+                index.fragment().parse::<u32>().unwrap(),
+            ));
+            remaining = input;
+            continue;
+        }
         if !remaining.fragment().starts_with('.') {
             break;
         }
@@ -415,6 +425,7 @@ pub fn fsh_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     }
 
     alt((
+        parse_numeric_leading_instance_ref,
         parse_ratio,
         parse_quantity,
         parse_reference,
@@ -434,6 +445,23 @@ pub fn fsh_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
             Ok((input, FshValue::InstanceRef(s.to_string())))
         },
     ))(input)
+}
+
+fn parse_numeric_leading_instance_ref(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
+    let (remaining, token) = take_while1(|c: char| !c.is_whitespace() && c != '\n')(input)?;
+    let value = token.fragment();
+    if value.starts_with(|character: char| character.is_ascii_digit())
+        && value
+            .chars()
+            .any(|character| character.is_ascii_alphabetic() || character == '-')
+    {
+        Ok((remaining, FshValue::InstanceRef(value.to_string())))
+    } else {
+        Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )))
+    }
 }
 
 /// Parse `$identifier` as a canonical reference (for use in value positions referencing aliases).
@@ -545,7 +573,16 @@ fn parse_quantity(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
             |s: Span<'_>| s.fragment().to_string(),
         ),
     ))(input)?;
-    Ok((input, FshValue::Quantity { value: val, unit }))
+    let (input, _) = ws(input)?;
+    let (input, display) = opt(quoted_string)(input)?;
+    Ok((
+        input,
+        FshValue::Quantity {
+            value: val,
+            unit,
+            display,
+        },
+    ))
 }
 
 /// Parse a single-quoted UCUM unit code like `'kg'`, returning the inner code.

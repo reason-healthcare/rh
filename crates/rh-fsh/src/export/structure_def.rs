@@ -481,7 +481,21 @@ fn fsh_value_to_fixed(value: &FshValue) -> serde_json::Value {
             }
             obj
         }
-        FshValue::Quantity { value, unit } => serde_json::json!({ "value": value, "unit": unit }),
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
+            let mut quantity = serde_json::json!({
+                "value": value,
+                "system": "http://unitsofmeasure.org",
+                "code": unit,
+            });
+            if let Some(display) = display {
+                quantity["unit"] = serde_json::Value::String(display.clone());
+            }
+            quantity
+        }
         FshValue::Ratio {
             numerator,
             denominator,
