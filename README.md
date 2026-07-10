@@ -6,7 +6,7 @@
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust Version](https://img.shields.io/badge/rust-1.91%2B-orange.svg)](https://www.rust-lang.org)
 
-**Rust Health (rh)** is a modern, high-performance toolkit for working with HL7® FHIR®, purpose-built in Rust. It ships as a cross-platform **CLI**, a set of **Rust library crates**, and **WebAssembly-backed npm packages** — all without the overhead of JVM- or .NET-based stacks.
+**Rust Health (rh)** is a modern, high-performance toolkit for healthcare interoperability and AI agent workflows, built in Rust. It provides deterministic capabilities for working with HL7® FHIR®, including validation, FHIRPath, FHIR Shorthand (FSH), CQL, terminology, and packaging, and is available as a cross-platform CLI, Rust crates, and WebAssembly-powered npm packages.
 
 ## Motivation
 
