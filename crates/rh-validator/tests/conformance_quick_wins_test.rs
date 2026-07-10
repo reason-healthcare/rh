@@ -2424,7 +2424,7 @@ fn base_profile_rejects_unknown_resource_property() {
 
 #[test]
 fn base_profile_rejects_invalid_concrete_choice_suffix() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    let validator = validator_with_observation_choice_profile();
 
     let observation = json!({
         "resourceType": "Observation",
@@ -2453,7 +2453,7 @@ fn base_profile_rejects_invalid_concrete_choice_suffix() {
 
 #[test]
 fn base_profile_rejects_unknown_nested_backbone_property() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    let validator = validator_with_plan_definition_backbone_profile();
 
     let plan_definition = json!({
         "resourceType": "PlanDefinition",
@@ -2480,7 +2480,7 @@ fn base_profile_rejects_unknown_nested_backbone_property() {
 
 #[test]
 fn base_profile_rejects_unknown_deeply_nested_backbone_property() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    let validator = validator_with_plan_definition_backbone_profile();
 
     let plan_definition = json!({
         "resourceType": "PlanDefinition",
@@ -2510,7 +2510,7 @@ fn base_profile_rejects_unknown_deeply_nested_backbone_property() {
 
 #[test]
 fn base_profile_accepts_valid_nested_backbone_property() {
-    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    let validator = validator_with_plan_definition_backbone_profile();
 
     let plan_definition = json!({
         "resourceType": "PlanDefinition",
@@ -2535,6 +2535,96 @@ fn base_profile_accepts_valid_nested_backbone_property() {
             && i.code == IssueCode::Structure
             && i.path.as_deref() == Some("PlanDefinition.action.relatedAction")
     }));
+}
+
+fn validator_with_observation_choice_profile() -> FhirValidator {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/StructureDefinition/Observation",
+        "name": "Observation",
+        "type": "Observation",
+        "snapshot": {
+            "element": [
+                {"id": "Observation", "path": "Observation", "min": 0, "max": "*"},
+                {"id": "Observation.status", "path": "Observation.status", "min": 1, "max": "1"},
+                {"id": "Observation.code", "path": "Observation.code", "min": 1, "max": "1"},
+                {
+                    "id": "Observation.value[x]",
+                    "path": "Observation.value[x]",
+                    "min": 0,
+                    "max": "1",
+                    "type": [
+                        {"code": "Quantity"},
+                        {"code": "CodeableConcept"},
+                        {"code": "string"},
+                        {"code": "boolean"},
+                        {"code": "integer"},
+                        {"code": "Range"},
+                        {"code": "Ratio"},
+                        {"code": "SampledData"},
+                        {"code": "time"},
+                        {"code": "dateTime"},
+                        {"code": "Period"}
+                    ]
+                }
+            ]
+        }
+    }));
+    validator
+}
+
+fn validator_with_plan_definition_backbone_profile() -> FhirValidator {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://hl7.org/fhir/StructureDefinition/PlanDefinition",
+        "name": "PlanDefinition",
+        "type": "PlanDefinition",
+        "snapshot": {
+            "element": [
+                {"id": "PlanDefinition", "path": "PlanDefinition", "min": 0, "max": "*"},
+                {"id": "PlanDefinition.status", "path": "PlanDefinition.status", "min": 1, "max": "1"},
+                {"id": "PlanDefinition.action", "path": "PlanDefinition.action", "min": 0, "max": "*"},
+                {"id": "PlanDefinition.action.id", "path": "PlanDefinition.action.id", "min": 0, "max": "1"},
+                {
+                    "id": "PlanDefinition.action.action",
+                    "path": "PlanDefinition.action.action",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "PlanDefinition.action.relatedAction",
+                    "path": "PlanDefinition.action.relatedAction",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "PlanDefinition.action.relatedAction.actionId",
+                    "path": "PlanDefinition.action.relatedAction.actionId",
+                    "min": 1,
+                    "max": "1"
+                },
+                {
+                    "id": "PlanDefinition.action.relatedAction.relationship",
+                    "path": "PlanDefinition.action.relatedAction.relationship",
+                    "min": 1,
+                    "max": "1"
+                },
+                {
+                    "id": "PlanDefinition.action.relatedAction.offset[x]",
+                    "path": "PlanDefinition.action.relatedAction.offset[x]",
+                    "min": 0,
+                    "max": "1",
+                    "type": [
+                        {"code": "Duration"},
+                        {"code": "Range"}
+                    ]
+                }
+            ]
+        }
+    }));
+    validator
 }
 
 #[test]
