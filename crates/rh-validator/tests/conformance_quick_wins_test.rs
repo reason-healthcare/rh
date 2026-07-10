@@ -2423,6 +2423,121 @@ fn base_profile_rejects_unknown_resource_property() {
 }
 
 #[test]
+fn base_profile_rejects_invalid_concrete_choice_suffix() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let observation = json!({
+        "resourceType": "Observation",
+        "status": "final",
+        "code": {
+            "coding": [{
+                "system": "http://loinc.org",
+                "code": "8302-2"
+            }]
+        },
+        "valueNotAType": "72"
+    });
+
+    let result = validator.validate_auto(&observation).unwrap();
+
+    assert!(
+        result.issues.iter().any(|i| {
+            i.severity == Severity::Error
+                && i.code == IssueCode::Structure
+                && i.message.contains("valueNotAType")
+        }),
+        "expected valueNotAType structure error, got: {:?}",
+        result.issues
+    );
+}
+
+#[test]
+fn base_profile_rejects_unknown_nested_backbone_property() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let plan_definition = json!({
+        "resourceType": "PlanDefinition",
+        "status": "draft",
+        "action": [{
+            "id": "assess",
+            "relatedAction": [{
+                "actionId": "other-action",
+                "relationship": "before-start",
+                "description": "R4 relatedAction has no description field"
+            }]
+        }]
+    });
+
+    let result = validator.validate_auto(&plan_definition).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("description")
+            && i.path.as_deref() == Some("PlanDefinition.action.relatedAction")
+    }));
+}
+
+#[test]
+fn base_profile_rejects_unknown_deeply_nested_backbone_property() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let plan_definition = json!({
+        "resourceType": "PlanDefinition",
+        "status": "draft",
+        "action": [{
+            "id": "parent",
+            "action": [{
+                "id": "child",
+                "relatedAction": [{
+                    "actionId": "other-action",
+                    "relationship": "before-start",
+                    "description": "R4 relatedAction has no description field"
+                }]
+            }]
+        }]
+    });
+
+    let result = validator.validate_auto(&plan_definition).unwrap();
+
+    assert!(result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.message.contains("description")
+            && i.path.as_deref() == Some("PlanDefinition.action.action.relatedAction")
+    }));
+}
+
+#[test]
+fn base_profile_accepts_valid_nested_backbone_property() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+
+    let plan_definition = json!({
+        "resourceType": "PlanDefinition",
+        "status": "draft",
+        "action": [{
+            "id": "assess",
+            "relatedAction": [{
+                "actionId": "other-action",
+                "relationship": "before-start",
+                "offsetDuration": {
+                    "value": 1,
+                    "unit": "day"
+                }
+            }]
+        }]
+    });
+
+    let result = validator.validate_auto(&plan_definition).unwrap();
+
+    assert!(!result.issues.iter().any(|i| {
+        i.severity == Severity::Error
+            && i.code == IssueCode::Structure
+            && i.path.as_deref() == Some("PlanDefinition.action.relatedAction")
+    }));
+}
+
+#[test]
 fn primitive_date_format_rejects_non_date_text() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
 
