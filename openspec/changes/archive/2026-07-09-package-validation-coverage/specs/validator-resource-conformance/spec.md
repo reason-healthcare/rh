@@ -65,6 +65,20 @@ slices.
 - **WHEN** a closed slicing definition is used and an element matches no allowed slice
 - **THEN** validation reports an ERROR identifying the unsliced element
 
+### Requirement: Validator reports selected Questionnaire item authoring issues
+
+The validator SHALL report selected Questionnaire item authoring issues that
+are available from core R4 rules without requiring package context or remote
+terminology access.
+
+#### Scenario: Unsupported answer option item type is reported
+- **WHEN** a Questionnaire item has type `boolean` and includes `answerOption` or `answerValueSet`
+- **THEN** validation reports an ERROR for the `que-5` invariant at the item path
+
+#### Scenario: Answer option coding code without system is warned
+- **WHEN** a Questionnaire `answerOption.valueCoding` has a `code` but no `system`
+- **THEN** validation reports a WARNING at the answer option coding path
+
 ### Requirement: Validator validates QuestionnaireResponse against Questionnaire
 
 The validator SHALL validate QuestionnaireResponse resources against their

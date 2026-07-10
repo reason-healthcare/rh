@@ -27,6 +27,7 @@
 
 ## 5. QuestionnaireResponse Validation
 
+- [x] 5.0 Validate selected Questionnaire item authoring invariants, including `que-5` answer option applicability and incomplete answer option Coding warnings.
 - [x] 5.1 Resolve Questionnaire resources from package-local and dependency context.
 - [x] 5.2 Validate required answers and answer type compatibility.
 - [x] 5.3 Validate answer options, local answerValueSet references, and reference answer constraints.

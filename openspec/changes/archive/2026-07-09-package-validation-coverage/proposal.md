@@ -17,6 +17,9 @@ the checks most relevant when building and checking FHIR packages.
 - Improve QuestionnaireResponse validation against packaged Questionnaire
   resources, including required answers, answer type checks, answer option /
   answerValueSet checks where locally resolvable, and reference constraints.
+- Add selected Questionnaire item authoring checks for core R4 rules such as
+  `que-5` answer option applicability and incomplete answer option Coding
+  warnings.
 - Improve local terminology and ValueSet validation for package-local resources,
   including ValueSet expansion/compose lookup and version-tolerant canonical
   matching.

@@ -394,7 +394,7 @@ impl FhirValidator {
         }
 
         if resource_type_name == "Questionnaire" {
-            for issue in validate_questionnaire_enable_behavior(resource) {
+            for issue in validate_questionnaire_item_invariants(resource) {
                 result = result.with_issue(issue);
             }
         }
@@ -4321,21 +4321,17 @@ fn validate_parameters_resource_references(
     }
 }
 
-fn validate_questionnaire_enable_behavior(questionnaire: &Value) -> Vec<ValidationIssue> {
+fn validate_questionnaire_item_invariants(questionnaire: &Value) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
     if let Some(items) = questionnaire.get("item").and_then(|value| value.as_array()) {
-        validate_questionnaire_item_enable_behavior(items, "Questionnaire.item", &mut issues);
+        validate_questionnaire_items(items, "Questionnaire.item", &mut issues);
     }
 
     issues
 }
 
-fn validate_questionnaire_item_enable_behavior(
-    items: &[Value],
-    path: &str,
-    issues: &mut Vec<ValidationIssue>,
-) {
+fn validate_questionnaire_items(items: &[Value], path: &str, issues: &mut Vec<ValidationIssue>) {
     for (idx, item) in items.iter().enumerate() {
         let item_path = format!("{path}[{idx}]");
         let enable_when_count = item
@@ -4353,14 +4349,88 @@ fn validate_questionnaire_item_enable_behavior(
             );
         }
 
+        validate_questionnaire_item_answer_options(item, &item_path, issues);
+
         if let Some(children) = item.get("item").and_then(|value| value.as_array()) {
-            validate_questionnaire_item_enable_behavior(
-                children,
-                &format!("{item_path}.item"),
-                issues,
+            validate_questionnaire_items(children, &format!("{item_path}.item"), issues);
+        }
+    }
+}
+
+fn validate_questionnaire_item_answer_options(
+    item: &Value,
+    item_path: &str,
+    issues: &mut Vec<ValidationIssue>,
+) {
+    let item_type = item.get("type").and_then(|value| value.as_str());
+    let has_answer_option = item.get("answerOption").is_some();
+    let has_answer_valueset = item.get("answerValueSet").is_some();
+
+    if (has_answer_option || has_answer_valueset)
+        && !item_type.is_some_and(is_questionnaire_answer_option_type)
+    {
+        let actual_type = item_type.unwrap_or("<missing>");
+        let field = if has_answer_option {
+            "answerOption"
+        } else {
+            "answerValueSet"
+        };
+        issues.push(
+            ValidationIssue::error(
+                IssueCode::Invariant,
+                format!("que-5: {actual_type} item has {field}"),
+            )
+            .with_path(item_path.to_string()),
+        );
+    }
+
+    let Some(answer_options) = item.get("answerOption").and_then(|value| value.as_array()) else {
+        return;
+    };
+
+    for (option_idx, option) in answer_options.iter().enumerate() {
+        let Some(coding) = option
+            .get("valueCoding")
+            .and_then(|value| value.as_object())
+        else {
+            continue;
+        };
+        let has_code = coding
+            .get("code")
+            .and_then(|value| value.as_str())
+            .is_some_and(|code| !code.is_empty());
+        let has_system = coding
+            .get("system")
+            .and_then(|value| value.as_str())
+            .is_some_and(|system| !system.is_empty());
+
+        if has_code && !has_system {
+            issues.push(
+                ValidationIssue::warning(
+                    IssueCode::Incomplete,
+                    "Questionnaire answerOption Coding has code but no system".to_string(),
+                )
+                .with_path(format!(
+                    "{item_path}.answerOption[{option_idx}].valueCoding"
+                )),
             );
         }
     }
+}
+
+fn is_questionnaire_answer_option_type(item_type: &str) -> bool {
+    matches!(
+        item_type,
+        "choice"
+            | "open-choice"
+            | "decimal"
+            | "integer"
+            | "date"
+            | "dateTime"
+            | "time"
+            | "string"
+            | "quantity"
+    )
 }
 
 fn validate_measure_population_criteria(measure: &Value) -> Vec<ValidationIssue> {

@@ -37,9 +37,9 @@ package pipeline diagnostics.
 1. Scope validation around package authoring errors.
 
    Rationale: package validation should catch errors authors can fix in source
-   resources: unknown fields, invalid choice fields, profile rule violations,
-   bad references, QuestionnaireResponse mismatches, and local ValueSet/binding
-   issues.
+   resources: unknown fields, invalid choice fields, selected Questionnaire
+   item authoring issues, profile rule violations, bad references,
+   QuestionnaireResponse mismatches, and local ValueSet/binding issues.
 
    Alternative considered: carry the full exploratory validator expansion. That
    was too large for this branch and included validation areas already removed
