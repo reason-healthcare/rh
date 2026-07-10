@@ -26,6 +26,7 @@ pub struct UnknownPropertyPlan {
     pub resource_roots: HashSet<String>,
     pub allowed_children: HashMap<String, HashSet<String>>,
     pub allowed_choice_prefixes: HashMap<String, Vec<String>>,
+    pub allowed_choice_fields: HashMap<String, HashSet<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -310,7 +311,7 @@ impl RuleCompiler {
 
             let rules = Arc::new(CompiledValidationRules {
                 profile_url: profile_url.clone(),
-                unknown_properties: build_unknown_property_plan(&element_paths),
+                unknown_properties: build_unknown_property_plan(&element_paths, &type_rules),
                 element_paths,
                 cardinality_rules,
                 type_rules,
@@ -334,7 +335,7 @@ impl RuleCompiler {
 
         let rules = Arc::new(CompiledValidationRules {
             profile_url: profile_url.clone(),
-            unknown_properties: build_unknown_property_plan(&element_paths),
+            unknown_properties: build_unknown_property_plan(&element_paths, &type_rules),
             element_paths,
             cardinality_rules,
             type_rules,
@@ -377,10 +378,14 @@ impl RuleCompiler {
     }
 }
 
-fn build_unknown_property_plan(element_paths: &[String]) -> UnknownPropertyPlan {
+fn build_unknown_property_plan(
+    element_paths: &[String],
+    type_rules: &[TypeRule],
+) -> UnknownPropertyPlan {
     let mut resource_roots = HashSet::new();
     let mut allowed_children: HashMap<String, HashSet<String>> = HashMap::new();
     let mut allowed_choice_prefixes: HashMap<String, Vec<String>> = HashMap::new();
+    let mut allowed_choice_fields: HashMap<String, HashSet<String>> = HashMap::new();
 
     for element_path in element_paths {
         let parts: Vec<&str> = element_path.split('.').collect();
@@ -400,9 +405,17 @@ fn build_unknown_property_plan(element_paths: &[String]) -> UnknownPropertyPlan 
             .unwrap_or(parts[parts.len() - 1]);
         if let Some(prefix) = child.strip_suffix("[x]") {
             allowed_choice_prefixes
-                .entry(parent)
+                .entry(parent.clone())
                 .or_default()
                 .push(prefix.to_string());
+            if let Some(rule) = type_rules.iter().find(|rule| rule.path == *element_path) {
+                let fields = allowed_choice_fields.entry(parent.clone()).or_default();
+                for type_code in &rule.types {
+                    if let Some(field_name) = choice_field_name(prefix, type_code) {
+                        fields.insert(field_name);
+                    }
+                }
+            }
         } else {
             allowed_children
                 .entry(parent)
@@ -415,7 +428,23 @@ fn build_unknown_property_plan(element_paths: &[String]) -> UnknownPropertyPlan 
         resource_roots,
         allowed_children,
         allowed_choice_prefixes,
+        allowed_choice_fields,
     }
+}
+
+fn choice_field_name(prefix: &str, type_code: &str) -> Option<String> {
+    let type_name = type_code
+        .rsplit(['/', '.'])
+        .next()
+        .filter(|name| !name.is_empty())?;
+    let mut chars = type_name.chars();
+    let first = chars.next()?;
+    Some(format!(
+        "{}{}{}",
+        prefix,
+        first.to_ascii_uppercase(),
+        chars.as_str()
+    ))
 }
 
 fn add_differential_binding_rules(

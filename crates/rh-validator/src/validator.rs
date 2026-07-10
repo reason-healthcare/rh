@@ -5643,6 +5643,7 @@ fn validate_unknown_properties_against_rules(
         resource_type,
         &rules.unknown_properties.allowed_children,
         &rules.unknown_properties.allowed_choice_prefixes,
+        &rules.unknown_properties.allowed_choice_fields,
         &mut issues,
     );
     issues
@@ -5653,11 +5654,15 @@ fn validate_unknown_properties_recursive(
     path: &str,
     allowed_children: &HashMap<String, HashSet<String>>,
     allowed_choice_prefixes: &HashMap<String, Vec<String>>,
+    allowed_choice_fields: &HashMap<String, HashSet<String>>,
     issues: &mut Vec<ValidationIssue>,
 ) {
     match value {
         Value::Object(obj) => {
-            let Some(allowed) = allowed_children.get(path) else {
+            let Some(allowed_path) = resolve_allowed_children_path(path, allowed_children) else {
+                return;
+            };
+            let Some(allowed) = allowed_children.get(&allowed_path) else {
                 return;
             };
 
@@ -5665,12 +5670,19 @@ fn validate_unknown_properties_recursive(
                 if key == "resourceType" || key.starts_with('_') {
                     continue;
                 }
-                let known_child = allowed.contains(key)
-                    || allowed_choice_prefixes.get(path).is_some_and(|prefixes| {
-                        prefixes
-                            .iter()
-                            .any(|prefix| key.starts_with(prefix) && key.len() > prefix.len())
-                    });
+                let known_choice_child =
+                    if let Some(fields) = allowed_choice_fields.get(&allowed_path) {
+                        fields.contains(key)
+                    } else {
+                        allowed_choice_prefixes
+                            .get(&allowed_path)
+                            .is_some_and(|prefixes| {
+                                prefixes.iter().any(|prefix| {
+                                    key.starts_with(prefix) && key.len() > prefix.len()
+                                })
+                            })
+                    };
+                let known_child = allowed.contains(key) || known_choice_child;
                 if !known_child {
                     issues.push(
                         ValidationIssue::error(
@@ -5686,6 +5698,7 @@ fn validate_unknown_properties_recursive(
                     &format!("{path}.{key}"),
                     allowed_children,
                     allowed_choice_prefixes,
+                    allowed_choice_fields,
                     issues,
                 );
             }
@@ -5697,12 +5710,39 @@ fn validate_unknown_properties_recursive(
                     path,
                     allowed_children,
                     allowed_choice_prefixes,
+                    allowed_choice_fields,
                     issues,
                 );
             }
         }
         _ => {}
     }
+}
+
+fn resolve_allowed_children_path(
+    path: &str,
+    allowed_children: &HashMap<String, HashSet<String>>,
+) -> Option<String> {
+    if allowed_children.contains_key(path) {
+        return Some(path.to_string());
+    }
+
+    let mut parts: Vec<&str> = path.split('.').collect();
+    while parts.len() > 2 {
+        let duplicate_index = parts
+            .windows(2)
+            .position(|window| window[0] == window[1])
+            .map(|index| index + 1);
+        let index = duplicate_index?;
+
+        parts.remove(index);
+        let normalized = parts.join(".");
+        if allowed_children.contains_key(&normalized) {
+            return Some(normalized);
+        }
+    }
+
+    None
 }
 
 fn get_value_at_path<'a>(resource: &'a Value, path: &str) -> Option<&'a Value> {
