@@ -1,0 +1,24 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PrimaryAndSecondaryCancerDisorderVS",
+  "id": "primary-and-secondard-cancer-disorder-vs",
+  "title": "Cancer Disorder Value Set",
+  "description": "A value set containing both primary and secondary tumor types.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/primary-and-secondard-cancer-disorder-vs",
+  "compose": {
+    "include": [
+      {
+        "valueSet": [
+          "http://example.org/fhir/ValueSet/primary-cancer-disorder"
+        ]
+      },
+      {
+        "valueSet": [
+          "http://example.org/fhir/ValueSet/secondary-cancer-disorder"
+        ]
+      }
+    ]
+  }
+}

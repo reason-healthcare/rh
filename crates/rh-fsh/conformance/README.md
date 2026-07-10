@@ -15,8 +15,8 @@ Default projects:
 ## Usage
 
 ```bash
-# Build the rh CLI used by the runner.
-cargo build -p rh-cli
+# Build the rh CLI in an isolated target directory.
+CARGO_TARGET_DIR=target/conformance cargo build -p rh-cli
 
 # Run all default projects. Repositories are cloned under conformance/projects.
 python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py
@@ -24,7 +24,7 @@ python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py
 # Smoke-test only the first N FSH files per project.
 python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --limit-files 10
 
-# Refresh already-cloned repositories before running.
+# Restore already-cloned repositories to the revisions in projects.json.
 python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --update-projects
 ```
 
@@ -34,3 +34,7 @@ and `crates/rh-fsh/conformance/results/latest-summary.md`.
 The runner normalizes fields that are expected to differ across tools or runs
 (`text`, `meta`, generated package metadata, and publisher-generated index
 files), then compares resources by `(resourceType, id)`.
+
+SUSHI is pinned to 3.19.0. Project repository URLs and revisions are pinned in
+`projects.json`; the runner refuses to use a different revision unless
+`--update-projects` is supplied to restore the checked-in revision.

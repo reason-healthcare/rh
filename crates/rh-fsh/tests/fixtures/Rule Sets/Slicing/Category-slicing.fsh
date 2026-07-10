@@ -1,6 +1,8 @@
 // @Name: Category Slicing
 // @Description: Slice the category element so a certain category is required
 
+Alias: LNC = http://loinc.org
+
 RuleSet: CategorySlicingRules
 * category ^slicing.discriminator.type = #pattern
 * category ^slicing.discriminator.path = "$this"

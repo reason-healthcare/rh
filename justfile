@@ -200,6 +200,8 @@ regen-r4:
     pub mod metadata;
     EOF
     cat > "$OUTPUT/src/metadata.rs" <<'EOF'
+    use phf::{phf_map, Map};
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum FhirPrimitiveType {
         Boolean, Integer, String, Date, DateTime, Instant, Time, Decimal, Uri, Url, Canonical,
@@ -220,6 +222,8 @@ regen-r4:
         pub is_choice_type: bool,
         pub choice_types: &'static [&'static str],
     }
+    pub static FHIR_TYPE_REGISTRY: Map<&'static str, &'static Map<&'static str, FieldInfo>> =
+        phf_map! {};
     pub fn get_field_info(_type_name: &str, _field_name: &str) -> Option<&'static FieldInfo> {
         None
     }
@@ -265,6 +269,8 @@ regen-r5:
     pub mod metadata;
     EOF
     cat > "$OUTPUT/src/metadata.rs" <<'EOF'
+    use phf::{phf_map, Map};
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum FhirPrimitiveType {
         Boolean, Integer, String, Date, DateTime, Instant, Time, Decimal, Uri, Url, Canonical,
@@ -285,6 +291,8 @@ regen-r5:
         pub is_choice_type: bool,
         pub choice_types: &'static [&'static str],
     }
+    pub static FHIR_TYPE_REGISTRY: Map<&'static str, &'static Map<&'static str, FieldInfo>> =
+        phf_map! {};
     pub fn get_field_info(_type_name: &str, _field_name: &str) -> Option<&'static FieldInfo> {
         None
     }

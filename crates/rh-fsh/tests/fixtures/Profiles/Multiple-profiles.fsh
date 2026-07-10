@@ -14,5 +14,5 @@ Id: pediatric-patient-profile
 Parent: base-patient-profile
 Title: "Pediatric Patient Profile"
 Description: "A profile for pediatric patients, derived from the base profile."
-* birthDate MS
+* deceased[x] MS
 * ^url = "http://example.org/StructureDefinition/PediatricPatientProfile"

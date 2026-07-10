@@ -143,6 +143,9 @@ jobs:
       - name: Run cargo test
         run: cargo test --workspace --all-features
 
+      - name: Run rh-fsh SUSHI compatibility tests
+        run: cargo test -p rh-fsh --test sushi_compat -- --include-ignored
+
   lints:
     name: Lints
     runs-on: ubuntu-latest

@@ -233,9 +233,9 @@ fn expand_value(value: &mut FshValue, aliases: &HashMap<String, String>) {
                 *url = resolved.clone();
             }
         }
-        FshValue::Reference(ref mut r) => {
-            if let Some(resolved) = aliases.get(r.as_str()) {
-                *r = resolved.clone();
+        FshValue::Reference { target, .. } => {
+            if let Some(resolved) = aliases.get(target.as_str()) {
+                *target = resolved.clone();
             }
         }
         FshValue::Code {

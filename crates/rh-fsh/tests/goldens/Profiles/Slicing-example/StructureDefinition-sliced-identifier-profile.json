@@ -1,0 +1,83 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "sliced-identifier-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/sliced-identifier-profile",
+  "version": "0.1.0",
+  "name": "SlicedIdentifierProfile",
+  "title": "Sliced Identifier Profile",
+  "status": "draft",
+  "description": "A profile that slices the identifier element by system.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.identifier",
+        "path": "Patient.identifier",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "system"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 1
+      },
+      {
+        "id": "Patient.identifier:MRN",
+        "path": "Patient.identifier",
+        "sliceName": "MRN",
+        "short": "Medical Record Number",
+        "min": 1,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.identifier:MRN.system",
+        "path": "Patient.identifier.system",
+        "min": 1,
+        "patternUri": "http://hospital.example.org/mrn"
+      },
+      {
+        "id": "Patient.identifier:MRN.value",
+        "path": "Patient.identifier.value",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.identifier:SSN",
+        "path": "Patient.identifier",
+        "sliceName": "SSN",
+        "short": "Social Security Number",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Patient.identifier:SSN.system",
+        "path": "Patient.identifier.system",
+        "min": 1,
+        "patternUri": "http://hl7.org/fhir/sid/us-ssn"
+      },
+      {
+        "id": "Patient.identifier:NPI",
+        "path": "Patient.identifier",
+        "sliceName": "NPI",
+        "short": "National Provider Identifier",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Patient.identifier:NPI.system",
+        "path": "Patient.identifier.system",
+        "min": 1,
+        "patternUri": "http://hl7.org/fhir/sid/us-npi"
+      }
+    ]
+  }
+}

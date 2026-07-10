@@ -22,28 +22,25 @@ WORKSPACE_ROOT = CRATE_DIR.parent.parent
 PROJECTS_DIR = CONFORMANCE_DIR / "projects"
 RESULTS_DIR = CONFORMANCE_DIR / "results"
 FIXTURES_DIR = CONFORMANCE_DIR / "fixtures"
-DEFAULT_RH_CLI = WORKSPACE_ROOT / "target/debug/rh"
+PROJECTS_MANIFEST = CONFORMANCE_DIR / "projects.json"
+DEFAULT_RH_CLI = WORKSPACE_ROOT / "target/conformance/debug/rh"
+DEFAULT_SUSHI_BIN = "npx --yes fsh-sushi@3.19.0"
 
-DEFAULT_PROJECTS = {
-    "carin-bb": "https://github.com/HL7/carin-bb.git",
-    "mcode": "https://github.com/HL7/fhir-mCODE-ig.git",
-    "davinci-crd": "https://github.com/HL7/davinci-crd.git",
-    "davinci-dtr": "https://github.com/HL7/davinci-dtr.git",
-    "davinci-pas": "https://github.com/HL7/davinci-pas.git",
-    "fhir-ips": "https://github.com/HL7/fhir-ips.git",
-}
+PROJECT_SPECS = json.loads(PROJECTS_MANIFEST.read_text())
+DEFAULT_PROJECTS = {name: spec["repo"] for name, spec in PROJECT_SPECS.items()}
+DEFAULT_REVISIONS = {name: spec["revision"] for name, spec in PROJECT_SPECS.items()}
 
 FIXTURE_PROJECTS = {
     "profile-identity-smoke": FIXTURES_DIR / "profile-identity-smoke",
 }
 
 DEFAULT_THRESHOLDS = {
-    "carin-bb": {"missing": 22, "extra": 22, "mismatch": 112},
-    "mcode": {"missing": 0, "extra": 0, "mismatch": 329},
-    "davinci-crd": {"missing": 7, "extra": 8, "mismatch": 74},
-    "davinci-dtr": {"missing": 0, "extra": 5, "mismatch": 64},
-    "davinci-pas": {"missing": 14, "extra": 17, "mismatch": 142},
-    "fhir-ips": {"missing": 0, "extra": 97, "mismatch": 117},
+    "carin-bb": {"missing": 0, "extra": 0, "mismatch": 86},
+    "mcode": {"missing": 0, "extra": 0, "mismatch": 307},
+    "davinci-crd": {"missing": 0, "extra": 0, "mismatch": 70},
+    "davinci-dtr": {"missing": 0, "extra": 0, "mismatch": 54},
+    "davinci-pas": {"missing": 0, "extra": 0, "mismatch": 133},
+    "fhir-ips": {"missing": 0, "extra": 0, "mismatch": 103},
     "profile-identity-smoke": {"missing": 0, "extra": 0, "mismatch": 1},
 }
 
@@ -127,7 +124,7 @@ def main() -> int:
     parser.add_argument("--projects-dir", type=Path, default=PROJECTS_DIR)
     parser.add_argument("--results-dir", type=Path, default=RESULTS_DIR)
     parser.add_argument("--rh-cli", type=Path, default=DEFAULT_RH_CLI)
-    parser.add_argument("--sushi-bin", default="npx --yes fsh-sushi")
+    parser.add_argument("--sushi-bin", default=DEFAULT_SUSHI_BIN)
     parser.add_argument("--limit-files", type=int)
     parser.add_argument("--project", action="append", choices=sorted(DEFAULT_PROJECTS))
     parser.add_argument("--fixture", action="append", choices=sorted(FIXTURE_PROJECTS))
@@ -144,7 +141,13 @@ def main() -> int:
     results: list[ProjectResult] = []
     for name in selected:
         repo = DEFAULT_PROJECTS[name]
-        project_dir = ensure_project(name, repo, args.projects_dir, args.update_projects)
+        project_dir = ensure_project(
+            name,
+            repo,
+            DEFAULT_REVISIONS[name],
+            args.projects_dir,
+            args.update_projects,
+        )
         results.append(run_project(name, repo, project_dir, args, thresholds.get(name, {})))
     for name in args.fixture or []:
         project_dir = FIXTURE_PROJECTS[name]
@@ -168,13 +171,41 @@ def main() -> int:
     return 1 if failures else 0
 
 
-def ensure_project(name: str, repo: str, projects_dir: Path, update: bool) -> Path:
+def ensure_project(
+    name: str, repo: str, revision: str, projects_dir: Path, update: bool
+) -> Path:
     project_dir = projects_dir / name
     if not project_dir.exists():
-        run(["git", "clone", "--depth", "1", repo, str(project_dir)], cwd=projects_dir)
-    elif update:
-        run(["git", "fetch", "--depth", "1", "origin"], cwd=project_dir)
-        run(["git", "reset", "--hard", "origin/HEAD"], cwd=project_dir)
+        run(
+            ["git", "clone", "--filter=blob:none", "--no-checkout", repo, str(project_dir)],
+            cwd=projects_dir,
+        )
+        update = True
+
+    current = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=project_dir,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    ).stdout.strip()
+    if current != revision:
+        if not update:
+            raise RuntimeError(
+                f"{name} is at {current or 'no revision'}, expected {revision}; "
+                "rerun with --update-projects"
+            )
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=project_dir,
+            text=True,
+            stdout=subprocess.PIPE,
+            check=True,
+        ).stdout.strip()
+        if dirty:
+            raise RuntimeError(f"refusing to replace modified conformance project {name}")
+        run(["git", "fetch", "--depth", "1", "origin", revision], cwd=project_dir)
+        run(["git", "checkout", "--detach", revision], cwd=project_dir)
     return project_dir
 
 
@@ -460,12 +491,16 @@ def categorize_gaps(
 def find_resource_identity_pairs(
     missing: list[str], extra: list[str]
 ) -> tuple[set[str], set[str]]:
-    missing_by_id = {resource_id(item): item for item in missing}
-    extra_by_id = {resource_id(item): item for item in extra}
+    missing_by_id: dict[str, list[str]] = {}
+    extra_by_id: dict[str, list[str]] = {}
+    for item in missing:
+        missing_by_id.setdefault(resource_id(item), []).append(item)
+    for item in extra:
+        extra_by_id.setdefault(resource_id(item), []).append(item)
     shared_ids = set(missing_by_id) & set(extra_by_id)
     return (
-        {missing_by_id[resource_id] for resource_id in shared_ids},
-        {extra_by_id[resource_id] for resource_id in shared_ids},
+        {item for resource_id in shared_ids for item in missing_by_id[resource_id]},
+        {item for resource_id in shared_ids for item in extra_by_id[resource_id]},
     )
 
 

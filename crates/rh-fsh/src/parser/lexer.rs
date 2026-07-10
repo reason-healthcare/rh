@@ -560,7 +560,15 @@ fn parse_reference(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     let (input, _) = tag("Reference(")(input)?;
     let (input, target) = take_while(|c| c != ')')(input)?;
     let (input, _) = char(')')(input)?;
-    Ok((input, FshValue::Reference(target.fragment().to_string())))
+    let (input, _) = ws(input)?;
+    let (input, display) = opt(quoted_string)(input)?;
+    Ok((
+        input,
+        FshValue::Reference {
+            target: target.fragment().to_string(),
+            display,
+        },
+    ))
 }
 
 fn parse_canonical(input: Span<'_>) -> IResult<Span<'_>, FshValue> {

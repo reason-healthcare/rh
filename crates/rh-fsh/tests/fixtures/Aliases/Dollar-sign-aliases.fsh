@@ -15,7 +15,7 @@ Description: "A profile using aliases for cleaner rule writing."
 
 * code from $loinc|http://hl7.org/fhir/ValueSet/observation-codes (preferred)
 * valueQuantity.system = $ucum
-* category[+] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+* category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
 
 Instance: AliasedObservation
 InstanceOf: AliasedProfile

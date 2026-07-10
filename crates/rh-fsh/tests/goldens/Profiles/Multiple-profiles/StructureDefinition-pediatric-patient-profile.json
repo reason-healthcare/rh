@@ -1,0 +1,25 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pediatric-patient-profile",
+  "url": "http://example.org/StructureDefinition/PediatricPatientProfile",
+  "version": "0.1.0",
+  "name": "PediatricPatientProfile",
+  "title": "Pediatric Patient Profile",
+  "status": "draft",
+  "description": "A profile for pediatric patients, derived from the base profile.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://rh-fsh-test.example.org/StructureDefinition/base-patient-profile",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.deceased[x]",
+        "path": "Patient.deceased[x]",
+        "mustSupport": true
+      }
+    ]
+  }
+}

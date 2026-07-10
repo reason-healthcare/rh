@@ -1,0 +1,32 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "base-patient-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/base-patient-profile",
+  "version": "0.1.0",
+  "name": "BasePatientProfile",
+  "title": "Base Patient Profile",
+  "status": "draft",
+  "description": "A base profile for all patients.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.name",
+        "path": "Patient.name",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Patient.birthDate",
+        "path": "Patient.birthDate",
+        "min": 1,
+        "mustSupport": true
+      }
+    ]
+  }
+}

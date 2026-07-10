@@ -118,6 +118,10 @@ fn load_goldens(golden_dir: &Path) -> Vec<Value> {
     goldens
 }
 
+fn has_verified_empty_output(golden_dir: &Path) -> bool {
+    golden_dir.join(".sushi-empty").is_file()
+}
+
 // ── Comparison helpers ───────────────────────────────────────────────────────
 
 fn resource_key(v: &Value) -> (String, String) {
@@ -336,6 +340,16 @@ fn compare_outputs(actual: &[Value], golden: &[Value], fixture_name: &str) -> Ve
         }
     }
 
+    for actual_resource in actual {
+        let key = resource_key(actual_resource);
+        if !golden.iter().any(|g| resource_key(g) == key) {
+            diffs.push(format!(
+                "{fixture_name}: rh-fsh produced unexpected resource ({}, {})",
+                key.0, key.1
+            ));
+        }
+    }
+
     diffs
 }
 
@@ -355,16 +369,16 @@ fn run_category(category: &str) {
 
     let mut failures = Vec::new();
     let mut pass_count = 0;
-    let mut skip_count = 0;
+    let mut unverified = Vec::new();
 
     for case in &category_cases {
         let golden = load_goldens(&case.golden_dir);
-        if golden.is_empty() {
+        if golden.is_empty() && !has_verified_empty_output(&case.golden_dir) {
             eprintln!(
                 "SKIP {} (no goldens — run scripts/generate-fsh-goldens.sh)",
                 case.name
             );
-            skip_count += 1;
+            unverified.push(case.name.clone());
             continue;
         }
 
@@ -390,16 +404,17 @@ fn run_category(category: &str) {
     }
 
     eprintln!(
-        "\n{}/{} tests passed ({} skipped)",
+        "\n{}/{} tests passed ({} unverified)",
         pass_count,
         category_cases.len(),
-        skip_count
+        unverified.len()
     );
 
-    if !failures.is_empty() {
+    if !failures.is_empty() || !unverified.is_empty() {
         panic!(
-            "{} sushi compatibility failure(s) in category '{category}' (see above)",
-            failures.len()
+            "{} sushi compatibility failure(s) and {} unverified fixture(s) in category '{category}' (see above)",
+            failures.len(),
+            unverified.len()
         );
     }
 }
@@ -417,13 +432,13 @@ fn test_all_sushi_compat() {
 
     let mut failures = Vec::new();
     let mut pass_count = 0;
-    let mut skip_count = 0;
+    let mut unverified = Vec::new();
 
     for case in &cases {
         let golden = load_goldens(&case.golden_dir);
-        if golden.is_empty() {
-            eprintln!("SKIP {} (no goldens)", case.name);
-            skip_count += 1;
+        if golden.is_empty() && !has_verified_empty_output(&case.golden_dir) {
+            eprintln!("UNVERIFIED {} (no goldens)", case.name);
+            unverified.push(case.name.clone());
             continue;
         }
 
@@ -449,16 +464,17 @@ fn test_all_sushi_compat() {
     }
 
     eprintln!(
-        "\n{}/{} tests passed ({} skipped)",
+        "\n{}/{} tests passed ({} unverified)",
         pass_count,
         cases.len(),
-        skip_count
+        unverified.len()
     );
 
-    if !failures.is_empty() {
+    if !failures.is_empty() || !unverified.is_empty() {
         panic!(
-            "{} sushi compatibility failure(s) (see above)",
-            failures.len()
+            "{} sushi compatibility failure(s) and {} unverified fixture(s) (see above)",
+            failures.len(),
+            unverified.len()
         );
     }
 }

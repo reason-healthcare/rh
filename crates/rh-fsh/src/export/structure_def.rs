@@ -3,19 +3,26 @@
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
+use crate::DefinitionIndex;
 use std::sync::Arc;
+
+struct StructureExportContext<'a> {
+    defs: Arc<FhirDefs>,
+    config: &'a crate::FshConfig,
+    definition_index: &'a DefinitionIndex,
+}
 
 pub fn export_profile(
     profile: &Profile,
     defs: Arc<FhirDefs>,
     config: &crate::FshConfig,
-    parent_types: &std::collections::HashMap<String, String>,
+    definition_index: &DefinitionIndex,
 ) -> Result<serde_json::Value, FshError> {
     let fhir_type = profile
         .metadata
         .parent
         .as_deref()
-        .and_then(|p| resolve_fhir_type(p, parent_types, &defs))
+        .and_then(|p| definition_index.resolve_base_type(p, &defs))
         .unwrap_or_else(|| profile.metadata.name.clone());
     export_sd(
         &profile.metadata,
@@ -23,8 +30,11 @@ pub fn export_profile(
         "constraint",
         "resource",
         &fhir_type,
-        defs,
-        config,
+        StructureExportContext {
+            defs,
+            config,
+            definition_index,
+        },
     )
 }
 
@@ -32,7 +42,7 @@ pub fn export_extension(
     ext: &Extension,
     defs: Arc<FhirDefs>,
     config: &crate::FshConfig,
-    _parent_types: &std::collections::HashMap<String, String>,
+    definition_index: &DefinitionIndex,
 ) -> Result<serde_json::Value, FshError> {
     export_sd(
         &ext.metadata,
@@ -40,8 +50,11 @@ pub fn export_extension(
         "constraint",
         "complex-type",
         "Extension",
-        defs,
-        config,
+        StructureExportContext {
+            defs,
+            config,
+            definition_index,
+        },
     )
 }
 
@@ -49,7 +62,7 @@ pub fn export_logical(
     logical: &Logical,
     defs: Arc<FhirDefs>,
     config: &crate::FshConfig,
-    _parent_types: &std::collections::HashMap<String, String>,
+    definition_index: &DefinitionIndex,
 ) -> Result<serde_json::Value, FshError> {
     export_sd(
         &logical.metadata,
@@ -57,8 +70,11 @@ pub fn export_logical(
         "specialization",
         "logical",
         &logical.metadata.name,
-        defs,
-        config,
+        StructureExportContext {
+            defs,
+            config,
+            definition_index,
+        },
     )
 }
 
@@ -66,7 +82,7 @@ pub fn export_resource_def(
     res: &ResourceDef,
     defs: Arc<FhirDefs>,
     config: &crate::FshConfig,
-    _parent_types: &std::collections::HashMap<String, String>,
+    definition_index: &DefinitionIndex,
 ) -> Result<serde_json::Value, FshError> {
     export_sd(
         &res.metadata,
@@ -74,28 +90,12 @@ pub fn export_resource_def(
         "specialization",
         "resource",
         &res.metadata.name,
-        defs,
-        config,
+        StructureExportContext {
+            defs,
+            config,
+            definition_index,
+        },
     )
-}
-
-/// Resolve the FHIR base type by walking up the parent chain.
-/// Returns the first parent name that is a known FHIR type.
-fn resolve_fhir_type(
-    name: &str,
-    parent_types: &std::collections::HashMap<String, String>,
-    defs: &FhirDefs,
-) -> Option<String> {
-    if defs.get_sd(name).is_some() {
-        // It's a built-in FHIR type
-        let sd = defs.get_sd(name).unwrap();
-        return Some(sd.base_type.clone());
-    }
-    // Walk up via the pre-computed parent_types map
-    if let Some(parent) = parent_types.get(name) {
-        return resolve_fhir_type(parent, parent_types, defs);
-    }
-    None
 }
 
 fn export_sd(
@@ -104,14 +104,30 @@ fn export_sd(
     derivation: &str,
     kind: &str,
     fhir_type: &str,
-    defs: Arc<FhirDefs>,
-    config: &crate::FshConfig,
+    context: StructureExportContext<'_>,
 ) -> Result<serde_json::Value, FshError> {
+    let StructureExportContext {
+        defs,
+        config,
+        definition_index,
+    } = context;
     let base_url = meta
         .parent
         .as_deref()
         .and_then(|p| defs.get_sd(p))
         .map(|sd| sd.url.clone())
+        .or_else(|| {
+            meta.parent.as_deref().and_then(|parent| {
+                definition_index.lookup(parent).and_then(|definition| {
+                    definition.url.as_ref().map(|url| {
+                        parent
+                            .split_once('|')
+                            .map(|(_, version)| format!("{url}|{version}"))
+                            .unwrap_or_else(|| url.clone())
+                    })
+                })
+            })
+        })
         .unwrap_or_else(|| {
             // Custom parent profile — build its URL
             if let Some(parent) = &meta.parent {
@@ -143,8 +159,21 @@ fn export_sd(
 
     let status = config.status.as_deref().unwrap_or("active");
 
-    // base_path for differential element paths is the FHIR resource type
-    let base_path = fhir_type;
+    let base_path = if kind == "logical" { sd_id } else { fhir_type };
+    let sd_type = if kind == "logical" {
+        config
+            .canonical
+            .as_ref()
+            .map(|canonical| {
+                format!(
+                    "{}/StructureDefinition/{sd_id}",
+                    canonical.trim_end_matches('/')
+                )
+            })
+            .unwrap_or_else(|| sd_id.to_string())
+    } else {
+        fhir_type.to_string()
+    };
 
     // Helper: build FHIR SD path and id from base_path + FshPath.
     // An empty FshPath (from `* . MS` dot-path rule) refers to the root element.
@@ -224,6 +253,7 @@ fn export_sd(
                 }));
             }
             SdRule::Assignment(r) => {
+                inject_choice_slice_elements(&mut elements, &r.path, base_path);
                 // Skip rules where the code system is an unresolved alias (not a URL or URN)
                 if let FshValue::Code {
                     system: Some(sys), ..
@@ -355,7 +385,7 @@ fn export_sd(
         "status": status,
         "kind": kind,
         "abstract": false,
-        "type": fhir_type,
+        "type": sd_type,
         "baseDefinition": base_url,
         "derivation": derivation,
         "differential": { "element": elements },
@@ -383,6 +413,52 @@ fn export_sd(
     }
 
     Ok(sd)
+}
+
+fn inject_choice_slice_elements(
+    elements: &mut Vec<serde_json::Value>,
+    path: &FshPath,
+    base_path: &str,
+) {
+    let Some(FshPathSegment::Name(resolved_name)) = path.segments.first() else {
+        return;
+    };
+    let Some(choice_name) = normalize_choice_type_name(resolved_name) else {
+        return;
+    };
+    let choice_id = format!("{base_path}.{choice_name}");
+    if !elements
+        .iter()
+        .any(|element| element.get("id").and_then(|id| id.as_str()) == Some(choice_id.as_str()))
+    {
+        elements.push(serde_json::json!({
+            "id": choice_id,
+            "path": format!("{base_path}.{choice_name}"),
+            "slicing": {
+                "discriminator": [{ "type": "type", "path": "$this" }],
+                "ordered": false,
+                "rules": "open"
+            }
+        }));
+    }
+    let slice_id = format!("{base_path}.{choice_name}:{resolved_name}");
+    if elements
+        .iter()
+        .any(|element| element.get("id").and_then(|id| id.as_str()) == Some(slice_id.as_str()))
+    {
+        return;
+    }
+    let type_name = resolved_name
+        .strip_prefix(choice_name.trim_end_matches("[x]"))
+        .unwrap_or(resolved_name);
+    elements.push(serde_json::json!({
+        "id": slice_id,
+        "path": format!("{base_path}.{choice_name}"),
+        "sliceName": resolved_name,
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": type_name }]
+    }));
 }
 
 fn fsh_value_to_fixed(value: &FshValue) -> serde_json::Value {
@@ -413,7 +489,13 @@ fn fsh_value_to_fixed(value: &FshValue) -> serde_json::Value {
             "numerator": fsh_value_to_fixed(numerator),
             "denominator": fsh_value_to_fixed(denominator),
         }),
-        FshValue::Reference(r) => serde_json::json!({ "reference": r }),
+        FshValue::Reference { target, display } => {
+            let mut reference = serde_json::json!({ "reference": target });
+            if let Some(display) = display {
+                reference["display"] = serde_json::Value::String(display.clone());
+            }
+            reference
+        }
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
         FshValue::InstanceRef(s) => serde_json::Value::String(s.clone()),
@@ -442,16 +524,43 @@ fn apply_flags_to_element(elem: &mut serde_json::Value, flags: &[FshFlag]) {
 /// Set a (potentially nested dot-path) key on a JSON object.
 fn set_nested_value(obj: &mut serde_json::Value, path: &str, val: serde_json::Value) {
     let parts: Vec<&str> = path.splitn(2, '.').collect();
-    if parts.len() == 1 {
+    let (name, index) = parse_indexed_key(parts[0]);
+    if let Some(index) = index {
         if let Some(map) = obj.as_object_mut() {
-            map.insert(parts[0].to_string(), val);
+            let array = map
+                .entry(name.to_string())
+                .or_insert_with(|| serde_json::json!([]));
+            if let Some(array) = array.as_array_mut() {
+                while array.len() <= index {
+                    array.push(serde_json::json!({}));
+                }
+                if parts.len() == 1 {
+                    array[index] = val;
+                } else {
+                    set_nested_value(&mut array[index], parts[1], val);
+                }
+            }
+        }
+    } else if parts.len() == 1 {
+        if let Some(map) = obj.as_object_mut() {
+            map.insert(name.to_string(), val);
         }
     } else if let Some(map) = obj.as_object_mut() {
         let child = map
-            .entry(parts[0].to_string())
+            .entry(name.to_string())
             .or_insert_with(|| serde_json::json!({}));
         set_nested_value(child, parts[1], val);
     }
+}
+
+fn parse_indexed_key(key: &str) -> (&str, Option<usize>) {
+    let Some((name, suffix)) = key.split_once('[') else {
+        return (key, None);
+    };
+    let index = suffix
+        .strip_suffix(']')
+        .and_then(|value| value.parse().ok());
+    (name, index)
 }
 
 /// Inject auto-generated elements for a **simple** extension (no sub-extensions).
@@ -539,4 +648,31 @@ fn inject_complex_extension_elements(
         "path": "Extension.value[x]",
         "max": "0"
     }));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sets_nested_values_through_indexed_caret_paths() {
+        let mut resource = serde_json::json!({});
+
+        set_nested_value(
+            &mut resource,
+            "contact[0].telecom[0].system",
+            serde_json::json!("url"),
+        );
+        set_nested_value(
+            &mut resource,
+            "contact[0].telecom[0].value",
+            serde_json::json!("https://example.org"),
+        );
+
+        assert_eq!(resource["contact"][0]["telecom"][0]["system"], "url");
+        assert_eq!(
+            resource["contact"][0]["telecom"][0]["value"],
+            "https://example.org"
+        );
+    }
 }

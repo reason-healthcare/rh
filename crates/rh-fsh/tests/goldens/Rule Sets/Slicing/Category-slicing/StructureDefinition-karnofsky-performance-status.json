@@ -38,6 +38,18 @@
         }
       },
       {
+        "id": "Observation.code",
+        "path": "Observation.code",
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "89243-0",
+              "system": "http://loinc.org"
+            }
+          ]
+        }
+      },
+      {
         "id": "Observation.value[x]",
         "path": "Observation.value[x]",
         "type": [

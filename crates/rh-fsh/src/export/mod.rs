@@ -13,7 +13,6 @@ use crate::{
     build_definition_index, load_dependency_structure_definitions, DependencyDefinitionSet,
 };
 use rayon::prelude::*;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// A compiled FHIR package — the output of FSH compilation
@@ -43,36 +42,37 @@ impl FshExporter {
             }
         }));
 
-        // Pre-compute parent name → parent name chain for FHIR type resolution
-        // (maps profile/extension name → its declared parent name)
-        let parent_types: HashMap<String, String> = build_parent_type_map(tank);
-
         export_par(
             tank.profiles.values(),
-            |p| structure_def::export_profile(p, defs.clone(), config, &parent_types),
+            |p| structure_def::export_profile(p, defs.clone(), config, &definition_index),
             &mut resources,
             &mut errors,
         );
         export_par(
             tank.extensions.values(),
-            |e| structure_def::export_extension(e, defs.clone(), config, &parent_types),
+            |e| structure_def::export_extension(e, defs.clone(), config, &definition_index),
             &mut resources,
             &mut errors,
         );
         export_par(
             tank.logicals.values(),
-            |l| structure_def::export_logical(l, defs.clone(), config, &parent_types),
+            |l| structure_def::export_logical(l, defs.clone(), config, &definition_index),
             &mut resources,
             &mut errors,
         );
         export_par(
             tank.resources.values(),
-            |r| structure_def::export_resource_def(r, defs.clone(), config, &parent_types),
+            |r| structure_def::export_resource_def(r, defs.clone(), config, &definition_index),
             &mut resources,
             &mut errors,
         );
         export_par(
-            tank.instances.values(),
+            tank.instances.values().filter(|instance| {
+                !matches!(
+                    instance.metadata.usage.as_deref(),
+                    Some("#inline" | "inline")
+                )
+            }),
             |i| instance::export_instance(i, defs.as_ref(), config, tank, &definition_index),
             &mut resources,
             &mut errors,
@@ -93,10 +93,28 @@ impl FshExporter {
             resources.push(implementation_guide);
         }
 
+        resources.sort_by_key(resource_sort_key);
+
         // Mappings do NOT produce standalone FHIR resources (H6)
 
         FhirPackage { resources, errors }
     }
+}
+
+fn resource_sort_key(resource: &serde_json::Value) -> (String, String, String) {
+    (
+        resource
+            .get("resourceType")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        resource
+            .get("id")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        serde_json::to_string(resource).unwrap_or_default(),
+    )
 }
 
 fn export_implementation_guide(
@@ -145,6 +163,38 @@ fn export_implementation_guide(
     if let Some(publisher) = &config.publisher {
         resource["publisher"] = serde_json::Value::String(publisher.clone());
     }
+    if !config.contacts.is_empty() {
+        resource["contact"] = serde_json::Value::Array(
+            config
+                .contacts
+                .iter()
+                .map(|contact| {
+                    let mut value = serde_json::Map::new();
+                    if let Some(name) = &contact.name {
+                        value.insert("name".to_string(), serde_json::Value::String(name.clone()));
+                    }
+                    if !contact.telecom.is_empty() {
+                        value.insert(
+                            "telecom".to_string(),
+                            serde_json::Value::Array(
+                                contact
+                                    .telecom
+                                    .iter()
+                                    .map(|telecom| {
+                                        serde_json::json!({
+                                            "system": telecom.system,
+                                            "value": telecom.value,
+                                        })
+                                    })
+                                    .collect(),
+                            ),
+                        );
+                    }
+                    serde_json::Value::Object(value)
+                })
+                .collect(),
+        );
+    }
     if !config.dependencies.is_empty() {
         resource["dependsOn"] = serde_json::Value::Array(
             config
@@ -174,25 +224,6 @@ fn resource_reference(resource: &serde_json::Value) -> Option<String> {
     let resource_type = resource.get("resourceType")?.as_str()?;
     let id = resource.get("id").and_then(|v| v.as_str())?;
     Some(format!("{resource_type}/{id}"))
-}
-
-/// Build a map of entity name → parent name for FHIR type resolution.
-fn build_parent_type_map(tank: &FshTank) -> HashMap<String, String> {
-    tank.profiles
-        .iter()
-        .filter_map(|(name, p)| {
-            p.metadata
-                .parent
-                .as_ref()
-                .map(|parent| (name.clone(), parent.clone()))
-        })
-        .chain(tank.extensions.iter().filter_map(|(name, e)| {
-            e.metadata
-                .parent
-                .as_ref()
-                .map(|parent| (name.clone(), parent.clone()))
-        }))
-        .collect()
 }
 
 /// Collect results, separating values from errors.
@@ -228,7 +259,7 @@ fn export_par<'a, T, F, I>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FshConfig, FshDependency};
+    use crate::{CompilerOptions, FshCompiler, FshConfig, FshContact, FshDependency, FshTelecom};
 
     #[test]
     fn emits_implementation_guide_from_project_config() {
@@ -241,6 +272,13 @@ mod tests {
                 name: Some("ExampleIG".to_string()),
                 status: Some("draft".to_string()),
                 publisher: Some("Example Publisher".to_string()),
+                contacts: vec![FshContact {
+                    name: Some("Example Publisher".to_string()),
+                    telecom: vec![FshTelecom {
+                        system: "url".to_string(),
+                        value: "http://example.org/publisher".to_string(),
+                    }],
+                }],
                 version: Some("1.2.3".to_string()),
                 fhir_version: Some("4.0.1".to_string()),
                 dependencies: vec![FshDependency {
@@ -269,5 +307,38 @@ mod tests {
         );
         assert_eq!(ig["packageId"], "example.fhir");
         assert_eq!(ig["dependsOn"][0]["packageId"], "hl7.fhir.us.core");
+        assert_eq!(ig["contact"][0]["telecom"][0]["system"], "url");
+    }
+
+    #[test]
+    fn embeds_inline_instances_without_emitting_them_at_top_level() {
+        let package = FshCompiler::new(CompilerOptions::default())
+            .compile(
+                r#"
+Instance: example-bundle
+InstanceOf: Bundle
+Usage: #example
+* type = #collection
+* entry[+].resource = inline-patient
+
+Instance: inline-patient
+InstanceOf: Patient
+Usage: #inline
+* active = true
+"#,
+                "inline.fsh",
+            )
+            .expect("FSH compiles");
+
+        assert_eq!(package.resources.len(), 1);
+        assert_eq!(package.resources[0]["resourceType"], "Bundle");
+        assert_eq!(
+            package.resources[0]["entry"][0]["resource"]["resourceType"],
+            "Patient"
+        );
+        assert_eq!(
+            package.resources[0]["entry"][0]["resource"]["id"],
+            "inline-patient"
+        );
     }
 }

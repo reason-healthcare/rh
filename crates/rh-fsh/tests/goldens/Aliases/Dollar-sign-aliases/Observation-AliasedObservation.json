@@ -1,0 +1,25 @@
+{
+  "resourceType": "Observation",
+  "id": "AliasedObservation",
+  "meta": {
+    "profile": [
+      "http://rh-fsh-test.example.org/StructureDefinition/aliased-profile"
+    ]
+  },
+  "valueQuantity": {
+    "system": "http://unitsofmeasure.org",
+    "value": 55,
+    "unit": "mg/dL",
+    "code": "mg/dL"
+  },
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "code": "2085-9",
+        "system": "http://loinc.org",
+        "display": "HDL Cholesterol"
+      }
+    ]
+  }
+}

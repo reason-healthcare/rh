@@ -1,0 +1,74 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "body-weight-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/body-weight-profile",
+  "version": "0.1.0",
+  "name": "BodyWeightProfile",
+  "title": "Body Weight Profile",
+  "status": "draft",
+  "description": "Profile for body weight observations.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation",
+        "path": "Observation",
+        "constraint": [
+          {
+            "key": "us-core-2",
+            "severity": "error",
+            "human": "If there is no component or hasMember element then either a value[x] or a data absent reason must be present.",
+            "expression": "(component | hasMember).empty() implies (dataAbsentReason.exists() or value.exists())",
+            "source": "http://rh-fsh-test.example.org/StructureDefinition/body-weight-profile"
+          }
+        ]
+      },
+      {
+        "id": "Observation.status",
+        "path": "Observation.status",
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.code",
+        "path": "Observation.code",
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "code": "29463-7",
+              "system": "http://loinc.org"
+            }
+          ]
+        },
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.subject",
+        "path": "Observation.subject",
+        "min": 1,
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Patient"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.effective[x]",
+        "path": "Observation.effective[x]",
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      }
+    ]
+  }
+}

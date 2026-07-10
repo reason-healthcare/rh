@@ -358,7 +358,10 @@ pub enum FshValue {
         numerator: Box<FshValue>,
         denominator: Box<FshValue>,
     },
-    Reference(String),
+    Reference {
+        target: String,
+        display: Option<String>,
+    },
     Canonical(String),
     /// A date value like 1960-04-25
     Date(String),
@@ -392,7 +395,16 @@ impl FshPath {
         if self.segments.is_empty() {
             return base.to_string();
         }
-        let parts: Vec<String> = self.segments.iter().map(|s| s.to_path_part()).collect();
+        let parts: Vec<String> = self
+            .segments
+            .iter()
+            .map(|segment| match segment {
+                FshPathSegment::Name(name) => {
+                    normalize_choice_type_name(name).unwrap_or_else(|| name.clone())
+                }
+                other => other.to_path_part(),
+            })
+            .collect();
         format!("{}.{}", base, parts.join("."))
     }
 
@@ -408,8 +420,11 @@ impl FshPath {
                     parts.push(format!("{element}:{slice}"));
                 }
                 FshPathSegment::Name(n) => {
-                    // Normalize choice-type resolved names (e.g. valueString → value[x]) in ids too
-                    parts.push(normalize_choice_type_name(n).unwrap_or_else(|| n.clone()));
+                    if let Some(choice) = normalize_choice_type_name(n) {
+                        parts.push(format!("{choice}:{n}"));
+                    } else {
+                        parts.push(n.clone());
+                    }
                 }
                 other => parts.push(other.to_string()),
             }

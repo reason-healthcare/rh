@@ -74,7 +74,11 @@ fn export_instance_with_context(
     };
 
     if let Some(title) = &inst.metadata.title {
-        resource["title"] = serde_json::Value::String(title.clone());
+        if get_field_info(&resource_type_for_metadata, "title").is_some()
+            || resource_type_for_metadata == "ActorDefinition"
+        {
+            resource["title"] = serde_json::Value::String(title.clone());
+        }
     }
 
     let usage = inst.metadata.usage.as_deref().unwrap_or("");
@@ -154,15 +158,19 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
                 "denominator": fsh_value_to_json(denominator, context),
             })
         }
-        FshValue::Reference(r) => {
+        FshValue::Reference { target, display } => {
             let resolved = resolve_reference(
-                r,
+                target,
                 context.tank,
                 context.defs,
                 context.config,
                 context.definition_index,
             );
-            serde_json::json!({ "reference": resolved })
+            let mut reference = serde_json::json!({ "reference": resolved });
+            if let Some(display) = display {
+                reference["display"] = serde_json::Value::String(display.clone());
+            }
+            reference
         }
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
@@ -477,7 +485,8 @@ fn handle_slice_segment(
             let arr = map.get_mut(&element_key).unwrap();
             if let serde_json::Value::Array(arr) = arr {
                 if segments.len() == 1 {
-                    arr[idx] = value;
+                    arr[idx] =
+                        wrap_codeable_concept_if_needed(value, fi.map(|field| &field.field_type));
                 } else {
                     set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
                 }
@@ -500,7 +509,8 @@ fn handle_slice_segment(
                 arr.push(serde_json::json!({}));
             }
             if segments.len() == 1 {
-                arr[idx] = value;
+                arr[idx] =
+                    wrap_codeable_concept_if_needed(value, fi.map(|field| &field.field_type));
             } else {
                 set_at_path(&mut arr[idx], &segments[1..], value, _defs, next_type);
             }
@@ -515,7 +525,10 @@ fn handle_slice_segment(
         .unwrap_or(current_type);
     let key = element.to_string();
     if segments.len() == 1 {
-        map.insert(key, value);
+        map.insert(
+            key,
+            wrap_codeable_concept_if_needed(value, fi.map(|field| &field.field_type)),
+        );
     } else {
         let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
         set_at_path(child, &segments[1..], value, _defs, next_type);

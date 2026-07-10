@@ -1,6 +1,6 @@
 //! Minimal `sushi-config.yaml` ingestion for project-level FSH compilation.
 
-use crate::{FshConfig, FshDependency, FshError};
+use crate::{FshConfig, FshContact, FshDependency, FshError, FshTelecom};
 use indexmap::IndexMap;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -13,6 +13,7 @@ struct SushiConfigFile {
     name: Option<String>,
     status: Option<String>,
     publisher: Option<PublisherValue>,
+    contact: Option<ScalarOrListContact>,
     version: Option<String>,
     #[serde(rename = "fhirVersion")]
     fhir_version: Option<ScalarOrList>,
@@ -30,7 +31,31 @@ enum ScalarOrList {
 #[serde(untagged)]
 enum PublisherValue {
     Name(String),
-    Object { name: Option<String> },
+    Object {
+        name: Option<String>,
+        url: Option<String>,
+        email: Option<String>,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum ScalarOrListContact {
+    Scalar(ContactValue),
+    List(Vec<ContactValue>),
+}
+
+#[derive(Debug, Deserialize)]
+struct ContactValue {
+    name: Option<String>,
+    #[serde(default)]
+    telecom: Vec<TelecomValue>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelecomValue {
+    system: String,
+    value: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,6 +82,36 @@ pub fn read_sushi_config(path: &Path) -> Result<FshConfig, FshError> {
 /// Parse SUSHI config text into the compiler's normalized project config.
 pub fn parse_sushi_config(input: &str) -> Result<FshConfig, serde_yaml::Error> {
     let raw: SushiConfigFile = serde_yaml::from_str(input)?;
+    let (publisher, publisher_contact) = match raw.publisher {
+        Some(PublisherValue::Name(name)) => (Some(name), None),
+        Some(PublisherValue::Object { name, url, email }) => {
+            let telecom = url
+                .map(|value| FshTelecom {
+                    system: "url".to_string(),
+                    value,
+                })
+                .into_iter()
+                .chain(email.map(|value| FshTelecom {
+                    system: "email".to_string(),
+                    value,
+                }))
+                .collect::<Vec<_>>();
+            let contact = (!telecom.is_empty()).then(|| FshContact {
+                name: name.clone(),
+                telecom,
+            });
+            (name, contact)
+        }
+        None => (None, None),
+    };
+    let explicit_contacts = raw.contact.map(|contacts| match contacts {
+        ScalarOrListContact::Scalar(contact) => vec![contact],
+        ScalarOrListContact::List(contacts) => contacts,
+    });
+    let contacts = explicit_contacts
+        .map(|contacts| contacts.into_iter().map(normalize_contact).collect())
+        .unwrap_or_else(|| publisher_contact.into_iter().collect());
+
     Ok(FshConfig {
         canonical: raw.canonical,
         fhir_version: raw.fhir_version.and_then(|v| match v {
@@ -66,10 +121,8 @@ pub fn parse_sushi_config(input: &str) -> Result<FshConfig, serde_yaml::Error> {
         id: raw.id,
         name: raw.name,
         status: raw.status,
-        publisher: raw.publisher.and_then(|p| match p {
-            PublisherValue::Name(name) => Some(name),
-            PublisherValue::Object { name } => name,
-        }),
+        publisher,
+        contacts,
         version: raw.version,
         dependencies: raw
             .dependencies
@@ -91,6 +144,20 @@ pub fn parse_sushi_config(input: &str) -> Result<FshConfig, serde_yaml::Error> {
             })
             .collect(),
     })
+}
+
+fn normalize_contact(contact: ContactValue) -> FshContact {
+    FshContact {
+        name: contact.name,
+        telecom: contact
+            .telecom
+            .into_iter()
+            .map(|telecom| FshTelecom {
+                system: telecom.system,
+                value: telecom.value,
+            })
+            .collect(),
+    }
 }
 
 /// Find the nearest SUSHI config for the provided input files.
@@ -133,6 +200,8 @@ name: ExampleIG
 status: active
 publisher:
   name: Example Publisher
+  url: http://example.org/publisher
+  email: publisher@example.org
 fhirVersion: 4.0.1
 dependencies:
   hl7.fhir.uv.genomics-reporting: 2.0.0
@@ -148,6 +217,13 @@ dependencies:
         assert_eq!(config.canonical.as_deref(), Some("http://example.org/fhir"));
         assert_eq!(config.fhir_version.as_deref(), Some("4.0.1"));
         assert_eq!(config.publisher.as_deref(), Some("Example Publisher"));
+        assert_eq!(config.contacts.len(), 1);
+        assert_eq!(
+            config.contacts[0].name.as_deref(),
+            Some("Example Publisher")
+        );
+        assert_eq!(config.contacts[0].telecom[0].system, "url");
+        assert_eq!(config.contacts[0].telecom[1].system, "email");
         assert_eq!(config.dependencies.len(), 2);
         assert_eq!(
             config.dependencies[0].package_id,
@@ -157,5 +233,28 @@ dependencies:
         assert_eq!(config.dependencies[1].package_id, "hl7.fhir.us.core");
         assert_eq!(config.dependencies[1].version, "6.1.0");
         assert_eq!(config.dependencies[1].id.as_deref(), Some("uscore"));
+    }
+
+    #[test]
+    fn explicit_contacts_override_publisher_contact() {
+        let config = parse_sushi_config(
+            r#"
+publisher:
+  name: Example Publisher
+  url: http://example.org/publisher
+contact:
+  telecom:
+    - system: url
+      value: http://example.org/committee
+"#,
+        )
+        .expect("config parses");
+
+        assert_eq!(config.contacts.len(), 1);
+        assert_eq!(config.contacts[0].name, None);
+        assert_eq!(
+            config.contacts[0].telecom[0].value,
+            "http://example.org/committee"
+        );
     }
 }

@@ -570,7 +570,21 @@ fn parses_quantity_value() {
 #[test]
 fn parses_reference_value() {
     match assignment_value("* subject = Reference(patient-1)") {
-        FshValue::Reference(r) => assert_eq!(r, "patient-1"),
+        FshValue::Reference { target, display } => {
+            assert_eq!(target, "patient-1");
+            assert_eq!(display, None);
+        }
+        other => panic!("expected Reference, got {other:?}"),
+    }
+}
+
+#[test]
+fn parses_reference_value_with_display() {
+    match assignment_value("* subject = Reference(patient-1) \"Example Patient\"") {
+        FshValue::Reference { target, display } => {
+            assert_eq!(target, "patient-1");
+            assert_eq!(display.as_deref(), Some("Example Patient"));
+        }
         other => panic!("expected Reference, got {other:?}"),
     }
 }
@@ -715,6 +729,40 @@ fn parses_vs_filter_is_a() {
     );
     let rule = &vs.components[0].value;
     assert!(!rule.filters.is_empty());
+}
+
+#[test]
+fn parses_value_set_filter_on_continuation_line() {
+    let document = FshParser::parse(
+        "ValueSet: Findings\n* include codes from system http://snomed.info/sct\n    where concept is-a #404684003\n",
+        "filter.fsh",
+    )
+    .expect("value set parses");
+    let FshEntity::ValueSet(value_set) = &document.entities[0].value else {
+        panic!("expected value set");
+    };
+
+    assert_eq!(value_set.components[0].value.filters.len(), 1);
+    assert_eq!(value_set.components[0].value.filters[0].op, "is-a");
+}
+
+#[test]
+fn parses_code_system_concept_hierarchy() {
+    let document = FshParser::parse(
+        "CodeSystem: Animals\n* #animal \"Animal\" \"Animal definition\"\n  * #mammal \"Mammal\" \"Mammal definition\"\n    * #dog \"Dog\" \"Dog definition\"\n",
+        "hierarchy.fsh",
+    )
+    .expect("code system parses");
+    let FshEntity::CodeSystem(code_system) = &document.entities[0].value else {
+        panic!("expected code system");
+    };
+
+    assert!(code_system.concepts[0].value.hierarchy.is_empty());
+    assert_eq!(code_system.concepts[1].value.hierarchy, ["animal"]);
+    assert_eq!(
+        code_system.concepts[2].value.hierarchy,
+        ["animal", "mammal"]
+    );
 }
 
 #[test]

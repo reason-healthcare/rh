@@ -45,10 +45,30 @@ pub struct FshConfig {
     pub status: Option<String>,
     /// Publisher name
     pub publisher: Option<String>,
+    /// Implementation guide contacts normalized from `sushi-config.yaml`.
+    pub contacts: Vec<FshContact>,
     /// Package version string (e.g. "0.1.0")
     pub version: Option<String>,
     /// Dependency packages declared by the project config.
     pub dependencies: Vec<FshDependency>,
+}
+
+/// Contact details declared by a FSH project.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshContact {
+    /// Optional contact name.
+    pub name: Option<String>,
+    /// Contact points for this person or organization.
+    pub telecom: Vec<FshTelecom>,
+}
+
+/// A contact point declared by a FSH project.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshTelecom {
+    /// FHIR ContactPoint system, such as `url` or `email`.
+    pub system: String,
+    /// Contact point value.
+    pub value: String,
 }
 
 /// Dependency package declaration from project configuration.

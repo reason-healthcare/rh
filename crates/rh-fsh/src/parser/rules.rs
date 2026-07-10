@@ -188,7 +188,17 @@ fn parse_vs_from_clause(
 
     // could be "system X" or "valueset Y" or "system X and valueset Y" etc.
     loop {
-        let (inp, _) = ws(remaining)?;
+        let (mut inp, _) = ws(remaining)?;
+        if inp.fragment().starts_with('\n') || inp.fragment().starts_with("\r\n") {
+            let (after_cr, _) = opt(char('\r'))(inp)?;
+            let (after_line, _) = char('\n')(after_cr)?;
+            let (after_indent, _) = ws(after_line)?;
+            if after_indent.fragment().starts_with("where")
+                || after_indent.fragment().starts_with("and")
+            {
+                inp = after_indent;
+            }
+        }
         if inp.fragment().starts_with("system") {
             let (inp, _) = tag("system")(inp)?;
             let (inp, _) = ws(inp)?;

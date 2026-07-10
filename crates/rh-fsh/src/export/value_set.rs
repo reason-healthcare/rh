@@ -2,7 +2,7 @@
 
 use crate::error::FshError;
 use crate::parser::ast::*;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 pub fn export_value_set(
     vs: &ValueSet,
@@ -21,10 +21,6 @@ pub fn export_value_set(
     if let Some(v) = &config.version {
         json["version"] = serde_json::Value::String(v.clone());
     }
-    if let Some(fv) = &config.fhir_version {
-        json["fhirVersion"] = serde_json::Value::String(fv.clone());
-    }
-
     if let Some(canonical) = &config.canonical {
         let vs_id = vs.metadata.id.as_deref().unwrap_or(&vs.metadata.name);
         json["url"] = serde_json::Value::String(format!(
@@ -42,9 +38,9 @@ pub fn export_value_set(
     }
 
     // Group include/exclude rules by system for same-system concept merging
-    let mut include_map: HashMap<Option<String>, Vec<serde_json::Value>> = HashMap::new();
+    let mut include_map: IndexMap<Option<String>, Vec<serde_json::Value>> = IndexMap::new();
     let mut include_with_from: Vec<serde_json::Value> = Vec::new();
-    let mut exclude_map: HashMap<Option<String>, Vec<serde_json::Value>> = HashMap::new();
+    let mut exclude_map: IndexMap<Option<String>, Vec<serde_json::Value>> = IndexMap::new();
     let mut exclude_with_from: Vec<serde_json::Value> = Vec::new();
 
     for comp in &vs.components {
@@ -159,7 +155,13 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
         FshValue::Code { code, .. } => serde_json::Value::String(code.clone()),
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
-        FshValue::Reference(r) => serde_json::json!({ "reference": r }),
+        FshValue::Reference { target, display } => {
+            let mut reference = serde_json::json!({ "reference": target });
+            if let Some(display) = display {
+                reference["display"] = serde_json::Value::String(display.clone());
+            }
+            reference
+        }
         FshValue::Quantity { value, unit } => serde_json::json!({ "value": value, "unit": unit }),
         FshValue::Ratio {
             numerator,
@@ -169,5 +171,39 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
             "denominator": fsh_value_to_json_simple(denominator),
         }),
         FshValue::InstanceRef(s) => serde_json::Value::String(s.clone()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{CompilerOptions, FshCompiler};
+
+    #[test]
+    fn preserves_first_system_occurrence_order() {
+        let package = FshCompiler::new(CompilerOptions::default())
+            .compile(
+                r#"
+ValueSet: OrderedSystems
+* include #a from system http://example.org/first
+* include #b from system http://example.org/second
+* include #c from system http://example.org/first
+"#,
+                "ordered-systems.fsh",
+            )
+            .expect("ValueSet compiles");
+        let value_set = &package.resources[0];
+
+        assert_eq!(
+            value_set["compose"]["include"][0]["system"],
+            "http://example.org/first"
+        );
+        assert_eq!(
+            value_set["compose"]["include"][1]["system"],
+            "http://example.org/second"
+        );
+        assert_eq!(
+            value_set["compose"]["include"][0]["concept"][1]["code"],
+            "c"
+        );
     }
 }

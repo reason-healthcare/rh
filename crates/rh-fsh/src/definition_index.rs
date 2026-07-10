@@ -49,6 +49,10 @@ impl DefinitionIndex {
     pub fn lookup(&self, key: &str) -> Option<&IndexedStructureDefinition> {
         self.keys
             .get(key)
+            .or_else(|| {
+                key.split_once('|')
+                    .and_then(|(canonical, _)| self.keys.get(canonical))
+            })
             .and_then(|idx| self.definitions.get(*idx))
     }
 
@@ -369,5 +373,51 @@ mod tests {
             ),
             Some("Practitioner".to_string())
         );
+    }
+
+    #[test]
+    fn resolves_versioned_profile_references_to_base_resource_type() {
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![DependencyStructureDefinition {
+                package_id: "hl7.fhir.us.core".to_string(),
+                version: "7.0.0".to_string(),
+                path: PathBuf::from("StructureDefinition-us-core-patient.json"),
+                id: Some("us-core-patient".to_string()),
+                url: Some(
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient".to_string(),
+                ),
+                name: Some("USCorePatientProfile".to_string()),
+                title: None,
+                kind: Some("resource".to_string()),
+                type_: Some("Patient".to_string()),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
+                ),
+                derivation: Some("constraint".to_string()),
+            }],
+            warnings: Vec::new(),
+        };
+        let mut tank = empty_tank();
+        tank.profiles.insert(
+            "ProjectPatient".to_string(),
+            Profile {
+                metadata: SdMetadata {
+                    name: "ProjectPatient".to_string(),
+                    parent: Some("USCorePatientProfile|7.0.0".to_string()),
+                    id: Some("project-patient".to_string()),
+                    title: None,
+                    description: None,
+                    characteristics: Vec::new(),
+                },
+                rules: Vec::new(),
+            },
+        );
+        let index = build_definition_index(&tank, &FshConfig::default(), &dependencies);
+
+        assert_eq!(
+            index.resolve_base_type("ProjectPatient", FhirDefs::r4().as_ref()),
+            Some("Patient".to_string())
+        );
+        assert!(index.lookup("USCorePatientProfile|7.0.0").is_some());
     }
 }

@@ -1,0 +1,24 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "LOINCVitalSignsVS",
+  "id": "loinc-vitals-vs",
+  "title": "LOINC Vital Signs",
+  "description": "ValueSet containing LOINC vital sign codes using regex filtering.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/loinc-vitals-vs",
+  "compose": {
+    "include": [
+      {
+        "system": "http://loinc.org",
+        "filter": [
+          {
+            "property": "code",
+            "op": "regex",
+            "value": "^[0-9]{5}-[0-9]$"
+          }
+        ]
+      }
+    ]
+  }
+}
