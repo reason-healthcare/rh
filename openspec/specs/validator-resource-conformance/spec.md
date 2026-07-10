@@ -68,30 +68,6 @@ slices.
 - **WHEN** a closed slicing definition is used and an element matches no allowed slice
 - **THEN** validation reports an ERROR identifying the unsliced element
 
-### Requirement: Validator validates QuestionnaireResponse against Questionnaire
-
-The validator SHALL validate QuestionnaireResponse resources against their
-referenced Questionnaire when that Questionnaire is available locally or from
-loaded package context. Standalone validation SHALL NOT implicitly scan sibling
-files or package resources for Questionnaire context; callers that need local
-context SHALL register or otherwise load that context explicitly.
-
-#### Scenario: Missing required answer is reported
-- **WHEN** a Questionnaire item requires an answer and the QuestionnaireResponse omits it
-- **THEN** validation reports an ERROR for the missing answer
-
-#### Scenario: Answer type mismatch is reported
-- **WHEN** a Questionnaire item expects a boolean answer and the QuestionnaireResponse provides a string answer
-- **THEN** validation reports an ERROR for the mismatched answer type
-
-#### Scenario: Answer option mismatch is reported
-- **WHEN** a Questionnaire item restricts answers to listed answer options and the QuestionnaireResponse uses a different answer
-- **THEN** validation reports an ERROR for the unsupported answer
-
-#### Scenario: Questionnaire reference constraint is enforced
-- **WHEN** a Questionnaire item restricts reference answer resource types and the QuestionnaireResponse uses a disallowed reference type
-- **THEN** validation reports an ERROR for the reference answer
-
 ### Requirement: Validator resolves local ValueSets for binding checks
 
 The validator SHALL use package-local and dependency-loaded ValueSet resources

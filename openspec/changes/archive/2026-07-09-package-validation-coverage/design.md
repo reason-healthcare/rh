@@ -7,8 +7,8 @@ build time. The exploratory branch mixed useful validator improvements with
 broader conformance work, performance changes, and unrelated validation areas.
 
 This proposal narrows the work to package-relevant FHIR validation: resource
-shape, profile rules, references, Questionnaires, local ValueSets, and clear
-package pipeline diagnostics.
+shape, profile rules, references, local ValueSets, and clear package pipeline
+diagnostics.
 
 ## Goals / Non-Goals
 
@@ -24,7 +24,8 @@ package pipeline diagnostics.
 
 **Non-Goals:**
 
-- Do not add broad Measure, MeasureReport, Bundle, or narrative validation.
+- Do not add broad Measure, MeasureReport, Bundle, narrative, or
+  QuestionnaireResponse validation.
 - Do not change package canonical/url handling.
 - Do not change CQL behavior.
 - Do not require a terminology server for local package validation.
@@ -38,8 +39,7 @@ package pipeline diagnostics.
 
    Rationale: package validation should catch errors authors can fix in source
    resources: unknown fields, invalid choice fields, profile rule violations,
-   bad references, QuestionnaireResponse mismatches, and local ValueSet/binding
-   issues.
+   bad references, and local ValueSet/binding issues.
 
    Alternative considered: carry the full exploratory validator expansion. That
    was too large for this branch and included validation areas already removed
@@ -62,8 +62,8 @@ package pipeline diagnostics.
 3. Prefer local context before remote terminology.
 
    Rationale: package validation should work offline by using package-local
-   ValueSets, Questionnaires, StructureDefinitions, and installed dependency
-   packages. A terminology server remains optional for checks that require it.
+   ValueSets, StructureDefinitions, and installed dependency packages. A
+   terminology server remains optional for checks that require it.
 
    Alternative considered: require terminology server access for binding checks.
    That would make packaging less deterministic and harder to run in CI.
@@ -100,7 +100,3 @@ package pipeline diagnostics.
 - Local ValueSet validation cannot cover every terminology case.
   Mitigation: validate package-local expansion/compose cases offline and keep
   terminology-server behavior optional.
-- QuestionnaireResponse validation may need lenient loading of partial
-  Questionnaire fixtures.
-  Mitigation: use internal parsing helpers if needed without weakening public
-  Questionnaire API requirements.

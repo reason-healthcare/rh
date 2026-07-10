@@ -1247,7 +1247,6 @@ impl FhirValidator {
     pub fn register_package_resource(&self, resource: &Value) {
         match resource.get("resourceType").and_then(|v| v.as_str()) {
             Some("StructureDefinition") => self.register_profile(resource),
-            Some("Questionnaire") => self.register_questionnaire(resource),
             Some("ValueSet") => self.register_valueset(resource),
             Some("CodeSystem") => self.register_codesystem(resource),
             _ => {}

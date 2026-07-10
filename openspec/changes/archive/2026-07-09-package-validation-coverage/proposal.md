@@ -14,9 +14,6 @@ the checks most relevant when building and checking FHIR packages.
 - Add profile-driven validation coverage for package resources:
   fixed/pattern values, reference target type checks, slice-aware cardinality,
   slice-aware binding, and slice-aware fixed/pattern checks.
-- Improve QuestionnaireResponse validation against packaged Questionnaire
-  resources, including required answers, answer type checks, answer option /
-  answerValueSet checks where locally resolvable, and reference constraints.
 - Improve local terminology and ValueSet validation for package-local resources,
   including ValueSet expansion/compose lookup and version-tolerant canonical
   matching.
@@ -50,8 +47,7 @@ the checks most relevant when building and checking FHIR packages.
   hook may now surface additional FHIR validation issues. ERROR severity issues
   fail as before; WARNING severity issues remain non-blocking.
 - Affected dependency behavior: package dependencies and local package resources
-  provide validation context for profiles, Questionnaires, and ValueSets where
-  available.
+  provide validation context for profiles and ValueSets where available.
 - Compatibility: no intended package manifest changes, no canonical/url handling
   changes, no CQL behavior changes, and no broad Measure/Bundle/narrative
   validation expansion.

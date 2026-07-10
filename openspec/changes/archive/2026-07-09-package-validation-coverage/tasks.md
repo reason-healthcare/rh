@@ -7,9 +7,9 @@
 
 ## 2. Package Validation Context
 
-- [x] 2.1 Register package-local StructureDefinitions, Questionnaires, and ValueSets with the validator context.
+- [x] 2.1 Register package-local StructureDefinitions and ValueSets with the validator context.
 - [x] 2.2 Ensure installed dependency packages remain available for profile validation.
-- [x] 2.3 Add package-level tests for local Questionnaire and ValueSet resolution.
+- [x] 2.3 Add package-level tests for package validation context resolution.
 
 ## 3. Resource Shape Validation
 
@@ -25,32 +25,24 @@
 - [x] 4.3 Apply slice-aware cardinality, binding, fixed, and pattern rules.
 - [x] 4.4 Add focused profile tests for valid and invalid fixed, pattern, reference, and slicing cases.
 
-## 5. QuestionnaireResponse Validation
+## 5. Local ValueSet And Binding Validation
 
-- [x] 5.1 Resolve Questionnaire resources from package-local and dependency context.
-- [x] 5.2 Validate required answers and answer type compatibility.
-- [x] 5.3 Validate answer options, local answerValueSet references, and reference answer constraints.
-- [x] 5.4 Keep any lenient Questionnaire parsing internal without changing the public required-field model.
-- [x] 5.5 Add QuestionnaireResponse validation tests for passing and failing resources.
+- [x] 5.1 Resolve local and dependency ValueSets by canonical URL with version-tolerant matching.
+- [x] 5.2 Validate required bindings against local ValueSet expansion entries.
+- [x] 5.3 Validate required bindings against local ValueSet compose include concepts.
+- [x] 5.4 Preserve optional terminology-server behavior for checks that cannot be resolved locally.
+- [x] 5.5 Add ValueSet and binding tests covering expansion, compose, missing code, and versioned canonical cases.
 
-## 6. Local ValueSet And Binding Validation
+## 6. Scope And Compatibility Guardrails
 
-- [x] 6.1 Resolve local and dependency ValueSets by canonical URL with version-tolerant matching.
-- [x] 6.2 Validate required bindings against local ValueSet expansion entries.
-- [x] 6.3 Validate required bindings against local ValueSet compose include concepts.
-- [x] 6.4 Preserve optional terminology-server behavior for checks that cannot be resolved locally.
-- [x] 6.5 Add ValueSet and binding tests covering expansion, compose, missing code, and versioned canonical cases.
+- [x] 6.1 Avoid broad Measure, MeasureReport, Bundle, narrative, and QuestionnaireResponse validation expansion.
+- [x] 6.2 Keep cached validator internals private where possible and avoid new public API breaks.
+- [x] 6.3 Add constructors/helpers if new public rule structs need safer construction.
+- [x] 6.4 Update validator/package docs only for behavior that is actually implemented.
 
-## 7. Scope And Compatibility Guardrails
+## 7. Verification
 
-- [x] 7.1 Avoid broad Measure, MeasureReport, Bundle, and narrative validation expansion.
-- [x] 7.2 Keep cached validator internals private where possible and avoid new public API breaks.
-- [x] 7.3 Add constructors/helpers if new public rule structs need safer construction.
-- [x] 7.4 Update validator/package docs only for behavior that is actually implemented.
-
-## 8. Verification
-
-- [x] 8.1 Run focused `rh-validator` tests for new validation categories.
-- [x] 8.2 Run focused `rh-packager` validate processor tests.
-- [x] 8.3 Run relevant CLI validation integration tests if shared validator behavior changes CLI output.
-- [x] 8.4 Run `cargo check -p rh-validator` and `cargo check -p rh-packager`.
+- [x] 7.1 Run focused `rh-validator` tests for new validation categories.
+- [x] 7.2 Run focused `rh-packager` validate processor tests.
+- [x] 7.3 Run relevant CLI validation integration tests if shared validator behavior changes CLI output.
+- [x] 7.4 Run `cargo check -p rh-validator` and `cargo check -p rh-packager`.

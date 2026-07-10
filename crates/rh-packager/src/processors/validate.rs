@@ -210,61 +210,31 @@ mod tests {
     }
 
     #[test]
-    fn package_local_questionnaire_is_available_to_questionnaire_response_validation() {
+    fn package_local_valueset_is_available_to_profile_binding_validation() {
         let mut resources = HashMap::new();
         resources.insert(
-            "Questionnaire-intake".to_string(),
+            "StructureDefinition-value-observation".to_string(),
             json!({
-                "resourceType": "Questionnaire",
-                "id": "intake",
-                "url": "http://example.org/fhir/Questionnaire/intake",
-                "status": "active",
-                "item": [{
-                    "linkId": "required-question",
-                    "type": "string",
-                    "required": true
-                }]
-            }),
-        );
-        resources.insert(
-            "QuestionnaireResponse-intake-response".to_string(),
-            json!({
-                "resourceType": "QuestionnaireResponse",
-                "id": "intake-response",
-                "questionnaire": "http://example.org/fhir/Questionnaire/intake|1.0.0",
-                "status": "completed",
-                "item": [{
-                    "linkId": "required-question",
-                    "answer": [{ "valueInteger": 1 }]
-                }]
-            }),
-        );
-
-        let (mut ctx, tmp) = make_ctx(resources, HashMap::new());
-        ctx.config.validate.packages_dir = Some(tmp.path().to_string_lossy().to_string());
-
-        let err = ValidateProcessor.run(&mut ctx).unwrap_err();
-        assert!(
-            matches!(err, PublisherError::ValidationFailed(ref message) if message.contains("Answer value must be of the type string")),
-            "expected local Questionnaire validation failure, got: {err:?}"
-        );
-    }
-
-    #[test]
-    fn package_local_valueset_is_available_to_questionnaire_response_validation() {
-        let mut resources = HashMap::new();
-        resources.insert(
-            "Questionnaire-coded".to_string(),
-            json!({
-                "resourceType": "Questionnaire",
-                "id": "coded",
-                "url": "http://example.org/fhir/Questionnaire/coded",
-                "status": "active",
-                "item": [{
-                    "linkId": "coded-question",
-                    "type": "choice",
-                    "answerValueSet": "http://example.org/fhir/ValueSet/local-codes|1.0.0"
-                }]
+                "resourceType": "StructureDefinition",
+                "url": "http://example.org/fhir/StructureDefinition/value-observation",
+                "name": "ValueObservation",
+                "type": "Observation",
+                "snapshot": {
+                    "element": [
+                        {"id": "Observation", "path": "Observation", "min": 0, "max": "*"},
+                        {
+                            "id": "Observation.value[x]",
+                            "path": "Observation.value[x]",
+                            "min": 1,
+                            "max": "1",
+                            "type": [{"code": "CodeableConcept"}],
+                            "binding": {
+                                "strength": "required",
+                                "valueSet": "http://example.org/fhir/ValueSet/local-codes"
+                            }
+                        }
+                    ]
+                }
             }),
         );
         resources.insert(
@@ -283,21 +253,22 @@ mod tests {
             }),
         );
         resources.insert(
-            "QuestionnaireResponse-coded-response".to_string(),
+            "Observation-invalid".to_string(),
             json!({
-                "resourceType": "QuestionnaireResponse",
-                "id": "coded-response",
-                "questionnaire": "http://example.org/fhir/Questionnaire/coded",
-                "status": "completed",
-                "item": [{
-                    "linkId": "coded-question",
-                    "answer": [{
-                        "valueCoding": {
-                            "system": "http://example.org/codes",
-                            "code": "missing"
-                        }
+                "resourceType": "Observation",
+                "meta": {
+                    "profile": [
+                        "http://example.org/fhir/StructureDefinition/value-observation"
+                    ]
+                },
+                "status": "final",
+                "code": { "text": "test" },
+                "valueCodeableConcept": {
+                    "coding": [{
+                        "system": "http://example.org/codes",
+                        "code": "missing"
                     }]
-                }]
+                }
             }),
         );
 
@@ -306,7 +277,7 @@ mod tests {
 
         let err = ValidateProcessor.run(&mut ctx).unwrap_err();
         assert!(
-            matches!(err, PublisherError::ValidationFailed(ref message) if message.contains("is not in the options value set")),
+            matches!(err, PublisherError::ValidationFailed(ref message) if message.contains("not in required ValueSet")),
             "expected local ValueSet binding validation failure, got: {err:?}"
         );
     }

@@ -31,17 +31,13 @@ and a count of additional ERROR issues when present.
 
 The `validate` processor SHALL make package-local resources available as
 validation context for checks that can resolve resources locally, including
-StructureDefinitions, Questionnaires, and ValueSets. This package-local context
-loading is specific to the validate processor and SHALL NOT imply that
-standalone resource validation discovers sibling package resources implicitly.
+StructureDefinitions and ValueSets. This package-local context loading is
+specific to the validate processor and SHALL NOT imply that standalone resource
+validation discovers sibling package resources implicitly.
 
 #### Scenario: Local ValueSet is available for binding validation
 - **WHEN** a package contains a ValueSet and a profile binding references that ValueSet by canonical URL
 - **THEN** package validation can use the local ValueSet for binding validation without requiring a terminology server
-
-#### Scenario: Local Questionnaire is available for QuestionnaireResponse validation
-- **WHEN** a package contains a Questionnaire and a QuestionnaireResponse references it
-- **THEN** package validation can validate the QuestionnaireResponse against the local Questionnaire
 
 ### Requirement: validate processor preserves severity-based pipeline contract
 
