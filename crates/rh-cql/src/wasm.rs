@@ -6,10 +6,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 
+use crate::analytics::{
+    data_requirements, emit_sql_query_library, emit_sql_text, emit_view_definitions, inspect_elm,
+    lower_check, relational_plan, ViewDefinitionArtifact,
+};
 use crate::eval::value::{CqlCode, CqlConcept, CqlDate, CqlDateTime, CqlQuantity, CqlTime, Value};
 use crate::{
-    compile_to_elm_with_sourcemap, compile_to_json, evaluate_elm, explain_compile, explain_parse,
-    CompilerOptions, EvalContextBuilder, FixedClock, InMemoryDataProvider,
+    compile, compile_to_elm_with_sourcemap, compile_to_json, evaluate_elm, explain_compile,
+    explain_parse, CompilerOptions, EvalContextBuilder, FixedClock, InMemoryDataProvider,
 };
 
 pub use rh_foundation::wasm::WasmResult;
@@ -186,6 +190,69 @@ pub fn explain_cql_compile(source: &str, _options: &CompileOptions) -> WasmResul
     result.map_or_else(compile_explain_err, WasmResult::ok)
 }
 
+#[wasm_bindgen]
+pub fn inspect_cql(source: &str, options: &CompileOptions) -> WasmResult {
+    with_compiled_library(source, options.pretty, |library| inspect_elm(library))
+}
+
+#[wasm_bindgen]
+pub fn cql_data_requirements(source: &str, options: &CompileOptions) -> WasmResult {
+    with_compiled_library(source, options.pretty, data_requirements)
+}
+
+#[wasm_bindgen]
+pub fn cql_relational_plan(source: &str, target: &str, options: &CompileOptions) -> WasmResult {
+    with_compiled_library(source, options.pretty, |library| {
+        relational_plan(library, target)
+    })
+}
+
+#[wasm_bindgen]
+pub fn cql_lower_check(source: &str, target: &str, options: &CompileOptions) -> WasmResult {
+    with_compiled_library(source, options.pretty, |library| {
+        lower_check(library, target)
+    })
+}
+
+#[wasm_bindgen]
+pub fn cql_emit_view_definitions(
+    source: &str,
+    canonical_base: &str,
+    options: &CompileOptions,
+) -> WasmResult {
+    with_compiled_library(source, options.pretty, |library| {
+        emit_view_definitions(library, canonical_base)
+    })
+}
+
+#[wasm_bindgen]
+pub fn cql_emit_sql(source: &str, canonical_base: &str, options: &CompileOptions) -> WasmResult {
+    with_compiled_library(source, options.pretty, |library| {
+        let views = emit_view_definitions(library, canonical_base).views;
+        SqlTextResponse {
+            sql: emit_sql_text(library, &views),
+            views,
+        }
+    })
+}
+
+#[wasm_bindgen]
+pub fn cql_emit_sql_query_library(
+    source: &str,
+    canonical_base: &str,
+    options: &CompileOptions,
+) -> WasmResult {
+    with_compiled_library(source, options.pretty, |library| {
+        let views = emit_view_definitions(library, canonical_base).views;
+        let generation = emit_sql_query_library(library, &views, canonical_base);
+        SqlQueryResponse {
+            sql: generation.sql,
+            library: generation.library,
+            views,
+        }
+    })
+}
+
 fn parse_explain_err(err: crate::CompilationError) -> WasmResult {
     WasmResult::err(format!("Failed to explain CQL parse: {err}"))
 }
@@ -197,6 +264,48 @@ fn compile_explain_err(err: crate::CompilationError) -> WasmResult {
 #[wasm_bindgen]
 pub fn get_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SqlTextResponse {
+    sql: String,
+    views: Vec<ViewDefinitionArtifact>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SqlQueryResponse {
+    sql: String,
+    library: crate::analytics::SqlQueryLibraryArtifact,
+    views: Vec<ViewDefinitionArtifact>,
+}
+
+fn with_compiled_library<T, F>(source: &str, pretty: bool, f: F) -> WasmResult
+where
+    T: Serialize,
+    F: FnOnce(&crate::elm::Library) -> T,
+{
+    let result = match compile(source, Some(CompilerOptions::default())) {
+        Ok(result) => result,
+        Err(err) => return WasmResult::err(format!("Failed to compile CQL: {err}")),
+    };
+
+    if !result.is_success() {
+        let message = result
+            .errors
+            .iter()
+            .map(|diagnostic| diagnostic.message.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        return WasmResult::err(if message.is_empty() {
+            "Failed to compile CQL".to_string()
+        } else {
+            format!("Failed to compile CQL: {message}")
+        });
+    }
+
+    json_result(json!(f(&result.library)), pretty)
 }
 
 fn json_result(value: serde_json::Value, pretty: bool) -> WasmResult {

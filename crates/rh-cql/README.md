@@ -12,6 +12,7 @@ This crate provides:
 - **Source Maps**: CQL source span → ELM node correlation via `compile_to_elm_with_sourcemap`
 - **Explain Output**: Human-readable parse tree and compilation details (`explain_parse`, `explain_compile`)
 - **ELM Evaluator**: Pure Rust evaluation engine (`evaluate_elm`, `evaluate_elm_with_trace`)
+- **Analytics and SQL-on-FHIR**: Data requirements, relational planning, lowerability checks, ViewDefinition generation, and SQLQuery Library emission
 - **ModelInfo Types**: FHIR and custom model definitions for type resolution
 - **DataType System**: Type checking, compatibility, and implicit conversions
 
@@ -241,6 +242,66 @@ for event in &trace {
     println!("  op={} inputs={:?} output={}", event.op, event.inputs, event.output);
 }
 ```
+
+### Analytics and SQL-on-FHIR
+
+`rh-cql` includes first-pass analytics helpers for inspecting compiled ELM and
+generating SQL-on-FHIR artifacts from supported CQL retrieve patterns. These
+APIs expose what was found, what can lower, and where fallback evaluation may
+still be needed.
+
+```rust
+use rh_cql::{
+    analytics::{
+        data_requirements, emit_sql_query_library, emit_sql_text,
+        emit_view_definitions, lower_check, relational_plan,
+    },
+    compile,
+};
+
+let source = r#"
+library DiabetesMeasure version '1.0.0'
+using FHIR version '4.0.1'
+valueset "Diabetes": 'http://example.org/fhir/ValueSet/diabetes'
+parameter MeasurementPeriod Interval<DateTime>
+context Patient
+define "Diabetes Conditions":
+  [Condition: "Diabetes"]
+define "Has Diabetes":
+  exists "Diabetes Conditions"
+"#;
+
+let compiled = compile(source, None).unwrap();
+assert!(compiled.is_success());
+
+let requirements = data_requirements(&compiled.library);
+assert_eq!(requirements.resources, vec!["Condition"]);
+
+let plan = relational_plan(&compiled.library, "sql-on-fhir");
+let report = lower_check(&compiled.library, "sql-on-fhir");
+assert!(report.supported);
+
+let views = emit_view_definitions(
+    &compiled.library,
+    "https://reason.health/rh/generated/sql-on-fhir",
+).views;
+let sql = emit_sql_text(&compiled.library, &views);
+let sql_library = emit_sql_query_library(
+    &compiled.library,
+    &views,
+    "https://reason.health/rh/generated/sql-on-fhir",
+).library;
+
+println!("plan expressions: {}", plan.expressions.len());
+println!("{sql}");
+println!("{}", serde_json::to_string_pretty(&sql_library).unwrap());
+```
+
+The SQL-on-FHIR lowerer is currently a first-pass bridge for retrieve-centric
+measure logic. It can emit deterministic ViewDefinition JSON, SQL text, and
+FHIR `Library` resources carrying SQLQuery content. Complete CQL semantics,
+terminology expansion, interval precision, quantity handling, and complex list
+semantics may still require runtime fallback evaluation.
 
 ### Working with CompilationResult
 

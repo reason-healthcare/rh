@@ -9,6 +9,11 @@ export interface EvaluateOptions {
   parameters?: Record<string, unknown>;
 }
 
+export interface AnalyticsOptions extends CompileOptions {
+  target?: string;
+  canonicalBase?: string;
+}
+
 export interface WasmCallResult<T = unknown> {
   success: boolean;
   data?: string;

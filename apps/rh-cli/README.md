@@ -94,6 +94,11 @@ rh validate resource --input patient.json --report-format operationoutcome
 # Compile CQL to ELM
 rh cql compile library.cql --output library.elm.json
 
+# Generate SQL-on-FHIR artifacts from CQL retrieves
+rh cql lower-check measure.cql
+rh cql emit-views measure.cql --out views/
+rh cql emit-sql measure.cql --views views/ --out query-library.json
+
 # Compile FSH to FHIR JSON
 rh fsh compile profiles/*.fsh --output output/
 
@@ -153,6 +158,25 @@ Options (build/pack):
 ```
 
 See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including the step-by-step guide and `packager.toml` configuration reference.
+
+### `rh cql` SQL-on-FHIR helpers
+
+`rh cql` can inspect compiled ELM and emit first-pass SQL-on-FHIR artifacts for
+retrieve-centric measure logic:
+
+```
+rh cql data-requirements measure.cql
+rh cql plan measure.cql --target sql-on-fhir
+rh cql lower-check measure.cql
+rh cql emit-views measure.cql --out views/
+rh cql emit-sql measure.cql --views views/ --out query-library.json
+rh cql emit-runtime measure.cql --query query-library.json --views views/
+```
+
+The lowerer emits deterministic ViewDefinition JSON, SQLQuery Library resources,
+and runtime manifests for supported retrieve patterns. It is intentionally
+reported as a first-pass lowerer; full CQL semantics may still require fallback
+evaluation.
 
 ### `rh validate` subcommands
 

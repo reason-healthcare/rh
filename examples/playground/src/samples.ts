@@ -37,12 +37,18 @@ export const vclExamples = [
 ] as const;
 
 export const cqlSource = `library Playground version '1.0.0'
+using FHIR version '4.0.1'
 
-define "Greeting":
-  'hello'
+valueset "Diabetes": 'http://example.org/fhir/ValueSet/diabetes'
+parameter MeasurementPeriod Interval<DateTime>
 
-define "Score":
-  40 + 2
+context Patient
+
+define "Diabetes Conditions":
+  [Condition: "Diabetes"]
+
+define "Has Diabetes":
+  exists "Diabetes Conditions"
 `;
 
 export function formatJson(value: unknown): string {
