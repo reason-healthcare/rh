@@ -21,15 +21,19 @@ rh cql compile [OPTIONS] <FILE>
 - `<FILE>` - Path to a CQL file, or `-` to read from stdin
 
 **Options:**
+- `--format <FORMAT>` - Output format: `human` (default), `json`, or `ndjson`
 - `-o, --output <OUTPUT>` - Output file path (defaults to stdout)
 - `--compact` - Output compact JSON (no pretty-printing)
 - `--debug` - Enable debug mode (includes annotations, locators, and result types in output)
 - `--result-types` - Include result type metadata in output
 - `--strict` - Enable strict mode (disable implicit conversions)
 - `--signatures` - Include all signatures in output
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries; may be specified multiple times
 - `--source-map` - Also emit a source-map sidecar file alongside the ELM output
 - `--source-map-output <PATH>` - Path for source-map output (defaults to `<output>.sourcemap.json` or stderr)
-- `-v, --verbose` - Enable verbose logging
+- `-q, --quiet` - Suppress informational output on stderr
+- `-v, --verbose...` - Increase verbosity (`-v` info, `-vv` debug, `-vvv` trace)
+- `--color <WHEN>` - Color output policy: `auto` (default), `always`, or `never`
 - `-h, --help` - Print help
 
 **Examples:**
@@ -144,6 +148,28 @@ Output:
 }
 ```
 
+Compile with included libraries from another directory:
+
+```bash
+# Compile with an additional include search path
+rh cql compile measure.cql --lib-path cql/includes
+```
+
+Output:
+
+```json
+{
+  "library": {
+    "identifier": {
+      "id": "Measure",
+      "version": "1.0.0"
+    },
+    "includes": { "...": "..." },
+    "statements": { "...": "..." }
+  }
+}
+```
+
 Emit compact JSON with a source map:
 
 ```bash
@@ -187,14 +213,19 @@ Validate CQL source without generating ELM output.
 
 **Usage:**
 ```bash
-rh cql validate [OPTIONS] <FILE>
+rh cql validate [OPTIONS] [FILE]...
 ```
 
 **Arguments:**
-- `<FILE>` - Path to a CQL file, or `-` to read from stdin
+- `[FILE]...` - Path(s) to CQL file(s) or glob pattern(s), or `-` to read from stdin
 
 **Options:**
-- `-v, --verbose` - Enable verbose logging
+- `--format <FORMAT>` - Output format: `human` (default), `json`, or `ndjson`
+- `--lib-path <DIR>` - Additional directory to search for included CQL libraries; may be specified multiple times
+- `--details` - Show detailed error information, including locations and annotations
+- `-q, --quiet` - Suppress informational output on stderr
+- `-v, --verbose...` - Increase verbosity (`-v` info, `-vv` debug, `-vvv` trace)
+- `--color <WHEN>` - Color output policy: `auto` (default), `always`, or `never`
 - `-h, --help` - Print help
 
 **Examples:**
@@ -210,6 +241,64 @@ Output:
 
 ```text
 ✓ CQL is valid
+```
+
+Validate multiple CQL files:
+
+```bash
+# Validate every CQL file under measures/
+rh cql validate 'measures/**/*.cql'
+```
+
+Output:
+
+```text
+[measures/diabetes.cql]
+✓ CQL is valid
+
+[measures/hypertension.cql]
+✓ CQL is valid
+```
+
+Validate with detailed diagnostics:
+
+```bash
+# Include source locations for validation diagnostics
+rh cql validate library.cql --details
+```
+
+Output:
+
+```text
+✗ CQL has errors
+
+Errors (1):
+  ✗ Undefined symbol: MissingExpression (line 8, col 12)
+```
+
+Validate with a JSON envelope for automation:
+
+```bash
+# Emit the standard rh JSON envelope
+rh cql validate library.cql --format json
+```
+
+Output:
+
+```json
+{
+  "ok": true,
+  "result": [
+    {
+      "file": "library.cql",
+      "valid": true,
+      "errors": [],
+      "warnings": []
+    }
+  ],
+  "errors": [],
+  "meta": { "...": "..." }
+}
 ```
 
 Validate from stdin:
