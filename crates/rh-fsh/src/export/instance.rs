@@ -184,26 +184,28 @@ fn apply_local_profile_defaults(
     }
     assigned_paths.extend(instance_assigned_paths.iter().cloned());
 
-    for profile in dependency_profiles.into_iter().rev() {
-        let mut fixed_values = profile.fixed_values.iter().collect::<Vec<_>>();
-        fixed_values
-            .sort_by_key(|fixed_value| dependency_slice_order(&fixed_value.path, &assigned_paths));
-        for fixed_value in fixed_values {
-            let segments = dependency_fixed_path(&fixed_value.path);
-            let is_overridden = assigned_paths
-                .iter()
-                .any(|assigned| paths_override(assigned, &segments));
-            let slice_is_used =
-                fixed_value.required || dependency_slice_is_used(&segments, &assigned_paths);
-            if !segments.is_empty() && !is_overridden && slice_is_used {
-                set_at_path(
-                    resource,
-                    &segments,
-                    fixed_value.value.clone(),
-                    shape_context,
-                    resource_type,
-                );
-            }
+    let mut dependency_fixed_values = dependency_profiles
+        .into_iter()
+        .rev()
+        .flat_map(|profile| profile.fixed_values.iter())
+        .collect::<Vec<_>>();
+    dependency_fixed_values
+        .sort_by_key(|fixed_value| dependency_slice_order(&fixed_value.path, &assigned_paths));
+    for fixed_value in dependency_fixed_values {
+        let segments = dependency_fixed_path(&fixed_value.path);
+        let is_overridden = assigned_paths
+            .iter()
+            .any(|assigned| paths_override(assigned, &segments));
+        let slice_is_used =
+            fixed_value.required || dependency_slice_is_used(&segments, &assigned_paths);
+        if !segments.is_empty() && !is_overridden && slice_is_used {
+            set_at_path(
+                resource,
+                &segments,
+                fixed_value.value.clone(),
+                shape_context,
+                resource_type,
+            );
         }
     }
 
@@ -372,20 +374,44 @@ fn dependency_fixed_path(path: &str) -> Vec<FshPathSegment> {
 }
 
 fn paths_override(assigned: &[FshPathSegment], fixed: &[FshPathSegment]) -> bool {
-    let Some(assigned_root) = assigned.first().and_then(path_segment_name) else {
+    assigned.len() <= fixed.len()
+        && assigned
+            .iter()
+            .zip(fixed)
+            .all(|(assigned, fixed)| path_segments_match(assigned, fixed))
+}
+
+fn path_segments_match(left: &FshPathSegment, right: &FshPathSegment) -> bool {
+    match (left, right) {
+        (
+            FshPathSegment::Slice {
+                element: left_element,
+                slice: left_slice,
+            },
+            FshPathSegment::Slice {
+                element: right_element,
+                slice: right_slice,
+            },
+        ) => left_element == right_element && left_slice == right_slice,
+        _ => path_elements_match(path_segment_name(left), path_segment_name(right)),
+    }
+}
+
+fn path_elements_match(left: Option<&str>, right: Option<&str>) -> bool {
+    let (Some(left), Some(right)) = (left, right) else {
         return false;
     };
-    let Some(fixed_root) = fixed.first().and_then(path_segment_name) else {
+    left == right || choice_element_matches(left, right) || choice_element_matches(right, left)
+}
+
+fn choice_element_matches(concrete: &str, choice: &str) -> bool {
+    let Some(base) = choice.strip_suffix("[x]") else {
         return false;
     };
-    if assigned_root != fixed_root {
-        return false;
-    }
-    if assigned.len() == 1 {
-        return true;
-    }
-    assigned[..assigned.len() - 1] == fixed[..fixed.len() - 1]
-        && path_segment_name(assigned.last().unwrap()) == path_segment_name(fixed.last().unwrap())
+    concrete
+        .strip_prefix(base)
+        .and_then(|suffix| suffix.chars().next())
+        .is_some_and(char::is_uppercase)
 }
 
 fn dependency_slice_is_used(
@@ -1307,6 +1333,17 @@ fn handle_slice_segment(
     let index = values
         .iter()
         .position(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
+        .or_else(|| {
+            if element == "extension" {
+                return None;
+            }
+            let mut unmarked = values
+                .iter()
+                .enumerate()
+                .filter(|(_, item)| item.get(SLICE_MARKER).is_none());
+            let candidate = unmarked.next().map(|(index, _)| index);
+            candidate.filter(|_| unmarked.next().is_none())
+        })
         .unwrap_or_else(|| {
             let mut item = serde_json::json!({ SLICE_MARKER: slice });
             if element == "extension" {
@@ -1316,6 +1353,11 @@ fn handle_slice_segment(
             values.insert(index, item);
             index
         });
+    if let Some(object) = values[index].as_object_mut() {
+        object
+            .entry(SLICE_MARKER.to_string())
+            .or_insert_with(|| serde_json::Value::String(slice.to_string()));
+    }
     if segments.len() == 1 {
         let mut value = shape_value_for_field(value, fi.map(|field| &field.field_type));
         if let serde_json::Value::Object(object) = &mut value {
@@ -1376,6 +1418,27 @@ mod tests {
     use crate::parser::ast::{Profile, SdMetadata};
     use crate::{build_definition_index, FshConfig};
     use std::path::PathBuf;
+
+    #[test]
+    fn concrete_choice_assignments_override_generic_dependency_defaults() {
+        let assigned = [
+            FshPathSegment::Slice {
+                element: "component".to_string(),
+                slice: "frequency".to_string(),
+            },
+            FshPathSegment::Name("valueQuantity".to_string()),
+        ];
+        let fixed = [
+            FshPathSegment::Slice {
+                element: "component".to_string(),
+                slice: "frequency".to_string(),
+            },
+            FshPathSegment::Name("value[x]".to_string()),
+            FshPathSegment::Name("system".to_string()),
+        ];
+
+        assert!(paths_override(&assigned, &fixed));
+    }
 
     #[test]
     fn materializes_named_extension_slices_with_canonical_urls() {
@@ -1787,6 +1850,33 @@ InstanceOf: GeneObservation
             "48018-6"
         );
         assert_eq!(instance["component"][1]["valueString"], "BRCA2");
+    }
+
+    #[test]
+    fn associates_single_unmarked_repetition_with_a_named_slice() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: GeneObservation
+Parent: Observation
+* component contains gene 0..1
+
+Instance: gene-example
+InstanceOf: GeneObservation
+* component.code = http://loinc.org#48018-6
+* component[gene].valueString = "BRCA1"
+"#,
+                "unmarked-named-slice.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "gene-example")
+            .expect("instance exists");
+
+        assert_eq!(instance["component"].as_array().unwrap().len(), 1);
+        assert_eq!(instance["component"][0]["valueString"], "BRCA1");
     }
 
     #[test]

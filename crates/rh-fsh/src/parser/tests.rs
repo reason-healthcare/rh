@@ -522,6 +522,20 @@ fn parses_integer_value() {
 }
 
 #[test]
+fn parses_integer_before_inline_comment_as_integer() {
+    let entity = single_entity(
+        "Instance: medication\nInstanceOf: MedicationRequest\n* dosageInstruction.timing.repeat.frequency = 1 // once daily\n",
+    );
+    let FshEntity::Instance(instance) = entity else {
+        panic!("expected instance");
+    };
+    assert!(matches!(
+        &instance.rules[0].value,
+        InstanceRule::Assignment(assignment) if matches!(assignment.value, FshValue::Integer(1))
+    ));
+}
+
+#[test]
 fn parses_decimal_value() {
     match assignment_value("* valueDecimal = 3.5") {
         FshValue::Decimal(d) => assert!((d - 3.5).abs() < f64::EPSILON),

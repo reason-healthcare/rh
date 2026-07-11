@@ -10,7 +10,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
     character::complete::{char, digit1},
-    combinator::{map, opt, recognize, value},
+    combinator::{map, opt, recognize, value, verify},
     multi::many0,
     sequence::{pair, tuple},
     IResult,
@@ -568,9 +568,12 @@ fn parse_quantity(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     let (input, unit) = alt((
         single_quoted_string,
         quoted_string,
-        map(
-            take_while1(|c: char| !c.is_whitespace() && c != '\n' && c != '(' && c != ')'),
-            |s: Span<'_>| s.fragment().to_string(),
+        verify(
+            map(
+                take_while1(|c: char| !c.is_whitespace() && c != '\n' && c != '(' && c != ')'),
+                |s: Span<'_>| s.fragment().to_string(),
+            ),
+            |unit: &String| unit.starts_with(char::is_alphabetic),
         ),
     ))(input)?;
     let (input, _) = ws(input)?;
