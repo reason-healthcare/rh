@@ -422,6 +422,7 @@ mod tests {
             min: Some(0),
             max: Some("1".to_string()),
             element_type: None,
+            content_reference: None,
             fixed: None,
             pattern: None,
             binding: None,

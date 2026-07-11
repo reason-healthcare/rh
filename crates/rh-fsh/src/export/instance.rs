@@ -1531,6 +1531,34 @@ mod tests {
     }
 
     #[test]
+    fn shapes_coded_values_inside_inline_element_metadata() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: medication-request
+InstanceOf: MedicationRequest
+* status = #active
+* intent = #order
+* medicationCodeableConcept = #example
+* subject = Reference(Patient/example)
+* dosageInstruction.timing.repeat.periodUnit = UCUM#d
+"#,
+                "inline-element-metadata.fsh",
+            )
+            .expect("FSH compiles");
+        let resource = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "medication-request")
+            .expect("instance exported");
+
+        assert_eq!(
+            resource["dosageInstruction"][0]["timing"]["repeat"]["periodUnit"],
+            "d"
+        );
+    }
+
+    #[test]
     fn concrete_choice_assignments_override_generic_dependency_defaults() {
         let assigned = [
             FshPathSegment::Slice {

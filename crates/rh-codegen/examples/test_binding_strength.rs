@@ -20,6 +20,7 @@ fn main() -> Result<()> {
             code: Some("code".to_string()),
             target_profile: None,
         }]),
+        content_reference: None,
         fixed: None,
         pattern: None,
         binding: Some(ElementBinding {
@@ -42,6 +43,7 @@ fn main() -> Result<()> {
             code: Some("code".to_string()),
             target_profile: None,
         }]),
+        content_reference: None,
         fixed: None,
         pattern: None,
         binding: Some(ElementBinding {

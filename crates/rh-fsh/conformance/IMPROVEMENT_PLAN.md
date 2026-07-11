@@ -6,8 +6,8 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 128 passing tests. Shared-resource mismatches are down
-from 838 to 531. Phases 2–4 remain in progress; Phase 5 continues with lowered
+and the library suite has 129 passing tests. Shared-resource mismatches are down
+from 838 to 530. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
 ## Success Criteria
@@ -71,7 +71,7 @@ implemented alongside BackboneElement metadata, cardinality-aware arrays,
 CodeableConcept wrapping,
 dynamic choice typing, primitive shadows, recursive inline export, dependency
 fixed/pattern defaults, and named/repeated slice materialization. JSON-shape
-leading gaps are down from 434 to 168; the below-100 milestone remains open.
+leading gaps are down from 434 to 167; the below-100 milestone remains open.
 
 **Goal**: stop inferring JSON shape from assignment syntax alone.
 
@@ -124,6 +124,12 @@ performance remain measurable throughout:
    typed nodes without schema lookups, remove the mutable JSON walker and cleanup
    pass, and centralize mixed-version compatibility shapes as declarative schema
    data instead of exporter branches.
+5. **2E — Navigable inline metadata (complete).** Generate static metadata for
+   inline snapshot structures and `contentReference` fields, exclude profile
+   roots from nested inference, and preserve O(1) PHF lookups in the exporter.
+   The checkpoint benchmark measured core schema lookup at 65.7–66.0 ns,
+   generated-core lookup at 74.0–74.3 ns, and profile-view lookup at
+   24.0–24.4 ns.
 
 Every checkpoint must keep missing and extra resources at zero, must not raise a
 comparison threshold, must run the field-lookup and compile benchmarks, and must
@@ -189,14 +195,14 @@ full runs produced identical results.
    improvement.
 5. Require two consecutive clean full runs before declaring project parity.
 
-**Current checkpoint**: 920/920 resource identities match; 389/920 match
-normalized content. Remaining mismatches: CARIN 77, mCODE 158, CRD 57, DTR 47,
+**Current checkpoint**: 920/920 resource identities match; 390/920 match
+normalized content. Remaining mismatches: CARIN 77, mCODE 157, CRD 57, DTR 47,
 PAS 121, and IPS 71.
 
 **Next delivery order**:
 
 1. Complete recursive schema shaping for extension arrays, Bundle entries,
-   Parameters, and primitive shadow fields (168 leading JSON-shape gaps).
+   Parameters, and primitive shadow fields (167 leading JSON-shape gaps).
 2. Export root constraints, context, slicing, bindings, fixed/pattern values,
    and differential element merging (234 StructureDefinition gaps).
 3. Preserve nested indentation context in instance rules and finish local

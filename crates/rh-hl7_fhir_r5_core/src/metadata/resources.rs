@@ -2221,6 +2221,12 @@ pub static BODYSTRUCTURE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
+    "excludedStructure" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("BodyStructureIncludedStructure"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -3997,6 +4003,12 @@ pub static CLAIM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 pub static CLAIMRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "addItem" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ClaimResponseAddItem"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -10646,6 +10658,12 @@ pub static EXPLANATIONOFBENEFIT_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
     },
     "addItem" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitAddItem"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -18823,6 +18841,12 @@ pub static ORGANIZATIONAFFILIATION_FIELDS: Map<&'static str, FieldInfo> = phf_ma
 pub static PACKAGEDPRODUCTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "attachedDocument" => FieldInfo {
         field_type: FhirFieldType::Reference,
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "characteristic" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("PackagedProductDefinitionPackagingProperty"),
         min: 0,
         max: None,
         is_choice_type: false,

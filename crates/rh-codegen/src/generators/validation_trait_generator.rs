@@ -198,6 +198,7 @@ mod tests {
             max: Some("*".to_string()),
             short: None,
             definition: None,
+            content_reference: None,
             fixed: None,
             pattern: None,
             binding: None,

@@ -172,6 +172,7 @@ mod tests {
             min: None,
             max: None,
             element_type: None,
+            content_reference: None,
             fixed: None,
             pattern: None,
             binding: Some(FhirElementBinding {
@@ -233,6 +234,7 @@ mod tests {
             min: None,
             max: None,
             element_type: None,
+            content_reference: None,
             fixed: None,
             pattern: None,
             binding: None,

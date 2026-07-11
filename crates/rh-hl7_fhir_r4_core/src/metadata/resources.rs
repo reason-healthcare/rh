@@ -2915,6 +2915,12 @@ pub static CLAIMRESPONSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "communicationRequest" => FieldInfo {
         field_type: FhirFieldType::Reference,
         min: 0,
@@ -8483,6 +8489,12 @@ pub static EXPLANATIONOFBENEFIT_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
         max: None,
         is_choice_type: false,
     },
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "benefitBalance" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitBenefitBalance"),
         min: 0,
@@ -10680,6 +10692,12 @@ pub static INVOICE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Complex("Money"),
         min: 0,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "totalPriceComponent" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("InvoiceLineItemPriceComponent"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "type" => FieldInfo {
@@ -20885,6 +20903,12 @@ pub static SUBSTANCESPECIFICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map
     },
     "moiety" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("SubstanceSpecificationMoiety"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "molecularWeight" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("SubstanceSpecificationStructureIsotopeMolecularWeight"),
         min: 0,
         max: None,
         is_choice_type: false,

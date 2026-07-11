@@ -261,7 +261,7 @@ pub static ATTACHMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 #[rustfmt::skip]
 pub static AVAILABILITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "availableTime" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("AvailabilityAvailableTime"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -279,7 +279,7 @@ pub static AVAILABILITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "notAvailableTime" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("AvailabilityNotAvailableTime"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -609,13 +609,13 @@ pub static DATAELEMENT_CONSTRAINT_ON_ELEMENTDEFINITION_DATA_TYPE_FIELDS: Map<&'s
 #[rustfmt::skip]
 pub static DATAREQUIREMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "codeFilter" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("DataRequirementCodeFilter"),
         min: 0,
         max: None,
         is_choice_type: false,
     },
     "dateFilter" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("DataRequirementDateFilter"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -651,7 +651,7 @@ pub static DATAREQUIREMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "sort" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("DataRequirementSort"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -669,7 +669,7 @@ pub static DATAREQUIREMENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "valueFilter" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("DataRequirementValueFilter"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -762,7 +762,7 @@ pub static DOSAGE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "doseAndRate" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("DosageDoseAndRate"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -921,13 +921,13 @@ pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "base" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionBase"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
     "binding" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionBinding"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -951,7 +951,7 @@ pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "constraint" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionConstraint"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -975,7 +975,7 @@ pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "example" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionExample"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -1023,7 +1023,7 @@ pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "mapping" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionMapping"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -1131,13 +1131,13 @@ pub static ELEMENTDEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "slicing" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionSlicing"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
     },
     "type" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionType"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -2180,7 +2180,7 @@ pub static TIMING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "repeat" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("TimingRepeat"),
         min: 0,
         max: Some(1),
         is_choice_type: false,

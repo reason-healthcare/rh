@@ -367,6 +367,83 @@ pub static ACTIVITYDEFINITIONPARTICIPANT_FIELDS: Map<&'static str, FieldInfo> = 
     },
 };
 
+/// Field metadata for ActivityDefinitionRelatedArtifact
+#[rustfmt::skip]
+pub static ACTIVITYDEFINITIONRELATEDARTIFACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "citation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "classifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "document" => FieldInfo {
+        field_type: FhirFieldType::Complex("Attachment"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "label" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationDate" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationStatus" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resource" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resourceReference" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
 /// Field metadata for AdministrableProductDefinitionProperty
 #[rustfmt::skip]
 pub static ADMINISTRABLEPRODUCTDEFINITIONPROPERTY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -1174,6 +1251,12 @@ pub static ARTIFACTASSESSMENTCONTENT_FIELDS: Map<&'static str, FieldInfo> = phf_
         max: None,
         is_choice_type: false,
     },
+    "component" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ArtifactAssessmentContent"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -1310,6 +1393,12 @@ pub static AUDITEVENTAGENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for AuditEventEntity
 #[rustfmt::skip]
 pub static AUDITEVENTENTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "agent" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("AuditEventAgent"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "detail" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("AuditEventEntityDetail"),
         min: 0,
@@ -1467,6 +1556,76 @@ pub static AUDITEVENTSOURCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
         max: None,
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for AvailabilityAvailableTime
+#[rustfmt::skip]
+pub static AVAILABILITYAVAILABLETIME_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "allDay" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "availableEndTime" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Time),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "availableStartTime" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Time),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "daysOfWeek" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for AvailabilityNotAvailableTime
+#[rustfmt::skip]
+pub static AVAILABILITYNOTAVAILABLETIME_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "description" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "during" => FieldInfo {
+        field_type: FhirFieldType::Complex("Period"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
         is_choice_type: false,
     },
 };
@@ -1738,6 +1897,12 @@ pub static BUNDLEENTRY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
+    "link" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("BundleLink"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "modifierExtension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -1912,6 +2077,59 @@ pub static BUNDLEENTRYSEARCH_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "score" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
         min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for BundleIdentifier
+#[rustfmt::skip]
+pub static BUNDLEIDENTIFIER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "assigner" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "period" => FieldInfo {
+        field_type: FhirFieldType::Complex("Period"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "system" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "use" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "value" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
         max: Some(1),
         is_choice_type: false,
     },
@@ -2196,8 +2414,20 @@ pub static CAPABILITYSTATEMENTREST_FIELDS: Map<&'static str, FieldInfo> = phf_ma
         max: None,
         is_choice_type: false,
     },
+    "operation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("CapabilityStatementRestResourceOperation"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "resource" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("CapabilityStatementRestResource"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "searchParam" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("CapabilityStatementRestResourceSearchParam"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -2713,6 +2943,12 @@ pub static CHARGEITEMDEFINITIONAPPLICABILITY_FIELDS: Map<&'static str, FieldInfo
 /// Field metadata for ChargeItemDefinitionPropertyGroup
 #[rustfmt::skip]
 pub static CHARGEITEMDEFINITIONPROPERTYGROUP_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "applicability" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ChargeItemDefinitionApplicability"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -4523,6 +4759,12 @@ pub static CLAIMRELATED_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for ClaimResponseAddItem
 #[rustfmt::skip]
 pub static CLAIMRESPONSEADDITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "bodySite" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ClaimResponseAddItemBodySite"),
         min: 0,
@@ -4637,6 +4879,12 @@ pub static CLAIMRESPONSEADDITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
         max: Some(1),
         is_choice_type: false,
     },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemReviewOutcome"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "serviced[x]" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
         min: 0,
@@ -4707,6 +4955,12 @@ pub static CLAIMRESPONSEADDITEMBODYSITE_FIELDS: Map<&'static str, FieldInfo> = p
 /// Field metadata for ClaimResponseAddItemDetail
 #[rustfmt::skip]
 pub static CLAIMRESPONSEADDITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -4769,6 +5023,12 @@ pub static CLAIMRESPONSEADDITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf
     },
     "revenue" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemReviewOutcome"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -4802,6 +5062,12 @@ pub static CLAIMRESPONSEADDITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf
 /// Field metadata for ClaimResponseAddItemDetailSubDetail
 #[rustfmt::skip]
 pub static CLAIMRESPONSEADDITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -4864,6 +5130,12 @@ pub static CLAIMRESPONSEADDITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, FieldIn
     },
     "revenue" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemReviewOutcome"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -5138,6 +5410,12 @@ pub static CLAIMRESPONSEITEMADJUDICATION_FIELDS: Map<&'static str, FieldInfo> = 
 /// Field metadata for ClaimResponseItemDetail
 #[rustfmt::skip]
 pub static CLAIMRESPONSEITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "detailSequence" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
         min: 1,
@@ -5168,6 +5446,12 @@ pub static CLAIMRESPONSEITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_ma
         max: None,
         is_choice_type: false,
     },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemReviewOutcome"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "subDetail" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ClaimResponseItemDetailSubDetail"),
         min: 0,
@@ -5185,6 +5469,12 @@ pub static CLAIMRESPONSEITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_ma
 /// Field metadata for ClaimResponseItemDetailSubDetail
 #[rustfmt::skip]
 pub static CLAIMRESPONSEITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -5207,6 +5497,12 @@ pub static CLAIMRESPONSEITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, FieldInfo>
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
         min: 0,
         max: None,
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClaimResponseItemReviewOutcome"),
+        min: 0,
+        max: Some(1),
         is_choice_type: false,
     },
     "subDetailSequence" => FieldInfo {
@@ -5656,6 +5952,12 @@ pub static CLINICALUSEDEFINITIONINDICATION_FIELDS: Map<&'static str, FieldInfo> 
         max: None,
         is_choice_type: false,
     },
+    "otherTherapy" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ClinicalUseDefinitionContraindicationOtherTherapy"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "undesirableEffect" => FieldInfo {
         field_type: FhirFieldType::Reference,
         min: 0,
@@ -5829,6 +6131,12 @@ pub static CODESYSTEMCONCEPT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
         min: 1,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "concept" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("CodeSystemConcept"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "definition" => FieldInfo {
@@ -6295,6 +6603,12 @@ pub static COMPOSITIONSECTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
+    "section" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("CompositionSection"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "text" => FieldInfo {
         field_type: FhirFieldType::Complex("Narrative"),
         min: 0,
@@ -6497,6 +6811,12 @@ pub static CONCEPTMAPGROUPELEMENTTARGET_FIELDS: Map<&'static str, FieldInfo> = p
     },
     "modifierExtension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "product" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ConceptMapGroupElementTargetDependsOn"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -7070,6 +7390,12 @@ pub static CONSENTPROVISION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: Some(1),
         is_choice_type: false,
     },
+    "provision" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ConsentProvision"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "purpose" => FieldInfo {
         field_type: FhirFieldType::Complex("Coding"),
         min: 0,
@@ -7427,6 +7753,12 @@ pub static CONTRACTTERM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
+    "group" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ContractTerm"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "id" => FieldInfo {
         field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
         min: 0,
@@ -7664,6 +7996,12 @@ pub static CONTRACTTERMACTIONSUBJECT_FIELDS: Map<&'static str, FieldInfo> = phf_
 /// Field metadata for ContractTermAsset
 #[rustfmt::skip]
 pub static CONTRACTTERMASSET_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "answer" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ContractTermOfferAnswer"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "condition" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 0,
@@ -8780,6 +9118,152 @@ pub static COVERAGEPAYMENTBY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     },
 };
 
+/// Field metadata for DataRequirementCodeFilter
+#[rustfmt::skip]
+pub static DATAREQUIREMENTCODEFILTER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Complex("Coding"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "path" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "searchParam" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "valueSet" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for DataRequirementDateFilter
+#[rustfmt::skip]
+pub static DATAREQUIREMENTDATEFILTER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "path" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "searchParam" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "value[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+};
+
+/// Field metadata for DataRequirementSort
+#[rustfmt::skip]
+pub static DATAREQUIREMENTSORT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "direction" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "path" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for DataRequirementValueFilter
+#[rustfmt::skip]
+pub static DATAREQUIREMENTVALUEFILTER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "comparator" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "path" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "searchParam" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "value[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+};
+
 /// Field metadata for Definition
 #[rustfmt::skip]
 pub static DEFINITION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -9537,10 +10021,22 @@ pub static DEVICEDEFINITIONPACKAGING_FIELDS: Map<&'static str, FieldInfo> = phf_
         max: None,
         is_choice_type: false,
     },
+    "packaging" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("DeviceDefinitionPackaging"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "type" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "udiDeviceIdentifier" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("DeviceDefinitionUdiDeviceIdentifier"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
 };
@@ -10323,6 +10819,416 @@ pub static DOCUMENTREFERENCERELATESTO_FIELDS: Map<&'static str, FieldInfo> = phf
     },
 };
 
+/// Field metadata for DosageDoseAndRate
+#[rustfmt::skip]
+pub static DOSAGEDOSEANDRATE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "dose[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("Range"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "rate[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("Ratio"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionBase
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONBASE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "max" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "min" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::UnsignedInt),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "path" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionBinding
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONBINDING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "additional" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionBindingAdditional"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "description" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "strength" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "valueSet" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionBindingAdditional
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONBINDINGADDITIONAL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "any" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "documentation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "purpose" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "shortDoco" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "usage" => FieldInfo {
+        field_type: FhirFieldType::Complex("UsageContext"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "valueSet" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionConstraint
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONCONSTRAINT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "expression" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "human" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "key" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Id),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "requirements" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "severity" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "source" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "suppress" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionExample
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONEXAMPLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "label" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "value[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Base64Binary),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+};
+
+/// Field metadata for ElementDefinitionMapping
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONMAPPING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "comment" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "identity" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Id),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "language" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "map" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionSlicing
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONSLICING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "description" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "discriminator" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ElementDefinitionSlicingDiscriminator"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "ordered" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "rules" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionSlicingDiscriminator
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONSLICINGDISCRIMINATOR_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "path" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ElementDefinitionType
+#[rustfmt::skip]
+pub static ELEMENTDEFINITIONTYPE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "aggregation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(0),
+        is_choice_type: false,
+    },
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "profile" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(0),
+        is_choice_type: false,
+    },
+    "targetProfile" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "versioning" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
 /// Field metadata for EncounterAdmission
 #[rustfmt::skip]
 pub static ENCOUNTERADMISSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -10773,7 +11679,7 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "performer" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("EventPerformer"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -10834,6 +11740,23 @@ pub static EVENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     },
 };
 
+/// Field metadata for EventPerformer
+#[rustfmt::skip]
+pub static EVENTPERFORMER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "actor" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "function" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
 /// Field metadata for EvidenceCertainty
 #[rustfmt::skip]
 pub static EVIDENCECERTAINTY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -10877,6 +11800,12 @@ pub static EVIDENCECERTAINTY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "subcomponent" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("EvidenceCertainty"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "type" => FieldInfo {
@@ -11042,6 +11971,12 @@ pub static EVIDENCEREPORTSECTION_FIELDS: Map<&'static str, FieldInfo> = phf_map!
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "section" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("EvidenceReportSection"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "text" => FieldInfo {
@@ -11226,6 +12161,12 @@ pub static EVIDENCESTATISTIC_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for EvidenceStatisticAttributeEstimate
 #[rustfmt::skip]
 pub static EVIDENCESTATISTICATTRIBUTEESTIMATE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "attributeEstimate" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("EvidenceStatisticAttributeEstimate"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "description" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
         min: 0,
@@ -11285,6 +12226,12 @@ pub static EVIDENCESTATISTICATTRIBUTEESTIMATE_FIELDS: Map<&'static str, FieldInf
 /// Field metadata for EvidenceStatisticModelCharacteristic
 #[rustfmt::skip]
 pub static EVIDENCESTATISTICMODELCHARACTERISTIC_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "attributeEstimate" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("EvidenceStatisticAttributeEstimate"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "code" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 1,
@@ -11574,6 +12521,12 @@ pub static EVIDENCEVARIABLECHARACTERISTIC_FIELDS: Map<&'static str, FieldInfo> =
 /// Field metadata for EvidenceVariableCharacteristicDefinitionByCombination
 #[rustfmt::skip]
 pub static EVIDENCEVARIABLECHARACTERISTICDEFINITIONBYCOMBINATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "characteristic" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("EvidenceVariableCharacteristic"),
+        min: 1,
+        max: None,
+        is_choice_type: false,
+    },
     "code" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
         min: 1,
@@ -12075,6 +13028,12 @@ pub static EXAMPLESCENARIOPROCESSSTEP_FIELDS: Map<&'static str, FieldInfo> = phf
         max: Some(1),
         is_choice_type: false,
     },
+    "process" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExampleScenarioProcess"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "workflow" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
         min: 0,
@@ -12106,6 +13065,12 @@ pub static EXAMPLESCENARIOPROCESSSTEPALTERNATIVE_FIELDS: Map<&'static str, Field
     },
     "modifierExtension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "step" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExampleScenarioProcessStep"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -12169,6 +13134,18 @@ pub static EXAMPLESCENARIOPROCESSSTEPOPERATION_FIELDS: Map<&'static str, FieldIn
         max: Some(1),
         is_choice_type: false,
     },
+    "request" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExampleScenarioInstanceContainedInstance"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "response" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExampleScenarioInstanceContainedInstance"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "title" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 1,
@@ -12227,6 +13204,12 @@ pub static EXPLANATIONOFBENEFITACCIDENT_FIELDS: Map<&'static str, FieldInfo> = p
 /// Field metadata for ExplanationOfBenefitAddItem
 #[rustfmt::skip]
 pub static EXPLANATIONOFBENEFITADDITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "bodySite" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitAddItemBodySite"),
         min: 0,
@@ -12347,6 +13330,12 @@ pub static EXPLANATIONOFBENEFITADDITEM_FIELDS: Map<&'static str, FieldInfo> = ph
         max: Some(1),
         is_choice_type: false,
     },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemReviewOutcome"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "serviced[x]" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
         min: 0,
@@ -12417,6 +13406,12 @@ pub static EXPLANATIONOFBENEFITADDITEMBODYSITE_FIELDS: Map<&'static str, FieldIn
 /// Field metadata for ExplanationOfBenefitAddItemDetail
 #[rustfmt::skip]
 pub static EXPLANATIONOFBENEFITADDITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -12485,6 +13480,12 @@ pub static EXPLANATIONOFBENEFITADDITEMDETAIL_FIELDS: Map<&'static str, FieldInfo
     },
     "revenue" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemReviewOutcome"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -12518,6 +13519,12 @@ pub static EXPLANATIONOFBENEFITADDITEMDETAIL_FIELDS: Map<&'static str, FieldInfo
 /// Field metadata for ExplanationOfBenefitAddItemDetailSubDetail
 #[rustfmt::skip]
 pub static EXPLANATIONOFBENEFITADDITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -12586,6 +13593,12 @@ pub static EXPLANATIONOFBENEFITADDITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, 
     },
     "revenue" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemReviewOutcome"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -13174,6 +14187,12 @@ pub static EXPLANATIONOFBENEFITITEMBODYSITE_FIELDS: Map<&'static str, FieldInfo>
 /// Field metadata for ExplanationOfBenefitItemDetail
 #[rustfmt::skip]
 pub static EXPLANATIONOFBENEFITITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "category" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
@@ -13254,6 +14273,12 @@ pub static EXPLANATIONOFBENEFITITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> =
     },
     "revenue" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemReviewOutcome"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -13299,6 +14324,12 @@ pub static EXPLANATIONOFBENEFITITEMDETAIL_FIELDS: Map<&'static str, FieldInfo> =
 /// Field metadata for ExplanationOfBenefitItemDetailSubDetail
 #[rustfmt::skip]
 pub static EXPLANATIONOFBENEFITITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "adjudication" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "category" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
@@ -13379,6 +14410,12 @@ pub static EXPLANATIONOFBENEFITITEMDETAILSUBDETAIL_FIELDS: Map<&'static str, Fie
     },
     "revenue" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "reviewOutcome" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemReviewOutcome"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -15431,6 +16468,12 @@ pub static IMPLEMENTATIONGUIDEDEFINITIONPAGE_FIELDS: Map<&'static str, FieldInfo
         max: Some(1),
         is_choice_type: false,
     },
+    "page" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ImplementationGuideDefinitionPage"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "source[x]" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Url),
         min: 0,
@@ -16747,6 +17790,178 @@ pub static INVOICEPARTICIPANT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     },
 };
 
+/// Field metadata for LibraryContent
+#[rustfmt::skip]
+pub static LIBRARYCONTENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "contentType" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "creation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "data" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Base64Binary),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "duration" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "frames" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "hash" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Base64Binary),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "height" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "language" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "pages" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "size" => FieldInfo {
+        field_type: FhirFieldType::Complex("integer64"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "title" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "url" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Url),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "width" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for LibraryRelatedArtifact
+#[rustfmt::skip]
+pub static LIBRARYRELATEDARTIFACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "citation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "classifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "document" => FieldInfo {
+        field_type: FhirFieldType::Complex("Attachment"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "label" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationDate" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationStatus" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resource" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resourceReference" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
 /// Field metadata for LinkageItem
 #[rustfmt::skip]
 pub static LINKAGEITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -16879,6 +18094,12 @@ pub static MANUFACTUREDITEMDEFINITIONCOMPONENT_FIELDS: Map<&'static str, FieldIn
         max: None,
         is_choice_type: false,
     },
+    "component" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ManufacturedItemDefinitionComponent"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "constituent" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("ManufacturedItemDefinitionComponentConstituent"),
         min: 0,
@@ -16905,6 +18126,12 @@ pub static MANUFACTUREDITEMDEFINITIONCOMPONENT_FIELDS: Map<&'static str, FieldIn
     },
     "modifierExtension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "property" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ManufacturedItemDefinitionProperty"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -17273,6 +18500,83 @@ pub static MEASUREGROUPSTRATIFIERCOMPONENT_FIELDS: Map<&'static str, FieldInfo> 
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
         max: None,
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for MeasureRelatedArtifact
+#[rustfmt::skip]
+pub static MEASURERELATEDARTIFACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "citation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "classifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "document" => FieldInfo {
+        field_type: FhirFieldType::Complex("Attachment"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "label" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationDate" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationStatus" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resource" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resourceReference" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
         is_choice_type: false,
     },
 };
@@ -18365,6 +19669,12 @@ pub static MEDICATIONKNOWLEDGEMONOGRAPH_FIELDS: Map<&'static str, FieldInfo> = p
 /// Field metadata for MedicationKnowledgePackaging
 #[rustfmt::skip]
 pub static MEDICATIONKNOWLEDGEPACKAGING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "cost" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("MedicationKnowledgeCost"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -20298,6 +21608,158 @@ pub static NUTRITIONPRODUCTNUTRIENT_FIELDS: Map<&'static str, FieldInfo> = phf_m
     },
 };
 
+/// Field metadata for ObservationCategory
+#[rustfmt::skip]
+pub static OBSERVATIONCATEGORY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "coding" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ObservationCategoryCoding"),
+        min: 1,
+        max: None,
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "text" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ObservationCategoryCoding
+#[rustfmt::skip]
+pub static OBSERVATIONCATEGORYCODING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "system" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "userSelected" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "version" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ObservationCode
+#[rustfmt::skip]
+pub static OBSERVATIONCODE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "coding" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ObservationCodeCoding"),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "text" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ObservationCodeCoding
+#[rustfmt::skip]
+pub static OBSERVATIONCODECODING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "system" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "userSelected" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "version" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
 /// Field metadata for ObservationComponent
 #[rustfmt::skip]
 pub static OBSERVATIONCOMPONENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -20337,9 +21799,138 @@ pub static OBSERVATIONCOMPONENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
         max: None,
         is_choice_type: false,
     },
+    "referenceRange" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ObservationReferenceRange"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "value[x]" => FieldInfo {
         field_type: FhirFieldType::Complex("Quantity"),
         min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+};
+
+/// Field metadata for ObservationComponentCode
+#[rustfmt::skip]
+pub static OBSERVATIONCOMPONENTCODE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "coding" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ObservationComponentCodeCoding"),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "text" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ObservationComponentCodeCoding
+#[rustfmt::skip]
+pub static OBSERVATIONCOMPONENTCODECODING_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "system" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "userSelected" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Boolean),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "version" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ObservationComponentValue
+#[rustfmt::skip]
+pub static OBSERVATIONCOMPONENTVALUE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "comparator" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: true,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "system" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "unit" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "value" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 1,
         max: Some(1),
         is_choice_type: true,
     },
@@ -20380,6 +21971,12 @@ pub static OBSERVATIONDEFINITIONCOMPONENT_FIELDS: Map<&'static str, FieldInfo> =
     },
     "permittedUnit" => FieldInfo {
         field_type: FhirFieldType::Complex("Coding"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "qualifiedValue" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ObservationDefinitionQualifiedValue"),
         min: 0,
         max: None,
         is_choice_type: false,
@@ -20587,6 +22184,53 @@ pub static OBSERVATIONTRIGGEREDBY_FIELDS: Map<&'static str, FieldInfo> = phf_map
     },
 };
 
+/// Field metadata for ObservationValue
+#[rustfmt::skip]
+pub static OBSERVATIONVALUE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "code" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "comparator" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(0),
+        is_choice_type: true,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: true,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "system" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Uri),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "unit" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "value" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+};
+
 /// Field metadata for OperationDefinitionOverload
 #[rustfmt::skip]
 pub static OPERATIONDEFINITIONOVERLOAD_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -20677,6 +22321,12 @@ pub static OPERATIONDEFINITIONPARAMETER_FIELDS: Map<&'static str, FieldInfo> = p
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
         min: 1,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "part" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("OperationDefinitionParameter"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "referencedFrom" => FieldInfo {
@@ -20985,6 +22635,12 @@ pub static PACKAGEDPRODUCTDEFINITIONPACKAGING_FIELDS: Map<&'static str, FieldInf
         max: None,
         is_choice_type: false,
     },
+    "packaging" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("PackagedProductDefinitionPackaging"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "property" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("PackagedProductDefinitionPackagingProperty"),
         min: 0,
@@ -21106,6 +22762,12 @@ pub static PARAMETERSPARAMETER_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 1,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "part" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ParametersParameter"),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
     "resource" => FieldInfo {
@@ -21740,6 +23402,12 @@ pub static PERSONLINK_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for PlanDefinitionAction
 #[rustfmt::skip]
 pub static PLANDEFINITIONACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "action" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("PlanDefinitionAction"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "cardinalityBehavior" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
         min: 0,
@@ -22380,6 +24048,83 @@ pub static PLANDEFINITIONGOALTARGET_FIELDS: Map<&'static str, FieldInfo> = phf_m
     },
 };
 
+/// Field metadata for PlanDefinitionRelatedArtifact
+#[rustfmt::skip]
+pub static PLANDEFINITIONRELATEDARTIFACT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "citation" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "classifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("CodeableConcept"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "display" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "document" => FieldInfo {
+        field_type: FhirFieldType::Complex("Attachment"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "label" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationDate" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Date),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "publicationStatus" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resource" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "resourceReference" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "type" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
 /// Field metadata for PractitionerCommunication
 #[rustfmt::skip]
 pub static PRACTITIONERCOMMUNICATION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
@@ -22560,7 +24305,7 @@ pub static PRODUCT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         is_choice_type: false,
     },
     "instance" => FieldInfo {
-        field_type: FhirFieldType::Complex("Element"),
+        field_type: FhirFieldType::BackboneElement("ProductInstance"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -22580,6 +24325,41 @@ pub static PRODUCT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
     "status" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
         min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for ProductInstance
+#[rustfmt::skip]
+pub static PRODUCTINSTANCE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "expiry" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::DateTime),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "identifier" => FieldInfo {
+        field_type: FhirFieldType::Complex("Identifier"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "lotNumber" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "quantity" => FieldInfo {
+        field_type: FhirFieldType::Complex("Quantity"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "subject" => FieldInfo {
+        field_type: FhirFieldType::Reference,
+        min: 0,
         max: Some(1),
         is_choice_type: false,
     },
@@ -22635,6 +24415,12 @@ pub static PROVENANCEAGENT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for ProvenanceEntity
 #[rustfmt::skip]
 pub static PROVENANCEENTITY_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "agent" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ProvenanceAgent"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -22843,6 +24629,12 @@ pub static QUESTIONNAIREITEM_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         max: None,
         is_choice_type: false,
     },
+    "item" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("QuestionnaireItem"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "linkId" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 1,
@@ -23031,6 +24823,12 @@ pub static QUESTIONNAIRERESPONSEITEM_FIELDS: Map<&'static str, FieldInfo> = phf_
         max: Some(1),
         is_choice_type: false,
     },
+    "item" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("QuestionnaireResponseItem"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "linkId" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 1,
@@ -23066,6 +24864,12 @@ pub static QUESTIONNAIRERESPONSEITEMANSWER_FIELDS: Map<&'static str, FieldInfo> 
         max: Some(1),
         is_choice_type: false,
     },
+    "item" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("QuestionnaireResponseItem"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "modifierExtension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -23083,6 +24887,12 @@ pub static QUESTIONNAIRERESPONSEITEMANSWER_FIELDS: Map<&'static str, FieldInfo> 
 /// Field metadata for RegulatedAuthorizationCase
 #[rustfmt::skip]
 pub static REGULATEDAUTHORIZATIONCASE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "application" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("RegulatedAuthorizationCase"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "date[x]" => FieldInfo {
         field_type: FhirFieldType::Complex("Period"),
         min: 0,
@@ -23326,6 +25136,12 @@ pub static REQUEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for RequestOrchestrationAction
 #[rustfmt::skip]
 pub static REQUESTORCHESTRATIONACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "action" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("RequestOrchestrationAction"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "cardinalityBehavior" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
         min: 0,
@@ -25233,6 +27049,12 @@ pub static STRUCTUREMAPGROUPRULE_FIELDS: Map<&'static str, FieldInfo> = phf_map!
         max: Some(1),
         is_choice_type: false,
     },
+    "rule" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("StructureMapGroupRule"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "source" => FieldInfo {
         field_type: FhirFieldType::BackboneElement("StructureMapGroupRuleSource"),
         min: 1,
@@ -25272,6 +27094,12 @@ pub static STRUCTUREMAPGROUPRULEDEPENDENT_FIELDS: Map<&'static str, FieldInfo> =
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Id),
         min: 1,
         max: Some(1),
+        is_choice_type: false,
+    },
+    "parameter" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("StructureMapGroupRuleTargetParameter"),
+        min: 1,
+        max: None,
         is_choice_type: false,
     },
 };
@@ -26169,6 +27997,18 @@ pub static SUBSTANCEDEFINITIONNAME_FIELDS: Map<&'static str, FieldInfo> = phf_ma
         max: Some(1),
         is_choice_type: false,
     },
+    "synonym" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("SubstanceDefinitionName"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "translation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("SubstanceDefinitionName"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "type" => FieldInfo {
         field_type: FhirFieldType::Complex("CodeableConcept"),
         min: 0,
@@ -26400,6 +28240,12 @@ pub static SUBSTANCEDEFINITIONSTRUCTURE_FIELDS: Map<&'static str, FieldInfo> = p
     },
     "molecularFormulaByMoiety" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "molecularWeight" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("SubstanceDefinitionMolecularWeight"),
         min: 0,
         max: Some(1),
         is_choice_type: false,
@@ -28602,6 +30448,12 @@ pub static TESTREPORTTEARDOWNACTION_FIELDS: Map<&'static str, FieldInfo> = phf_m
         max: None,
         is_choice_type: false,
     },
+    "operation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("TestReportSetupActionOperation"),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
 };
 
 /// Field metadata for TestReportTest
@@ -28648,6 +30500,12 @@ pub static TESTREPORTTEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for TestReportTestAction
 #[rustfmt::skip]
 pub static TESTREPORTTESTACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "assert" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("TestReportSetupActionAssert"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -28664,6 +30522,12 @@ pub static TESTREPORTTESTACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
         max: None,
+        is_choice_type: false,
+    },
+    "operation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("TestReportSetupActionOperation"),
+        min: 0,
+        max: Some(1),
         is_choice_type: false,
     },
 };
@@ -29443,6 +31307,12 @@ pub static TESTSCRIPTTEARDOWNACTION_FIELDS: Map<&'static str, FieldInfo> = phf_m
         max: None,
         is_choice_type: false,
     },
+    "operation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("TestScriptSetupActionOperation"),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
 };
 
 /// Field metadata for TestScriptTest
@@ -29489,6 +31359,12 @@ pub static TESTSCRIPTTEST_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
 /// Field metadata for TestScriptTestAction
 #[rustfmt::skip]
 pub static TESTSCRIPTTESTACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "assert" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("TestScriptSetupActionAssert"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -29505,6 +31381,12 @@ pub static TESTSCRIPTTESTACTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
         max: None,
+        is_choice_type: false,
+    },
+    "operation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("TestScriptSetupActionOperation"),
+        min: 0,
+        max: Some(1),
         is_choice_type: false,
     },
 };
@@ -29576,6 +31458,113 @@ pub static TESTSCRIPTVARIABLE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::Id),
         min: 0,
         max: Some(1),
+        is_choice_type: false,
+    },
+};
+
+/// Field metadata for TimingRepeat
+#[rustfmt::skip]
+pub static TIMINGREPEAT_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "bounds[x]" => FieldInfo {
+        field_type: FhirFieldType::Complex("Duration"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: true,
+    },
+    "count" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "countMax" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "dayOfWeek" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "duration" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "durationMax" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "durationUnit" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "frequency" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "frequencyMax" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "offset" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::UnsignedInt),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "period" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "periodMax" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Decimal),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "periodUnit" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "timeOfDay" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Time),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "when" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Code),
+        min: 0,
+        max: None,
         is_choice_type: false,
     },
 };
@@ -29694,6 +31683,12 @@ pub static TRANSPORTRESTRICTION_FIELDS: Map<&'static str, FieldInfo> = phf_map! 
 /// Field metadata for ValueSetCompose
 #[rustfmt::skip]
 pub static VALUESETCOMPOSE_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "exclude" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ValueSetComposeInclude"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "extension" => FieldInfo {
         field_type: FhirFieldType::Complex("Extension"),
         min: 0,
@@ -30012,6 +32007,18 @@ pub static VALUESETEXPANSIONCONTAINS_FIELDS: Map<&'static str, FieldInfo> = phf_
         max: Some(1),
         is_choice_type: false,
     },
+    "contains" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ValueSetExpansionContains"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
+    "designation" => FieldInfo {
+        field_type: FhirFieldType::BackboneElement("ValueSetComposeIncludeConceptDesignation"),
+        min: 0,
+        max: None,
+        is_choice_type: false,
+    },
     "display" => FieldInfo {
         field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
         min: 0,
@@ -30205,6 +32212,35 @@ pub static VALUESETEXPANSIONPROPERTY_FIELDS: Map<&'static str, FieldInfo> = phf_
         min: 0,
         max: Some(1),
         is_choice_type: false,
+    },
+};
+
+/// Field metadata for ValueSetExtension
+#[rustfmt::skip]
+pub static VALUESETEXTENSION_FIELDS: Map<&'static str, FieldInfo> = phf_map! {
+    "extension" => FieldInfo {
+        field_type: FhirFieldType::Complex("Extension"),
+        min: 0,
+        max: Some(0),
+        is_choice_type: false,
+    },
+    "id" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 0,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "url" => FieldInfo {
+        field_type: FhirFieldType::Complex("http://hl7.org/fhirpath/System.String"),
+        min: 1,
+        max: Some(1),
+        is_choice_type: false,
+    },
+    "value[x]" => FieldInfo {
+        field_type: FhirFieldType::Primitive(FhirPrimitiveType::Markdown),
+        min: 1,
+        max: Some(1),
+        is_choice_type: true,
     },
 };
 

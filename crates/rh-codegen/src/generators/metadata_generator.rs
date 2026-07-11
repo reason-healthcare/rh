@@ -92,7 +92,7 @@ pub fn build_metadata_registry(structure_defs: &[StructureDefinition]) -> Metada
                 registry.add_type(type_metadata);
             }
         }
-        for type_metadata in extract_backbone_metadata(structure_def) {
+        for type_metadata in extract_nested_metadata(structure_def) {
             if !registry.types.contains_key(&type_metadata.name) {
                 registry.add_type(type_metadata);
             }
@@ -114,7 +114,7 @@ fn extract_type_metadata(structure_def: &StructureDefinition) -> Option<TypeMeta
         let Some(field_name) = extract_field_name(&element.path, type_name) else {
             continue;
         };
-        if let Some(field_info) = extract_field_info(element) {
+        if let Some(field_info) = extract_field_info(element, elements) {
             fields.insert(field_name, field_info);
         }
     }
@@ -138,16 +138,18 @@ fn extract_field_name(path: &str, type_name: &str) -> Option<String> {
     (!field_path.contains('.')).then(|| field_path.to_string())
 }
 
-fn extract_backbone_metadata(structure_def: &StructureDefinition) -> Vec<TypeMetadata> {
+fn extract_nested_metadata(structure_def: &StructureDefinition) -> Vec<TypeMetadata> {
     let Some(snapshot) = &structure_def.snapshot else {
         return Vec::new();
     };
     snapshot
         .element
         .iter()
-        .filter(|element| is_backbone_element(element))
-        .map(|backbone| {
-            let prefix = format!("{}.", backbone.path);
+        .filter(|element| {
+            element.path.contains('.') && is_nested_element(element, &snapshot.element)
+        })
+        .map(|nested| {
+            let prefix = format!("{}.", nested.path);
             let mut fields = HashMap::new();
             for element in &snapshot.element {
                 let Some(field_path) = element.path.strip_prefix(&prefix) else {
@@ -156,16 +158,30 @@ fn extract_backbone_metadata(structure_def: &StructureDefinition) -> Vec<TypeMet
                 if field_path.contains('.') {
                     continue;
                 }
-                if let Some(field_info) = extract_field_info(element) {
+                if let Some(field_info) = extract_field_info(element, &snapshot.element) {
                     fields.insert(field_path.to_string(), field_info);
                 }
             }
             TypeMetadata {
-                name: backbone_type_name(&backbone.path),
+                name: backbone_type_name(&nested.path),
                 fields,
             }
         })
         .collect()
+}
+
+fn is_nested_element(element: &ElementDefinition, elements: &[ElementDefinition]) -> bool {
+    is_backbone_element(element) || has_direct_children(&element.path, elements)
+}
+
+fn has_direct_children(path: &str, elements: &[ElementDefinition]) -> bool {
+    let prefix = format!("{path}.");
+    elements.iter().any(|candidate| {
+        candidate
+            .path
+            .strip_prefix(&prefix)
+            .is_some_and(|suffix| !suffix.contains('.'))
+    })
 }
 
 fn is_backbone_element(element: &ElementDefinition) -> bool {
@@ -183,13 +199,10 @@ fn backbone_type_name(path: &str) -> String {
 }
 
 /// Extract field information from an ElementDefinition
-fn extract_field_info(element: &ElementDefinition) -> Option<FieldInfo> {
-    let element_types = element.element_type.as_ref()?;
-
-    if element_types.is_empty() {
-        return None;
-    }
-
+fn extract_field_info(
+    element: &ElementDefinition,
+    elements: &[ElementDefinition],
+) -> Option<FieldInfo> {
     // Get cardinality
     let min = element.min.unwrap_or(0);
     let max = element.max.as_ref().and_then(|m| {
@@ -204,14 +217,30 @@ fn extract_field_info(element: &ElementDefinition) -> Option<FieldInfo> {
     let is_choice_type = element.path.contains("[x]");
 
     // Collect all types (for choice types)
-    let choice_types: Vec<String> = element_types
+    let choice_types: Vec<String> = element
+        .element_type
+        .as_deref()
+        .unwrap_or_default()
         .iter()
-        .filter_map(|et| et.code.clone())
+        .filter_map(|element_type| element_type.code.clone())
         .collect();
 
-    // Use the first type as the primary field type
-    let primary_type_code = element_types[0].code.as_ref()?;
-    let field_type = determine_field_type(primary_type_code, &element.path);
+    let field_type = if has_direct_children(&element.path, elements) {
+        FhirFieldType::BackboneElement(backbone_type_name(&element.path))
+    } else if let Some(type_code) = element
+        .element_type
+        .as_ref()
+        .and_then(|types| types.first())
+        .and_then(|element_type| element_type.code.as_deref())
+    {
+        determine_field_type(type_code, &element.path)
+    } else {
+        let reference = element.content_reference.as_deref()?;
+        let target = reference
+            .rsplit_once('#')
+            .map_or(reference, |(_, fragment)| fragment);
+        FhirFieldType::BackboneElement(backbone_type_name(target))
+    };
 
     Some(FieldInfo {
         field_type,
@@ -703,6 +732,10 @@ pub fn resolve_path(path: &str) -> Option<&'static FhirFieldType> {
 mod tests {
     use super::*;
 
+    fn element(value: serde_json::Value) -> ElementDefinition {
+        serde_json::from_value(value).expect("element definition parses")
+    }
+
     #[test]
     fn test_extract_field_name() {
         assert_eq!(
@@ -740,5 +773,48 @@ mod tests {
             determine_field_type("BackboneElement", "Patient.communication"),
             FhirFieldType::BackboneElement("PatientCommunication".to_string())
         );
+    }
+
+    #[test]
+    fn inline_element_with_children_uses_navigable_nested_type() {
+        let elements = vec![
+            element(serde_json::json!({
+                "path": "Timing.repeat",
+                "min": 0,
+                "max": "1",
+                "type": [{"code": "Element"}]
+            })),
+            element(serde_json::json!({
+                "path": "Timing.repeat.periodUnit",
+                "min": 0,
+                "max": "1",
+                "type": [{"code": "code"}]
+            })),
+        ];
+
+        let field = extract_field_info(&elements[0], &elements).expect("repeat metadata");
+
+        assert_eq!(
+            field.field_type,
+            FhirFieldType::BackboneElement("TimingRepeat".to_string())
+        );
+    }
+
+    #[test]
+    fn content_reference_reuses_target_nested_type() {
+        let elements = vec![element(serde_json::json!({
+            "path": "ClaimResponse.addItem.adjudication",
+            "min": 1,
+            "max": "*",
+            "contentReference": "http://hl7.org/fhir/StructureDefinition/ClaimResponse#ClaimResponse.item.adjudication"
+        }))];
+
+        let field = extract_field_info(&elements[0], &elements).expect("reference metadata");
+
+        assert_eq!(
+            field.field_type,
+            FhirFieldType::BackboneElement("ClaimResponseItemAdjudication".to_string())
+        );
+        assert_eq!(field.max, None);
     }
 }
