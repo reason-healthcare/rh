@@ -762,6 +762,16 @@ fn resolve_reference(
             .values()
             .find(|instance| instance_id(instance) == id)
     }) {
+        let exported_id = instance_id(inst);
+        if inst
+            .metadata
+            .usage
+            .as_deref()
+            .is_some_and(|usage| usage == "#inline" || usage == "inline")
+            && is_contained_instance(id, tank)
+        {
+            return format!("#{exported_id}");
+        }
         let rt = resolve_instance_resource_type(&inst.metadata.instance_of, defs, definition_index)
             .unwrap_or_else(|| inst.metadata.instance_of.clone());
         // If the instanceOf is a Logical model, references use the full canonical URL
@@ -776,9 +786,21 @@ fn resolve_reference(
                 );
             }
         }
-        return format!("{rt}/{id}");
+        return format!("{rt}/{exported_id}");
     }
     id.to_string()
+}
+
+fn is_contained_instance(target: &str, tank: &FshTank) -> bool {
+    tank.instances.values().any(|instance| {
+        instance.rules.iter().any(|rule| {
+            let InstanceRule::Assignment(assignment) = &rule.value else {
+                return false;
+            };
+            assignment.path.segments.first().and_then(path_segment_name) == Some("contained")
+                && matches!(&assignment.value, FshValue::InstanceRef(value) if value == target)
+        })
+    })
 }
 
 fn resolve_canonical(value: &str, context: &InstanceExportContext<'_>) -> String {
@@ -799,6 +821,9 @@ fn resolve_canonical(value: &str, context: &InstanceExportContext<'_>) -> String
             .values()
             .find(|instance| instance_id(instance) == value)
     }) {
+        if let Some(url) = instance_assigned_string(instance, "url") {
+            return url.to_string();
+        }
         if let Some(canonical) = &context.config.canonical {
             let resource_type = resolve_instance_resource_type(
                 &instance.metadata.instance_of,
@@ -817,25 +842,28 @@ fn resolve_canonical(value: &str, context: &InstanceExportContext<'_>) -> String
 }
 
 fn instance_id(instance: &Instance) -> &str {
-    instance
-        .rules
-        .iter()
-        .find_map(|rule| {
-            let InstanceRule::Assignment(assignment) = &rule.value else {
-                return None;
-            };
-            let [FshPathSegment::Name(path)] = assignment.path.segments.as_slice() else {
-                return None;
-            };
-            if path != "id" {
-                return None;
-            }
-            match &assignment.value {
-                FshValue::Str(id) => Some(id.as_str()),
-                _ => None,
-            }
-        })
-        .unwrap_or(&instance.metadata.name)
+    instance_assigned_string(instance, "id").unwrap_or(&instance.metadata.name)
+}
+
+fn instance_assigned_string<'a>(instance: &'a Instance, requested_path: &str) -> Option<&'a str> {
+    instance.rules.iter().find_map(|rule| {
+        if rule.location.column != 1 {
+            return None;
+        }
+        let InstanceRule::Assignment(assignment) = &rule.value else {
+            return None;
+        };
+        let [FshPathSegment::Name(assigned_path)] = assignment.path.segments.as_slice() else {
+            return None;
+        };
+        if assigned_path != requested_path {
+            return None;
+        }
+        match &assignment.value {
+            FshValue::Str(id) => Some(id.as_str()),
+            _ => None,
+        }
+    })
 }
 
 fn resolve_instance_resource_type(
@@ -1317,6 +1345,10 @@ fn handle_slice_segment(
             .nth(repetition)
             .map(|(index, _)| index)
             .unwrap();
+        if element == "extension" && values[index].get("url").is_none() {
+            values[index]["url"] =
+                serde_json::Value::String(named_extension_url(slice, shape_context));
+        }
         if segments.len() == 2 {
             values[index] = value;
         } else {
@@ -1634,6 +1666,72 @@ InstanceOf: CapabilityStatement
     }
 
     #[test]
+    fn resolves_instance_urls_and_inline_references() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config: FshConfig {
+                canonical: Some("http://example.org/fhir".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Instance: questionnaire-source
+InstanceOf: Questionnaire
+* url = "http://example.org/questionnaire-source"
+
+Instance: questionnaire-copy
+InstanceOf: Questionnaire
+* derivedFrom = Canonical(questionnaire-source)
+
+Instance: contained-payer
+InstanceOf: Organization
+Usage: #inline
+
+Instance: payer-list
+InstanceOf: List
+* contained[0] = contained-payer
+* entry[0].item = Reference(contained-payer)
+
+Instance: capability-example
+InstanceOf: CapabilityStatement
+* url = Canonical(capability-example)
+* rest
+  * resource[0]
+    * extension[0]
+      * url = "http://example.org/nested-extension"
+"#,
+            "instance-targets.fsh",
+        )
+        .expect("FSH compiles");
+        let questionnaire = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "questionnaire-copy")
+            .expect("questionnaire exists");
+        let list = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "payer-list")
+            .expect("list exists");
+        let capability = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "capability-example")
+            .expect("capability exists");
+
+        assert_eq!(
+            questionnaire["derivedFrom"][0],
+            "http://example.org/questionnaire-source"
+        );
+        assert_eq!(list["entry"][0]["item"]["reference"], "#contained-payer");
+        assert_eq!(
+            capability["url"],
+            "http://example.org/fhir/CapabilityStatement/capability-example"
+        );
+    }
+
+    #[test]
     fn exports_extensions_on_primitive_choice_fields() {
         let package = crate::FshCompiler::new(crate::CompilerOptions::default())
             .compile(
@@ -1941,20 +2039,30 @@ InstanceOf: OrderedAppointment
     }
 
     #[test]
-    fn omits_empty_required_slice_placeholders() {
-        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
-            .compile(
-                r#"
+    fn omits_unused_required_extension_placeholders() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config: FshConfig {
+                canonical: Some("http://example.org/fhir".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Extension: RequiredExtension
+Id: required-extension
+* value[x] only string
+
 Profile: RequiredExtensionRequest
 Parent: CommunicationRequest
-* extension contains MissingExtension named missing 1..1
+* extension contains RequiredExtension named required 1..1
 
 Instance: request-example
 InstanceOf: RequiredExtensionRequest
 "#,
-                "empty-required-slice.fsh",
-            )
-            .expect("FSH compiles");
+            "required-extension-url.fsh",
+        )
+        .expect("FSH compiles");
         let instance = package
             .resources
             .iter()

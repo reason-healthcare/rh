@@ -36,14 +36,14 @@ Report files:
 | CARIN Blue Button | different | pass | 71 | 134 | 134 | 0 | 0 | 77 |
 | mCODE | different | pass | 57 | 350 | 350 | 0 | 0 | 158 |
 | Da Vinci CRD | different | pass | 69 | 85 | 85 | 0 | 0 | 62 |
-| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 52 |
+| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 47 |
 | Da Vinci PAS | different | pass | 20 | 158 | 158 | 0 | 0 | 122 |
 | IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 74 |
 
 All six projects pass their lowered regression thresholds, but none is yet
 SUSHI-identical. Across 379 FSH files, both tools emit the same 920 resource
-identities: there are zero missing and zero extra resources. Of those, 375
-match exactly after normalization and 545 have at least one JSON difference.
+identities: there are zero missing and zero extra resources. Of those, 380
+match exactly after normalization and 540 have at least one JSON difference.
 
 Categorized latest results:
 
@@ -52,10 +52,10 @@ Categorized latest results:
 | CARIN Blue Button | 0 | 32 | 16 | 1 | 0 | 1 | 27 |
 | mCODE | 0 | 98 | 53 | 3 | 1 | 1 | 2 |
 | Da Vinci CRD | 0 | 15 | 27 | 2 | 3 | 1 | 14 |
-| Da Vinci DTR | 0 | 4 | 25 | 14 | 0 | 1 | 8 |
+| Da Vinci DTR | 0 | 0 | 25 | 13 | 0 | 1 | 8 |
 | Da Vinci PAS | 0 | 18 | 81 | 11 | 1 | 1 | 10 |
 | IPS | 0 | 34 | 32 | 0 | 0 | 1 | 7 |
-| **Total** | **0** | **201** | **234** | **31** | **5** | **6** | **68** |
+| **Total** | **0** | **197** | **234** | **30** | **5** | **6** | **68** |
 
 Categories count missing, extra, and mismatched resources. Each mismatched
 resource is assigned from its first observed JSON difference, so the categories
@@ -71,7 +71,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 **Total: 61 fixtures** (plan target was ≥60)
 
 Latest run: all 61 fixtures passed against reviewed SUSHI goldens; none failed
-or remained unverified. The library unit suite passes all 117 tests.
+or remained unverified. The library unit suite passes all 118 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
@@ -111,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (117 cases) cover parser, resolver, dependency loading, definition
+Unit tests (118 cases) cover parser, resolver, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---
