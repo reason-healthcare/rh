@@ -128,7 +128,13 @@ fn export_instance_with_context(
             }
             InstanceRule::Insert(_) => {}
             InstanceRule::Path(path_rule) => {
-                let path = qualify_instance_path(&path_contexts, indent, &path_rule.path);
+                let mut path = qualify_instance_path(&path_contexts, indent, &path_rule.path);
+                stabilize_soft_index_context(
+                    &mut resource,
+                    &mut path,
+                    &shape_context,
+                    &resource_type_for_metadata,
+                );
                 path_contexts.push((indent, path));
             }
         }
@@ -136,6 +142,30 @@ fn export_instance_with_context(
     remove_export_markers(&mut resource);
 
     Ok(resource)
+}
+
+fn stabilize_soft_index_context(
+    resource: &mut serde_json::Value,
+    path: &mut FshPath,
+    shape_context: &InstanceShapeContext,
+    resource_type: &str,
+) {
+    if !matches!(
+        path.segments.last(),
+        Some(FshPathSegment::Slice { slice, .. }) if slice == "+"
+    ) {
+        return;
+    }
+    set_at_path(
+        resource,
+        &path.segments,
+        serde_json::json!({}),
+        shape_context,
+        resource_type,
+    );
+    if let Some(FshPathSegment::Slice { slice, .. }) = path.segments.last_mut() {
+        *slice = "=".to_string();
+    }
 }
 
 fn apply_local_profile_defaults(
@@ -1162,6 +1192,21 @@ fn handle_slice_segment(
             .unwrap_or(current_type);
         let element_key = element.to_string();
 
+        if fi.is_some_and(|field| field.max.is_some()) {
+            if segments.len() == 1 {
+                map.insert(
+                    element_key,
+                    shape_value_for_field(value, fi.map(|field| &field.field_type)),
+                );
+            } else {
+                let child = map
+                    .entry(element_key)
+                    .or_insert_with(|| serde_json::json!({}));
+                set_at_path(child, &segments[1..], value, shape_context, next_type);
+            }
+            return;
+        }
+
         let arr_len = {
             let arr = map
                 .entry(element_key.clone())
@@ -1585,6 +1630,59 @@ InstanceOf: ExplanationOfBenefit
         assert_eq!(
             instance["insurance"][0]["coverage"]["reference"],
             "Coverage/example"
+        );
+    }
+
+    #[test]
+    fn keeps_references_scalar_inside_indexed_backbone_elements() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: eob-example
+InstanceOf: ExplanationOfBenefit
+* insurance[0].coverage[+] = Reference(Coverage/example)
+* insurance[0].focal = true
+"#,
+                "indexed-backbone-reference.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "eob-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["insurance"][0]["coverage"]["reference"],
+            "Coverage/example"
+        );
+    }
+
+    #[test]
+    fn reuses_soft_index_path_context_for_nested_assignments() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: parameters-example
+InstanceOf: Parameters
+* parameter[+]
+  * name = "response"
+  * valueReference = Reference(Patient/example)
+"#,
+                "soft-index-context.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "parameters-example")
+            .expect("instance exists");
+
+        assert_eq!(instance["parameter"].as_array().unwrap().len(), 1);
+        assert_eq!(instance["parameter"][0]["name"], "response");
+        assert_eq!(
+            instance["parameter"][0]["valueReference"]["reference"],
+            "Patient/example"
         );
     }
 
