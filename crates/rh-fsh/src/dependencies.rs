@@ -90,6 +90,14 @@ pub fn load_dependency_structure_definitions_from_dir(
 ) -> Result<DependencyDefinitionSet, FshError> {
     let mut definitions = DependencyDefinitionSet::default();
 
+    let core_package = packages_dir.join("hl7.fhir.r4.core#4.0.1/package");
+    for name in ["vitalsigns", "bodyheight", "bodyweight", "bodytemp"] {
+        let path = core_package.join(format!("StructureDefinition-{name}.json"));
+        if path.is_file() {
+            load_structure_definition_file("hl7.fhir.r4.core", "4.0.1", path, &mut definitions)?;
+        }
+    }
+
     for dependency in &config.dependencies {
         let package_dir = packages_dir
             .join(format!("{}#{}", dependency.package_id, dependency.version))
@@ -145,83 +153,94 @@ fn load_package_structure_definitions(
             continue;
         }
 
-        let text = fs::read_to_string(&path).map_err(|e| FshError::Export {
-            message: format!("failed to read dependency resource {}: {e}", path.display()),
-        })?;
-        let resource: serde_json::Value =
-            serde_json::from_str(&text).map_err(|e| FshError::Export {
-                message: format!(
-                    "failed to parse dependency resource {}: {e}",
-                    path.display()
-                ),
-            })?;
-
-        if resource.get("resourceType").and_then(|v| v.as_str()) != Some("StructureDefinition") {
-            continue;
-        }
-        let raw: RawStructureDefinition =
-            serde_json::from_value(resource).map_err(|e| FshError::Export {
-                message: format!(
-                    "failed to parse dependency StructureDefinition {}: {e}",
-                    path.display()
-                ),
-            })?;
-
-        let fixed_values = raw
-            .differential
-            .map(|differential| {
-                let required_paths = differential
-                    .element
-                    .iter()
-                    .filter(|element| element.min.is_some_and(|min| min > 0))
-                    .filter_map(|element| element.id.clone())
-                    .collect::<std::collections::HashSet<_>>();
-                differential
-                    .element
-                    .into_iter()
-                    .filter_map(|element| {
-                        element
-                            .properties
-                            .into_iter()
-                            .find(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
-                            .map(|(_, value)| {
-                                let path = element.id.unwrap_or(element.path);
-                                let parts = path.split('.').collect::<Vec<_>>();
-                                let required_path = parts
-                                    .iter()
-                                    .position(|part| part.contains(':'))
-                                    .map(|index| parts[..=index].join("."))
-                                    .or_else(|| (parts.len() > 2).then(|| parts[..2].join(".")));
-                                DependencyFixedValue {
-                                    path,
-                                    slice_name: element.slice_name,
-                                    value,
-                                    required: required_path
-                                        .is_none_or(|path| required_paths.contains(&path)),
-                                }
-                            })
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        definitions
-            .structure_definitions
-            .push(DependencyStructureDefinition {
-                package_id: package_id.to_string(),
-                version: version.to_string(),
-                path,
-                id: raw.id,
-                url: raw.url,
-                name: raw.name,
-                title: raw.title,
-                kind: raw.kind,
-                type_: raw.type_,
-                base_definition: raw.base_definition,
-                derivation: raw.derivation,
-                fixed_values,
-            });
+        load_structure_definition_file(package_id, version, path, definitions)?;
     }
+
+    Ok(())
+}
+
+fn load_structure_definition_file(
+    package_id: &str,
+    version: &str,
+    path: PathBuf,
+    definitions: &mut DependencyDefinitionSet,
+) -> Result<(), FshError> {
+    let text = fs::read_to_string(&path).map_err(|e| FshError::Export {
+        message: format!("failed to read dependency resource {}: {e}", path.display()),
+    })?;
+    let resource: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| FshError::Export {
+            message: format!(
+                "failed to parse dependency resource {}: {e}",
+                path.display()
+            ),
+        })?;
+
+    if resource.get("resourceType").and_then(|v| v.as_str()) != Some("StructureDefinition") {
+        return Ok(());
+    }
+    let raw: RawStructureDefinition =
+        serde_json::from_value(resource).map_err(|e| FshError::Export {
+            message: format!(
+                "failed to parse dependency StructureDefinition {}: {e}",
+                path.display()
+            ),
+        })?;
+
+    let fixed_values = raw
+        .differential
+        .map(|differential| {
+            let required_paths = differential
+                .element
+                .iter()
+                .filter(|element| element.min.is_some_and(|min| min > 0))
+                .filter_map(|element| element.id.clone())
+                .collect::<std::collections::HashSet<_>>();
+            differential
+                .element
+                .into_iter()
+                .filter_map(|element| {
+                    element
+                        .properties
+                        .into_iter()
+                        .find(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
+                        .map(|(_, value)| {
+                            let path = element.id.unwrap_or(element.path);
+                            let parts = path.split('.').collect::<Vec<_>>();
+                            let required_path = parts
+                                .iter()
+                                .position(|part| part.contains(':'))
+                                .map(|index| parts[..=index].join("."))
+                                .or_else(|| (parts.len() > 2).then(|| parts[..2].join(".")));
+                            DependencyFixedValue {
+                                path,
+                                slice_name: element.slice_name,
+                                value,
+                                required: required_path
+                                    .is_none_or(|path| required_paths.contains(&path)),
+                            }
+                        })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    definitions
+        .structure_definitions
+        .push(DependencyStructureDefinition {
+            package_id: package_id.to_string(),
+            version: version.to_string(),
+            path,
+            id: raw.id,
+            url: raw.url,
+            name: raw.name,
+            title: raw.title,
+            kind: raw.kind,
+            type_: raw.type_,
+            base_definition: raw.base_definition,
+            derivation: raw.derivation,
+            fixed_values,
+        });
 
     Ok(())
 }
@@ -269,6 +288,12 @@ mod tests {
               "derivation": "constraint",
               "differential": {
                 "element": [
+                  {
+                    "id": "Patient.communication:required",
+                    "path": "Patient.communication",
+                    "sliceName": "required",
+                    "min": 1
+                  },
                   {
                     "id": "Patient.communication:required.language",
                     "path": "Patient.communication.language",

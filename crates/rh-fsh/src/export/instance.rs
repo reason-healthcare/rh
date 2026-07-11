@@ -6,7 +6,7 @@ use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
 use crate::tank::FshTank;
 use crate::FshConfig;
-use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType};
+use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType, FhirPrimitiveType};
 use std::collections::{HashMap, HashSet};
 
 struct InstanceExportContext<'a> {
@@ -18,7 +18,6 @@ struct InstanceExportContext<'a> {
 
 struct InstanceShapeContext {
     extension_slice_urls: HashMap<String, String>,
-    slice_order: HashMap<String, usize>,
 }
 
 pub fn export_instance(
@@ -98,7 +97,6 @@ fn export_instance_with_context(
     let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
     let shape_context = InstanceShapeContext {
         extension_slice_urls: extension_slice_urls(instance_of, context),
-        slice_order: slice_order(instance_of, context),
     };
     apply_local_profile_defaults(
         &mut resource,
@@ -210,6 +208,7 @@ fn apply_local_profile_defaults(
     }
 
     for profile in profiles.into_iter().rev() {
+        materialize_required_slices(resource, profile, shape_context, resource_type);
         let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
         for rule in &profile.rules {
             let indent = rule.location.column;
@@ -244,6 +243,38 @@ fn apply_local_profile_defaults(
                 }
                 _ => {}
             }
+        }
+    }
+}
+
+fn materialize_required_slices(
+    resource: &mut serde_json::Value,
+    profile: &Profile,
+    shape_context: &InstanceShapeContext,
+    resource_type: &str,
+) {
+    for rule in &profile.rules {
+        let SdRule::Contains(contains) = &rule.value else {
+            continue;
+        };
+        let [FshPathSegment::Name(element)] = contains.path.segments.as_slice() else {
+            continue;
+        };
+        for item in &contains.items {
+            if item.min.is_none_or(|min| min == 0) {
+                continue;
+            }
+            let segments = [FshPathSegment::Slice {
+                element: element.clone(),
+                slice: item.alias.clone().unwrap_or_else(|| item.name.clone()),
+            }];
+            set_at_path(
+                resource,
+                &segments,
+                serde_json::json!({}),
+                shape_context,
+                resource_type,
+            );
         }
     }
 }
@@ -448,46 +479,6 @@ fn extension_slice_urls(
     urls
 }
 
-fn slice_order(instance_of: &str, context: &InstanceExportContext<'_>) -> HashMap<String, usize> {
-    let mut order = HashMap::new();
-    let mut current = Some(instance_of.to_string());
-    let mut seen = HashSet::new();
-    while let Some(profile_name) = current {
-        if !seen.insert(profile_name.clone()) {
-            break;
-        }
-        let Some(profile) = context.tank.profiles.get(&profile_name) else {
-            break;
-        };
-        collect_slice_order(&profile.rules, &mut order);
-        current = profile.metadata.parent.clone();
-    }
-    for profile in context.tank.profiles.values() {
-        collect_slice_order(&profile.rules, &mut order);
-    }
-    for extension in context.tank.extensions.values() {
-        collect_slice_order(&extension.rules, &mut order);
-    }
-    order
-}
-
-fn collect_slice_order(rules: &[Spanned<SdRule>], order: &mut HashMap<String, usize>) {
-    for rule in rules {
-        let SdRule::Contains(contains) = &rule.value else {
-            continue;
-        };
-        for (index, item) in contains.items.iter().enumerate() {
-            let slice = item.alias.as_deref().unwrap_or(&item.name);
-            let rank = if item.min.is_some_and(|min| min > 0) {
-                index
-            } else {
-                1_000 + index
-            };
-            order.entry(slice.to_string()).or_insert(rank);
-        }
-    }
-}
-
 fn extension_lookup_keys(value: &str) -> Vec<String> {
     let normalized: String = value
         .chars()
@@ -541,8 +532,14 @@ fn remove_export_markers(value: &mut serde_json::Value) {
             for child in map.values_mut() {
                 remove_export_markers(child);
             }
+            map.retain(
+                |_, child| !matches!(child, serde_json::Value::Array(values) if values.is_empty()),
+            );
         }
         serde_json::Value::Array(values) => {
+            values.retain(|value| {
+                !matches!(value, serde_json::Value::Object(object) if object.len() == 1 && object.contains_key(SLICE_MARKER))
+            });
             for child in values {
                 remove_export_markers(child);
             }
@@ -594,7 +591,7 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
             }
             if let Some(s) = system {
                 // Resolve local CodeSystem name to its ^url if present in the tank
-                let resolved_system = resolve_code_system_url(s, context.tank);
+                let resolved_system = resolve_code_system_url(s, context.tank, context.config);
                 // Code with system → Coding object (embedded in CodeableConcept by caller if needed)
                 let mut obj = serde_json::json!({ "system": resolved_system, "code": code });
                 if let Some(d) = display {
@@ -642,12 +639,24 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
             }
             reference
         }
-        FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
+        FshValue::Canonical(c) => serde_json::Value::String(resolve_canonical(c, context)),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
         FshValue::InstanceRef(name) => {
             // Embed the referenced inline instance JSON (used for contained[+] = myInstance)
             if let Some(inst) = context.tank.instances.get(name) {
-                export_instance_with_context(inst, context).unwrap_or(serde_json::Value::Null)
+                let mut value =
+                    export_instance_with_context(inst, context).unwrap_or(serde_json::Value::Null);
+                if context
+                    .defs
+                    .get_sd(&inst.metadata.instance_of)
+                    .is_some_and(|definition| definition.kind != "resource")
+                {
+                    if let serde_json::Value::Object(object) = &mut value {
+                        object.remove("resourceType");
+                        object.remove("id");
+                    }
+                }
+                value
             } else {
                 serde_json::Value::Null
             }
@@ -656,11 +665,14 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
 }
 
 /// Resolve a local CodeSystem name to its `^url` value if defined in the tank.
-fn resolve_code_system_url(system: &str, tank: &FshTank) -> String {
+fn resolve_code_system_url(system: &str, tank: &FshTank, config: &FshConfig) -> String {
     // If the system already looks like a URL, return as-is
     if system.starts_with("http://") || system.starts_with("https://") || system.starts_with("urn:")
     {
-        return system.to_string();
+        return system
+            .split_once('|')
+            .map_or(system, |(url, _)| url)
+            .to_string();
     }
     // Look up by CodeSystem name or id in the tank
     if let Some(cs) = tank.code_systems.get(system) {
@@ -684,6 +696,10 @@ fn resolve_code_system_url(system: &str, tank: &FshTank) -> String {
                     }
                 }
             }
+        }
+        if let Some(canonical) = &config.canonical {
+            let id = cs.metadata.id.as_deref().unwrap_or(system);
+            return format!("{}/CodeSystem/{id}", canonical.trim_end_matches('/'));
         }
     } else {
         // Try matching by id
@@ -715,7 +731,11 @@ fn resolve_reference(
         return id.to_string();
     }
     // Look up instance in tank to get its resource type
-    if let Some(inst) = tank.instances.get(id) {
+    if let Some(inst) = tank.instances.get(id).or_else(|| {
+        tank.instances
+            .values()
+            .find(|instance| instance_id(instance) == id)
+    }) {
         let rt = resolve_instance_resource_type(&inst.metadata.instance_of, defs, definition_index)
             .unwrap_or_else(|| inst.metadata.instance_of.clone());
         // If the instanceOf is a Logical model, references use the full canonical URL
@@ -733,6 +753,63 @@ fn resolve_reference(
         return format!("{rt}/{id}");
     }
     id.to_string()
+}
+
+fn resolve_canonical(value: &str, context: &InstanceExportContext<'_>) -> String {
+    if value.starts_with("http://") || value.starts_with("https://") || value.starts_with("urn:") {
+        return value.to_string();
+    }
+    if let Some(url) = context
+        .definition_index
+        .lookup(value)
+        .and_then(|definition| definition.url.clone())
+    {
+        return url;
+    }
+    if let Some(instance) = context.tank.instances.get(value).or_else(|| {
+        context
+            .tank
+            .instances
+            .values()
+            .find(|instance| instance_id(instance) == value)
+    }) {
+        if let Some(canonical) = &context.config.canonical {
+            let resource_type = resolve_instance_resource_type(
+                &instance.metadata.instance_of,
+                context.defs,
+                context.definition_index,
+            )
+            .unwrap_or_else(|| instance.metadata.instance_of.clone());
+            return format!(
+                "{}/{resource_type}/{}",
+                canonical.trim_end_matches('/'),
+                instance_id(instance)
+            );
+        }
+    }
+    value.to_string()
+}
+
+fn instance_id(instance: &Instance) -> &str {
+    instance
+        .rules
+        .iter()
+        .find_map(|rule| {
+            let InstanceRule::Assignment(assignment) = &rule.value else {
+                return None;
+            };
+            let [FshPathSegment::Name(path)] = assignment.path.segments.as_slice() else {
+                return None;
+            };
+            if path != "id" {
+                return None;
+            }
+            match &assignment.value {
+                FshValue::Str(id) => Some(id.as_str()),
+                _ => None,
+            }
+        })
+        .unwrap_or(&instance.metadata.name)
 }
 
 fn resolve_instance_resource_type(
@@ -780,11 +857,31 @@ fn choice_field_type(current_type: &str, field_name: &str) -> Option<FhirFieldTy
     match suffix {
         "CodeableConcept" => Some(FhirFieldType::Complex("CodeableConcept")),
         "Coding" => Some(FhirFieldType::Complex("Coding")),
+        "Identifier" => Some(FhirFieldType::Complex("Identifier")),
         "Quantity" => Some(FhirFieldType::Complex("Quantity")),
         "Reference" => Some(FhirFieldType::Reference),
         "Period" => Some(FhirFieldType::Complex("Period")),
         "Range" => Some(FhirFieldType::Complex("Range")),
         "Ratio" => Some(FhirFieldType::Complex("Ratio")),
+        "Boolean" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Boolean)),
+        "Integer" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Integer)),
+        "Decimal" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Decimal)),
+        "String" => Some(FhirFieldType::Primitive(FhirPrimitiveType::String)),
+        "Date" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Date)),
+        "DateTime" => Some(FhirFieldType::Primitive(FhirPrimitiveType::DateTime)),
+        "Time" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Time)),
+        "Code" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Code)),
+        "Uri" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Uri)),
+        "Url" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Url)),
+        "Canonical" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Canonical)),
+        "Instant" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Instant)),
+        "Markdown" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Markdown)),
+        "Oid" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Oid)),
+        "Uuid" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Uri)),
+        "Id" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Id)),
+        "Base64Binary" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Base64Binary)),
+        "PositiveInt" => Some(FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt)),
+        "UnsignedInt" => Some(FhirFieldType::Primitive(FhirPrimitiveType::UnsignedInt)),
         _ => None,
     }
 }
@@ -1092,6 +1189,26 @@ fn handle_slice_segment(
             .unwrap_or(current_type);
         let is_primitive =
             fi.is_some_and(|field| matches!(field.field_type, FhirFieldType::Primitive(_)));
+        let is_array = fi.is_none_or(|field| field.max.is_none());
+        if !is_array && idx == 0 {
+            if is_primitive && segments.len() > 1 {
+                let shadow = map
+                    .entry(format!("_{element}"))
+                    .or_insert_with(|| serde_json::json!({}));
+                set_at_path(shadow, &segments[1..], value, shape_context, "Element");
+            } else if segments.len() == 1 {
+                map.insert(
+                    element.to_string(),
+                    shape_value_for_field(value, fi.map(|field| &field.field_type)),
+                );
+            } else {
+                let child = map
+                    .entry(element.to_string())
+                    .or_insert_with(|| serde_json::json!({}));
+                set_at_path(child, &segments[1..], value, shape_context, next_type);
+            }
+            return;
+        }
         if is_primitive && segments.len() > 1 {
             let shadow = map
                 .entry(format!("_{element}"))
@@ -1162,7 +1279,7 @@ fn handle_slice_segment(
             .count()
             <= repetition
         {
-            let insert_at = named_slice_insert_index(values, slice, shape_context);
+            let insert_at = named_slice_insert_index(values, slice);
             values.insert(insert_at, template.clone());
         }
         let index = values
@@ -1195,7 +1312,7 @@ fn handle_slice_segment(
             if element == "extension" {
                 item["url"] = serde_json::Value::String(named_extension_url(slice, shape_context));
             }
-            let index = named_slice_insert_index(values, slice, shape_context);
+            let index = named_slice_insert_index(values, slice);
             values.insert(index, item);
             index
         });
@@ -1219,31 +1336,14 @@ fn handle_slice_segment(
     }
 }
 
-fn named_slice_insert_index(
-    values: &[serde_json::Value],
-    slice: &str,
-    shape_context: &InstanceShapeContext,
-) -> usize {
+fn named_slice_insert_index(values: &[serde_json::Value], slice: &str) -> usize {
     if let Some(index) = values
         .iter()
         .rposition(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
     {
         return index + 1;
     }
-    let rank = shape_context
-        .slice_order
-        .get(slice)
-        .copied()
-        .unwrap_or(usize::MAX);
-    values
-        .iter()
-        .position(|item| {
-            item.get(SLICE_MARKER)
-                .and_then(|value| value.as_str())
-                .and_then(|existing| shape_context.slice_order.get(existing))
-                .is_some_and(|existing_rank| *existing_rank > rank)
-        })
-        .unwrap_or(values.len())
+    values.len()
 }
 
 fn named_extension_url(slice: &str, shape_context: &InstanceShapeContext) -> String {
@@ -1370,6 +1470,211 @@ InstanceOf: DiagnosticReport
     }
 
     #[test]
+    fn keeps_indexed_scalar_fields_scalar() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: eob-example
+InstanceOf: ExplanationOfBenefit
+* insurance[0].coverage[0] = Reference(Coverage/example)
+"#,
+                "indexed-scalar.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "eob-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["insurance"][0]["coverage"]["reference"],
+            "Coverage/example"
+        );
+    }
+
+    #[test]
+    fn resolves_bare_references_by_exported_instance_id() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: named-practitioner
+InstanceOf: Practitioner
+* id = "exported-practitioner"
+
+Instance: observation-example
+InstanceOf: Observation
+* performer = Reference(exported-practitioner)
+"#,
+                "reference-exported-id.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "observation-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["performer"][0]["reference"],
+            "Practitioner/exported-practitioner"
+        );
+    }
+
+    #[test]
+    fn resolves_local_canonical_targets() {
+        let config = FshConfig {
+            canonical: Some("http://example.org/fhir".to_string()),
+            ..Default::default()
+        };
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config,
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Profile: LocalPatient
+Parent: Patient
+Id: local-patient
+
+Instance: local-operation
+InstanceOf: OperationDefinition
+* id = "local-op"
+* parameter[0].targetProfile = Canonical(LocalPatient)
+
+Instance: local-capability
+InstanceOf: CapabilityStatement
+* instantiates = Canonical(local-operation)
+"#,
+            "local-canonical.fsh",
+        )
+        .expect("FSH compiles");
+        let operation = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "local-op")
+            .expect("operation exists");
+        let capability = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "local-capability")
+            .expect("capability exists");
+
+        assert_eq!(
+            operation["parameter"][0]["targetProfile"][0],
+            "http://example.org/fhir/StructureDefinition/local-patient"
+        );
+        assert_eq!(
+            capability["instantiates"][0],
+            "http://example.org/fhir/OperationDefinition/local-op"
+        );
+    }
+
+    #[test]
+    fn exports_extensions_on_primitive_choice_fields() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: device-use-example
+InstanceOf: DeviceUseStatement
+* timingDateTime.extension.url = "http://hl7.org/fhir/StructureDefinition/data-absent-reason"
+* timingDateTime.extension.valueCode = #unknown
+"#,
+                "primitive-choice-extension.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "device-use-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["_timingDateTime"]["extension"][0]["valueCode"],
+            "unknown"
+        );
+    }
+
+    #[test]
+    fn exports_complex_choice_fields_without_primitive_shadows() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: claim-example
+InstanceOf: Claim
+* item[0].extension[itemTrace].valueIdentifier.system = "http://example.org/trace"
+* item[0].extension[itemTrace].valueIdentifier.value = "1122334"
+"#,
+                "complex-choice-extension.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "claim-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["item"][0]["extension"][0]["valueIdentifier"]["value"],
+            "1122334"
+        );
+        assert!(instance["item"][0]["extension"][0]
+            .get("_valueIdentifier")
+            .is_none());
+    }
+
+    #[test]
+    fn exports_nested_named_extensions() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: response-example
+InstanceOf: ClaimResponse
+* error[1].extension[errorElement].extension[error].valueString = "2010A-NM103"
+"#,
+                "nested-named-extension.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "response-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["error"][1]["extension"][0]["extension"][0]["valueString"],
+            "2010A-NM103"
+        );
+    }
+
+    #[test]
+    fn preserves_path_contexts_from_inserted_rule_sets() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+RuleSet: CapabilityRest
+* rest
+  * mode = #server
+  * documentation = "Server capabilities"
+
+Instance: capability-example
+InstanceOf: CapabilityStatement
+* insert CapabilityRest
+"#,
+                "ruleset-path-context.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "capability-example")
+            .expect("instance exists");
+
+        assert_eq!(instance["rest"][0]["documentation"], "Server capabilities");
+        assert!(instance.get("documentation").is_none());
+    }
+
+    #[test]
     fn wraps_dynamically_resolved_choice_types() {
         let package = crate::FshCompiler::new(crate::CompilerOptions::default())
             .compile(
@@ -1390,6 +1695,65 @@ InstanceOf: MedicationAdministration
         assert_eq!(
             instance["medicationCodeableConcept"]["coding"][0]["code"],
             "3002"
+        );
+    }
+
+    #[test]
+    fn resolves_local_and_versioned_code_system_canonicals() {
+        let config = FshConfig {
+            canonical: Some("http://example.org/fhir".to_string()),
+            ..Default::default()
+        };
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config,
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Alias: $Role = http://terminology.hl7.org/CodeSystem/claimcareteamrole|1.0.0
+
+Instance: versioned-code-example
+InstanceOf: Observation
+* code = $Role#primary
+"#,
+            "code-system-canonical.fsh",
+        )
+        .expect("FSH compiles");
+        let versioned = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "versioned-code-example")
+            .expect("versioned instance exists");
+
+        assert_eq!(
+            versioned["code"]["coding"][0]["system"],
+            "http://terminology.hl7.org/CodeSystem/claimcareteamrole"
+        );
+
+        let mut tank = FshTank::new();
+        tank.code_systems.insert(
+            "LocalStatus".to_string(),
+            CodeSystem {
+                metadata: CsMetadata {
+                    name: "LocalStatus".to_string(),
+                    id: Some("local-status".to_string()),
+                    title: None,
+                    description: None,
+                },
+                concepts: Vec::new(),
+                caret_rules: Vec::new(),
+            },
+        );
+        assert_eq!(
+            resolve_code_system_url(
+                "LocalStatus",
+                &tank,
+                &FshConfig {
+                    canonical: Some("http://example.org/fhir".to_string()),
+                    ..Default::default()
+                }
+            ),
+            "http://example.org/fhir/CodeSystem/local-status"
         );
     }
 
@@ -1448,6 +1812,66 @@ InstanceOf: OptionalCareTeamClaim
             .expect("instance exists");
 
         assert!(instance.get("careTeam").is_none());
+    }
+
+    #[test]
+    fn preserves_declared_order_for_required_slices() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: OrderedAppointment
+Parent: Appointment
+* participant contains Patient 1..1 and PrimaryPerformer 1..1
+* participant[PrimaryPerformer].type = http://terminology.hl7.org/CodeSystem/v3-ParticipationType#PPRF
+
+Instance: appointment-example
+InstanceOf: OrderedAppointment
+* participant[Patient]
+  * actor = Reference(Patient/example)
+* participant[PrimaryPerformer]
+  * actor = Reference(Practitioner/example)
+"#,
+                "required-slice-order.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "appointment-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["participant"][0]["actor"]["reference"],
+            "Patient/example"
+        );
+        assert_eq!(
+            instance["participant"][1]["actor"]["reference"],
+            "Practitioner/example"
+        );
+    }
+
+    #[test]
+    fn omits_empty_required_slice_placeholders() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: RequiredExtensionRequest
+Parent: CommunicationRequest
+* extension contains MissingExtension named missing 1..1
+
+Instance: request-example
+InstanceOf: RequiredExtensionRequest
+"#,
+                "empty-required-slice.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "request-example")
+            .expect("instance exists");
+
+        assert!(instance.get("extension").is_none());
     }
 
     #[test]

@@ -341,4 +341,31 @@ Usage: #inline
             "inline-patient"
         );
     }
+
+    #[test]
+    fn embeds_inline_datatypes_without_resource_identity_fields() {
+        let package = FshCompiler::new(CompilerOptions::default())
+            .compile(
+                r#"
+Instance: identifier-pattern
+InstanceOf: Identifier
+Usage: #inline
+* system = "http://example.org/identifier"
+
+Profile: IdentifiedOrganization
+Parent: Organization
+* identifier = identifier-pattern
+
+Instance: organization-example
+InstanceOf: IdentifiedOrganization
+"#,
+                "inline-datatype.fsh",
+            )
+            .expect("FSH compiles");
+
+        let identifier = &package.resources[0]["identifier"][0];
+        assert_eq!(identifier["system"], "http://example.org/identifier");
+        assert!(identifier.get("resourceType").is_none());
+        assert!(identifier.get("id").is_none());
+    }
 }
