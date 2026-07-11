@@ -27,7 +27,7 @@ pub use export::{FhirPackage, FshExporter};
 pub use fhirdefs::FhirDefs;
 pub use parser::{FshDocument, FshParser, SourceLocation};
 pub use resolver::FshResolver;
-pub use schema::{CompiledSchema, ElementShape, FieldShape};
+pub use schema::{CompiledProfileView, CompiledSchema, ElementShape, FieldShape, SchemaView};
 pub use semantic::{
     PathSelection, RepetitionSelection, SemanticAssignment, SemanticOperation, SemanticPath,
     SemanticProgram,

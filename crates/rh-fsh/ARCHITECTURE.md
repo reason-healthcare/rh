@@ -7,9 +7,10 @@ highlighting key design choices and their rationale.
 
 `rh-fsh` transforms FHIR Shorthand (FSH) source text into FHIR R4 JSON resources.
 The architecture is a staged pipeline — parse, index, resolve, compile schema,
-lower semantic assignments, and export — with parallel export via rayon. A typed
-instance tree is the next migration stage. Validation is explicitly out of scope;
-structural errors are delegated to `rh-validator`.
+lower semantic assignments, apply them to a schema-typed instance tree, and
+export — with parallel export via rayon. Deterministic serialization is the next
+migration stage. Validation is explicitly out of scope; structural errors are
+delegated to `rh-validator`.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -50,7 +51,13 @@ structural errors are delegated to `rh-validator`.
                                     │  SemanticProgram
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│             Stage 6 — Export  (FshExporter, rayon parallel)                  │
+│              Stage 6 — Schema-Typed Instance Tree                           │
+│       profile view · typed traversal · defaults · slices · cardinality       │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│             Stage 7 — Export  (FshExporter, rayon parallel)                  │
 │   export/structure_def.rs · export/value_set.rs · export/code_system.rs      │
 │            export/instance.rs · export/mapping.rs · export/mod.rs            │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -141,8 +148,9 @@ Passes are strictly sequential because each depends on the result of the previou
 instance exporter. It is the single field-shape boundary for cardinality and
 datatype decisions. Generated R4 metadata remains borrowed directly from its
 compile-time PHF registry; this avoids cloning field metadata or copying the core
-schema into a runtime map. The runtime index is reserved for compiled local and
-dependency overrides as profile-aware schema views are added.
+schema into a runtime map. The runtime index contains observed concrete-choice
+shapes and sparse profile views; dependency/local element overrides can extend
+the same boundary without changing tree application.
 
 This boundary is intentionally separate from JSON construction. The migration
 target lowers rules into semantic assignments, applies them to a typed instance
@@ -164,12 +172,26 @@ indentation are interpreted once during lowering. Soft-index contexts emit an
 explicit context operation and subsequent assignments target the current
 repetition.
 
-The semantic layer is deliberately independent of schema lookup and JSON tree
-mutation. Phase 2C will apply these operations to a typed instance tree; the
-current exporter adapter applies the same operations through the legacy JSON
-path walker to preserve behavior during migration.
+The semantic layer is deliberately independent of schema lookup and tree
+mutation. Its operations feed the schema-typed instance tree directly.
 
-### 6. Parallel Export with rayon
+### 6. Profile-Aware Schema-Typed Instance Tree
+
+Each exported instance receives a lightweight `SchemaView` compiled for its
+`InstanceOf` reference. The view contains the resolved base resource type and
+the local/dependency profile lineage. Only profiles referenced by instances are
+cached, so profile-only compilation and unused dependency definitions pay no
+view-construction cost.
+
+`TypedInstanceTree` owns the mutable resource between semantic lowering and
+serialization. All explicit assignments, inherited fixed/pattern defaults,
+required slices, extension URLs, cardinality shaping, and primitive companions
+flow through its schema-aware `apply` boundary. Internally it retains the proven
+JSON path walker during the behavior-preserving migration; Phase 2D replaces
+that implementation with typed nodes and a deterministic serializer without
+changing callers.
+
+### 7. Parallel Export with rayon
 
 `FshExporter::export` collects all entities from the resolved tank and dispatches
 to per-type exporter functions in parallel using a shared `export_par` helper.
@@ -201,7 +223,7 @@ Non-fatal export errors (e.g. unresolvable parent SD) are collected into
 `FhirPackage::errors` rather than aborting compilation. The caller decides
 whether to treat them as hard failures.
 
-### 7. Differential-Only StructureDefinitions
+### 8. Differential-Only StructureDefinitions
 
 The `structure_def` exporter produces FHIR `StructureDefinition` resources
 containing only a `differential` — the minimal set of element overrides derived
@@ -213,7 +235,7 @@ This matches the output of sushi and keeps the exporter fast: computing a full
 snapshot requires walking the entire parent SD hierarchy, which is expensive
 and only needed for validation.
 
-### 8. `FhirDefs` — Pluggable Definition Registry
+### 9. `FhirDefs` — Pluggable Definition Registry
 
 `FhirDefs` is an `Arc`-wrapped registry of FHIR StructureDefinition summaries
 used by the exporter for:

@@ -15,6 +15,16 @@ fn make_fsh_input(n: usize) -> String {
     buf
 }
 
+fn make_instance_input(n: usize) -> String {
+    let mut buf = String::new();
+    for i in 0..n {
+        buf.push_str(&format!(
+            "Instance: patient-{i}\nInstanceOf: Patient\n* active = true\n\n"
+        ));
+    }
+    buf
+}
+
 fn bench_small(c: &mut Criterion) {
     let input = make_fsh_input(10);
     c.bench_function("compile_small", |b| {
@@ -32,6 +42,13 @@ fn bench_medium(c: &mut Criterion) {
 fn bench_large(c: &mut Criterion) {
     let input = make_fsh_input(1000);
     c.bench_function("compile_large", |b| {
+        b.iter(|| compile_fsh(black_box(&input), "bench").ok())
+    });
+}
+
+fn bench_instances(c: &mut Criterion) {
+    let input = make_instance_input(1000);
+    c.bench_function("compile_instances_1000", |b| {
         b.iter(|| compile_fsh(black_box(&input), "bench").ok())
     });
 }
@@ -60,6 +77,9 @@ fn bench_schema_lookup(c: &mut Criterion) {
     });
     c.bench_function("generated_core_field_lookup", |b| {
         b.iter(|| black_box(get_field_info(black_box("HumanName"), black_box("given"))))
+    });
+    c.bench_function("compiled_profile_view_lookup", |b| {
+        b.iter(|| black_box(schema.view(black_box("Patient"), black_box("Resource"))))
     });
 }
 
@@ -91,6 +111,7 @@ criterion_group!(
     bench_small,
     bench_medium,
     bench_large,
+    bench_instances,
     bench_schema_lookup,
     bench_semantic_lowering
 );

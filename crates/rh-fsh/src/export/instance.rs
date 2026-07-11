@@ -4,7 +4,7 @@ use crate::definition_index::DefinitionIndex;
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
-use crate::schema::{CompiledSchema, FieldShape};
+use crate::schema::{CompiledSchema, FieldShape, SchemaView};
 use crate::semantic::{SemanticOperation, SemanticProgram};
 use crate::tank::FshTank;
 use crate::FshConfig;
@@ -21,7 +21,55 @@ struct InstanceExportContext<'a> {
 
 struct InstanceShapeContext<'a> {
     extension_slice_urls: HashMap<String, String>,
-    schema: &'a CompiledSchema,
+    schema_view: SchemaView<'a>,
+}
+
+/// Schema-typed mutation tree used between semantic lowering and JSON serialization.
+struct TypedInstanceTree<'a> {
+    root: serde_json::Value,
+    root_type: &'a str,
+    shape_context: InstanceShapeContext<'a>,
+}
+
+impl<'a> TypedInstanceTree<'a> {
+    fn new(
+        root: serde_json::Value,
+        root_type: &'a str,
+        schema_view: SchemaView<'a>,
+        extension_slice_urls: HashMap<String, String>,
+    ) -> Self {
+        Self {
+            root,
+            root_type,
+            shape_context: InstanceShapeContext {
+                extension_slice_urls,
+                schema_view,
+            },
+        }
+    }
+
+    fn apply(&mut self, segments: &[FshPathSegment], value: serde_json::Value) {
+        set_at_path(
+            &mut self.root,
+            segments,
+            value,
+            &self.shape_context,
+            self.root_type,
+        );
+    }
+
+    fn root_type(&self) -> &'a str {
+        self.root_type
+    }
+
+    fn schema_view(&self) -> SchemaView<'a> {
+        self.shape_context.schema_view
+    }
+
+    fn into_json(mut self) -> serde_json::Value {
+        remove_export_markers(&mut self.root);
+        self.root
+    }
 }
 
 pub fn export_instance(
@@ -103,73 +151,55 @@ fn export_instance_with_context(
         }
     }
 
-    let shape_context = InstanceShapeContext {
-        extension_slice_urls: extension_slice_urls(instance_of, context),
-        schema: context.schema,
-    };
-    apply_local_profile_defaults(
-        &mut resource,
-        instance_of,
-        &inst.rules,
+    let schema_view = context
+        .schema
+        .view(instance_of, &resource_type_for_metadata);
+    let mut tree = TypedInstanceTree::new(
+        resource,
         &resource_type_for_metadata,
-        context,
-        &shape_context,
+        schema_view,
+        extension_slice_urls(instance_of, context),
     );
+    apply_local_profile_defaults(&mut tree, instance_of, &inst.rules, context);
     let program =
         SemanticProgram::lower_instance(&inst.rules, |value| fsh_value_to_json(value, context));
     for operation in program.into_operations() {
         match operation {
-            SemanticOperation::Assign(assignment) => set_at_path(
-                &mut resource,
-                assignment.path.segments(),
-                assignment.value,
-                &shape_context,
-                &resource_type_for_metadata,
-            ),
+            SemanticOperation::Assign(assignment) => {
+                tree.apply(assignment.path.segments(), assignment.value)
+            }
             SemanticOperation::EstablishContext { path, .. } if path.has_trailing_append() => {
-                set_at_path(
-                    &mut resource,
-                    path.segments(),
-                    serde_json::json!({}),
-                    &shape_context,
-                    &resource_type_for_metadata,
-                );
+                tree.apply(path.segments(), serde_json::json!({}));
             }
             SemanticOperation::EstablishContext { .. } => {}
         }
     }
-    remove_export_markers(&mut resource);
-
-    Ok(resource)
+    Ok(tree.into_json())
 }
 
 fn apply_local_profile_defaults(
-    resource: &mut serde_json::Value,
+    tree: &mut TypedInstanceTree<'_>,
     instance_of: &str,
     instance_rules: &[Spanned<InstanceRule>],
-    resource_type: &str,
     context: &InstanceExportContext<'_>,
-    shape_context: &InstanceShapeContext,
 ) {
     let mut profiles = Vec::new();
     let mut dependency_profiles = Vec::new();
-    let mut current = Some(instance_of.to_string());
-    let mut seen = HashSet::new();
-    while let Some(profile_name) = current {
-        if !seen.insert(profile_name.clone()) {
-            break;
-        }
-        if let Some(profile) = context.tank.profiles.get(&profile_name) {
-            profiles.push(profile);
-            current = profile.metadata.parent.clone();
-        } else if let Some(profile) = context.definition_index.lookup(&profile_name) {
-            dependency_profiles.push(profile);
-            current = profile
-                .parent
-                .clone()
-                .or_else(|| profile.base_definition.clone());
-        } else {
-            break;
+    let schema_view = tree.schema_view();
+    if schema_view.profile_lineage().is_empty() {
+        collect_profile_chain(
+            instance_of,
+            context,
+            &mut profiles,
+            &mut dependency_profiles,
+        );
+    } else {
+        for profile_name in schema_view.profile_lineage() {
+            if let Some(profile) = context.tank.profiles.get(profile_name) {
+                profiles.push(profile);
+            } else if let Some(profile) = context.definition_index.lookup(profile_name) {
+                dependency_profiles.push(profile);
+            }
         }
     }
 
@@ -204,18 +234,12 @@ fn apply_local_profile_defaults(
         let slice_is_used =
             fixed_value.required || dependency_slice_is_used(&segments, &assigned_paths);
         if !segments.is_empty() && !is_overridden && slice_is_used {
-            set_at_path(
-                resource,
-                &segments,
-                fixed_value.value.clone(),
-                shape_context,
-                resource_type,
-            );
+            tree.apply(&segments, fixed_value.value.clone());
         }
     }
 
     for profile in profiles.into_iter().rev() {
-        materialize_required_slices(resource, profile, shape_context, resource_type);
+        materialize_required_slices(tree, profile);
         let program = SemanticProgram::lower_profile(&profile.rules, |value| {
             fsh_value_to_json(value, context)
         });
@@ -226,16 +250,10 @@ fn apply_local_profile_defaults(
                         assignment.path.segments(),
                         &instance_assigned_paths,
                         profile,
-                        resource_type,
-                        context.schema,
+                        tree.root_type(),
+                        tree.schema_view(),
                     ) {
-                        set_at_path(
-                            resource,
-                            assignment.path.segments(),
-                            assignment.value,
-                            shape_context,
-                            resource_type,
-                        );
+                        tree.apply(assignment.path.segments(), assignment.value);
                     }
                 }
                 SemanticOperation::EstablishContext { .. } => {}
@@ -244,12 +262,34 @@ fn apply_local_profile_defaults(
     }
 }
 
-fn materialize_required_slices(
-    resource: &mut serde_json::Value,
-    profile: &Profile,
-    shape_context: &InstanceShapeContext,
-    resource_type: &str,
+fn collect_profile_chain<'a>(
+    instance_of: &str,
+    context: &'a InstanceExportContext<'_>,
+    profiles: &mut Vec<&'a Profile>,
+    dependency_profiles: &mut Vec<&'a crate::IndexedStructureDefinition>,
 ) {
+    let mut current = Some(instance_of.to_string());
+    let mut seen = HashSet::new();
+    while let Some(profile_name) = current {
+        if !seen.insert(profile_name.clone()) {
+            break;
+        }
+        if let Some(profile) = context.tank.profiles.get(&profile_name) {
+            profiles.push(profile);
+            current = profile.metadata.parent.clone();
+        } else if let Some(profile) = context.definition_index.lookup(&profile_name) {
+            dependency_profiles.push(profile);
+            current = profile
+                .parent
+                .clone()
+                .or_else(|| profile.base_definition.clone());
+        } else {
+            break;
+        }
+    }
+}
+
+fn materialize_required_slices(tree: &mut TypedInstanceTree<'_>, profile: &Profile) {
     for rule in &profile.rules {
         let SdRule::Contains(contains) = &rule.value else {
             continue;
@@ -265,13 +305,7 @@ fn materialize_required_slices(
                 element: element.clone(),
                 slice: item.alias.clone().unwrap_or_else(|| item.name.clone()),
             }];
-            set_at_path(
-                resource,
-                &segments,
-                serde_json::json!({}),
-                shape_context,
-                resource_type,
-            );
+            tree.apply(&segments, serde_json::json!({}));
         }
     }
 }
@@ -281,7 +315,7 @@ fn local_profile_path_is_used(
     assigned_paths: &[Vec<FshPathSegment>],
     profile: &Profile,
     resource_type: &str,
-    schema: &CompiledSchema,
+    schema_view: SchemaView<'_>,
 ) -> bool {
     if let Some((slice_index, element, slice)) =
         path.iter()
@@ -331,7 +365,7 @@ fn local_profile_path_is_used(
         return true;
     }
     if root.is_some_and(|root| {
-        path_field_info(schema, resource_type, root).is_some_and(|field| field.min() > 0)
+        path_field_info(schema_view, resource_type, root).is_some_and(|field| field.min() > 0)
     }) {
         return true;
     }
@@ -853,13 +887,13 @@ fn field_next_type(ft: &FhirFieldType) -> Option<&str> {
 }
 
 fn path_field_info<'a>(
-    schema: &'a CompiledSchema,
+    schema_view: SchemaView<'a>,
     current_type: &str,
     field_name: &str,
 ) -> Option<FieldShape<'a>> {
-    schema.field(current_type, field_name).or_else(|| {
+    schema_view.field(current_type, field_name).or_else(|| {
         normalize_choice_type_name(field_name)
-            .and_then(|choice_name| schema.field(current_type, &choice_name))
+            .and_then(|choice_name| schema_view.field(current_type, &choice_name))
     })
 }
 
@@ -919,7 +953,7 @@ fn set_at_path(
 
     match &segments[0] {
         FshPathSegment::Name(name) => {
-            let fi = path_field_info(shape_context.schema, current_type, name);
+            let fi = path_field_info(shape_context.schema_view, current_type, name);
             let family_history_condition =
                 current_type == "FamilyMemberHistory" && name == "condition";
             let family_history_relationship =
@@ -1080,7 +1114,7 @@ fn handle_slice_segment(
 ) {
     // Soft-indexing operators: [+] appends, [=] reuses last
     if slice == "+" || slice == "=" {
-        let fi = path_field_info(shape_context.schema, current_type, element);
+        let fi = path_field_info(shape_context.schema_view, current_type, element);
         let next_type = fi
             .as_ref()
             .and_then(|f| field_next_type(f.field_type()))
@@ -1178,7 +1212,7 @@ fn handle_slice_segment(
 
     // Numeric index (e.g., extension[0])
     if let Ok(idx) = slice.parse::<usize>() {
-        let fi = path_field_info(shape_context.schema, current_type, element);
+        let fi = path_field_info(shape_context.schema_view, current_type, element);
         let next_type = fi
             .as_ref()
             .and_then(|f| field_next_type(f.field_type()))
@@ -1251,7 +1285,7 @@ fn handle_slice_segment(
     }
 
     // Regular named slice: navigate to a stable repetition for the slice.
-    let fi = path_field_info(shape_context.schema, current_type, element);
+    let fi = path_field_info(shape_context.schema_view, current_type, element);
     let next_type = fi
         .as_ref()
         .and_then(|f| field_next_type(f.field_type()))

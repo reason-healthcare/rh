@@ -6,7 +6,7 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 123 passing tests. Shared-resource mismatches are down
+and the library suite has 127 passing tests. Shared-resource mismatches are down
 from 838 to 531. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
@@ -65,12 +65,12 @@ identity-category gaps and 106 other-category gaps.
 
 ## Phase 2: Introduce Schema-informed Instance Export
 
-**Status**: In progress. The compiled-schema boundary and semantic assignment IR
-are implemented alongside BackboneElement metadata, cardinality-aware arrays,
-CodeableConcept wrapping, dynamic choice typing, primitive shadows, recursive
-inline export, dependency fixed/pattern defaults, and named/repeated slice
-materialization. JSON-shape leading gaps are down from 434 to 168; the below-100
-milestone remains open.
+**Status**: In progress. The compiled-schema boundary, semantic assignment IR,
+and profile-aware schema-typed instance tree are implemented alongside
+BackboneElement metadata, cardinality-aware arrays, CodeableConcept wrapping,
+dynamic choice typing, primitive shadows, recursive inline export, dependency
+fixed/pattern defaults, and named/repeated slice materialization. JSON-shape
+leading gaps are down from 434 to 168; the below-100 milestone remains open.
 
 **Goal**: stop inferring JSON shape from assignment syntax alone.
 
@@ -102,29 +102,33 @@ resolved FSH → semantic assignments → compiled schema views
 This migration is split into behavior-preserving checkpoints so conformance and
 performance remain measurable throughout:
 
-1. **2A — Compiled schema foundation (complete).** Build one immutable schema index per
-   compilation, share it across rayon workers, route instance field-shape
+1. **2A — Compiled schema foundation (complete).** Build one immutable schema
+   index per compilation, share it across rayon workers, route instance field-shape
    queries through it, and benchmark the lookup boundary against generated core
    metadata. Generated PHF metadata remains the zero-copy fast path.
 2. **2B — Semantic assignment IR (complete).** Lower resolved instance and local
-   profile rules into explicit
-   operations with normalized paths, selection semantics, source locations, and
+   profile rules into explicit operations with normalized paths, selection
+   semantics, source locations, and
    resolved values. Indentation and path-context interpretation now occurs once
    during lowering instead of inside export. Typed-tree application replaces the
    remaining JSON path walker in 2C.
-3. **2C — Profile-aware schema views and typed instance tree.** Compile core,
-   dependency, and local StructureDefinition constraints into per-profile views;
-   apply defaults, slicing, cardinality, and primitive companions while building
-   a typed tree.
+3. **2C — Profile-aware schema views and typed instance tree (complete).**
+   Compile observed local, dependency, and versioned profile identities into
+   views over the core shape index; apply defaults, slicing, cardinality, and
+   primitive companions while building a schema-typed tree. Views include the
+   resolved lineage and base type and drive inherited default application
+   without eagerly indexing the dependency corpus. Dependency/local element
+   overrides can be added to the view without changing tree callers.
 4. **2D — Deterministic serializer and legacy removal.** Serialize the typed
    tree without schema lookups, remove superseded fallback branches, and retain
    only versioned/declarative compatibility data.
 
 Every checkpoint must keep missing and extra resources at zero, must not raise a
 comparison threshold, must run the field-lookup and compile benchmarks, and must
-pass `just check` before its commit. Phases 2A and 2B landed with unchanged
-project comparison counts; Phase 2C is the next checkpoint and later checkpoints
-own the below-100 JSON-shape target.
+pass `just check` before its commit. Phases 2A–2C landed with unchanged project
+comparison counts; Phase 2D is the next architecture checkpoint and owns removal
+of the legacy JSON path walker. Later correctness slices own the below-100
+JSON-shape target.
 
 ## Phase 3: StructureDefinition Differential Parity
 

@@ -24,6 +24,47 @@ pub enum FieldShape<'a> {
     Owned(ElementShape),
 }
 
+/// Pre-resolved profile lineage and base type for one observed profile reference.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompiledProfileView {
+    root_type: String,
+    lineage: Vec<String>,
+}
+
+impl CompiledProfileView {
+    pub fn root_type(&self) -> &str {
+        &self.root_type
+    }
+
+    pub fn lineage(&self) -> &[String] {
+        &self.lineage
+    }
+}
+
+/// Lightweight profile-aware view over the immutable compiled schema.
+#[derive(Debug, Clone, Copy)]
+pub struct SchemaView<'a> {
+    schema: &'a CompiledSchema,
+    profile: Option<&'a CompiledProfileView>,
+    fallback_root_type: &'a str,
+}
+
+impl<'a> SchemaView<'a> {
+    pub fn root_type(&self) -> &str {
+        self.profile.map_or(self.fallback_root_type, |profile| {
+            profile.root_type.as_str()
+        })
+    }
+
+    pub fn profile_lineage(&self) -> &[String] {
+        self.profile.map_or(&[], |profile| profile.lineage())
+    }
+
+    pub fn field(&self, type_name: &str, field_name: &str) -> Option<FieldShape<'a>> {
+        self.schema.field(type_name, field_name)
+    }
+}
+
 impl FieldShape<'_> {
     pub fn field_type(&self) -> &FhirFieldType {
         match self {
@@ -54,6 +95,7 @@ impl FieldShape<'_> {
 #[derive(Debug, Default)]
 pub struct CompiledSchema {
     fields: HashMap<String, HashMap<String, ElementShape>>,
+    profiles: HashMap<String, CompiledProfileView>,
 }
 
 impl CompiledSchema {
@@ -102,7 +144,33 @@ impl CompiledSchema {
             }
         }
 
+        let mut observed_profiles = tank
+            .instances
+            .values()
+            .map(|instance| instance.metadata.instance_of.as_str())
+            .collect::<Vec<_>>();
+        observed_profiles.sort_unstable();
+        observed_profiles.dedup();
+        for profile_ref in observed_profiles {
+            if let Some(view) = compile_profile_view(profile_ref, tank, defs, definitions) {
+                schema.profiles.insert(profile_ref.to_string(), view);
+            }
+        }
+
         schema
+    }
+
+    pub fn view<'a>(&'a self, profile_ref: &str, fallback_root_type: &'a str) -> SchemaView<'a> {
+        let profile = self.profiles.get(profile_ref).or_else(|| {
+            profile_ref
+                .split_once('|')
+                .and_then(|(canonical, _)| self.profiles.get(canonical))
+        });
+        SchemaView {
+            schema: self,
+            profile,
+            fallback_root_type,
+        }
     }
 
     /// Return generated core metadata first, then compiled dependency/local shapes.
@@ -134,6 +202,10 @@ impl CompiledSchema {
         self.fields.values().map(HashMap::len).sum()
     }
 
+    pub fn cached_profile_count(&self) -> usize {
+        self.profiles.len()
+    }
+
     fn compile_path(&mut self, root_type: &str, segments: &[FshPathSegment]) {
         let mut current_type = root_type.to_string();
         for segment in segments {
@@ -158,6 +230,45 @@ impl CompiledSchema {
             }
         }
     }
+}
+
+fn compile_profile_view(
+    profile_ref: &str,
+    tank: &FshTank,
+    defs: &FhirDefs,
+    definitions: &DefinitionIndex,
+) -> Option<CompiledProfileView> {
+    let root_type = definitions.resolve_base_type(profile_ref, defs)?;
+    let mut lineage = Vec::new();
+    let mut current = Some(profile_ref.to_string());
+    let mut seen = std::collections::HashSet::new();
+    while let Some(profile_name) = current {
+        if !seen.insert(profile_name.clone()) {
+            break;
+        }
+        lineage.push(profile_name.clone());
+        current = tank
+            .profiles
+            .get(&profile_name)
+            .and_then(|profile| profile.metadata.parent.clone())
+            .or_else(|| {
+                definitions.lookup(&profile_name).and_then(|definition| {
+                    definition
+                        .parent
+                        .clone()
+                        .or_else(|| definition.base_definition.clone())
+                })
+            });
+        if current
+            .as_deref()
+            .is_some_and(|parent| defs.get_sd(parent).is_some())
+        {
+            if let Some(parent) = current.take() {
+                lineage.push(parent);
+            }
+        }
+    }
+    Some(CompiledProfileView { root_type, lineage })
 }
 
 fn navigable_type(field_type: &FhirFieldType) -> Option<&str> {
@@ -237,7 +348,11 @@ fn choice_type(suffix: &str) -> Option<FhirFieldType> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{build_definition_index, DependencyDefinitionSet, FshConfig, FshParser};
+    use crate::{
+        build_definition_index, DependencyDefinitionSet, DependencyStructureDefinition, FshConfig,
+        FshParser,
+    };
+    use std::path::PathBuf;
 
     #[test]
     fn compiles_observed_instance_paths() {
@@ -265,5 +380,78 @@ mod tests {
             &FhirFieldType::Primitive(FhirPrimitiveType::String)
         );
         assert_eq!(field.max(), Some(1));
+    }
+
+    #[test]
+    fn compiles_profile_aware_views_for_observed_instances() {
+        let document = FshParser::parse(
+            "Profile: LocalPatient\nParent: Patient\n\nInstance: example\nInstanceOf: LocalPatient\n* active = true\n",
+            "schema-view.fsh",
+        )
+        .expect("FSH parses");
+        let mut tank = FshTank::new();
+        tank.add_document(document).expect("document indexes");
+        let defs = FhirDefs::r4();
+        let definitions = build_definition_index(
+            &tank,
+            &FshConfig::default(),
+            &DependencyDefinitionSet::default(),
+        );
+
+        let schema = CompiledSchema::compile(&tank, &defs, &definitions);
+        let view = schema.view("LocalPatient", "Resource");
+
+        assert_eq!(schema.cached_profile_count(), 1);
+        assert_eq!(view.root_type(), "Patient");
+        assert_eq!(view.profile_lineage()[0], "LocalPatient");
+        assert!(view
+            .profile_lineage()
+            .last()
+            .is_some_and(|parent| parent == "Patient"));
+        assert!(view.field("Patient", "active").is_some());
+    }
+
+    #[test]
+    fn compiles_versioned_dependency_profile_lineage() {
+        let document = FshParser::parse(
+            "Instance: example\nInstanceOf: USCorePatientProfile|6.1.0\n* active = true\n",
+            "dependency-schema-view.fsh",
+        )
+        .expect("FSH parses");
+        let mut tank = FshTank::new();
+        tank.add_document(document).expect("document indexes");
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![DependencyStructureDefinition {
+                package_id: "hl7.fhir.us.core".to_string(),
+                version: "6.1.0".to_string(),
+                path: PathBuf::from("StructureDefinition-us-core-patient.json"),
+                id: Some("us-core-patient".to_string()),
+                url: Some(
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient".to_string(),
+                ),
+                name: Some("USCorePatientProfile".to_string()),
+                title: None,
+                kind: Some("resource".to_string()),
+                type_: Some("Patient".to_string()),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
+                ),
+                derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+            }],
+            warnings: Vec::new(),
+        };
+        let defs = FhirDefs::r4();
+        let definitions = build_definition_index(&tank, &FshConfig::default(), &dependencies);
+
+        let schema = CompiledSchema::compile(&tank, &defs, &definitions);
+        let view = schema.view("USCorePatientProfile|6.1.0", "Resource");
+
+        assert_eq!(view.root_type(), "Patient");
+        assert_eq!(view.profile_lineage()[0], "USCorePatientProfile|6.1.0");
+        assert!(view
+            .profile_lineage()
+            .iter()
+            .any(|parent| parent.ends_with("/Patient")));
     }
 }
