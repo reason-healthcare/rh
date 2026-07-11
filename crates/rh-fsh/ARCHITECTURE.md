@@ -7,10 +7,9 @@ highlighting key design choices and their rationale.
 
 `rh-fsh` transforms FHIR Shorthand (FSH) source text into FHIR R4 JSON resources.
 The architecture is a staged pipeline — parse, index, resolve, compile schema,
-lower semantic assignments, apply them to a schema-typed instance tree, and
-export — with parallel export via rayon. Deterministic serialization is the next
-migration stage. Validation is explicitly out of scope; structural errors are
-delegated to `rh-validator`.
+lower semantic assignments, apply them to a schema-typed instance tree, serialize
+deterministically, and export in parallel via rayon. Validation is explicitly out
+of scope; structural errors are delegated to `rh-validator`.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -57,7 +56,13 @@ delegated to `rh-validator`.
                                     │
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│             Stage 7 — Export  (FshExporter, rayon parallel)                  │
+│              Stage 7 — Deterministic Serializer                             │
+│       typed nodes · sorted object keys · internal marker elision             │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  serde_json::Value
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│             Stage 8 — Export  (FshExporter, rayon parallel)                  │
 │   export/structure_def.rs · export/value_set.rs · export/code_system.rs      │
 │            export/instance.rs · export/mapping.rs · export/mod.rs            │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -183,15 +188,23 @@ the local/dependency profile lineage. Only profiles referenced by instances are
 cached, so profile-only compilation and unused dependency definitions pay no
 view-construction cost.
 
-`TypedInstanceTree` owns the mutable resource between semantic lowering and
+`TypedInstanceTree` owns an `InstanceNode` tree between semantic lowering and
 serialization. All explicit assignments, inherited fixed/pattern defaults,
 required slices, extension URLs, cardinality shaping, and primitive companions
-flow through its schema-aware `apply` boundary. Internally it retains the proven
-JSON path walker during the behavior-preserving migration; Phase 2D replaces
-that implementation with typed nodes and a deterministic serializer without
-changing callers.
+flow through its schema-aware `apply` boundary. Objects, arrays, primitive
+values, and nulls are distinct node variants; no mutable `serde_json::Value`
+walker remains.
 
-### 7. Parallel Export with rayon
+### 7. Deterministic Typed-Node Serialization
+
+The serializer consumes the typed tree exactly once. Object fields use sorted
+keys, while array order remains semantic. Internal named-slice markers and
+object fields made empty by marker removal are elided during that same pass, so
+there is no cleanup traversal or second intermediate JSON tree. Mixed-version
+field exceptions live in a declarative schema compatibility table rather than
+conditional branches in tree application.
+
+### 8. Parallel Export with rayon
 
 `FshExporter::export` collects all entities from the resolved tank and dispatches
 to per-type exporter functions in parallel using a shared `export_par` helper.
@@ -223,7 +236,7 @@ Non-fatal export errors (e.g. unresolvable parent SD) are collected into
 `FhirPackage::errors` rather than aborting compilation. The caller decides
 whether to treat them as hard failures.
 
-### 8. Differential-Only StructureDefinitions
+### 9. Differential-Only StructureDefinitions
 
 The `structure_def` exporter produces FHIR `StructureDefinition` resources
 containing only a `differential` — the minimal set of element overrides derived
@@ -235,7 +248,7 @@ This matches the output of sushi and keeps the exporter fast: computing a full
 snapshot requires walking the entire parent SD hierarchy, which is expensive
 and only needed for validation.
 
-### 9. `FhirDefs` — Pluggable Definition Registry
+### 10. `FhirDefs` — Pluggable Definition Registry
 
 `FhirDefs` is an `Arc`-wrapped registry of FHIR StructureDefinition summaries
 used by the exporter for:

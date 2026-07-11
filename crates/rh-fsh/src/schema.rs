@@ -16,6 +16,88 @@ pub struct ElementShape {
     pub is_choice_type: bool,
 }
 
+struct CompatibilityField {
+    owner: &'static str,
+    field: &'static str,
+    shape: ElementShape,
+}
+
+/// Declarative shapes absent from the generated R4 registry but required by the
+/// pinned mixed-version conformance corpus. This table replaces exporter branches
+/// and can be selected by FHIR-version-specific schema providers in a later slice.
+static COMPATIBILITY_FIELDS: &[CompatibilityField] = &[
+    CompatibilityField {
+        owner: "ActorDefinition",
+        field: "derivedFrom",
+        shape: ElementShape {
+            field_type: FhirFieldType::Primitive(FhirPrimitiveType::Canonical),
+            min: 0,
+            max: None,
+            is_choice_type: false,
+        },
+    },
+    CompatibilityField {
+        owner: "ActorDefinition",
+        field: "jurisdiction",
+        shape: ElementShape {
+            field_type: FhirFieldType::Complex("CodeableConcept"),
+            min: 0,
+            max: None,
+            is_choice_type: false,
+        },
+    },
+    CompatibilityField {
+        owner: "ActorDefinition",
+        field: "title",
+        shape: ElementShape {
+            field_type: FhirFieldType::Primitive(FhirPrimitiveType::String),
+            min: 0,
+            max: Some(1),
+            is_choice_type: false,
+        },
+    },
+    CompatibilityField {
+        owner: "FamilyMemberHistory",
+        field: "condition",
+        shape: ElementShape {
+            field_type: FhirFieldType::BackboneElement("FamilyMemberHistoryCondition"),
+            min: 0,
+            max: None,
+            is_choice_type: false,
+        },
+    },
+    CompatibilityField {
+        owner: "FamilyMemberHistory",
+        field: "relationship",
+        shape: ElementShape {
+            field_type: FhirFieldType::Complex("CodeableConcept"),
+            min: 1,
+            max: Some(1),
+            is_choice_type: false,
+        },
+    },
+    CompatibilityField {
+        owner: "ExplanationOfBenefit",
+        field: "adjudication",
+        shape: ElementShape {
+            field_type: FhirFieldType::BackboneElement("ExplanationOfBenefitItemAdjudication"),
+            min: 0,
+            max: None,
+            is_choice_type: false,
+        },
+    },
+    CompatibilityField {
+        owner: "ClaimResponse",
+        field: "adjudication",
+        shape: ElementShape {
+            field_type: FhirFieldType::BackboneElement("ClaimResponseItemAdjudication"),
+            min: 0,
+            max: None,
+            is_choice_type: false,
+        },
+    },
+];
+
 /// Borrowed view of either generated core metadata or a compiled shape.
 #[derive(Debug)]
 pub enum FieldShape<'a> {
@@ -184,6 +266,12 @@ impl CompiledSchema {
             .and_then(|fields| fields.get(field_name))
         {
             return Some(FieldShape::Compiled(field));
+        }
+        if let Some(field) = COMPATIBILITY_FIELDS
+            .iter()
+            .find(|field| field.owner == type_name && field.field == field_name)
+        {
+            return Some(FieldShape::Compiled(&field.shape));
         }
         if let Some(field) = concrete_choice_shape(type_name, field_name) {
             return Some(FieldShape::Owned(field));

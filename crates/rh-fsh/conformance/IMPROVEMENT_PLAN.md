@@ -6,7 +6,7 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 127 passing tests. Shared-resource mismatches are down
+and the library suite has 128 passing tests. Shared-resource mismatches are down
 from 838 to 531. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
@@ -66,8 +66,9 @@ identity-category gaps and 106 other-category gaps.
 ## Phase 2: Introduce Schema-informed Instance Export
 
 **Status**: In progress. The compiled-schema boundary, semantic assignment IR,
-and profile-aware schema-typed instance tree are implemented alongside
-BackboneElement metadata, cardinality-aware arrays, CodeableConcept wrapping,
+profile-aware schema-typed instance tree, and deterministic serializer are
+implemented alongside BackboneElement metadata, cardinality-aware arrays,
+CodeableConcept wrapping,
 dynamic choice typing, primitive shadows, recursive inline export, dependency
 fixed/pattern defaults, and named/repeated slice materialization. JSON-shape
 leading gaps are down from 434 to 168; the below-100 milestone remains open.
@@ -119,16 +120,16 @@ performance remain measurable throughout:
    resolved lineage and base type and drive inherited default application
    without eagerly indexing the dependency corpus. Dependency/local element
    overrides can be added to the view without changing tree callers.
-4. **2D — Deterministic serializer and legacy removal.** Serialize the typed
-   tree without schema lookups, remove superseded fallback branches, and retain
-   only versioned/declarative compatibility data.
+4. **2D — Deterministic serializer and legacy removal (complete).** Serialize
+   typed nodes without schema lookups, remove the mutable JSON walker and cleanup
+   pass, and centralize mixed-version compatibility shapes as declarative schema
+   data instead of exporter branches.
 
 Every checkpoint must keep missing and extra resources at zero, must not raise a
 comparison threshold, must run the field-lookup and compile benchmarks, and must
-pass `just check` before its commit. Phases 2A–2C landed with unchanged project
-comparison counts; Phase 2D is the next architecture checkpoint and owns removal
-of the legacy JSON path walker. Later correctness slices own the below-100
-JSON-shape target.
+pass `just check` before its commit. Phases 2A–2D landed with unchanged project
+comparison counts. The architecture migration is complete; focused correctness
+slices now own the below-100 JSON-shape target.
 
 ## Phase 3: StructureDefinition Differential Parity
 
@@ -195,7 +196,7 @@ PAS 121, and IPS 71.
 **Next delivery order**:
 
 1. Complete recursive schema shaping for extension arrays, Bundle entries,
-   Parameters, and primitive shadow fields (434 leading JSON-shape gaps).
+   Parameters, and primitive shadow fields (168 leading JSON-shape gaps).
 2. Export root constraints, context, slicing, bindings, fixed/pattern values,
    and differential element merging (234 StructureDefinition gaps).
 3. Preserve nested indentation context in instance rules and finish local

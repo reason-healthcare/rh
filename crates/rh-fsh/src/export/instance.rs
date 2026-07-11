@@ -9,7 +9,7 @@ use crate::semantic::{SemanticOperation, SemanticProgram};
 use crate::tank::FshTank;
 use crate::FshConfig;
 use rh_hl7_fhir_r4_core::metadata::FhirFieldType;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 struct InstanceExportContext<'a> {
     defs: &'a FhirDefs,
@@ -24,16 +24,125 @@ struct InstanceShapeContext<'a> {
     schema_view: SchemaView<'a>,
 }
 
+/// Internal typed node representation with deterministic object ordering.
+#[derive(Debug, Clone, PartialEq)]
+enum InstanceNode {
+    Null,
+    Bool(bool),
+    Number(serde_json::Number),
+    String(String),
+    Array(Vec<InstanceNode>),
+    Object(BTreeMap<String, InstanceNode>),
+}
+
+impl InstanceNode {
+    fn object() -> Self {
+        Self::Object(BTreeMap::new())
+    }
+
+    fn array() -> Self {
+        Self::Array(Vec::new())
+    }
+
+    fn get(&self, key: &str) -> Option<&Self> {
+        match self {
+            Self::Object(object) => object.get(key),
+            _ => None,
+        }
+    }
+
+    fn as_object_mut(&mut self) -> Option<&mut BTreeMap<String, Self>> {
+        match self {
+            Self::Object(object) => Some(object),
+            _ => None,
+        }
+    }
+
+    fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::String(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    fn is_object(&self) -> bool {
+        matches!(self, Self::Object(_))
+    }
+
+    fn is_null(&self) -> bool {
+        matches!(self, Self::Null)
+    }
+
+    fn insert(&mut self, key: impl Into<String>, value: Self) {
+        if let Self::Object(object) = self {
+            object.insert(key.into(), value);
+        }
+    }
+
+    fn into_json(self) -> serde_json::Value {
+        match self {
+            Self::Null => serde_json::Value::Null,
+            Self::Bool(value) => serde_json::Value::Bool(value),
+            Self::Number(value) => serde_json::Value::Number(value),
+            Self::String(value) => serde_json::Value::String(value),
+            Self::Array(values) => serde_json::Value::Array(
+                values
+                    .into_iter()
+                    .filter(|value| !value.is_slice_marker_only())
+                    .map(Self::into_json)
+                    .collect(),
+            ),
+            Self::Object(values) => {
+                let values = values.into_iter().filter_map(|(key, value)| {
+                    if key == SLICE_MARKER {
+                        return None;
+                    }
+                    let value = value.into_json();
+                    if matches!(&value, serde_json::Value::Array(values) if values.is_empty()) {
+                        return None;
+                    }
+                    Some((key, value))
+                });
+                serde_json::Value::Object(values.collect())
+            }
+        }
+    }
+
+    fn is_slice_marker_only(&self) -> bool {
+        matches!(self, Self::Object(object) if object.len() == 1 && object.contains_key(SLICE_MARKER))
+    }
+}
+
+impl From<serde_json::Value> for InstanceNode {
+    fn from(value: serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::Null => Self::Null,
+            serde_json::Value::Bool(value) => Self::Bool(value),
+            serde_json::Value::Number(value) => Self::Number(value),
+            serde_json::Value::String(value) => Self::String(value),
+            serde_json::Value::Array(values) => {
+                Self::Array(values.into_iter().map(Self::from).collect())
+            }
+            serde_json::Value::Object(values) => Self::Object(
+                values
+                    .into_iter()
+                    .map(|(key, value)| (key, Self::from(value)))
+                    .collect(),
+            ),
+        }
+    }
+}
+
 /// Schema-typed mutation tree used between semantic lowering and JSON serialization.
 struct TypedInstanceTree<'a> {
-    root: serde_json::Value,
+    root: InstanceNode,
     root_type: &'a str,
     shape_context: InstanceShapeContext<'a>,
 }
 
 impl<'a> TypedInstanceTree<'a> {
     fn new(
-        root: serde_json::Value,
+        root: InstanceNode,
         root_type: &'a str,
         schema_view: SchemaView<'a>,
         extension_slice_urls: HashMap<String, String>,
@@ -49,10 +158,10 @@ impl<'a> TypedInstanceTree<'a> {
     }
 
     fn apply(&mut self, segments: &[FshPathSegment], value: serde_json::Value) {
-        set_at_path(
+        apply_at_path(
             &mut self.root,
             segments,
-            value,
+            InstanceNode::from(value),
             &self.shape_context,
             self.root_type,
         );
@@ -66,9 +175,8 @@ impl<'a> TypedInstanceTree<'a> {
         self.shape_context.schema_view
     }
 
-    fn into_json(mut self) -> serde_json::Value {
-        remove_export_markers(&mut self.root);
-        self.root
+    fn into_json(self) -> serde_json::Value {
+        self.root.into_json()
     }
 }
 
@@ -118,18 +226,33 @@ fn export_instance_with_context(
             .iter()
             .any(|c| c == "#can-be-target" || c == "can-be-target");
         if has_can_be_target {
-            serde_json::json!({
-                "resourceType": resource_type_json,
-                "id": inst.metadata.name,
-            })
+            InstanceNode::Object(BTreeMap::from([
+                (
+                    "resourceType".to_string(),
+                    InstanceNode::String(resource_type_json),
+                ),
+                (
+                    "id".to_string(),
+                    InstanceNode::String(inst.metadata.name.clone()),
+                ),
+            ]))
         } else {
-            serde_json::json!({ "resourceType": resource_type_json })
+            InstanceNode::Object(BTreeMap::from([(
+                "resourceType".to_string(),
+                InstanceNode::String(resource_type_json),
+            )]))
         }
     } else {
-        serde_json::json!({
-            "resourceType": resource_type_json,
-            "id": inst.metadata.name,
-        })
+        InstanceNode::Object(BTreeMap::from([
+            (
+                "resourceType".to_string(),
+                InstanceNode::String(resource_type_json),
+            ),
+            (
+                "id".to_string(),
+                InstanceNode::String(inst.metadata.name.clone()),
+            ),
+        ]))
     };
 
     if let Some(title) = &inst.metadata.title {
@@ -137,9 +260,8 @@ fn export_instance_with_context(
             .schema
             .field(&resource_type_for_metadata, "title")
             .is_some()
-            || resource_type_for_metadata == "ActorDefinition"
         {
-            resource["title"] = serde_json::Value::String(title.clone());
+            resource.insert("title", InstanceNode::String(title.clone()));
         }
     }
 
@@ -147,7 +269,7 @@ fn export_instance_with_context(
     if usage == "#definition" || usage == "definition" {
         if let Some(canonical) = &context.config.canonical {
             let url = format!("{canonical}/{instance_of}/{}", inst.metadata.name);
-            resource["url"] = serde_json::Value::String(url);
+            resource.insert("url", InstanceNode::String(url));
         }
     }
 
@@ -581,29 +703,6 @@ fn collect_extension_slice_urls(
 
 const SLICE_MARKER: &str = "__rh_fsh_slice";
 
-fn remove_export_markers(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::Object(map) => {
-            map.remove(SLICE_MARKER);
-            for child in map.values_mut() {
-                remove_export_markers(child);
-            }
-            map.retain(
-                |_, child| !matches!(child, serde_json::Value::Array(values) if values.is_empty()),
-            );
-        }
-        serde_json::Value::Array(values) => {
-            values.retain(|value| {
-                !matches!(value, serde_json::Value::Object(object) if object.len() == 1 && object.contains_key(SLICE_MARKER))
-            });
-            for child in values {
-                remove_export_markers(child);
-            }
-        }
-        _ => {}
-    }
-}
-
 fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> serde_json::Value {
     match value {
         FshValue::Str(s) => serde_json::Value::String(s.clone()),
@@ -897,36 +996,28 @@ fn path_field_info<'a>(
     })
 }
 
-fn fallback_backbone_type(current_type: &str, field_name: &str) -> Option<&'static str> {
-    match (current_type, field_name) {
-        ("ExplanationOfBenefit", "adjudication") => Some("ExplanationOfBenefitItemAdjudication"),
-        ("ClaimResponse", "adjudication") => Some("ClaimResponseItemAdjudication"),
-        _ => None,
-    }
-}
-
 /// Wrap a Coding-shaped object as a CodeableConcept if the target field requires it.
 ///
 /// A "Coding-shaped" value is `{"code": ..., "system": ...}` (with optional display).
 /// When the field type is `CodeableConcept`, FHIR requires `{"coding": [{...}]}`.
 fn wrap_codeable_concept_if_needed(
-    value: serde_json::Value,
+    value: InstanceNode,
     field_type: Option<&FhirFieldType>,
-) -> serde_json::Value {
+) -> InstanceNode {
     if matches!(field_type, Some(FhirFieldType::Complex("CodeableConcept"))) {
-        if let serde_json::Value::Object(ref map) = value {
+        if let InstanceNode::Object(ref map) = value {
             if map.contains_key("code") || map.contains_key("system") {
-                return serde_json::json!({ "coding": [value] });
+                return InstanceNode::Object(BTreeMap::from([(
+                    "coding".to_string(),
+                    InstanceNode::Array(vec![value]),
+                )]));
             }
         }
     }
     value
 }
 
-fn shape_value_for_field(
-    value: serde_json::Value,
-    field_type: Option<&FhirFieldType>,
-) -> serde_json::Value {
+fn shape_value_for_field(value: InstanceNode, field_type: Option<&FhirFieldType>) -> InstanceNode {
     if matches!(field_type, Some(FhirFieldType::Primitive(_))) {
         if let Some(code) = value.get("code") {
             return code.clone();
@@ -935,14 +1026,14 @@ fn shape_value_for_field(
     wrap_codeable_concept_if_needed(value, field_type)
 }
 
-/// Navigate a FHIR path in the JSON tree and set the leaf value.
+/// Navigate a FHIR path in the typed tree and set the leaf value.
 ///
 /// Uses `FhirDefs` to determine whether each field has max cardinality `*` (array)
 /// or `1` (scalar), matching sushi's JSON output shape without a full snapshot.
-fn set_at_path(
-    node: &mut serde_json::Value,
+fn apply_at_path(
+    node: &mut InstanceNode,
     segments: &[FshPathSegment],
-    value: serde_json::Value,
+    value: InstanceNode,
     shape_context: &InstanceShapeContext,
     current_type: &str,
 ) {
@@ -954,52 +1045,29 @@ fn set_at_path(
     match &segments[0] {
         FshPathSegment::Name(name) => {
             let fi = path_field_info(shape_context.schema_view, current_type, name);
-            let family_history_condition =
-                current_type == "FamilyMemberHistory" && name == "condition";
-            let family_history_relationship =
-                current_type == "FamilyMemberHistory" && name == "relationship";
-            let fallback_backbone = fallback_backbone_type(current_type, name);
-            let field_type = fi
-                .as_ref()
-                .map(|field| field.field_type().clone())
-                .or_else(|| {
-                    (current_type == "ActorDefinition" && name == "jurisdiction")
-                        .then_some(FhirFieldType::Complex("CodeableConcept"))
-                })
-                .or_else(|| {
-                    family_history_relationship.then_some(FhirFieldType::Complex("CodeableConcept"))
-                });
-            let is_array = family_history_condition
-                || fallback_backbone.is_some()
-                || (current_type == "ActorDefinition"
-                    && matches!(name.as_str(), "derivedFrom" | "jurisdiction"))
-                || fi.as_ref().is_some_and(|f| f.max().is_none());
+            let field_type = fi.as_ref().map(|field| field.field_type().clone());
+            let is_array = fi.as_ref().is_some_and(|field| field.max().is_none());
             let is_primitive = field_type
                 .as_ref()
                 .is_some_and(|field_type| matches!(field_type, FhirFieldType::Primitive(_)));
             let next_type = field_type
                 .as_ref()
                 .and_then(field_next_type)
-                .or(fallback_backbone)
-                .unwrap_or(if family_history_condition {
-                    "FamilyMemberHistoryCondition"
-                } else {
-                    current_type
-                });
+                .unwrap_or(current_type);
 
-            if let serde_json::Value::Object(map) = node {
+            if let InstanceNode::Object(map) = node {
                 if segments.len() > 1 && is_primitive {
                     let child = map
                         .entry(format!("_{name}"))
-                        .or_insert_with(|| serde_json::json!({}));
-                    set_at_path(child, &segments[1..], value, shape_context, "Element");
+                        .or_insert_with(InstanceNode::object);
+                    apply_at_path(child, &segments[1..], value, shape_context, "Element");
                     return;
                 }
                 if segments.len() == 1 {
                     // Wrap Coding-shaped values in CodeableConcept when required by the field type
                     let value = shape_value_for_field(value, field_type.as_ref());
                     if is_array {
-                        map.insert(name.clone(), serde_json::json!([value]));
+                        map.insert(name.clone(), InstanceNode::Array(vec![value]));
                     } else {
                         map.insert(name.clone(), value);
                     }
@@ -1008,39 +1076,37 @@ fn set_at_path(
                     if is_array && !next_is_index {
                         // Array field accessed without an explicit index — navigate to last element
                         // (creating the first one if the array is empty).
-                        let arr = map
-                            .entry(name.clone())
-                            .or_insert_with(|| serde_json::json!([]));
-                        if let serde_json::Value::Array(a) = arr {
+                        let arr = map.entry(name.clone()).or_insert_with(InstanceNode::array);
+                        if let InstanceNode::Array(a) = arr {
                             if a.is_empty() {
-                                a.push(serde_json::json!({}));
+                                a.push(InstanceNode::object());
                             }
                             let last = a.last_mut().unwrap();
-                            set_at_path(last, &segments[1..], value, shape_context, next_type);
+                            apply_at_path(last, &segments[1..], value, shape_context, next_type);
                         }
                     } else {
                         // Scalar field, or array field with explicit index following.
                         let default = if is_array || next_is_index {
-                            serde_json::json!([])
+                            InstanceNode::array()
                         } else {
-                            serde_json::json!({})
+                            InstanceNode::object()
                         };
                         let child = map.entry(name.clone()).or_insert_with(|| default);
-                        set_at_path(child, &segments[1..], value, shape_context, next_type);
+                        apply_at_path(child, &segments[1..], value, shape_context, next_type);
                     }
                 }
             }
         }
         FshPathSegment::Index(idx) => {
-            if let serde_json::Value::Array(arr) = node {
+            if let InstanceNode::Array(arr) = node {
                 let i = *idx as usize;
                 while arr.len() <= i {
-                    arr.push(serde_json::json!({}));
+                    arr.push(InstanceNode::object());
                 }
                 if segments.len() == 1 {
                     arr[i] = value;
                 } else {
-                    set_at_path(
+                    apply_at_path(
                         &mut arr[i],
                         &segments[1..],
                         value,
@@ -1051,7 +1117,7 @@ fn set_at_path(
             }
         }
         FshPathSegment::Slice { element, slice } => {
-            if let serde_json::Value::Object(map) = node {
+            if let InstanceNode::Object(map) = node {
                 handle_slice_segment(
                     map,
                     element,
@@ -1064,27 +1130,33 @@ fn set_at_path(
             }
         }
         FshPathSegment::ChoiceType(element) => {
-            if let serde_json::Value::Object(map) = node {
+            if let InstanceNode::Object(map) = node {
                 let key = element.clone();
                 if segments.len() == 1 {
                     map.insert(key, value);
                 } else {
-                    let child = map.entry(key).or_insert_with(|| serde_json::json!({}));
-                    set_at_path(child, &segments[1..], value, shape_context, current_type);
+                    let child = map.entry(key).or_insert_with(InstanceNode::object);
+                    apply_at_path(child, &segments[1..], value, shape_context, current_type);
                 }
             }
         }
         FshPathSegment::Extension(url) => {
-            if let serde_json::Value::Object(map) = node {
+            if let InstanceNode::Object(map) = node {
                 let exts = map
-                    .entry("extension")
-                    .or_insert_with(|| serde_json::json!([]));
-                if let serde_json::Value::Array(arr) = exts {
+                    .entry("extension".to_string())
+                    .or_insert_with(InstanceNode::array);
+                if let InstanceNode::Array(arr) = exts {
                     if segments.len() == 1 {
-                        arr.push(serde_json::json!({ "url": url, "valueString": value }));
+                        arr.push(InstanceNode::Object(BTreeMap::from([
+                            ("url".to_string(), InstanceNode::String(url.clone())),
+                            ("valueString".to_string(), value),
+                        ])));
                     } else {
-                        let mut ext_obj = serde_json::json!({ "url": url });
-                        set_at_path(
+                        let mut ext_obj = InstanceNode::Object(BTreeMap::from([(
+                            "url".to_string(),
+                            InstanceNode::String(url.clone()),
+                        )]));
+                        apply_at_path(
                             &mut ext_obj,
                             &segments[1..],
                             value,
@@ -1104,11 +1176,11 @@ fn set_at_path(
 /// 2. Numeric index (`[0]`, `[1]`, …)
 /// 3. Named slice (navigates to the element field by name)
 fn handle_slice_segment(
-    map: &mut serde_json::Map<String, serde_json::Value>,
+    map: &mut BTreeMap<String, InstanceNode>,
     element: &str,
     slice: &str,
     segments: &[FshPathSegment],
-    value: serde_json::Value,
+    value: InstanceNode,
     shape_context: &InstanceShapeContext,
     current_type: &str,
 ) {
@@ -1118,7 +1190,6 @@ fn handle_slice_segment(
         let next_type = fi
             .as_ref()
             .and_then(|f| field_next_type(f.field_type()))
-            .or_else(|| fallback_backbone_type(current_type, element))
             .unwrap_or(current_type);
         let element_key = element.to_string();
 
@@ -1129,10 +1200,8 @@ fn handle_slice_segment(
                     shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
                 );
             } else {
-                let child = map
-                    .entry(element_key)
-                    .or_insert_with(|| serde_json::json!({}));
-                set_at_path(child, &segments[1..], value, shape_context, next_type);
+                let child = map.entry(element_key).or_insert_with(InstanceNode::object);
+                apply_at_path(child, &segments[1..], value, shape_context, next_type);
             }
             return;
         }
@@ -1140,13 +1209,13 @@ fn handle_slice_segment(
         let arr_len = {
             let arr = map
                 .entry(element_key.clone())
-                .or_insert_with(|| serde_json::json!([]));
+                .or_insert_with(InstanceNode::array);
             if slice == "+" {
-                if let serde_json::Value::Array(a) = arr {
-                    a.push(serde_json::json!({}));
+                if let InstanceNode::Array(a) = arr {
+                    a.push(InstanceNode::object());
                 }
             }
-            if let serde_json::Value::Array(a) = arr {
+            if let InstanceNode::Array(a) = arr {
                 a.len()
             } else {
                 0
@@ -1162,7 +1231,7 @@ fn handle_slice_segment(
         let is_primitive = map
             .get(&element_key)
             .and_then(|v| {
-                if let serde_json::Value::Array(a) = v {
+                if let InstanceNode::Array(a) = v {
                     a.get(idx)
                 } else {
                     None
@@ -1172,17 +1241,15 @@ fn handle_slice_segment(
 
         if is_primitive && segments.len() > 1 {
             let shadow_key = format!("_{element_key}");
-            let shadow_arr = map
-                .entry(shadow_key)
-                .or_insert_with(|| serde_json::json!([]));
-            if let serde_json::Value::Array(shadow) = shadow_arr {
+            let shadow_arr = map.entry(shadow_key).or_insert_with(InstanceNode::array);
+            if let InstanceNode::Array(shadow) = shadow_arr {
                 while shadow.len() <= idx {
-                    shadow.push(serde_json::Value::Null);
+                    shadow.push(InstanceNode::Null);
                 }
                 if shadow[idx].is_null() {
-                    shadow[idx] = serde_json::json!({});
+                    shadow[idx] = InstanceNode::object();
                 }
-                set_at_path(
+                apply_at_path(
                     &mut shadow[idx],
                     &segments[1..],
                     value,
@@ -1192,12 +1259,12 @@ fn handle_slice_segment(
             }
         } else {
             let arr = map.get_mut(&element_key).unwrap();
-            if let serde_json::Value::Array(arr) = arr {
+            if let InstanceNode::Array(arr) = arr {
                 if segments.len() == 1 {
                     arr[idx] =
                         shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
                 } else {
-                    set_at_path(
+                    apply_at_path(
                         &mut arr[idx],
                         &segments[1..],
                         value,
@@ -1216,7 +1283,6 @@ fn handle_slice_segment(
         let next_type = fi
             .as_ref()
             .and_then(|f| field_next_type(f.field_type()))
-            .or_else(|| fallback_backbone_type(current_type, element))
             .unwrap_or(current_type);
         let is_primitive = fi
             .as_ref()
@@ -1226,8 +1292,8 @@ fn handle_slice_segment(
             if is_primitive && segments.len() > 1 {
                 let shadow = map
                     .entry(format!("_{element}"))
-                    .or_insert_with(|| serde_json::json!({}));
-                set_at_path(shadow, &segments[1..], value, shape_context, "Element");
+                    .or_insert_with(InstanceNode::object);
+                apply_at_path(shadow, &segments[1..], value, shape_context, "Element");
             } else if segments.len() == 1 {
                 map.insert(
                     element.to_string(),
@@ -1236,23 +1302,23 @@ fn handle_slice_segment(
             } else {
                 let child = map
                     .entry(element.to_string())
-                    .or_insert_with(|| serde_json::json!({}));
-                set_at_path(child, &segments[1..], value, shape_context, next_type);
+                    .or_insert_with(InstanceNode::object);
+                apply_at_path(child, &segments[1..], value, shape_context, next_type);
             }
             return;
         }
         if is_primitive && segments.len() > 1 {
             let shadow = map
                 .entry(format!("_{element}"))
-                .or_insert_with(|| serde_json::json!([]));
-            if let serde_json::Value::Array(values) = shadow {
+                .or_insert_with(InstanceNode::array);
+            if let InstanceNode::Array(values) = shadow {
                 while values.len() <= idx {
-                    values.push(serde_json::Value::Null);
+                    values.push(InstanceNode::Null);
                 }
                 if values[idx].is_null() {
-                    values[idx] = serde_json::json!({});
+                    values[idx] = InstanceNode::object();
                 }
-                set_at_path(
+                apply_at_path(
                     &mut values[idx],
                     &segments[1..],
                     value,
@@ -1264,15 +1330,15 @@ fn handle_slice_segment(
         }
         let arr = map
             .entry(element.to_string())
-            .or_insert_with(|| serde_json::json!([]));
-        if let serde_json::Value::Array(arr) = arr {
+            .or_insert_with(InstanceNode::array);
+        if let InstanceNode::Array(arr) = arr {
             while arr.len() <= idx {
-                arr.push(serde_json::json!({}));
+                arr.push(InstanceNode::object());
             }
             if segments.len() == 1 {
                 arr[idx] = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
             } else {
-                set_at_path(
+                apply_at_path(
                     &mut arr[idx],
                     &segments[1..],
                     value,
@@ -1289,11 +1355,10 @@ fn handle_slice_segment(
     let next_type = fi
         .as_ref()
         .and_then(|f| field_next_type(f.field_type()))
-        .or_else(|| fallback_backbone_type(current_type, element))
         .unwrap_or(current_type);
     let key = element.to_string();
-    let array = map.entry(key).or_insert_with(|| serde_json::json!([]));
-    let serde_json::Value::Array(values) = array else {
+    let array = map.entry(key).or_insert_with(InstanceNode::array);
+    let InstanceNode::Array(values) = array else {
         return;
     };
     if let Some(FshPathSegment::Index(repetition)) = segments.get(1) {
@@ -1302,9 +1367,12 @@ fn handle_slice_segment(
             .iter()
             .find(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
             .cloned()
-            .unwrap_or_else(|| serde_json::json!({ SLICE_MARKER: slice }));
+            .unwrap_or_else(|| slice_marker_node(slice));
         if element == "extension" && template.get("url").is_none() {
-            template["url"] = serde_json::Value::String(named_extension_url(slice, shape_context));
+            template.insert(
+                "url",
+                InstanceNode::String(named_extension_url(slice, shape_context)),
+            );
         }
         while values
             .iter()
@@ -1325,13 +1393,15 @@ fn handle_slice_segment(
             .map(|(index, _)| index)
             .unwrap();
         if element == "extension" && values[index].get("url").is_none() {
-            values[index]["url"] =
-                serde_json::Value::String(named_extension_url(slice, shape_context));
+            values[index].insert(
+                "url",
+                InstanceNode::String(named_extension_url(slice, shape_context)),
+            );
         }
         if segments.len() == 2 {
             values[index] = value;
         } else {
-            set_at_path(
+            apply_at_path(
                 &mut values[index],
                 &segments[2..],
                 value,
@@ -1356,9 +1426,12 @@ fn handle_slice_segment(
             candidate.filter(|_| unmarked.next().is_none())
         })
         .unwrap_or_else(|| {
-            let mut item = serde_json::json!({ SLICE_MARKER: slice });
+            let mut item = slice_marker_node(slice);
             if element == "extension" {
-                item["url"] = serde_json::Value::String(named_extension_url(slice, shape_context));
+                item.insert(
+                    "url",
+                    InstanceNode::String(named_extension_url(slice, shape_context)),
+                );
             }
             let index = named_slice_insert_index(values, slice);
             values.insert(index, item);
@@ -1367,19 +1440,19 @@ fn handle_slice_segment(
     if let Some(object) = values[index].as_object_mut() {
         object
             .entry(SLICE_MARKER.to_string())
-            .or_insert_with(|| serde_json::Value::String(slice.to_string()));
+            .or_insert_with(|| InstanceNode::String(slice.to_string()));
     }
     if segments.len() == 1 {
         let mut value = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
-        if let serde_json::Value::Object(object) = &mut value {
+        if let InstanceNode::Object(object) = &mut value {
             object.insert(
                 SLICE_MARKER.to_string(),
-                serde_json::Value::String(slice.to_string()),
+                InstanceNode::String(slice.to_string()),
             );
         }
         values[index] = value;
     } else {
-        set_at_path(
+        apply_at_path(
             &mut values[index],
             &segments[1..],
             value,
@@ -1389,7 +1462,14 @@ fn handle_slice_segment(
     }
 }
 
-fn named_slice_insert_index(values: &[serde_json::Value], slice: &str) -> usize {
+fn slice_marker_node(slice: &str) -> InstanceNode {
+    InstanceNode::Object(BTreeMap::from([(
+        SLICE_MARKER.to_string(),
+        InstanceNode::String(slice.to_string()),
+    )]))
+}
+
+fn named_slice_insert_index(values: &[InstanceNode], slice: &str) -> usize {
     if let Some(index) = values
         .iter()
         .rposition(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
@@ -1429,6 +1509,26 @@ mod tests {
     use crate::parser::ast::{Profile, SdMetadata};
     use crate::{build_definition_index, FshConfig};
     use std::path::PathBuf;
+
+    #[test]
+    fn typed_node_serialization_is_deterministic_and_hides_internal_markers() {
+        let node = InstanceNode::Object(BTreeMap::from([
+            ("z".to_string(), InstanceNode::from(serde_json::json!(1))),
+            ("a".to_string(), InstanceNode::from(serde_json::json!(2))),
+            (
+                "empty".to_string(),
+                InstanceNode::Array(vec![slice_marker_node("unused")]),
+            ),
+            (
+                SLICE_MARKER.to_string(),
+                InstanceNode::String("root".to_string()),
+            ),
+        ]));
+
+        let serialized = serde_json::to_string(&node.into_json()).expect("node serializes");
+
+        assert_eq!(serialized, r#"{"a":2,"z":1}"#);
+    }
 
     #[test]
     fn concrete_choice_assignments_override_generic_dependency_defaults() {
