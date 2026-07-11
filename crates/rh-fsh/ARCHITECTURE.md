@@ -7,9 +7,9 @@ highlighting key design choices and their rationale.
 
 `rh-fsh` transforms FHIR Shorthand (FSH) source text into FHIR R4 JSON resources.
 The architecture is a staged pipeline — parse, index, resolve, compile schema,
-and export — with parallel export via rayon. A semantic assignment IR and typed
-instance tree are the next migration stages. Validation is explicitly out of
-scope; structural errors are delegated to `rh-validator`.
+lower semantic assignments, and export — with parallel export via rayon. A typed
+instance tree is the next migration stage. Validation is explicitly out of scope;
+structural errors are delegated to `rh-validator`.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -44,7 +44,13 @@ scope; structural errors are delegated to `rh-validator`.
                                     │  Arc<CompiledSchema>
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
-│             Stage 5 — Export  (FshExporter, rayon parallel)                  │
+│              Stage 5 — Semantic Assignment IR  (semantic.rs)                │
+│  qualified paths · explicit selectors · source locations · resolved values  │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  SemanticProgram
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│             Stage 6 — Export  (FshExporter, rayon parallel)                  │
 │   export/structure_def.rs · export/value_set.rs · export/code_system.rs      │
 │            export/instance.rs · export/mapping.rs · export/mod.rs            │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -148,7 +154,22 @@ branches.
 The criterion suite measures schema lookup beside direct generated-core lookup,
 as well as end-to-end small, medium, and large compilation.
 
-### 5. Parallel Export with rayon
+### 5. Semantic Assignment IR
+
+Before export, `SemanticProgram` lowers resolved instance and local-profile
+rules into ordered operations. Each assignment has a fully qualified path,
+preclassified index/named/append/current selection behavior, its original source
+location and `exactly` modifier, and a resolved JSON value. Path contexts and
+indentation are interpreted once during lowering. Soft-index contexts emit an
+explicit context operation and subsequent assignments target the current
+repetition.
+
+The semantic layer is deliberately independent of schema lookup and JSON tree
+mutation. Phase 2C will apply these operations to a typed instance tree; the
+current exporter adapter applies the same operations through the legacy JSON
+path walker to preserve behavior during migration.
+
+### 6. Parallel Export with rayon
 
 `FshExporter::export` collects all entities from the resolved tank and dispatches
 to per-type exporter functions in parallel using a shared `export_par` helper.
@@ -180,7 +201,7 @@ Non-fatal export errors (e.g. unresolvable parent SD) are collected into
 `FhirPackage::errors` rather than aborting compilation. The caller decides
 whether to treat them as hard failures.
 
-### 6. Differential-Only StructureDefinitions
+### 7. Differential-Only StructureDefinitions
 
 The `structure_def` exporter produces FHIR `StructureDefinition` resources
 containing only a `differential` — the minimal set of element overrides derived
@@ -192,7 +213,7 @@ This matches the output of sushi and keeps the exporter fast: computing a full
 snapshot requires walking the entire parent SD hierarchy, which is expensive
 and only needed for validation.
 
-### 7. `FhirDefs` — Pluggable Definition Registry
+### 8. `FhirDefs` — Pluggable Definition Registry
 
 `FhirDefs` is an `Arc`-wrapped registry of FHIR StructureDefinition summaries
 used by the exporter for:
@@ -240,6 +261,7 @@ src/
 ├── resolver/
 │   └── mod.rs              # FshResolver, alias expansion, RuleSet inlining
 ├── schema.rs                 # Immutable compiled field-shape boundary
+├── semantic.rs               # Qualified semantic assignment programs
 ├── fhirdefs/
 │   └── mod.rs              # FhirDefs, SdSummary, ElementSummary
 ├── export/

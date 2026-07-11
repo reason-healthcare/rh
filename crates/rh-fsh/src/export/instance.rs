@@ -5,6 +5,7 @@ use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
 use crate::schema::{CompiledSchema, FieldShape};
+use crate::semantic::{SemanticOperation, SemanticProgram};
 use crate::tank::FshTank;
 use crate::FshConfig;
 use rh_hl7_fhir_r4_core::metadata::FhirFieldType;
@@ -102,7 +103,6 @@ fn export_instance_with_context(
         }
     }
 
-    let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
     let shape_context = InstanceShapeContext {
         extension_slice_urls: extension_slice_urls(instance_of, context),
         schema: context.schema,
@@ -115,66 +115,32 @@ fn export_instance_with_context(
         context,
         &shape_context,
     );
-    for rule in &inst.rules {
-        let indent = rule.location.column;
-        while path_contexts
-            .last()
-            .is_some_and(|(context_indent, _)| *context_indent >= indent)
-        {
-            path_contexts.pop();
-        }
-        match &rule.value {
-            InstanceRule::Assignment(a) => {
-                let path = qualify_instance_path(&path_contexts, indent, &a.path);
-                apply_assignment(
+    let program =
+        SemanticProgram::lower_instance(&inst.rules, |value| fsh_value_to_json(value, context));
+    for operation in program.into_operations() {
+        match operation {
+            SemanticOperation::Assign(assignment) => set_at_path(
+                &mut resource,
+                assignment.path.segments(),
+                assignment.value,
+                &shape_context,
+                &resource_type_for_metadata,
+            ),
+            SemanticOperation::EstablishContext { path, .. } if path.has_trailing_append() => {
+                set_at_path(
                     &mut resource,
-                    &path,
-                    &a.value,
-                    &resource_type_for_metadata,
-                    context,
-                    &shape_context,
-                );
-            }
-            InstanceRule::Insert(_) => {}
-            InstanceRule::Path(path_rule) => {
-                let mut path = qualify_instance_path(&path_contexts, indent, &path_rule.path);
-                stabilize_soft_index_context(
-                    &mut resource,
-                    &mut path,
+                    path.segments(),
+                    serde_json::json!({}),
                     &shape_context,
                     &resource_type_for_metadata,
                 );
-                path_contexts.push((indent, path));
             }
+            SemanticOperation::EstablishContext { .. } => {}
         }
     }
     remove_export_markers(&mut resource);
 
     Ok(resource)
-}
-
-fn stabilize_soft_index_context(
-    resource: &mut serde_json::Value,
-    path: &mut FshPath,
-    shape_context: &InstanceShapeContext,
-    resource_type: &str,
-) {
-    if !matches!(
-        path.segments.last(),
-        Some(FshPathSegment::Slice { slice, .. }) if slice == "+"
-    ) {
-        return;
-    }
-    set_at_path(
-        resource,
-        &path.segments,
-        serde_json::json!({}),
-        shape_context,
-        resource_type,
-    );
-    if let Some(FshPathSegment::Slice { slice, .. }) = path.segments.last_mut() {
-        *slice = "=".to_string();
-    }
 }
 
 fn apply_local_profile_defaults(
@@ -250,40 +216,29 @@ fn apply_local_profile_defaults(
 
     for profile in profiles.into_iter().rev() {
         materialize_required_slices(resource, profile, shape_context, resource_type);
-        let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
-        for rule in &profile.rules {
-            let indent = rule.location.column;
-            while path_contexts
-                .last()
-                .is_some_and(|(context_indent, _)| *context_indent >= indent)
-            {
-                path_contexts.pop();
-            }
-            match &rule.value {
-                SdRule::Assignment(assignment) => {
-                    let path = qualify_instance_path(&path_contexts, indent, &assignment.path);
+        let program = SemanticProgram::lower_profile(&profile.rules, |value| {
+            fsh_value_to_json(value, context)
+        });
+        for operation in program.into_operations() {
+            match operation {
+                SemanticOperation::Assign(assignment) => {
                     if local_profile_path_is_used(
-                        &path.segments,
+                        assignment.path.segments(),
                         &instance_assigned_paths,
                         profile,
                         resource_type,
                         context.schema,
                     ) {
-                        apply_assignment(
+                        set_at_path(
                             resource,
-                            &path,
-                            &assignment.value,
-                            resource_type,
-                            context,
+                            assignment.path.segments(),
+                            assignment.value,
                             shape_context,
+                            resource_type,
                         );
                     }
                 }
-                SdRule::Path(path_rule) => {
-                    let path = qualify_instance_path(&path_contexts, indent, &path_rule.path);
-                    path_contexts.push((indent, path));
-                }
-                _ => {}
+                SemanticOperation::EstablishContext { .. } => {}
             }
         }
     }
@@ -613,32 +568,6 @@ fn remove_export_markers(value: &mut serde_json::Value) {
         }
         _ => {}
     }
-}
-
-fn qualify_instance_path(contexts: &[(usize, FshPath)], indent: usize, path: &FshPath) -> FshPath {
-    let Some((_, parent)) = contexts
-        .iter()
-        .rev()
-        .find(|(context_indent, _)| *context_indent < indent)
-    else {
-        return path.clone();
-    };
-    let mut segments = parent.segments.clone();
-    segments.extend(path.segments.clone());
-    FshPath { segments }
-}
-
-/// Apply an assignment rule by navigating the FSH path and setting the value
-fn apply_assignment(
-    root: &mut serde_json::Value,
-    path: &FshPath,
-    value: &FshValue,
-    resource_type: &str,
-    context: &InstanceExportContext<'_>,
-    shape_context: &InstanceShapeContext,
-) {
-    let json_val = fsh_value_to_json(value, context);
-    set_at_path(root, &path.segments, json_val, shape_context, resource_type);
 }
 
 fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> serde_json::Value {

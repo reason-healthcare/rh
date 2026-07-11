@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rh_fsh::{
     build_definition_index, compile_fsh, CompiledSchema, DependencyDefinitionSet, FhirDefs,
-    FshConfig, FshParser, FshTank,
+    FshConfig, FshParser, FshTank, SemanticProgram,
 };
 use rh_hl7_fhir_r4_core::metadata::get_field_info;
 
@@ -63,11 +63,35 @@ fn bench_schema_lookup(c: &mut Criterion) {
     });
 }
 
+fn bench_semantic_lowering(c: &mut Criterion) {
+    let mut input = String::from("Instance: example\nInstanceOf: Patient\n");
+    for _ in 0..1000 {
+        input.push_str("* active = true\n");
+    }
+    let document = FshParser::parse(&input, "bench-semantic.fsh").expect("benchmark FSH parses");
+    let mut tank = FshTank::new();
+    tank.add_document(document).expect("benchmark tank builds");
+    let rules = &tank
+        .instances
+        .get("example")
+        .expect("benchmark instance exists")
+        .rules;
+
+    c.bench_function("semantic_lowering_1000_assignments", |b| {
+        b.iter(|| {
+            black_box(SemanticProgram::lower_instance(black_box(rules), |_| {
+                serde_json::Value::Bool(true)
+            }))
+        })
+    });
+}
+
 criterion_group!(
     benches,
     bench_small,
     bench_medium,
     bench_large,
-    bench_schema_lookup
+    bench_schema_lookup,
+    bench_semantic_lowering
 );
 criterion_main!(benches);
