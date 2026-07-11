@@ -9,6 +9,7 @@ pub mod export;
 pub mod fhirdefs;
 pub mod parser;
 pub mod resolver;
+pub mod schema;
 pub mod sushi_config;
 pub mod tank;
 
@@ -25,6 +26,7 @@ pub use export::{FhirPackage, FshExporter};
 pub use fhirdefs::FhirDefs;
 pub use parser::{FshDocument, FshParser, SourceLocation};
 pub use resolver::FshResolver;
+pub use schema::{CompiledSchema, ElementShape, FieldShape};
 pub use sushi_config::{find_sushi_config_for_files, parse_sushi_config, read_sushi_config};
 pub use tank::FshTank;
 

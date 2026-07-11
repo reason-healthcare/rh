@@ -8,6 +8,7 @@ pub mod value_set;
 
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
+use crate::schema::CompiledSchema;
 use crate::tank::FshTank;
 use crate::{
     build_definition_index, load_dependency_structure_definitions, DependencyDefinitionSet,
@@ -36,6 +37,11 @@ impl FshExporter {
             }
         };
         let definition_index = build_definition_index(tank, config, &dependencies);
+        let schema = Arc::new(CompiledSchema::compile(
+            tank,
+            defs.as_ref(),
+            &definition_index,
+        ));
         errors.extend(definition_index.dependency_warnings.iter().map(|message| {
             FshError::Export {
                 message: message.clone(),
@@ -73,7 +79,16 @@ impl FshExporter {
                     Some("#inline" | "inline")
                 )
             }),
-            |i| instance::export_instance(i, defs.as_ref(), config, tank, &definition_index),
+            |i| {
+                instance::export_instance(
+                    i,
+                    defs.as_ref(),
+                    config,
+                    tank,
+                    &definition_index,
+                    schema.as_ref(),
+                )
+            },
             &mut resources,
             &mut errors,
         );

@@ -4,9 +4,10 @@ use crate::definition_index::DefinitionIndex;
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
+use crate::schema::{CompiledSchema, FieldShape};
 use crate::tank::FshTank;
 use crate::FshConfig;
-use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType, FhirPrimitiveType};
+use rh_hl7_fhir_r4_core::metadata::FhirFieldType;
 use std::collections::{HashMap, HashSet};
 
 struct InstanceExportContext<'a> {
@@ -14,10 +15,12 @@ struct InstanceExportContext<'a> {
     config: &'a FshConfig,
     tank: &'a FshTank,
     definition_index: &'a DefinitionIndex,
+    schema: &'a CompiledSchema,
 }
 
-struct InstanceShapeContext {
+struct InstanceShapeContext<'a> {
     extension_slice_urls: HashMap<String, String>,
+    schema: &'a CompiledSchema,
 }
 
 pub fn export_instance(
@@ -26,12 +29,14 @@ pub fn export_instance(
     config: &FshConfig,
     tank: &FshTank,
     definition_index: &DefinitionIndex,
+    schema: &CompiledSchema,
 ) -> Result<serde_json::Value, FshError> {
     let context = InstanceExportContext {
         defs,
         config,
         tank,
         definition_index,
+        schema,
     };
     export_instance_with_context(inst, &context)
 }
@@ -79,7 +84,10 @@ fn export_instance_with_context(
     };
 
     if let Some(title) = &inst.metadata.title {
-        if get_field_info(&resource_type_for_metadata, "title").is_some()
+        if context
+            .schema
+            .field(&resource_type_for_metadata, "title")
+            .is_some()
             || resource_type_for_metadata == "ActorDefinition"
         {
             resource["title"] = serde_json::Value::String(title.clone());
@@ -97,6 +105,7 @@ fn export_instance_with_context(
     let mut path_contexts: Vec<(usize, FshPath)> = Vec::new();
     let shape_context = InstanceShapeContext {
         extension_slice_urls: extension_slice_urls(instance_of, context),
+        schema: context.schema,
     };
     apply_local_profile_defaults(
         &mut resource,
@@ -258,6 +267,7 @@ fn apply_local_profile_defaults(
                         &instance_assigned_paths,
                         profile,
                         resource_type,
+                        context.schema,
                     ) {
                         apply_assignment(
                             resource,
@@ -316,6 +326,7 @@ fn local_profile_path_is_used(
     assigned_paths: &[Vec<FshPathSegment>],
     profile: &Profile,
     resource_type: &str,
+    schema: &CompiledSchema,
 ) -> bool {
     if let Some((slice_index, element, slice)) =
         path.iter()
@@ -364,9 +375,9 @@ fn local_profile_path_is_used(
     {
         return true;
     }
-    if root
-        .is_some_and(|root| path_field_info(resource_type, root).is_some_and(|field| field.min > 0))
-    {
+    if root.is_some_and(|root| {
+        path_field_info(schema, resource_type, root).is_some_and(|field| field.min() > 0)
+    }) {
         return true;
     }
     profile.rules.iter().any(|rule| {
@@ -912,14 +923,14 @@ fn field_next_type(ft: &FhirFieldType) -> Option<&str> {
     }
 }
 
-fn path_field_info(
+fn path_field_info<'a>(
+    schema: &'a CompiledSchema,
     current_type: &str,
     field_name: &str,
-) -> Option<&'static rh_hl7_fhir_r4_core::metadata::FieldInfo> {
-    get_field_info(current_type, field_name).or_else(|| {
+) -> Option<FieldShape<'a>> {
+    schema.field(current_type, field_name).or_else(|| {
         normalize_choice_type_name(field_name)
-            .and_then(|choice_name| get_field_info(current_type, &choice_name))
-            .or_else(|| dynamic_choice_field(current_type, field_name).map(|(_, field)| field))
+            .and_then(|choice_name| schema.field(current_type, &choice_name))
     })
 }
 
@@ -929,58 +940,6 @@ fn fallback_backbone_type(current_type: &str, field_name: &str) -> Option<&'stat
         ("ClaimResponse", "adjudication") => Some("ClaimResponseItemAdjudication"),
         _ => None,
     }
-}
-
-fn choice_field_type(current_type: &str, field_name: &str) -> Option<FhirFieldType> {
-    let suffix = if let Some(choice_name) = normalize_choice_type_name(field_name) {
-        let base = choice_name.trim_end_matches("[x]");
-        field_name.strip_prefix(base)?
-    } else {
-        dynamic_choice_field(current_type, field_name)?.0
-    };
-    match suffix {
-        "CodeableConcept" => Some(FhirFieldType::Complex("CodeableConcept")),
-        "Coding" => Some(FhirFieldType::Complex("Coding")),
-        "Identifier" => Some(FhirFieldType::Complex("Identifier")),
-        "Quantity" => Some(FhirFieldType::Complex("Quantity")),
-        "Reference" => Some(FhirFieldType::Reference),
-        "Period" => Some(FhirFieldType::Complex("Period")),
-        "Range" => Some(FhirFieldType::Complex("Range")),
-        "Ratio" => Some(FhirFieldType::Complex("Ratio")),
-        "Boolean" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Boolean)),
-        "Integer" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Integer)),
-        "Decimal" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Decimal)),
-        "String" => Some(FhirFieldType::Primitive(FhirPrimitiveType::String)),
-        "Date" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Date)),
-        "DateTime" => Some(FhirFieldType::Primitive(FhirPrimitiveType::DateTime)),
-        "Time" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Time)),
-        "Code" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Code)),
-        "Uri" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Uri)),
-        "Url" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Url)),
-        "Canonical" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Canonical)),
-        "Instant" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Instant)),
-        "Markdown" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Markdown)),
-        "Oid" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Oid)),
-        "Uuid" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Uri)),
-        "Id" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Id)),
-        "Base64Binary" => Some(FhirFieldType::Primitive(FhirPrimitiveType::Base64Binary)),
-        "PositiveInt" => Some(FhirFieldType::Primitive(FhirPrimitiveType::PositiveInt)),
-        "UnsignedInt" => Some(FhirFieldType::Primitive(FhirPrimitiveType::UnsignedInt)),
-        _ => None,
-    }
-}
-
-fn dynamic_choice_field<'a>(
-    current_type: &str,
-    field_name: &'a str,
-) -> Option<(&'a str, &'static rh_hl7_fhir_r4_core::metadata::FieldInfo)> {
-    field_name.char_indices().find_map(|(index, character)| {
-        if index == 0 || !character.is_ascii_uppercase() {
-            return None;
-        }
-        let (base, suffix) = field_name.split_at(index);
-        get_field_info(current_type, &format!("{base}[x]")).map(|field| (suffix, field))
-    })
 }
 
 /// Wrap a Coding-shaped object as a CodeableConcept if the target field requires it.
@@ -1031,14 +990,15 @@ fn set_at_path(
 
     match &segments[0] {
         FshPathSegment::Name(name) => {
-            let fi = path_field_info(current_type, name);
+            let fi = path_field_info(shape_context.schema, current_type, name);
             let family_history_condition =
                 current_type == "FamilyMemberHistory" && name == "condition";
             let family_history_relationship =
                 current_type == "FamilyMemberHistory" && name == "relationship";
             let fallback_backbone = fallback_backbone_type(current_type, name);
-            let field_type = choice_field_type(current_type, name)
-                .or_else(|| fi.map(|field| field.field_type.clone()))
+            let field_type = fi
+                .as_ref()
+                .map(|field| field.field_type().clone())
                 .or_else(|| {
                     (current_type == "ActorDefinition" && name == "jurisdiction")
                         .then_some(FhirFieldType::Complex("CodeableConcept"))
@@ -1050,7 +1010,7 @@ fn set_at_path(
                 || fallback_backbone.is_some()
                 || (current_type == "ActorDefinition"
                     && matches!(name.as_str(), "derivedFrom" | "jurisdiction"))
-                || fi.is_some_and(|f| f.max.is_none());
+                || fi.as_ref().is_some_and(|f| f.max().is_none());
             let is_primitive = field_type
                 .as_ref()
                 .is_some_and(|field_type| matches!(field_type, FhirFieldType::Primitive(_)));
@@ -1191,18 +1151,19 @@ fn handle_slice_segment(
 ) {
     // Soft-indexing operators: [+] appends, [=] reuses last
     if slice == "+" || slice == "=" {
-        let fi = get_field_info(current_type, element);
+        let fi = path_field_info(shape_context.schema, current_type, element);
         let next_type = fi
-            .and_then(|f| field_next_type(&f.field_type))
+            .as_ref()
+            .and_then(|f| field_next_type(f.field_type()))
             .or_else(|| fallback_backbone_type(current_type, element))
             .unwrap_or(current_type);
         let element_key = element.to_string();
 
-        if fi.is_some_and(|field| field.max.is_some()) {
+        if fi.as_ref().is_some_and(|field| field.max().is_some()) {
             if segments.len() == 1 {
                 map.insert(
                     element_key,
-                    shape_value_for_field(value, fi.map(|field| &field.field_type)),
+                    shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
                 );
             } else {
                 let child = map
@@ -1270,7 +1231,8 @@ fn handle_slice_segment(
             let arr = map.get_mut(&element_key).unwrap();
             if let serde_json::Value::Array(arr) = arr {
                 if segments.len() == 1 {
-                    arr[idx] = shape_value_for_field(value, fi.map(|field| &field.field_type));
+                    arr[idx] =
+                        shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
                 } else {
                     set_at_path(
                         &mut arr[idx],
@@ -1287,14 +1249,16 @@ fn handle_slice_segment(
 
     // Numeric index (e.g., extension[0])
     if let Ok(idx) = slice.parse::<usize>() {
-        let fi = get_field_info(current_type, element);
+        let fi = path_field_info(shape_context.schema, current_type, element);
         let next_type = fi
-            .and_then(|f| field_next_type(&f.field_type))
+            .as_ref()
+            .and_then(|f| field_next_type(f.field_type()))
             .or_else(|| fallback_backbone_type(current_type, element))
             .unwrap_or(current_type);
-        let is_primitive =
-            fi.is_some_and(|field| matches!(field.field_type, FhirFieldType::Primitive(_)));
-        let is_array = fi.is_none_or(|field| field.max.is_none());
+        let is_primitive = fi
+            .as_ref()
+            .is_some_and(|field| matches!(field.field_type(), FhirFieldType::Primitive(_)));
+        let is_array = fi.as_ref().is_none_or(|field| field.max().is_none());
         if !is_array && idx == 0 {
             if is_primitive && segments.len() > 1 {
                 let shadow = map
@@ -1304,7 +1268,7 @@ fn handle_slice_segment(
             } else if segments.len() == 1 {
                 map.insert(
                     element.to_string(),
-                    shape_value_for_field(value, fi.map(|field| &field.field_type)),
+                    shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
                 );
             } else {
                 let child = map
@@ -1343,7 +1307,7 @@ fn handle_slice_segment(
                 arr.push(serde_json::json!({}));
             }
             if segments.len() == 1 {
-                arr[idx] = shape_value_for_field(value, fi.map(|field| &field.field_type));
+                arr[idx] = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
             } else {
                 set_at_path(
                     &mut arr[idx],
@@ -1358,9 +1322,10 @@ fn handle_slice_segment(
     }
 
     // Regular named slice: navigate to a stable repetition for the slice.
-    let fi = get_field_info(current_type, element);
+    let fi = path_field_info(shape_context.schema, current_type, element);
     let next_type = fi
-        .and_then(|f| field_next_type(&f.field_type))
+        .as_ref()
+        .and_then(|f| field_next_type(f.field_type()))
         .or_else(|| fallback_backbone_type(current_type, element))
         .unwrap_or(current_type);
     let key = element.to_string();
@@ -1442,7 +1407,7 @@ fn handle_slice_segment(
             .or_insert_with(|| serde_json::Value::String(slice.to_string()));
     }
     if segments.len() == 1 {
-        let mut value = shape_value_for_field(value, fi.map(|field| &field.field_type));
+        let mut value = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
         if let serde_json::Value::Object(object) = &mut value {
             object.insert(
                 SLICE_MARKER.to_string(),
@@ -2283,6 +2248,7 @@ InstanceOf: RequiredExtensionRequest
         };
         let definition_index = build_definition_index(&tank, &config, &dependencies);
         let defs = FhirDefs::r4();
+        let schema = CompiledSchema::compile(&tank, defs.as_ref(), &definition_index);
         let cases = [
             ("USCorePatientProfile", "Patient"),
             ("USCorePractitionerProfile", "Practitioner"),
@@ -2306,8 +2272,15 @@ InstanceOf: RequiredExtensionRequest
                 rules: Vec::new(),
             };
 
-            let resource = export_instance(&inst, defs.as_ref(), &config, &tank, &definition_index)
-                .expect("instance exports");
+            let resource = export_instance(
+                &inst,
+                defs.as_ref(),
+                &config,
+                &tank,
+                &definition_index,
+                &schema,
+            )
+            .expect("instance exports");
 
             assert_eq!(resource["resourceType"], expected_resource_type);
         }

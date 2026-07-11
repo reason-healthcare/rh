@@ -4,9 +4,9 @@ This plan prioritizes high-leverage exporter corrections before long-tail
 metadata work. Each phase should lower the stored project thresholds; thresholds
 must never be raised merely to make a run pass.
 
-**Progress (2026-07-10)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
+**Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 122 passing tests. Shared-resource mismatches are down
+and the library suite has 123 passing tests. Shared-resource mismatches are down
 from 838 to 531. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
@@ -88,6 +88,39 @@ are down from 434 to 168; the below-100 milestone remains open.
 
 **Milestone target**: golden fixtures 61/61 passing and project JSON-shape
 first-difference count 481 → below 100.
+
+### Phase 2 architecture migration
+
+Phase 2 will replace incremental exporter conditionals with a staged pipeline:
+
+```text
+resolved FSH → semantic assignments → compiled schema views
+             → typed instance tree → deterministic JSON serializer
+```
+
+This migration is split into behavior-preserving checkpoints so conformance and
+performance remain measurable throughout:
+
+1. **2A — Compiled schema foundation.** Build one immutable schema index per
+   compilation, share it across rayon workers, route instance field-shape
+   queries through it, and benchmark the lookup boundary against generated core
+   metadata. Generated PHF metadata remains the zero-copy fast path.
+2. **2B — Semantic assignment IR.** Lower resolved instance rules into explicit
+   operations with normalized paths, selection semantics, source locations, and
+   resolved values. Remove path interpretation from the serializer.
+3. **2C — Profile-aware schema views and typed instance tree.** Compile core,
+   dependency, and local StructureDefinition constraints into per-profile views;
+   apply defaults, slicing, cardinality, and primitive companions while building
+   a typed tree.
+4. **2D — Deterministic serializer and legacy removal.** Serialize the typed
+   tree without schema lookups, remove superseded fallback branches, and retain
+   only versioned/declarative compatibility data.
+
+Every checkpoint must keep missing and extra resources at zero, must not raise a
+comparison threshold, must run the field-lookup and compile benchmarks, and must
+pass `just check` before its commit. Phase 2A is complete when the compiled
+schema boundary lands with unchanged project comparison counts; later
+checkpoints own the below-100 JSON-shape target.
 
 ## Phase 3: StructureDefinition Differential Parity
 

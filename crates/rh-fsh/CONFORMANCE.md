@@ -1,6 +1,6 @@
 # rh-fsh Conformance
 
-**Last updated**: 2026-07-10 (full conformance rerun)
+**Last updated**: 2026-07-11 (compiled-schema architecture checkpoint)
 **SUSHI version**: 3.19.0 locally (`fsh-sushi`; implements FSH 3.0.0)
 **Test suites**:
 - Fixture golden comparison (`tests/sushi_compat.rs`)
@@ -71,7 +71,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 **Total: 61 fixtures** (plan target was ≥60)
 
 Latest run: all 61 fixtures passed against reviewed SUSHI goldens; none failed
-or remained unverified. The library unit suite passes all 122 tests.
+or remained unverified. The library unit suite passes all 123 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
@@ -111,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (122 cases) cover parser, resolver, dependency loading, definition
+Unit tests (123 cases) cover parser, resolver, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---
@@ -218,9 +218,9 @@ Recent fixes made while bringing up the project runner:
 |---|---|---|
 | `defineVariable` in rules | Low | FHIRPath 2.0 feature, not in SUSHI 3.x either |
 | Deep ParamRuleSet template nesting | Medium | Multi-level `{param}` inside nested rules |
-| Project-level exporter parity | High | All identities match, but 753 shared resources still differ in content |
+| Project-level exporter parity | High | All identities match, but 531 shared resources still differ in content |
 | IG metadata parity | Medium | Minimal `ImplementationGuide/*` resources are generated, but detailed SUSHI metadata still differs |
-| Array/scalar JSON shape fidelity | High | 434 resources first differ in nested cardinality/datatype shape, especially extensions, Bundle entries, and Parameters |
+| Array/scalar JSON shape fidelity | High | 168 resources first differ in nested cardinality/datatype shape, especially extensions, Bundle entries, and Parameters |
 | Primitive extension shadow fields | Medium | SUSHI emits `_field` companion arrays for extensions on primitive values; rh-fsh has partial support |
 | Extension JSON fidelity | Medium | Nested extension paths can miss wrapping arrays, `url`, or `value[x]` shape in complex examples |
 | StructureDefinition differential parity | High | 234 resources first differ in constraints, context, slicing, fixed values, or element merging |
