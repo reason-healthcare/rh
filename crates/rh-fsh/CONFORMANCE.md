@@ -38,12 +38,12 @@ Report files:
 | Da Vinci CRD | different | pass | 69 | 85 | 85 | 0 | 0 | 57 |
 | Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 47 |
 | Da Vinci PAS | different | pass | 20 | 158 | 158 | 0 | 0 | 121 |
-| IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 74 |
+| IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 71 |
 
 All six projects pass their lowered regression thresholds, but none is yet
 SUSHI-identical. Across 379 FSH files, both tools emit the same 920 resource
-identities: there are zero missing and zero extra resources. Of those, 386
-match exactly after normalization and 534 have at least one JSON difference.
+identities: there are zero missing and zero extra resources. Of those, 389
+match exactly after normalization and 531 have at least one JSON difference.
 
 Categorized latest results:
 
@@ -54,8 +54,8 @@ Categorized latest results:
 | Da Vinci CRD | 0 | 10 | 27 | 2 | 3 | 1 | 14 |
 | Da Vinci DTR | 0 | 0 | 25 | 13 | 0 | 1 | 8 |
 | Da Vinci PAS | 0 | 16 | 81 | 12 | 1 | 1 | 10 |
-| IPS | 0 | 34 | 32 | 0 | 0 | 1 | 7 |
-| **Total** | **0** | **190** | **234** | **31** | **5** | **6** | **68** |
+| IPS | 0 | 12 | 32 | 21 | 0 | 1 | 5 |
+| **Total** | **0** | **168** | **234** | **52** | **5** | **6** | **66** |
 
 Categories count missing, extra, and mismatched resources. Each mismatched
 resource is assigned from its first observed JSON difference, so the categories
@@ -71,7 +71,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 **Total: 61 fixtures** (plan target was ≥60)
 
 Latest run: all 61 fixtures passed against reviewed SUSHI goldens; none failed
-or remained unverified. The library unit suite passes all 120 tests.
+or remained unverified. The library unit suite passes all 122 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
@@ -111,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (120 cases) cover parser, resolver, dependency loading, definition
+Unit tests (122 cases) cover parser, resolver, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---

@@ -160,41 +160,7 @@ fn export_implementation_guide(
     if let Some(version) = &config.version {
         resource["version"] = serde_json::Value::String(version.clone());
     }
-    if let Some(publisher) = &config.publisher {
-        resource["publisher"] = serde_json::Value::String(publisher.clone());
-    }
-    if !config.contacts.is_empty() {
-        resource["contact"] = serde_json::Value::Array(
-            config
-                .contacts
-                .iter()
-                .map(|contact| {
-                    let mut value = serde_json::Map::new();
-                    if let Some(name) = &contact.name {
-                        value.insert("name".to_string(), serde_json::Value::String(name.clone()));
-                    }
-                    if !contact.telecom.is_empty() {
-                        value.insert(
-                            "telecom".to_string(),
-                            serde_json::Value::Array(
-                                contact
-                                    .telecom
-                                    .iter()
-                                    .map(|telecom| {
-                                        serde_json::json!({
-                                            "system": telecom.system,
-                                            "value": telecom.value,
-                                        })
-                                    })
-                                    .collect(),
-                            ),
-                        );
-                    }
-                    serde_json::Value::Object(value)
-                })
-                .collect(),
-        );
-    }
+    apply_config_metadata(&mut resource, config);
     if !config.dependencies.is_empty() {
         resource["dependsOn"] = serde_json::Value::Array(
             config
@@ -218,6 +184,45 @@ fn export_implementation_guide(
     }
 
     Some(resource)
+}
+
+pub(crate) fn apply_config_metadata(resource: &mut serde_json::Value, config: &crate::FshConfig) {
+    if let Some(publisher) = &config.publisher {
+        resource["publisher"] = serde_json::Value::String(publisher.clone());
+    }
+    if config.contacts.is_empty() {
+        return;
+    }
+    resource["contact"] = serde_json::Value::Array(
+        config
+            .contacts
+            .iter()
+            .map(|contact| {
+                let mut value = serde_json::Map::new();
+                if let Some(name) = &contact.name {
+                    value.insert("name".to_string(), serde_json::Value::String(name.clone()));
+                }
+                if !contact.telecom.is_empty() {
+                    value.insert(
+                        "telecom".to_string(),
+                        serde_json::Value::Array(
+                            contact
+                                .telecom
+                                .iter()
+                                .map(|telecom| {
+                                    serde_json::json!({
+                                        "system": telecom.system,
+                                        "value": telecom.value,
+                                    })
+                                })
+                                .collect(),
+                        ),
+                    );
+                }
+                serde_json::Value::Object(value)
+            })
+            .collect(),
+    );
 }
 
 fn resource_reference(resource: &serde_json::Value) -> Option<String> {

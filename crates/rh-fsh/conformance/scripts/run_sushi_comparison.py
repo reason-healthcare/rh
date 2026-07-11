@@ -40,7 +40,7 @@ DEFAULT_THRESHOLDS = {
     "davinci-crd": {"missing": 0, "extra": 0, "mismatch": 57},
     "davinci-dtr": {"missing": 0, "extra": 0, "mismatch": 47},
     "davinci-pas": {"missing": 0, "extra": 0, "mismatch": 121},
-    "fhir-ips": {"missing": 0, "extra": 0, "mismatch": 74},
+    "fhir-ips": {"missing": 0, "extra": 0, "mismatch": 71},
     "profile-identity-smoke": {"missing": 0, "extra": 0, "mismatch": 1},
 }
 

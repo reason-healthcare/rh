@@ -139,10 +139,40 @@ pub fn export_value_set(
     for cr in &vs.caret_rules {
         let val = fsh_value_to_json_simple(&cr.value.value);
         let key = &cr.value.caret_path;
-        json[key] = val;
+        set_value_set_caret(&mut json, key, val);
     }
 
     Ok(json)
+}
+
+fn set_value_set_caret(resource: &mut serde_json::Value, path: &str, value: serde_json::Value) {
+    let Some(contact_path) = path.strip_prefix("contact.") else {
+        resource[path] = value;
+        return;
+    };
+    let contact = resource
+        .as_object_mut()
+        .unwrap()
+        .entry("contact")
+        .or_insert_with(|| serde_json::json!([{}]));
+    let contacts = contact.as_array_mut().unwrap();
+    if contacts.is_empty() {
+        contacts.push(serde_json::json!({}));
+    }
+    if let Some(telecom_path) = contact_path.strip_prefix("telecom.") {
+        let telecom = contacts[0]
+            .as_object_mut()
+            .unwrap()
+            .entry("telecom")
+            .or_insert_with(|| serde_json::json!([{}]));
+        let telecoms = telecom.as_array_mut().unwrap();
+        if telecoms.is_empty() {
+            telecoms.push(serde_json::json!({}));
+        }
+        telecoms[0][telecom_path] = value;
+    } else {
+        contacts[0][contact_path] = value;
+    }
 }
 
 fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json::Value {
@@ -191,6 +221,28 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
 #[cfg(test)]
 mod tests {
     use crate::{CompilerOptions, FshCompiler};
+
+    #[test]
+    fn exports_nested_contact_caret_paths() {
+        let package = FshCompiler::new(CompilerOptions::default())
+            .compile(
+                r#"
+ValueSet: ContactValueSet
+* ^contact.telecom.system = #url
+* ^contact.telecom.value = "http://example.org/contact"
+"#,
+                "contact-caret.fsh",
+            )
+            .expect("ValueSet compiles");
+        let value_set = &package.resources[0];
+
+        assert_eq!(value_set["contact"][0]["telecom"][0]["system"], "url");
+        assert_eq!(
+            value_set["contact"][0]["telecom"][0]["value"],
+            "http://example.org/contact"
+        );
+        assert!(value_set.get("contact.telecom.system").is_none());
+    }
 
     #[test]
     fn preserves_first_system_occurrence_order() {

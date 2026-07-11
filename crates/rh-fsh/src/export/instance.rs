@@ -1040,10 +1040,16 @@ fn set_at_path(
             let field_type = choice_field_type(current_type, name)
                 .or_else(|| fi.map(|field| field.field_type.clone()))
                 .or_else(|| {
+                    (current_type == "ActorDefinition" && name == "jurisdiction")
+                        .then_some(FhirFieldType::Complex("CodeableConcept"))
+                })
+                .or_else(|| {
                     family_history_relationship.then_some(FhirFieldType::Complex("CodeableConcept"))
                 });
             let is_array = family_history_condition
                 || fallback_backbone.is_some()
+                || (current_type == "ActorDefinition"
+                    && matches!(name.as_str(), "derivedFrom" | "jurisdiction"))
                 || fi.is_some_and(|f| f.max.is_none());
             let is_primitive = field_type
                 .as_ref()
@@ -1827,6 +1833,32 @@ InstanceOf: CapabilityStatement
             capability["url"],
             "http://example.org/fhir/CapabilityStatement/capability-example"
         );
+    }
+
+    #[test]
+    fn exports_r5_actor_derived_from_as_an_array() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Instance: actor-example
+InstanceOf: ActorDefinition
+* derivedFrom = "http://example.org/ActorDefinition/base"
+* jurisdiction = urn:iso:std:iso:3166#US
+"#,
+                "actor-derived-from.fsh",
+            )
+            .expect("FSH compiles");
+        let actor = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "actor-example")
+            .expect("actor exists");
+
+        assert_eq!(
+            actor["derivedFrom"],
+            serde_json::json!(["http://example.org/ActorDefinition/base"])
+        );
+        assert_eq!(actor["jurisdiction"][0]["coding"][0]["code"], "US");
     }
 
     #[test]

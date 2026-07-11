@@ -175,7 +175,13 @@ pub fn multiline_string(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, _) = tag("\"\"\"")(input)?;
     let (input, content) = take_until("\"\"\"")(input)?;
     let (input, _) = tag("\"\"\"")(input)?;
-    Ok((input, content.fragment().to_string()))
+    Ok((
+        input,
+        content
+            .fragment()
+            .trim_end_matches(['\r', '\n'])
+            .to_string(),
+    ))
 }
 
 /// Parse an integer (optional leading `-` then digits)

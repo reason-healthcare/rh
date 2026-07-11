@@ -6,8 +6,8 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-10)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 120 passing tests. Shared-resource mismatches are down
-from 838 to 534. Phases 2–4 remain in progress; Phase 5 continues with lowered
+and the library suite has 122 passing tests. Shared-resource mismatches are down
+from 838 to 531. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
 ## Success Criteria
@@ -69,7 +69,7 @@ identity-category gaps and 106 other-category gaps.
 CodeableConcept wrapping, dynamic choice typing, primitive shadows, recursive
 inline export, indentation contexts, dependency fixed/pattern defaults, and
 named/repeated slice materialization are implemented. JSON-shape leading gaps
-are down from 434 to 190; the below-100 milestone remains open.
+are down from 434 to 168; the below-100 milestone remains open.
 
 **Goal**: stop inferring JSON shape from assignment syntax alone.
 
@@ -147,9 +147,9 @@ full runs produced identical results.
    improvement.
 5. Require two consecutive clean full runs before declaring project parity.
 
-**Current checkpoint**: 920/920 resource identities match; 386/920 match
+**Current checkpoint**: 920/920 resource identities match; 389/920 match
 normalized content. Remaining mismatches: CARIN 77, mCODE 158, CRD 57, DTR 47,
-PAS 121, and IPS 74.
+PAS 121, and IPS 71.
 
 **Next delivery order**:
 

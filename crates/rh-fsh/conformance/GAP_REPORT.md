@@ -7,12 +7,12 @@
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 120 library tests pass, and rh-fsh emits the
+61 fixture comparisons pass, all 122 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
-Content parity remains incomplete. Of the 920 shared resources, 386 (42.0%)
-match exactly after normalization and 534 (58.0%) have at least one JSON
+Content parity remains incomplete. Of the 920 shared resources, 389 (42.3%)
+match exactly after normalization and 531 (57.7%) have at least one JSON
 difference.
 
 A project passing its threshold means it did not regress past this checked-in
@@ -48,7 +48,7 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 120 | 0 | 0 | 120 |
+| Library unit tests | 122 | 0 | 0 | 122 |
 | SUSHI golden fixtures | 61 | 0 | 0 | 61 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
@@ -65,8 +65,8 @@ workflow explicitly runs the ignored compatibility suite.
 | Da Vinci CRD | 69 | 85 | 85 | 0 | 0 | 57 | 28 |
 | Da Vinci DTR | 39 | 75 | 75 | 0 | 0 | 47 | 28 |
 | Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 121 | 37 |
-| IPS | 123 | 118 | 118 | 0 | 0 | 74 | 44 |
-| **Total** | **379** | **920** | **920** | **0** | **0** | **534** | **386** |
+| IPS | 123 | 118 | 118 | 0 | 0 | 71 | 47 |
+| **Total** | **379** | **920** | **920** | **0** | **0** | **531** | **389** |
 
 ## Closed Gaps
 
@@ -90,7 +90,7 @@ The rerun and implementation work closed the following high-impact gaps:
   records complete counts, and no longer accepts missing goldens as passes.
 
 These fixes reduced the original 43 missing, 149 extra, and 838 mismatched
-resources to 0 missing, 0 extra, and 534 mismatched resources.
+resources to 0 missing, 0 extra, and 531 mismatched resources.
 
 ## Remaining Gap Categories
 
@@ -99,18 +99,18 @@ difference. Counts therefore measure affected resources, not all bad fields.
 
 | Category | Count | Share | Primary remaining work |
 |---|---:|---:|---|
-| JSON shape | 190 | 35.6% | Extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
-| StructureDefinition | 234 | 43.8% | Root constraints, context, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
-| Other | 68 | 12.7% | Reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
-| Metadata | 31 | 5.8% | Resource-specific defaults, names, descriptions, and derived metadata |
+| JSON shape | 168 | 31.6% | Extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
+| StructureDefinition | 234 | 44.1% | Root constraints, context, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
+| Other | 66 | 12.4% | Reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
+| Metadata | 52 | 9.8% | Resource-specific defaults, names, descriptions, and derived metadata |
 | IG generation | 6 | 1.1% | Page trees, grouping, globals, parameters, and definition resource metadata |
 | Terminology | 5 | 0.9% | Concept properties and remaining CodeSystem/ValueSet canonical/compose differences |
 | Resource identity | 0 | 0.0% | Closed for the pinned corpus |
 
-### JSON shape: 190 resources
+### JSON shape: 168 resources
 
-This group has fallen by 244 resources and is now concentrated in mCODE (98),
-IPS (34), CARIN (32), and PAS (18). Repeated first differences include:
+This group has fallen by 266 resources and is now concentrated in mCODE (98),
+CARIN (32), PAS (16), and IPS (12). Repeated first differences include:
 
 - extensions emitted at the wrong nesting level or without aligned primitive
   `_field` companions;
