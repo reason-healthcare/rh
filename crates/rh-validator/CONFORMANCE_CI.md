@@ -17,10 +17,23 @@ This subset validates:
 - UCUM/unit skip-note behavior when terminology is unavailable
 - UCUM/unit terminology path activation when terminology is configured
 
+## Latest Local Run
+
+Last updated: 2026-07-11
+
+```text
+Command: cargo test -p rh-validator --test conformance_quick_wins_test
+Result: 72 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
 ## Scenario Traceability Matrix
 
 | Scenario | Evidence |
 |----------|----------|
+| Invalid concrete choice suffix is rejected | `base_profile_rejects_invalid_concrete_choice_suffix` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
+| Unknown nested backbone property is rejected | `base_profile_rejects_unknown_nested_backbone_property` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
+| Unknown recursively nested backbone property is rejected | `base_profile_rejects_unknown_deeply_nested_backbone_property` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
+| Valid nested backbone property remains accepted | `base_profile_accepts_valid_nested_backbone_property` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
 | Security checks disabled uses informational severity | `security_checks_disabled_reports_information` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
 | Security checks enabled uses error severity | `security_checks_enabled_reports_error` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
 | Duplicate fullUrl in Bundle is reported | `document_bundle_duplicate_fullurl_is_reported` in `crates/rh-validator/tests/conformance_quick_wins_test.rs` |
