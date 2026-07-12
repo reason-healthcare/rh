@@ -7,7 +7,7 @@
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 137 library tests pass, and rh-fsh emits the
+61 fixture comparisons pass, all 138 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
@@ -48,7 +48,7 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 137 | 0 | 0 | 137 |
+| Library unit tests | 138 | 0 | 0 | 138 |
 | SUSHI golden fixtures | 61 | 0 | 0 | 61 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
@@ -105,6 +105,11 @@ The rerun and implementation work closed the following high-impact gaps:
   `context[+]` and `context[=]` assignments now produce ordered arrays with
   primitive context-type codes and paired expressions instead of a malformed
   singleton object.
+- Root caret paths also consult generated FHIR metadata for omitted indices.
+  Repeating fields such as `StructureDefinition.contact` and nested `telecom`
+  are array-wrapped even when the FSH uses `^contact.telecom` shorthand. This
+  corrected the leading contact shape on 31 IPS StructureDefinitions; later
+  differences keep those resources in the mismatch total.
 - The harness pins SUSHI and project revisions, detects duplicate identities,
   records complete counts, and no longer accepts missing goldens as passes.
 

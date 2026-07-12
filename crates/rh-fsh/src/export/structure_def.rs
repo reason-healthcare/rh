@@ -402,7 +402,7 @@ fn export_sd(
     }
 
     // Apply root-level caret rules to the SD object (e.g., * ^abstract = true)
-    let mut caret_paths = CaretPathWriter::default();
+    let mut caret_paths = CaretPathWriter::with_defs(&defs);
     for rule in rules {
         if let SdRule::CaretValue(r) = &rule.value {
             if r.path.is_none() {
@@ -549,11 +549,19 @@ fn apply_flags_to_element(elem: &mut serde_json::Value, flags: &[FshFlag]) {
 }
 
 #[derive(Default)]
-struct CaretPathWriter {
+struct CaretPathWriter<'a> {
+    defs: Option<&'a FhirDefs>,
     current_indices: std::collections::HashMap<String, usize>,
 }
 
-impl CaretPathWriter {
+impl<'a> CaretPathWriter<'a> {
+    fn with_defs(defs: &'a FhirDefs) -> Self {
+        Self {
+            defs: Some(defs),
+            current_indices: std::collections::HashMap::new(),
+        }
+    }
+
     fn set(&mut self, root: &mut serde_json::Value, path: &str, value: serde_json::Value) {
         let path = self.resolve_soft_indices(path);
         set_nested_value(root, &path, value);
@@ -561,8 +569,12 @@ impl CaretPathWriter {
 
     fn resolve_soft_indices(&mut self, path: &str) -> String {
         let mut resolved = Vec::new();
+        let mut current_type = "StructureDefinition".to_string();
         for segment in path.split('.') {
             let (name, selector) = parse_path_selector(segment);
+            let field = self
+                .defs
+                .and_then(|defs| defs.get_element(&current_type, name));
             let key = if resolved.is_empty() {
                 name.to_string()
             } else {
@@ -584,9 +596,16 @@ impl CaretPathWriter {
                     self.current_indices.insert(key, index);
                     format!("{name}[{index}]")
                 }
+                _ if field.as_ref().is_some_and(|field| field.max.is_none()) => {
+                    self.current_indices.entry(key).or_insert(0);
+                    format!("{name}[0]")
+                }
                 _ => segment.to_string(),
             };
             resolved.push(resolved_segment);
+            if let Some(next_type) = field.and_then(|field| field.types.into_iter().next()) {
+                current_type = next_type;
+            }
         }
         resolved.join(".")
     }
@@ -789,6 +808,34 @@ mod tests {
                     "expression": "http://example.org/StructureDefinition/nested"
                 }
             ])
+        );
+    }
+
+    #[test]
+    fn wraps_unindexed_repeating_caret_fields_from_fhir_schema() {
+        let defs = FhirDefs::r4();
+        let mut resource = serde_json::json!({});
+        let mut writer = CaretPathWriter::with_defs(&defs);
+
+        writer.set(
+            &mut resource,
+            "contact.telecom.system",
+            serde_json::json!("url"),
+        );
+        writer.set(
+            &mut resource,
+            "contact.telecom.value",
+            serde_json::json!("http://example.org/contact"),
+        );
+
+        assert_eq!(
+            resource["contact"],
+            serde_json::json!([{
+                "telecom": [{
+                    "system": "url",
+                    "value": "http://example.org/contact"
+                }]
+            }])
         );
     }
 }

@@ -6,7 +6,7 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-12)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 137 passing tests. Shared-resource mismatches are down
+and the library suite has 138 passing tests. Shared-resource mismatches are down
 from 838 to 509. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
@@ -204,6 +204,15 @@ SUSHI.
    at 64.8–65.2 ns, and profile-view lookup at 24.6–25.1 ns. The changed code is
    confined to StructureDefinition parsing/export and does not run in instance
    schema lookups.
+2. **3B — Schema-shaped root caret metadata (complete).** Use generated FHIR
+   field metadata while resolving root caret paths so omitted indices on
+   repeating fields materialize the first array entry. This corrects `contact[]`
+   and nested `telecom[]` shape on 31 IPS StructureDefinitions without a
+   resource-specific path list. Project mismatch totals remain at 509 because
+   each corrected resource exposes a later metadata or differential difference.
+   Benchmarks improved or remained neutral: 1,000-instance compile time was
+   4.39–4.45 ms, core lookup 64.6–65.3 ns, and profile-view lookup
+   23.2–23.5 ns.
 
 **Milestone target**: StructureDefinition first-difference count 234 → below 25.
 
