@@ -116,6 +116,38 @@ rh snapshot generate http://hl7.org/fhir/StructureDefinition/Patient \
 rh package init --canonical https://example.org/fhir --name com.example.fhir
 ```
 
+### FSH project workflow
+
+For a new RH package, scaffold the project, enable the built-in `fsh` hook in
+`packager.toml`, add source files under `input/fsh/`, and build:
+
+```bash
+rh package init my-ig \
+  --canonical https://example.org/fhir/my-ig \
+  --name example.fhir.my-ig
+
+# In my-ig/packager.toml:
+# [hooks]
+# before_build = ["fsh", "snapshot", "validate"]
+
+rh fsh parse my-ig/input/fsh/MyProfile.fsh
+rh package check my-ig
+rh package build my-ig
+```
+
+In an existing RH project, add FSH beneath the configured `fsh_dir` and add
+`fsh` to `before_build`. In an existing SUSHI project, compile all files under
+`input/fsh/`; the nearest `sushi-config.yaml` is discovered automatically:
+
+```bash
+cd my-sushi-ig
+rh fsh compile $(find input/fsh -type f -name '*.fsh' | sort) \
+  --output rh-generated
+```
+
+See [FSH.md](docs/FSH.md) for complete new-project, existing-project, SUSHI,
+dependency-cache, inspection, and JSON automation workflows.
+
 ## Command Reference
 
 <!-- docs-sync:cli-commands:start -->
