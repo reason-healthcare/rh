@@ -20,7 +20,7 @@ pub use definition_index::{
 };
 pub use dependencies::{
     load_dependency_structure_definitions, load_dependency_structure_definitions_from_dir,
-    DependencyDefinitionSet, DependencyStructureDefinition,
+    DependencyDefinitionSet, DependencyExtensionSlice, DependencyStructureDefinition,
 };
 pub use error::FshError;
 pub use export::{FhirPackage, FshExporter};

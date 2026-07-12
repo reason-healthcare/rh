@@ -6,7 +6,7 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 130 passing tests. Shared-resource mismatches are down
+and the library suite has 133 passing tests. Shared-resource mismatches are down
 from 838 to 529. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
@@ -139,6 +139,14 @@ performance remain measurable throughout:
    benchmarks detected no material performance change: 1,000-instance compile
    time was 4.41–4.45 ms, core lookup 65.7–66.0 ns, and profile-view lookup
    24.0–24.1 ns.
+7. **2G — Dependency extension navigation (complete).** Extract child slice
+   names, profile/fixed URLs, and cardinalities from dependency differentials
+   into the parent-scoped compiled registry. Explicit nested assignments use
+   this metadata, but dependency cardinalities do not materialize defaults
+   because the pinned corpus showed that doing so regresses local project
+   source. Project counts remain at 529 mismatches. Benchmarks detected no
+   compile regression: 1,000-instance compile time was 4.38–4.44 ms, core
+   lookup 65.8–66.3 ns, and profile-view lookup 21.9–22.2 ns.
 
 Every checkpoint must keep missing and extra resources at zero, must not raise a
 comparison threshold, must run the field-lookup and compile benchmarks, and must
@@ -211,8 +219,8 @@ PAS 120, and IPS 71.
 **Next delivery order**:
 
 1. Complete recursive schema shaping for extension arrays, Bundle entries,
-   Parameters, dependency-backed extension slices, and primitive shadow fields
-   (169 leading JSON-shape gaps).
+   Parameters, dependency-default precedence, and primitive shadow fields (169
+   leading JSON-shape gaps).
 2. Export root constraints, context, slicing, bindings, fixed/pattern values,
    and differential element merging (234 StructureDefinition gaps).
 3. Preserve nested indentation context in instance rules and finish local

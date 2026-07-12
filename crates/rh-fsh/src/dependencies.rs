@@ -21,6 +21,7 @@ pub struct DependencyStructureDefinition {
     pub base_definition: Option<String>,
     pub derivation: Option<String>,
     pub fixed_values: Vec<DependencyFixedValue>,
+    pub extension_slices: Vec<DependencyExtensionSlice>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +30,14 @@ pub struct DependencyFixedValue {
     pub slice_name: Option<String>,
     pub value: serde_json::Value,
     pub required: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// One child slice declared by a dependency-backed Extension definition.
+pub struct DependencyExtensionSlice {
+    pub name: String,
+    pub url: String,
+    pub min: u32,
 }
 
 /// Dependency definitions available to the compiler.
@@ -187,43 +196,43 @@ fn load_structure_definition_file(
             ),
         })?;
 
-    let fixed_values = raw
+    let differential_elements = raw
         .differential
-        .map(|differential| {
-            let required_paths = differential
-                .element
-                .iter()
-                .filter(|element| element.min.is_some_and(|min| min > 0))
-                .filter_map(|element| element.id.clone())
-                .collect::<std::collections::HashSet<_>>();
-            differential
-                .element
-                .into_iter()
-                .filter_map(|element| {
-                    element
-                        .properties
-                        .into_iter()
-                        .find(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
-                        .map(|(_, value)| {
-                            let path = element.id.unwrap_or(element.path);
-                            let parts = path.split('.').collect::<Vec<_>>();
-                            let required_path = parts
-                                .iter()
-                                .position(|part| part.contains(':'))
-                                .map(|index| parts[..=index].join("."))
-                                .or_else(|| (parts.len() > 2).then(|| parts[..2].join(".")));
-                            DependencyFixedValue {
-                                path,
-                                slice_name: element.slice_name,
-                                value,
-                                required: required_path
-                                    .is_none_or(|path| required_paths.contains(&path)),
-                            }
-                        })
-                })
-                .collect()
-        })
+        .map(|differential| differential.element)
         .unwrap_or_default();
+    let extension_slices = extract_extension_slices(&differential_elements);
+    let fixed_values = {
+        let required_paths = differential_elements
+            .iter()
+            .filter(|element| element.min.is_some_and(|min| min > 0))
+            .filter_map(|element| element.id.clone())
+            .collect::<std::collections::HashSet<_>>();
+        differential_elements
+            .into_iter()
+            .filter_map(|element| {
+                element
+                    .properties
+                    .into_iter()
+                    .find(|(key, _)| key.starts_with("fixed") || key.starts_with("pattern"))
+                    .map(|(_, value)| {
+                        let path = element.id.unwrap_or(element.path);
+                        let parts = path.split('.').collect::<Vec<_>>();
+                        let required_path = parts
+                            .iter()
+                            .position(|part| part.contains(':'))
+                            .map(|index| parts[..=index].join("."))
+                            .or_else(|| (parts.len() > 2).then(|| parts[..2].join(".")));
+                        DependencyFixedValue {
+                            path,
+                            slice_name: element.slice_name,
+                            value,
+                            required: required_path
+                                .is_none_or(|path| required_paths.contains(&path)),
+                        }
+                    })
+            })
+            .collect()
+    };
 
     definitions
         .structure_definitions
@@ -240,9 +249,54 @@ fn load_structure_definition_file(
             base_definition: raw.base_definition,
             derivation: raw.derivation,
             fixed_values,
+            extension_slices,
         });
 
     Ok(())
+}
+
+fn extract_extension_slices(elements: &[RawElementDefinition]) -> Vec<DependencyExtensionSlice> {
+    elements
+        .iter()
+        .filter(|element| element.path == "Extension.extension")
+        .filter_map(|element| {
+            let name = element.slice_name.clone()?;
+            let profile = element
+                .properties
+                .get("type")
+                .and_then(serde_json::Value::as_array)
+                .and_then(|types| {
+                    types.iter().find_map(|type_| {
+                        type_
+                            .get("profile")
+                            .and_then(serde_json::Value::as_array)
+                            .and_then(|profiles| profiles.first())
+                            .and_then(serde_json::Value::as_str)
+                    })
+                });
+            let fixed_url = element.id.as_deref().and_then(|id| {
+                let url_id = format!("{id}.url");
+                elements
+                    .iter()
+                    .find(|candidate| candidate.id.as_deref() == Some(url_id.as_str()))
+                    .and_then(|candidate| {
+                        candidate
+                            .properties
+                            .iter()
+                            .find(|(key, value)| {
+                                (key.starts_with("fixed") || key.starts_with("pattern"))
+                                    && value.is_string()
+                            })
+                            .and_then(|(_, value)| value.as_str())
+                    })
+            });
+            Some(DependencyExtensionSlice {
+                url: profile.or(fixed_url).unwrap_or(&name).to_string(),
+                name,
+                min: element.min.unwrap_or(0),
+            })
+        })
+        .collect()
 }
 
 fn is_structure_definition_json_file(path: &Path) -> bool {
@@ -257,6 +311,45 @@ fn is_structure_definition_json_file(path: &Path) -> bool {
 mod tests {
     use super::*;
     use crate::FshDependency;
+
+    #[test]
+    fn extracts_dependency_extension_slice_urls_and_cardinality() {
+        let elements = serde_json::from_value::<Vec<RawElementDefinition>>(serde_json::json!([
+            {
+                "id": "Extension.extension:provider",
+                "path": "Extension.extension",
+                "sliceName": "provider",
+                "min": 0
+            },
+            {
+                "id": "Extension.extension:provider.url",
+                "path": "Extension.extension.url",
+                "fixedUri": "provider"
+            },
+            {
+                "id": "Extension.extension:providerType",
+                "path": "Extension.extension",
+                "sliceName": "providerType",
+                "min": 1,
+                "type": [{
+                    "code": "Extension",
+                    "profile": ["http://example.org/StructureDefinition/provider-type"]
+                }]
+            }
+        ]))
+        .expect("elements deserialize");
+
+        let slices = extract_extension_slices(&elements);
+
+        assert_eq!(slices.len(), 2);
+        assert_eq!(slices[0].url, "provider");
+        assert_eq!(slices[0].min, 0);
+        assert_eq!(
+            slices[1].url,
+            "http://example.org/StructureDefinition/provider-type"
+        );
+        assert_eq!(slices[1].min, 1);
+    }
 
     fn temp_package_root(test_name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!(

@@ -1,6 +1,6 @@
 # rh-fsh Conformance
 
-**Last updated**: 2026-07-11 (compiled extension-slice checkpoint)
+**Last updated**: 2026-07-11 (dependency extension-slice checkpoint)
 **SUSHI version**: 3.19.0 locally (`fsh-sushi`; implements FSH 3.0.0)
 **Test suites**:
 - Fixture golden comparison (`tests/sushi_compat.rs`)
@@ -71,7 +71,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 **Total: 61 fixtures** (plan target was ≥60)
 
 Latest run: all 61 fixtures passed against reviewed SUSHI goldens; none failed
-or remained unverified. The library unit suite passes all 130 tests.
+or remained unverified. The library unit suite passes all 133 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
@@ -111,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (130 cases) cover parser, resolver, semantic lowering, dependency loading, definition
+Unit tests (133 cases) cover parser, resolver, semantic lowering, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---
@@ -222,7 +222,7 @@ Recent fixes made while bringing up the project runner:
 | IG metadata parity | Medium | Minimal `ImplementationGuide/*` resources are generated, but detailed SUSHI metadata still differs |
 | Array/scalar JSON shape fidelity | High | 169 resources first differ in nested cardinality/datatype shape, especially extensions, Bundle entries, and Parameters |
 | Primitive extension shadow fields | Medium | SUSHI emits `_field` companion arrays for extensions on primitive values; rh-fsh has partial support |
-| Extension JSON fidelity | Medium | Local required subextensions are schema-compiled and recursively materialized; dependency-backed nesting, wrapping arrays, and some `value[x]` shapes remain incomplete |
+| Extension JSON fidelity | Medium | Local required subextensions are recursively materialized, and dependency child URLs are parent-scoped; dependency defaults, wrapping arrays, and some `value[x]` shapes remain incomplete |
 | StructureDefinition differential parity | High | 234 resources first differ in constraints, context, slicing, fixed values, or element merging |
 
 ---

@@ -22,6 +22,7 @@ pub(crate) struct ExtensionSliceShape {
     pub name: String,
     pub url: String,
     pub min: u32,
+    pub materialize_by_default: bool,
 }
 
 struct CompatibilityField {
@@ -279,6 +280,31 @@ impl CompiledSchema {
             let Some(url) = &definition.url else {
                 continue;
             };
+            if !definition.extension_slices.is_empty() {
+                let slices = definition
+                    .extension_slices
+                    .iter()
+                    .map(|slice| ExtensionSliceShape {
+                        name: slice.name.clone(),
+                        url: slice.url.clone(),
+                        min: slice.min,
+                        materialize_by_default: false,
+                    })
+                    .collect::<Vec<_>>();
+                for key in [
+                    definition.name.as_deref(),
+                    definition.id.as_deref(),
+                    definition.url.as_deref(),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    schema
+                        .extension_slices
+                        .entry(key.to_string())
+                        .or_insert_with(|| slices.clone());
+                }
+            }
             for candidate in [definition.name.as_deref(), definition.id.as_deref()]
                 .into_iter()
                 .flatten()
@@ -380,7 +406,7 @@ impl CompiledSchema {
             .get(extension_url)
             .into_iter()
             .flatten()
-            .filter(|slice| slice.min > 0)
+            .filter(|slice| slice.materialize_by_default && slice.min > 0)
     }
 
     fn compile_extension_urls(&mut self, rules: &[Spanned<SdRule>], definitions: &DefinitionIndex) {
@@ -440,6 +466,7 @@ fn compile_extension_slices(
                 name: item.alias.clone().unwrap_or_else(|| item.name.clone()),
                 url,
                 min: item.min.unwrap_or(0),
+                materialize_by_default: true,
             })
         })
         .collect()
@@ -578,8 +605,8 @@ fn choice_type(suffix: &str) -> Option<FhirFieldType> {
 mod tests {
     use super::*;
     use crate::{
-        build_definition_index, DependencyDefinitionSet, DependencyStructureDefinition, FshConfig,
-        FshParser,
+        build_definition_index, DependencyDefinitionSet, DependencyExtensionSlice,
+        DependencyStructureDefinition, FshConfig, FshParser,
     };
     use std::path::PathBuf;
 
@@ -609,6 +636,55 @@ mod tests {
             &FhirFieldType::Primitive(FhirPrimitiveType::String)
         );
         assert_eq!(field.max(), Some(1));
+    }
+
+    #[test]
+    fn compiles_parent_scoped_dependency_extension_slices() {
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![DependencyStructureDefinition {
+                package_id: "example.package".to_string(),
+                version: "1.0.0".to_string(),
+                path: PathBuf::from("StructureDefinition-complex-extension.json"),
+                id: Some("complex-extension".to_string()),
+                url: Some("http://example.org/StructureDefinition/complex-extension".to_string()),
+                name: Some("ComplexExtension".to_string()),
+                title: None,
+                kind: Some("complex-type".to_string()),
+                type_: Some("Extension".to_string()),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Extension".to_string(),
+                ),
+                derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+                extension_slices: vec![DependencyExtensionSlice {
+                    name: "required".to_string(),
+                    url: "http://example.org/StructureDefinition/required-child".to_string(),
+                    min: 1,
+                }],
+            }],
+            warnings: Vec::new(),
+        };
+        let tank = FshTank::new();
+        let defs = FhirDefs::r4();
+        let definitions = build_definition_index(&tank, &FshConfig::default(), &dependencies);
+
+        let schema = CompiledSchema::compile(&tank, &defs, &definitions);
+
+        assert_eq!(
+            schema.extension_url(
+                Some("http://example.org/StructureDefinition/complex-extension"),
+                "required"
+            ),
+            Some("http://example.org/StructureDefinition/required-child")
+        );
+        assert_eq!(
+            schema
+                .required_extension_slices(
+                    "http://example.org/StructureDefinition/complex-extension"
+                )
+                .count(),
+            0
+        );
     }
 
     #[test]
@@ -667,6 +743,7 @@ mod tests {
                 ),
                 derivation: Some("constraint".to_string()),
                 fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
             }],
             warnings: Vec::new(),
         };

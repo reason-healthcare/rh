@@ -1,7 +1,8 @@
 //! StructureDefinition lookup index for local FSH definitions and package dependencies.
 
 use crate::dependencies::{
-    DependencyDefinitionSet, DependencyFixedValue, DependencyStructureDefinition,
+    DependencyDefinitionSet, DependencyExtensionSlice, DependencyFixedValue,
+    DependencyStructureDefinition,
 };
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::SdMetadata;
@@ -38,6 +39,7 @@ pub struct IndexedStructureDefinition {
     pub parent: Option<String>,
     pub source: DefinitionSource,
     pub fixed_values: Vec<DependencyFixedValue>,
+    pub extension_slices: Vec<DependencyExtensionSlice>,
 }
 
 /// Lookup index keyed by FSH name, id, canonical URL, aliases, and URL tail.
@@ -210,6 +212,7 @@ fn index_local_sd(
         parent: metadata.parent.clone(),
         source: DefinitionSource::Local { kind },
         fixed_values: Vec::new(),
+        extension_slices: Vec::new(),
     }
 }
 
@@ -228,6 +231,7 @@ fn index_dependency_sd(definition: &DependencyStructureDefinition) -> IndexedStr
             version: definition.version.clone(),
         },
         fixed_values: definition.fixed_values.clone(),
+        extension_slices: definition.extension_slices.clone(),
     }
 }
 
@@ -323,6 +327,7 @@ mod tests {
                 ),
                 derivation: Some("constraint".to_string()),
                 fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
             }],
             warnings: vec!["missing other package".to_string()],
         };
@@ -363,6 +368,7 @@ mod tests {
                 ),
                 derivation: Some("constraint".to_string()),
                 fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
             }],
             warnings: Vec::new(),
         };
@@ -402,6 +408,7 @@ mod tests {
                 ),
                 derivation: Some("constraint".to_string()),
                 fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
             }],
             warnings: Vec::new(),
         };

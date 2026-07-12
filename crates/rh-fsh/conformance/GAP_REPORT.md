@@ -7,7 +7,7 @@
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 130 library tests pass, and rh-fsh emits the
+61 fixture comparisons pass, all 133 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
@@ -48,7 +48,7 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 130 | 0 | 0 | 130 |
+| Library unit tests | 133 | 0 | 0 | 133 |
 | SUSHI golden fixtures | 61 | 0 | 0 | 61 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
@@ -89,6 +89,10 @@ The rerun and implementation work closed the following high-impact gaps:
 - Local extension slice definitions are compiled once into the shared schema;
   required nested slices are recursively materialized before optional assignments,
   and instance export no longer rebuilds a global extension URL map per resource.
+- Dependency extension differentials contribute parent-scoped child names,
+  canonical URLs, and cardinalities to the same schema. Explicit nested
+  assignments use that metadata, while dependency cardinalities do not create
+  defaults that may conflict with local project source.
 - The harness pins SUSHI and project revisions, detects duplicate identities,
   records complete counts, and no longer accepts missing goldens as passes.
 
@@ -126,9 +130,9 @@ downstream shape differences as the new first difference. Repeated examples incl
 - arrays such as `supportedProfile`, `targetProfile`, adjudication, category,
   and dose/rate fields.
 
-The next implementation slice should load dependency extension slice structure
-into the same compiled registry, then make the recursive path-shape service the
-only route for instance, contained, inline, Bundle, and Parameters assignments.
+The next implementation slice should make the recursive path-shape service the
+only route for instance, contained, inline, Bundle, and Parameters assignments,
+then define safe precedence rules before enabling dependency-derived defaults.
 
 ### StructureDefinition: 234 resources
 

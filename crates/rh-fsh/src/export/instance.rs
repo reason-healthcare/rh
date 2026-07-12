@@ -1461,7 +1461,9 @@ fn named_extension_url(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dependencies::{DependencyDefinitionSet, DependencyStructureDefinition};
+    use crate::dependencies::{
+        DependencyDefinitionSet, DependencyExtensionSlice, DependencyStructureDefinition,
+    };
     use crate::parser::ast::{Profile, SdMetadata};
     use crate::{build_definition_index, FshConfig};
     use std::path::PathBuf;
@@ -1484,6 +1486,57 @@ mod tests {
         let serialized = serde_json::to_string(&node.into_json()).expect("node serializes");
 
         assert_eq!(serialized, r#"{"a":2,"z":1}"#);
+    }
+
+    #[test]
+    fn resolves_nested_dependency_extension_urls_from_parent_schema() {
+        let mut extension = dependency_sd(
+            "example.package",
+            "1.0.0",
+            "ComplexExtension",
+            "complex-extension",
+            "http://example.org/StructureDefinition/complex-extension",
+            "Extension",
+        );
+        extension.kind = Some("complex-type".to_string());
+        extension.extension_slices = vec![DependencyExtensionSlice {
+            name: "required".to_string(),
+            url: "http://example.org/StructureDefinition/required-child".to_string(),
+            min: 1,
+        }];
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![extension],
+            warnings: Vec::new(),
+        };
+        let tank = FshTank::new();
+        let config = FshConfig::default();
+        let defs = FhirDefs::r4();
+        let definitions = build_definition_index(&tank, &config, &dependencies);
+        let schema = CompiledSchema::compile(&tank, defs.as_ref(), &definitions);
+        let mut tree = TypedInstanceTree::new(
+            InstanceNode::object(),
+            "Patient",
+            schema.view("Patient", "Patient"),
+        );
+        let path = [
+            FshPathSegment::Slice {
+                element: "extension".to_string(),
+                slice: "ComplexExtension".to_string(),
+            },
+            FshPathSegment::Slice {
+                element: "extension".to_string(),
+                slice: "required".to_string(),
+            },
+            FshPathSegment::Name("valueString".to_string()),
+        ];
+
+        tree.apply(&path, serde_json::json!("value"));
+        let resource = tree.into_json();
+
+        assert_eq!(
+            resource["extension"][0]["extension"][0]["url"],
+            "http://example.org/StructureDefinition/required-child"
+        );
     }
 
     #[test]
@@ -2408,6 +2461,7 @@ InstanceOf: RequiredExtensionRequest
             base_definition: Some(format!("http://hl7.org/fhir/StructureDefinition/{type_}")),
             derivation: Some("constraint".to_string()),
             fixed_values: Vec::new(),
+            extension_slices: Vec::new(),
         }
     }
 }
