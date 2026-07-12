@@ -3,6 +3,7 @@
 use crate::definition_index::DefinitionIndex;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::{FshPathSegment, InstanceRule, SdRule};
+use crate::parser::Spanned;
 use crate::tank::FshTank;
 use rh_hl7_fhir_r4_core::metadata::{get_field_info, FhirFieldType, FhirPrimitiveType, FieldInfo};
 use std::collections::HashMap;
@@ -14,6 +15,13 @@ pub struct ElementShape {
     pub min: u32,
     pub max: Option<u32>,
     pub is_choice_type: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ExtensionSliceShape {
+    pub name: String,
+    pub url: String,
+    pub min: u32,
 }
 
 struct CompatibilityField {
@@ -145,6 +153,17 @@ impl<'a> SchemaView<'a> {
     pub fn field(&self, type_name: &str, field_name: &str) -> Option<FieldShape<'a>> {
         self.schema.field(type_name, field_name)
     }
+
+    pub(crate) fn extension_url(&self, parent_url: Option<&str>, slice: &str) -> Option<&'a str> {
+        self.schema.extension_url(parent_url, slice)
+    }
+
+    pub(crate) fn required_extension_slices(
+        &self,
+        extension_url: &str,
+    ) -> impl Iterator<Item = &'a ExtensionSliceShape> {
+        self.schema.required_extension_slices(extension_url)
+    }
 }
 
 impl FieldShape<'_> {
@@ -178,6 +197,8 @@ impl FieldShape<'_> {
 pub struct CompiledSchema {
     fields: HashMap<String, HashMap<String, ElementShape>>,
     profiles: HashMap<String, CompiledProfileView>,
+    extension_urls: HashMap<String, String>,
+    extension_slices: HashMap<String, Vec<ExtensionSliceShape>>,
 }
 
 impl CompiledSchema {
@@ -203,6 +224,7 @@ impl CompiledSchema {
         }
 
         for profile in tank.profiles.values() {
+            schema.compile_extension_urls(&profile.rules, definitions);
             let root_type = definitions
                 .resolve_base_type(&profile.metadata.name, defs)
                 .or_else(|| {
@@ -222,6 +244,50 @@ impl CompiledSchema {
                     }
                     SdRule::Path(path) => schema.compile_path(&root_type, &path.path.segments),
                     _ => {}
+                }
+            }
+        }
+
+        for extension in tank.extensions.values() {
+            schema.compile_extension_urls(&extension.rules, definitions);
+            let Some(definition) = definitions.lookup(&extension.metadata.name) else {
+                continue;
+            };
+            let slices = compile_extension_slices(&extension.rules, definitions);
+            if slices.is_empty() {
+                continue;
+            }
+            for key in [
+                definition.name.as_deref(),
+                definition.id.as_deref(),
+                definition.url.as_deref(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                schema
+                    .extension_slices
+                    .entry(key.to_string())
+                    .or_insert_with(|| slices.clone());
+            }
+        }
+
+        for definition in definitions.definitions() {
+            if definition.type_.as_deref() != Some("Extension") {
+                continue;
+            }
+            let Some(url) = &definition.url else {
+                continue;
+            };
+            for candidate in [definition.name.as_deref(), definition.id.as_deref()]
+                .into_iter()
+                .flatten()
+            {
+                for key in extension_lookup_keys(candidate) {
+                    schema
+                        .extension_urls
+                        .entry(key)
+                        .or_insert_with(|| url.clone());
                 }
             }
         }
@@ -294,6 +360,39 @@ impl CompiledSchema {
         self.profiles.len()
     }
 
+    pub(crate) fn extension_url(&self, parent_url: Option<&str>, slice: &str) -> Option<&str> {
+        parent_url
+            .and_then(|url| self.extension_slices.get(url))
+            .and_then(|slices| slices.iter().find(|candidate| candidate.name == slice))
+            .map(|candidate| candidate.url.as_str())
+            .or_else(|| {
+                extension_lookup_keys(slice)
+                    .into_iter()
+                    .find_map(|key| self.extension_urls.get(&key).map(String::as_str))
+            })
+    }
+
+    pub(crate) fn required_extension_slices(
+        &self,
+        extension_url: &str,
+    ) -> impl Iterator<Item = &ExtensionSliceShape> {
+        self.extension_slices
+            .get(extension_url)
+            .into_iter()
+            .flatten()
+            .filter(|slice| slice.min > 0)
+    }
+
+    fn compile_extension_urls(&mut self, rules: &[Spanned<SdRule>], definitions: &DefinitionIndex) {
+        for slice in compile_extension_slices(rules, definitions) {
+            for key in extension_lookup_keys(&slice.name) {
+                self.extension_urls
+                    .entry(key)
+                    .or_insert_with(|| slice.url.clone());
+            }
+        }
+    }
+
     fn compile_path(&mut self, root_type: &str, segments: &[FshPathSegment]) {
         let mut current_type = root_type.to_string();
         for segment in segments {
@@ -318,6 +417,48 @@ impl CompiledSchema {
             }
         }
     }
+}
+
+fn compile_extension_slices(
+    rules: &[Spanned<SdRule>],
+    definitions: &DefinitionIndex,
+) -> Vec<ExtensionSliceShape> {
+    rules
+        .iter()
+        .filter_map(|rule| match &rule.value {
+            SdRule::Contains(contains)
+                if matches!(contains.path.segments.last(), Some(FshPathSegment::Name(name)) if name == "extension") =>
+            {
+                Some(&contains.items)
+            }
+            _ => None,
+        })
+        .flatten()
+        .filter_map(|item| {
+            let url = definitions.lookup(&item.name)?.url.clone()?;
+            Some(ExtensionSliceShape {
+                name: item.alias.clone().unwrap_or_else(|| item.name.clone()),
+                url,
+                min: item.min.unwrap_or(0),
+            })
+        })
+        .collect()
+}
+
+fn extension_lookup_keys(value: &str) -> Vec<String> {
+    let normalized: String = value
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect();
+    let mut values = vec![value.to_string(), format!("normalized:{normalized}")];
+    let without_extension = normalized.strip_suffix("extension").unwrap_or(&normalized);
+    for prefix in ["uscore", "mcode", "davinci", "crd", "dtr", "pas", "ips"] {
+        if let Some(short) = without_extension.strip_prefix(prefix) {
+            values.push(format!("normalized:{short}"));
+        }
+    }
+    values
 }
 
 fn compile_profile_view(

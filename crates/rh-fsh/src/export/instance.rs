@@ -9,7 +9,7 @@ use crate::semantic::{SemanticOperation, SemanticProgram};
 use crate::tank::FshTank;
 use crate::FshConfig;
 use rh_hl7_fhir_r4_core::metadata::FhirFieldType;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 struct InstanceExportContext<'a> {
     defs: &'a FhirDefs,
@@ -20,7 +20,6 @@ struct InstanceExportContext<'a> {
 }
 
 struct InstanceShapeContext<'a> {
-    extension_slice_urls: HashMap<String, String>,
     schema_view: SchemaView<'a>,
 }
 
@@ -141,19 +140,11 @@ struct TypedInstanceTree<'a> {
 }
 
 impl<'a> TypedInstanceTree<'a> {
-    fn new(
-        root: InstanceNode,
-        root_type: &'a str,
-        schema_view: SchemaView<'a>,
-        extension_slice_urls: HashMap<String, String>,
-    ) -> Self {
+    fn new(root: InstanceNode, root_type: &'a str, schema_view: SchemaView<'a>) -> Self {
         Self {
             root,
             root_type,
-            shape_context: InstanceShapeContext {
-                extension_slice_urls,
-                schema_view,
-            },
+            shape_context: InstanceShapeContext { schema_view },
         }
     }
 
@@ -276,12 +267,7 @@ fn export_instance_with_context(
     let schema_view = context
         .schema
         .view(instance_of, &resource_type_for_metadata);
-    let mut tree = TypedInstanceTree::new(
-        resource,
-        &resource_type_for_metadata,
-        schema_view,
-        extension_slice_urls(instance_of, context),
-    );
+    let mut tree = TypedInstanceTree::new(resource, &resource_type_for_metadata, schema_view);
     apply_local_profile_defaults(&mut tree, instance_of, &inst.rules, context);
     let program =
         SemanticProgram::lower_instance(&inst.rules, |value| fsh_value_to_json(value, context));
@@ -613,92 +599,6 @@ fn dependency_slice_order(path: &str, assigned_paths: &[Vec<FshPathSegment>]) ->
             })
         })
         .unwrap_or(usize::MAX)
-}
-
-fn extension_slice_urls(
-    instance_of: &str,
-    context: &InstanceExportContext<'_>,
-) -> HashMap<String, String> {
-    let mut urls = HashMap::new();
-    let mut current = Some(instance_of.to_string());
-    let mut seen = HashSet::new();
-    while let Some(profile_name) = current {
-        if !seen.insert(profile_name.clone()) {
-            break;
-        }
-        let Some(profile) = context.tank.profiles.get(&profile_name) else {
-            break;
-        };
-        collect_extension_slice_urls(&profile.rules, context, &mut urls);
-        current = profile.metadata.parent.clone();
-    }
-    for profile in context.tank.profiles.values() {
-        collect_extension_slice_urls(&profile.rules, context, &mut urls);
-    }
-    for extension in context.tank.extensions.values() {
-        collect_extension_slice_urls(&extension.rules, context, &mut urls);
-    }
-    for definition in context.definition_index.definitions() {
-        if definition.type_.as_deref() != Some("Extension") {
-            continue;
-        }
-        let Some(url) = &definition.url else {
-            continue;
-        };
-        for candidate in [definition.name.as_deref(), definition.id.as_deref()]
-            .into_iter()
-            .flatten()
-        {
-            for key in extension_lookup_keys(candidate) {
-                urls.entry(key).or_insert_with(|| url.clone());
-            }
-        }
-    }
-    urls
-}
-
-fn extension_lookup_keys(value: &str) -> Vec<String> {
-    let normalized: String = value
-        .chars()
-        .filter(|character| character.is_ascii_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect();
-    let mut values = vec![value.to_string(), format!("normalized:{normalized}")];
-    let without_extension = normalized.strip_suffix("extension").unwrap_or(&normalized);
-    for prefix in ["uscore", "mcode", "davinci", "crd", "dtr", "pas", "ips"] {
-        if let Some(short) = without_extension.strip_prefix(prefix) {
-            values.push(format!("normalized:{short}"));
-        }
-    }
-    values
-}
-
-fn collect_extension_slice_urls(
-    rules: &[Spanned<SdRule>],
-    context: &InstanceExportContext<'_>,
-    urls: &mut HashMap<String, String>,
-) {
-    for rule in rules {
-        let SdRule::Contains(contains) = &rule.value else {
-            continue;
-        };
-        if !matches!(
-            contains.path.segments.last(),
-            Some(FshPathSegment::Name(name)) if name == "extension"
-        ) {
-            continue;
-        }
-        for item in &contains.items {
-            let slice_name = item.alias.as_deref().unwrap_or(&item.name);
-            if let Some(url) = context
-                .definition_index
-                .lookup(&item.name)
-                .and_then(|definition| definition.url.clone())
-            {
-                urls.entry(slice_name.to_string()).or_insert(url);
-            }
-        }
-    }
 }
 
 const SLICE_MARKER: &str = "__rh_fsh_slice";
@@ -1356,6 +1256,10 @@ fn handle_slice_segment(
         .as_ref()
         .and_then(|f| field_next_type(f.field_type()))
         .unwrap_or(current_type);
+    let parent_extension_url = map
+        .get("url")
+        .and_then(InstanceNode::as_str)
+        .map(str::to_string);
     let key = element.to_string();
     let array = map.entry(key).or_insert_with(InstanceNode::array);
     let InstanceNode::Array(values) = array else {
@@ -1367,11 +1271,21 @@ fn handle_slice_segment(
             .iter()
             .find(|item| item.get(SLICE_MARKER).and_then(|value| value.as_str()) == Some(slice))
             .cloned()
-            .unwrap_or_else(|| slice_marker_node(slice));
+            .unwrap_or_else(|| {
+                if element == "extension" {
+                    named_extension_node(slice, parent_extension_url.as_deref(), shape_context)
+                } else {
+                    slice_marker_node(slice)
+                }
+            });
         if element == "extension" && template.get("url").is_none() {
             template.insert(
                 "url",
-                InstanceNode::String(named_extension_url(slice, shape_context)),
+                InstanceNode::String(named_extension_url(
+                    slice,
+                    parent_extension_url.as_deref(),
+                    shape_context,
+                )),
             );
         }
         while values
@@ -1395,7 +1309,11 @@ fn handle_slice_segment(
         if element == "extension" && values[index].get("url").is_none() {
             values[index].insert(
                 "url",
-                InstanceNode::String(named_extension_url(slice, shape_context)),
+                InstanceNode::String(named_extension_url(
+                    slice,
+                    parent_extension_url.as_deref(),
+                    shape_context,
+                )),
             );
         }
         if segments.len() == 2 {
@@ -1426,13 +1344,11 @@ fn handle_slice_segment(
             candidate.filter(|_| unmarked.next().is_none())
         })
         .unwrap_or_else(|| {
-            let mut item = slice_marker_node(slice);
-            if element == "extension" {
-                item.insert(
-                    "url",
-                    InstanceNode::String(named_extension_url(slice, shape_context)),
-                );
-            }
+            let item = if element == "extension" {
+                named_extension_node(slice, parent_extension_url.as_deref(), shape_context)
+            } else {
+                slice_marker_node(slice)
+            };
             let index = named_slice_insert_index(values, slice);
             values.insert(index, item);
             index
@@ -1479,16 +1395,56 @@ fn named_slice_insert_index(values: &[InstanceNode], slice: &str) -> usize {
     values.len()
 }
 
-fn named_extension_url(slice: &str, shape_context: &InstanceShapeContext) -> String {
-    shape_context
-        .extension_slice_urls
-        .get(slice)
-        .or_else(|| {
-            extension_lookup_keys(slice)
-                .into_iter()
-                .find_map(|key| shape_context.extension_slice_urls.get(&key))
-        })
+fn named_extension_node(
+    slice: &str,
+    parent_url: Option<&str>,
+    shape_context: &InstanceShapeContext<'_>,
+) -> InstanceNode {
+    let url = named_extension_url(slice, parent_url, shape_context);
+    let mut node = slice_marker_node(slice);
+    node.insert("url", InstanceNode::String(url.clone()));
+    materialize_required_extension_slices(&mut node, &url, shape_context, &mut HashSet::new());
+    node
+}
+
+fn materialize_required_extension_slices(
+    node: &mut InstanceNode,
+    extension_url: &str,
+    shape_context: &InstanceShapeContext<'_>,
+    seen: &mut HashSet<String>,
+) {
+    if !seen.insert(extension_url.to_string()) {
+        return;
+    }
+    let slices = shape_context
+        .schema_view
+        .required_extension_slices(extension_url)
         .cloned()
+        .collect::<Vec<_>>();
+    if !slices.is_empty() {
+        let mut children = Vec::new();
+        for slice in slices {
+            for _ in 0..slice.min {
+                let mut child = slice_marker_node(&slice.name);
+                child.insert("url", InstanceNode::String(slice.url.clone()));
+                materialize_required_extension_slices(&mut child, &slice.url, shape_context, seen);
+                children.push(child);
+            }
+        }
+        node.insert("extension", InstanceNode::Array(children));
+    }
+    seen.remove(extension_url);
+}
+
+fn named_extension_url(
+    slice: &str,
+    parent_url: Option<&str>,
+    shape_context: &InstanceShapeContext<'_>,
+) -> String {
+    shape_context
+        .schema_view
+        .extension_url(parent_url, slice)
+        .map(str::to_string)
         .unwrap_or_else(|| {
             if slice.contains('-')
                 && !slice.starts_with("http://")
@@ -1991,6 +1947,60 @@ InstanceOf: ClaimResponse
         assert_eq!(
             instance["error"][1]["extension"][0]["extension"][0]["valueString"],
             "2010A-NM103"
+        );
+    }
+
+    #[test]
+    fn materializes_required_nested_extensions_before_optional_assignments() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config: FshConfig {
+                canonical: Some("http://example.org/fhir".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Extension: RequiredChild
+Id: required-child
+* value[x] only CodeableConcept
+
+Extension: OptionalChild
+Id: optional-child
+* value[x] only Reference
+
+Extension: ComplexExtension
+Id: complex-extension
+* extension contains OptionalChild named optional 0..1 and RequiredChild named required 1..1
+
+Profile: NestedExtensionPatient
+Parent: Patient
+* extension contains ComplexExtension named complex 0..1
+
+Instance: nested-extension-patient
+InstanceOf: NestedExtensionPatient
+* extension[complex].extension[optional].valueReference = Reference(Practitioner/example)
+"#,
+            "required-nested-extension.fsh",
+        )
+        .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "nested-extension-patient")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["extension"][0]["extension"][0]["url"],
+            "http://example.org/fhir/StructureDefinition/required-child"
+        );
+        assert_eq!(
+            instance["extension"][0]["extension"][1]["url"],
+            "http://example.org/fhir/StructureDefinition/optional-child"
+        );
+        assert_eq!(
+            instance["extension"][0]["extension"][1]["valueReference"]["reference"],
+            "Practitioner/example"
         );
     }
 
