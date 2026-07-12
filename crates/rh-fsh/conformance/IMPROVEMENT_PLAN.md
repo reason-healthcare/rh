@@ -6,8 +6,8 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-12)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 135 passing tests. Shared-resource mismatches are down
-from 838 to 520. Phases 2–4 remain in progress; Phase 5 continues with lowered
+and the library suite has 137 passing tests. Shared-resource mismatches are down
+from 838 to 509. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
 ## Success Criteria
@@ -177,9 +177,10 @@ slices now own the below-100 JSON-shape target.
 
 ## Phase 3: StructureDefinition Differential Parity
 
-**Status**: In progress. Logical paths, choice slices, indexed caret paths, local
-parent resolution, and dependency/local parent canonical resolution are
-implemented; detailed differential parity remains.
+**Status**: In progress. Logical paths, choice slices, indexed caret paths,
+FHIR-correct extension context arrays, local parent resolution, and
+dependency/local parent canonical resolution are implemented; detailed
+differential parity remains.
 
 **Goal**: make profiles, extensions, logicals, and resources structurally match
 SUSHI.
@@ -191,6 +192,18 @@ SUSHI.
 5. Verify contains/slicing behavior across reslicing and named/profile slices.
 6. Add differential-specific comparisons that report every bad element rather
    than only the first resource difference.
+
+### Phase 3 delivery checkpoints
+
+1. **3A — Stateful root caret paths and extension context (complete).** Parse
+   `[=]` inside caret paths without confusing it with assignment syntax, resolve
+   append/current/numeric selectors through one stateful writer, and serialize
+   bare caret codes as primitive codes. PAS mismatches fell 120 → 109 and total
+   mismatches fell 520 → 509; the other five projects were unchanged. The
+   checkpoint measured 1,000-instance compile time at 4.47–4.54 ms, core lookup
+   at 64.8–65.2 ns, and profile-view lookup at 24.6–25.1 ns. The changed code is
+   confined to StructureDefinition parsing/export and does not run in instance
+   schema lookups.
 
 **Milestone target**: StructureDefinition first-difference count 234 → below 25.
 
@@ -233,9 +246,9 @@ full runs produced identical results.
    improvement.
 5. Require two consecutive clean full runs before declaring project parity.
 
-**Current checkpoint**: 920/920 resource identities match; 400/920 match
+**Current checkpoint**: 920/920 resource identities match; 411/920 match
 normalized content. Remaining mismatches: CARIN 76, mCODE 157, CRD 57, DTR 39,
-PAS 120, and IPS 71.
+PAS 109, and IPS 71.
 
 **Next delivery order**:
 

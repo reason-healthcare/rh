@@ -460,6 +460,19 @@ fn parses_caret_value_rule_nested_caret_path() {
 }
 
 #[test]
+fn parses_current_soft_index_inside_caret_path() {
+    let rule = profile_rule("* ^context[=].expression = \"Claim\"");
+    match rule {
+        SdRule::CaretValue(c) => {
+            assert!(c.path.is_none());
+            assert_eq!(c.caret_path, "context[=].expression");
+            assert!(matches!(c.value, FshValue::Str(ref value) if value == "Claim"));
+        }
+        other => panic!("expected CaretValue, got {other:?}"),
+    }
+}
+
+#[test]
 fn parses_insert_rule() {
     let rule = profile_rule("* insert CommonRules");
     match rule {

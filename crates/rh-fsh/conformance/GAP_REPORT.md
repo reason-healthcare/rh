@@ -7,12 +7,12 @@
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 135 library tests pass, and rh-fsh emits the
+61 fixture comparisons pass, all 137 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
-Content parity remains incomplete. Of the 920 shared resources, 400 (43.5%)
-match exactly after normalization and 520 (56.5%) have at least one JSON
+Content parity remains incomplete. Of the 920 shared resources, 411 (44.7%)
+match exactly after normalization and 509 (55.3%) have at least one JSON
 difference.
 
 A project passing its threshold means it did not regress past this checked-in
@@ -48,7 +48,7 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 135 | 0 | 0 | 135 |
+| Library unit tests | 137 | 0 | 0 | 137 |
 | SUSHI golden fixtures | 61 | 0 | 0 | 61 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
@@ -64,9 +64,9 @@ workflow explicitly runs the ignored compatibility suite.
 | mCODE | 57 | 350 | 350 | 0 | 0 | 157 | 193 |
 | Da Vinci CRD | 69 | 85 | 85 | 0 | 0 | 57 | 28 |
 | Da Vinci DTR | 39 | 75 | 75 | 0 | 0 | 39 | 36 |
-| Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 120 | 38 |
+| Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 109 | 49 |
 | IPS | 123 | 118 | 118 | 0 | 0 | 71 | 47 |
-| **Total** | **379** | **920** | **920** | **0** | **0** | **520** | **400** |
+| **Total** | **379** | **920** | **920** | **0** | **0** | **509** | **411** |
 
 ## Closed Gaps
 
@@ -101,11 +101,15 @@ The rerun and implementation work closed the following high-impact gaps:
   FSH `Id` back to the local entity name. Inherited local defaults and required
   slice ordering therefore apply through the same lineage path as name-based
   parents, including recursively embedded resources.
+- Root caret paths preserve soft-index state across related rules. Extension
+  `context[+]` and `context[=]` assignments now produce ordered arrays with
+  primitive context-type codes and paired expressions instead of a malformed
+  singleton object.
 - The harness pins SUSHI and project revisions, detects duplicate identities,
   records complete counts, and no longer accepts missing goldens as passes.
 
 These fixes reduced the original 43 missing, 149 extra, and 838 mismatched
-resources to 0 missing, 0 extra, and 520 mismatched resources.
+resources to 0 missing, 0 extra, and 509 mismatched resources.
 
 ## Remaining Gap Categories
 
@@ -114,11 +118,11 @@ difference. Counts therefore measure affected resources, not all bad fields.
 
 | Category | Count | Share | Primary remaining work |
 |---|---:|---:|---|
-| JSON shape | 168 | 32.3% | Dependency-backed extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
-| StructureDefinition | 234 | 45.0% | Root constraints, context, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
-| Other | 66 | 12.7% | Reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
-| Metadata | 41 | 7.9% | Resource-specific defaults, names, descriptions, and derived metadata |
-| IG generation | 6 | 1.1% | Page trees, grouping, globals, parameters, and definition resource metadata |
+| JSON shape | 168 | 33.0% | Dependency-backed extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
+| StructureDefinition | 223 | 43.8% | Root constraints, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
+| Other | 66 | 13.0% | Reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
+| Metadata | 41 | 8.1% | Resource-specific defaults, names, descriptions, and derived metadata |
+| IG generation | 6 | 1.2% | Page trees, grouping, globals, parameters, and definition resource metadata |
 | Terminology | 5 | 1.0% | Concept properties and remaining CodeSystem/ValueSet canonical/compose differences |
 | Resource identity | 0 | 0.0% | Closed for the pinned corpus |
 
@@ -141,14 +145,15 @@ The next implementation slice should make the recursive path-shape service the
 only route for instance, contained, inline, Bundle, and Parameters assignments,
 then define safe precedence rules before enabling dependency-derived defaults.
 
-### StructureDefinition: 234 resources
+### StructureDefinition: 223 resources
 
-The count is unchanged as a leading category, although parent canonical URLs,
-logical paths, choice slices, and indexed caret paths have improved within many
-of these resources. Remaining first differences are dominated by:
+FHIR-correct extension context arrays reduced this leading category by 11 PAS
+resources. Parent canonical URLs, logical paths, choice slices, and indexed
+caret paths have also improved within many resources. Remaining first
+differences are dominated by:
 
 - constraints attached to the root differential element;
-- extension context and complex slicing/reslicing;
+- complex slicing and reslicing;
 - fixed versus pattern values and CodeableConcept wrapping;
 - differential element ordering, merging, ids, and slice names;
 - bindings and type/profile/targetProfile arrays.

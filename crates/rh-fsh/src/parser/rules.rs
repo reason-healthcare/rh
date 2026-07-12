@@ -7,8 +7,9 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1},
     character::complete::char,
-    combinator::{map, opt},
-    multi::separated_list1,
+    combinator::{map, opt, recognize},
+    multi::{many1, separated_list1},
+    sequence::delimited,
     IResult,
 };
 
@@ -623,7 +624,14 @@ fn parse_caret_value_rule_inner(input: Span<'_>) -> IResult<Span<'_>, CaretValue
     let (input, path) = opt(parse_path_before_caret)(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('^')(input)?;
-    let (input, caret_path_raw) = take_while1(|c: char| !c.is_whitespace() && c != '=')(input)?;
+    let (input, caret_path_raw) = recognize(many1(alt((
+        recognize(delimited(
+            char('['),
+            take_while1(|c: char| c != ']'),
+            char(']'),
+        )),
+        take_while1(|c: char| !c.is_whitespace() && c != '=' && c != '['),
+    ))))(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('=')(input)?;
     let (input, _) = ws(input)?;

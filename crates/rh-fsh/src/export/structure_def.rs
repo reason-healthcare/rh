@@ -402,12 +402,13 @@ fn export_sd(
     }
 
     // Apply root-level caret rules to the SD object (e.g., * ^abstract = true)
+    let mut caret_paths = CaretPathWriter::default();
     for rule in rules {
         if let SdRule::CaretValue(r) = &rule.value {
             if r.path.is_none() {
-                let val = fsh_value_to_fixed(&r.value);
+                let val = fsh_value_to_caret(&r.value);
                 // Handle nested caret paths like "slicing.discriminator.type" using dot notation
-                set_nested_value(&mut sd, &r.caret_path, val);
+                caret_paths.set(&mut sd, &r.caret_path, val);
             }
         }
     }
@@ -516,6 +517,18 @@ fn fsh_value_to_fixed(value: &FshValue) -> serde_json::Value {
     }
 }
 
+fn fsh_value_to_caret(value: &FshValue) -> serde_json::Value {
+    if let FshValue::Code {
+        system: None,
+        code,
+        display: None,
+    } = value
+    {
+        return serde_json::Value::String(code.clone());
+    }
+    fsh_value_to_fixed(value)
+}
+
 fn apply_flags_to_element(elem: &mut serde_json::Value, flags: &[FshFlag]) {
     for flag in flags {
         match flag {
@@ -533,6 +546,57 @@ fn apply_flags_to_element(elem: &mut serde_json::Value, flags: &[FshFlag]) {
             }
         }
     }
+}
+
+#[derive(Default)]
+struct CaretPathWriter {
+    current_indices: std::collections::HashMap<String, usize>,
+}
+
+impl CaretPathWriter {
+    fn set(&mut self, root: &mut serde_json::Value, path: &str, value: serde_json::Value) {
+        let path = self.resolve_soft_indices(path);
+        set_nested_value(root, &path, value);
+    }
+
+    fn resolve_soft_indices(&mut self, path: &str) -> String {
+        let mut resolved = Vec::new();
+        for segment in path.split('.') {
+            let (name, selector) = parse_path_selector(segment);
+            let key = if resolved.is_empty() {
+                name.to_string()
+            } else {
+                format!("{}.{}", resolved.join("."), name)
+            };
+            let resolved_segment = match selector {
+                Some("+") => {
+                    let index = self.current_indices.get(&key).map_or(0, |index| index + 1);
+                    self.current_indices.insert(key, index);
+                    format!("{name}[{index}]")
+                }
+                Some("=") => {
+                    let index = self.current_indices.get(&key).copied().unwrap_or(0);
+                    self.current_indices.insert(key, index);
+                    format!("{name}[{index}]")
+                }
+                Some(index) if index.parse::<usize>().is_ok() => {
+                    let index = index.parse::<usize>().expect("validated numeric index");
+                    self.current_indices.insert(key, index);
+                    format!("{name}[{index}]")
+                }
+                _ => segment.to_string(),
+            };
+            resolved.push(resolved_segment);
+        }
+        resolved.join(".")
+    }
+}
+
+fn parse_path_selector(segment: &str) -> (&str, Option<&str>) {
+    let Some((name, suffix)) = segment.split_once('[') else {
+        return (segment, None);
+    };
+    (name, suffix.strip_suffix(']'))
 }
 
 /// Set a (potentially nested dot-path) key on a JSON object.
@@ -687,6 +751,44 @@ mod tests {
         assert_eq!(
             resource["contact"][0]["telecom"][0]["value"],
             "https://example.org"
+        );
+    }
+
+    #[test]
+    fn resolves_soft_indices_across_related_caret_rules() {
+        let mut resource = serde_json::json!({});
+        let mut writer = CaretPathWriter::default();
+
+        writer.set(
+            &mut resource,
+            "context[+].type",
+            serde_json::json!("element"),
+        );
+        writer.set(
+            &mut resource,
+            "context[=].expression",
+            serde_json::json!("Claim"),
+        );
+        writer.set(
+            &mut resource,
+            "context[+].type",
+            serde_json::json!("extension"),
+        );
+        writer.set(
+            &mut resource,
+            "context[=].expression",
+            serde_json::json!("http://example.org/StructureDefinition/nested"),
+        );
+
+        assert_eq!(
+            resource["context"],
+            serde_json::json!([
+                { "type": "element", "expression": "Claim" },
+                {
+                    "type": "extension",
+                    "expression": "http://example.org/StructureDefinition/nested"
+                }
+            ])
         );
     }
 }
