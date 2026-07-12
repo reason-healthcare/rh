@@ -1357,6 +1357,16 @@ fn handle_slice_segment(
         object
             .entry(SLICE_MARKER.to_string())
             .or_insert_with(|| InstanceNode::String(slice.to_string()));
+        if element == "extension" && !object.contains_key("url") && segments.len() > 1 {
+            object.insert(
+                "url".to_string(),
+                InstanceNode::String(named_extension_url(
+                    slice,
+                    parent_extension_url.as_deref(),
+                    shape_context,
+                )),
+            );
+        }
     }
     if segments.len() == 1 {
         let mut value = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
@@ -1628,6 +1638,62 @@ InstanceOf: Tumor
         assert_eq!(
             instance["extension"][0]["valueReference"]["reference"],
             "Condition/example"
+        );
+    }
+
+    #[test]
+    fn preserves_required_extension_urls_in_resources_and_recursive_embeddings() {
+        let config = FshConfig {
+            canonical: Some("http://example.org/fhir".to_string()),
+            ..Default::default()
+        };
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config,
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Extension: IntendedUse
+Id: intended-use
+* value[x] only code
+
+Profile: RequiredExtensionPatient
+Parent: Patient
+* extension contains IntendedUse named intendedUse 1..1
+
+Instance: patient-with-required-extension
+InstanceOf: RequiredExtensionPatient
+* extension[intendedUse].valueCode = #withorder
+
+Instance: bundle-with-required-extension
+InstanceOf: Bundle
+* type = #collection
+* entry[+].resource = patient-with-required-extension
+"#,
+            "required-extension-embedding.fsh",
+        )
+        .expect("FSH compiles");
+        let patient = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "patient-with-required-extension")
+            .expect("patient exists");
+        let bundle = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "bundle-with-required-extension")
+            .expect("bundle exists");
+
+        let expected_url = "http://example.org/fhir/StructureDefinition/intended-use";
+        assert_eq!(patient["extension"][0]["url"], expected_url);
+        assert_eq!(patient["extension"][0]["valueCode"], "withorder");
+        assert_eq!(
+            bundle["entry"][0]["resource"]["extension"][0]["url"],
+            expected_url
+        );
+        assert_eq!(
+            bundle["entry"][0]["resource"]["extension"][0]["valueCode"],
+            "withorder"
         );
     }
 

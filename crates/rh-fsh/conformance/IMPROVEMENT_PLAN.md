@@ -6,7 +6,7 @@ must never be raised merely to make a run pass.
 
 **Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 133 passing tests. Shared-resource mismatches are down
+and the library suite has 134 passing tests. Shared-resource mismatches are down
 from 838 to 529. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
@@ -147,6 +147,18 @@ performance remain measurable throughout:
    source. Project counts remain at 529 mismatches. Benchmarks detected no
    compile regression: 1,000-instance compile time was 4.38–4.44 ms, core
    lookup 65.8–66.3 ns, and profile-view lookup 21.9–22.2 ns.
+8. **2H — Lazy required extension identity (complete).** Keep required named
+   extension placeholders internal until the instance actually assigns content,
+   then attach the canonical URL from the compiled schema. The same typed node
+   is reused when resources are embedded recursively in Bundle entries and
+   Parameters. This corrects root and embedded DTR extension output without
+   emitting unused placeholders; project totals remain at 529 mismatches because
+   later differences in those resources become the first reported gap. The
+   checkpoint measured 1,000-instance compile time at 4.79–5.01 ms (within the
+   benchmark noise threshold on the confirmation run), core lookup at
+   66.0–66.6 ns, and profile-view lookup at 24.6–25.2 ns. The changed branch is
+   outside schema lookup and adds one object-key check only when navigating a
+   named extension slice.
 
 Every checkpoint must keep missing and extra resources at zero, must not raise a
 comparison threshold, must run the field-lookup and compile benchmarks, and must

@@ -7,7 +7,7 @@
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 133 library tests pass, and rh-fsh emits the
+61 fixture comparisons pass, all 134 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
@@ -48,7 +48,7 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 133 | 0 | 0 | 133 |
+| Library unit tests | 134 | 0 | 0 | 134 |
 | SUSHI golden fixtures | 61 | 0 | 0 | 61 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
@@ -93,6 +93,10 @@ The rerun and implementation work closed the following high-impact gaps:
   canonical URLs, and cardinalities to the same schema. Explicit nested
   assignments use that metadata, while dependency cardinalities do not create
   defaults that may conflict with local project source.
+- Required named extension placeholders remain internal until used. Their
+  schema-derived canonical URL is attached on the first nested assignment and
+  survives recursive Bundle and Parameters embedding without emitting unused
+  placeholder extensions.
 - The harness pins SUSHI and project revisions, detects duplicate identities,
   records complete counts, and no longer accepts missing goldens as passes.
 
