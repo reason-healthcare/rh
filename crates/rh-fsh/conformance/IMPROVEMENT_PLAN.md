@@ -4,10 +4,10 @@ This plan prioritizes high-leverage exporter corrections before long-tail
 metadata work. Each phase should lower the stored project thresholds; thresholds
 must never be raised merely to make a run pass.
 
-**Progress (2026-07-11)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
+**Progress (2026-07-12)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 134 passing tests. Shared-resource mismatches are down
-from 838 to 529. Phases 2–4 remain in progress; Phase 5 continues with lowered
+and the library suite has 135 passing tests. Shared-resource mismatches are down
+from 838 to 520. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
 ## Success Criteria
@@ -159,6 +159,15 @@ performance remain measurable throughout:
    66.0–66.6 ns, and profile-view lookup at 24.6–25.2 ns. The changed branch is
    outside schema lookup and adds one object-key check only when navigating a
    named extension slice.
+9. **2I — Canonical local profile lineage (complete).** Resolve local parent
+   references written as an FSH `Id` to the canonical local entity name while
+   compiling profile views. This lets inherited defaults and required extension
+   ordering flow through one schema lineage for root and recursively embedded
+   instances. CARIN mismatches fell 77 → 76, DTR fell 47 → 39, and total
+   mismatches fell 529 → 520; the other four projects were unchanged. Two
+   consecutive full runs reproduced the same project counts. Benchmarks improved or remained
+   neutral: 1,000-instance compile time was 4.41–4.45 ms, core lookup
+   65.7–68.9 ns, and profile-view lookup 23.8–24.1 ns.
 
 Every checkpoint must keep missing and extra resources at zero, must not raise a
 comparison threshold, must run the field-lookup and compile benchmarks, and must
@@ -224,8 +233,8 @@ full runs produced identical results.
    improvement.
 5. Require two consecutive clean full runs before declaring project parity.
 
-**Current checkpoint**: 920/920 resource identities match; 391/920 match
-normalized content. Remaining mismatches: CARIN 77, mCODE 157, CRD 57, DTR 47,
+**Current checkpoint**: 920/920 resource identities match; 400/920 match
+normalized content. Remaining mismatches: CARIN 76, mCODE 157, CRD 57, DTR 39,
 PAS 120, and IPS 71.
 
 **Next delivery order**:

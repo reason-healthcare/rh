@@ -1,6 +1,6 @@
 # rh-fsh Conformance
 
-**Last updated**: 2026-07-11 (required extension identity checkpoint)
+**Last updated**: 2026-07-12 (local profile-lineage checkpoint)
 **SUSHI version**: 3.19.0 locally (`fsh-sushi`; implements FSH 3.0.0)
 **Test suites**:
 - Fixture golden comparison (`tests/sushi_compat.rs`)
@@ -33,29 +33,29 @@ Report files:
 
 | Project | Status | Threshold | FSH files | SUSHI resources | rh-fsh resources | Missing | Extra | Mismatch |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | different | pass | 71 | 134 | 134 | 0 | 0 | 77 |
+| CARIN Blue Button | different | pass | 71 | 134 | 134 | 0 | 0 | 76 |
 | mCODE | different | pass | 57 | 350 | 350 | 0 | 0 | 157 |
 | Da Vinci CRD | different | pass | 69 | 85 | 85 | 0 | 0 | 57 |
-| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 47 |
+| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 39 |
 | Da Vinci PAS | different | pass | 20 | 158 | 158 | 0 | 0 | 120 |
 | IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 71 |
 
 All six projects pass their lowered regression thresholds, but none is yet
 SUSHI-identical. Across 379 FSH files, both tools emit the same 920 resource
-identities: there are zero missing and zero extra resources. Of those, 391
-match exactly after normalization and 529 have at least one JSON difference.
+identities: there are zero missing and zero extra resources. Of those, 400
+match exactly after normalization and 520 have at least one JSON difference.
 
 Categorized latest results:
 
 | Project | Resource identity | JSON shape | StructureDefinition | Metadata | Terminology | IG generation | Other |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | 0 | 32 | 16 | 1 | 0 | 1 | 27 |
+| CARIN Blue Button | 0 | 31 | 16 | 1 | 0 | 1 | 27 |
 | mCODE | 0 | 97 | 53 | 3 | 1 | 1 | 2 |
 | Da Vinci CRD | 0 | 10 | 27 | 2 | 3 | 1 | 14 |
-| Da Vinci DTR | 0 | 0 | 25 | 13 | 0 | 1 | 8 |
+| Da Vinci DTR | 0 | 0 | 25 | 5 | 0 | 1 | 8 |
 | Da Vinci PAS | 0 | 18 | 81 | 9 | 1 | 1 | 10 |
 | IPS | 0 | 12 | 32 | 21 | 0 | 1 | 5 |
-| **Total** | **0** | **169** | **234** | **49** | **5** | **6** | **66** |
+| **Total** | **0** | **168** | **234** | **41** | **5** | **6** | **66** |
 
 Categories count missing, extra, and mismatched resources. Each mismatched
 resource is assigned from its first observed JSON difference, so the categories
@@ -71,7 +71,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 **Total: 61 fixtures** (plan target was ≥60)
 
 Latest run: all 61 fixtures passed against reviewed SUSHI goldens; none failed
-or remained unverified. The library unit suite passes all 134 tests.
+or remained unverified. The library unit suite passes all 135 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
@@ -111,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (134 cases) cover parser, resolver, semantic lowering, dependency loading, definition
+Unit tests (135 cases) cover parser, resolver, semantic lowering, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---
@@ -218,9 +218,9 @@ Recent fixes made while bringing up the project runner:
 |---|---|---|
 | `defineVariable` in rules | Low | FHIRPath 2.0 feature, not in SUSHI 3.x either |
 | Deep ParamRuleSet template nesting | Medium | Multi-level `{param}` inside nested rules |
-| Project-level exporter parity | High | All identities match, but 529 shared resources still differ in content |
+| Project-level exporter parity | High | All identities match, but 520 shared resources still differ in content |
 | IG metadata parity | Medium | Minimal `ImplementationGuide/*` resources are generated, but detailed SUSHI metadata still differs |
-| Array/scalar JSON shape fidelity | High | 169 resources first differ in nested cardinality/datatype shape, especially extensions, Bundle entries, and Parameters |
+| Array/scalar JSON shape fidelity | High | 168 resources first differ in nested cardinality/datatype shape, especially extensions, Bundle entries, and Parameters |
 | Primitive extension shadow fields | Medium | SUSHI emits `_field` companion arrays for extensions on primitive values; rh-fsh has partial support |
 | Extension JSON fidelity | Medium | Local required subextensions are recursively materialized, and dependency child URLs are parent-scoped; dependency defaults, wrapping arrays, and some `value[x]` shapes remain incomplete |
 | StructureDefinition differential parity | High | 234 resources first differ in constraints, context, slicing, fixed values, or element merging |

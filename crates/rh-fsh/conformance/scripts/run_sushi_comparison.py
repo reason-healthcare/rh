@@ -35,10 +35,10 @@ FIXTURE_PROJECTS = {
 }
 
 DEFAULT_THRESHOLDS = {
-    "carin-bb": {"missing": 0, "extra": 0, "mismatch": 77},
+    "carin-bb": {"missing": 0, "extra": 0, "mismatch": 76},
     "mcode": {"missing": 0, "extra": 0, "mismatch": 157},
     "davinci-crd": {"missing": 0, "extra": 0, "mismatch": 57},
-    "davinci-dtr": {"missing": 0, "extra": 0, "mismatch": 47},
+    "davinci-dtr": {"missing": 0, "extra": 0, "mismatch": 39},
     "davinci-pas": {"missing": 0, "extra": 0, "mismatch": 120},
     "fhir-ips": {"missing": 0, "extra": 0, "mismatch": 71},
     "profile-identity-smoke": {"missing": 0, "extra": 0, "mismatch": 1},

@@ -1,6 +1,6 @@
 //! Immutable schema index used by semantic resolution and export.
 
-use crate::definition_index::DefinitionIndex;
+use crate::definition_index::{DefinitionIndex, DefinitionSource};
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::{FshPathSegment, InstanceRule, SdRule};
 use crate::parser::Spanned;
@@ -498,7 +498,13 @@ fn compile_profile_view(
     let mut lineage = Vec::new();
     let mut current = Some(profile_ref.to_string());
     let mut seen = std::collections::HashSet::new();
-    while let Some(profile_name) = current {
+    while let Some(profile_ref) = current {
+        let profile_name = if lineage.is_empty() {
+            profile_ref.clone()
+        } else {
+            local_profile_name(&profile_ref, tank, definitions)
+                .unwrap_or_else(|| profile_ref.clone())
+        };
         if !seen.insert(profile_name.clone()) {
             break;
         }
@@ -525,6 +531,25 @@ fn compile_profile_view(
         }
     }
     Some(CompiledProfileView { root_type, lineage })
+}
+
+fn local_profile_name(
+    profile_ref: &str,
+    tank: &FshTank,
+    definitions: &DefinitionIndex,
+) -> Option<String> {
+    if tank.profiles.contains_key(profile_ref) {
+        return Some(profile_ref.to_string());
+    }
+    let definition = definitions.lookup(profile_ref)?;
+    if !matches!(definition.source, DefinitionSource::Local { .. }) {
+        return None;
+    }
+    definition
+        .name
+        .as_ref()
+        .filter(|name| tank.profiles.contains_key(name.as_str()))
+        .cloned()
 }
 
 fn navigable_type(field_type: &FhirFieldType) -> Option<&str> {
@@ -714,6 +739,31 @@ mod tests {
             .last()
             .is_some_and(|parent| parent == "Patient"));
         assert!(view.field("Patient", "active").is_some());
+    }
+
+    #[test]
+    fn canonicalizes_local_profile_ids_in_compiled_lineage() {
+        let document = FshParser::parse(
+            "Profile: LocalParent\nParent: Patient\nId: local-parent\n\nProfile: LocalChild\nParent: local-parent\n\nInstance: example\nInstanceOf: LocalChild\n* active = true\n",
+            "local-id-lineage.fsh",
+        )
+        .expect("FSH parses");
+        let mut tank = FshTank::new();
+        tank.add_document(document).expect("document indexes");
+        let defs = FhirDefs::r4();
+        let definitions = build_definition_index(
+            &tank,
+            &FshConfig::default(),
+            &DependencyDefinitionSet::default(),
+        );
+
+        let schema = CompiledSchema::compile(&tank, &defs, &definitions);
+        let view = schema.view("LocalChild", "Resource");
+
+        assert_eq!(
+            view.profile_lineage(),
+            ["LocalChild", "LocalParent", "Patient"]
+        );
     }
 
     #[test]
