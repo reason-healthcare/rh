@@ -1,6 +1,6 @@
 //! Export FSH Instance to FHIR JSON
 
-use crate::definition_index::DefinitionIndex;
+use crate::definition_index::{DefinitionIndex, DefinitionSource, LocalDefinitionKind};
 use crate::error::FshError;
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::*;
@@ -246,6 +246,22 @@ fn export_instance_with_context(
         ]))
     };
 
+    if !has_explicit_meta_profile(inst) {
+        if let Some(profile_url) = instance_profile_url(
+            instance_of,
+            &resource_type_for_metadata,
+            context.definition_index,
+        ) {
+            resource.insert(
+                "meta",
+                InstanceNode::Object(BTreeMap::from([(
+                    "profile".to_string(),
+                    InstanceNode::Array(vec![InstanceNode::String(profile_url)]),
+                )])),
+            );
+        }
+    }
+
     if let Some(title) = &inst.metadata.title {
         if context
             .schema
@@ -259,7 +275,12 @@ fn export_instance_with_context(
     let usage = inst.metadata.usage.as_deref().unwrap_or("");
     if usage == "#definition" || usage == "definition" {
         if let Some(canonical) = &context.config.canonical {
-            let url = format!("{canonical}/{instance_of}/{}", inst.metadata.name);
+            let url = format!(
+                "{}/{}/{}",
+                canonical.trim_end_matches('/'),
+                resource_type_for_metadata,
+                instance_id(inst)
+            );
             resource.insert("url", InstanceNode::String(url));
         }
     }
@@ -311,20 +332,11 @@ fn apply_local_profile_defaults(
         }
     }
 
-    let mut assigned_paths = Vec::new();
-    for profile in &profiles {
-        for rule in &profile.rules {
-            if let SdRule::Assignment(assignment) = &rule.value {
-                assigned_paths.push(assignment.path.segments.clone());
-            }
-        }
-    }
-    let mut instance_assigned_paths = Vec::new();
-    for rule in instance_rules {
-        if let InstanceRule::Assignment(assignment) = &rule.value {
-            instance_assigned_paths.push(assignment.path.segments.clone());
-        }
-    }
+    let mut assigned_paths = profiles
+        .iter()
+        .flat_map(|profile| semantic_profile_assignment_paths(&profile.rules))
+        .collect::<Vec<_>>();
+    let instance_assigned_paths = semantic_instance_assignment_paths(instance_rules);
     assigned_paths.extend(instance_assigned_paths.iter().cloned());
 
     let mut dependency_fixed_values = dependency_profiles
@@ -368,6 +380,26 @@ fn apply_local_profile_defaults(
             }
         }
     }
+}
+
+fn semantic_instance_assignment_paths(rules: &[Spanned<InstanceRule>]) -> Vec<Vec<FshPathSegment>> {
+    SemanticProgram::lower_instance(rules, |_| serde_json::Value::Null)
+        .into_operations()
+        .filter_map(|operation| match operation {
+            SemanticOperation::Assign(assignment) => Some(assignment.path.segments().to_vec()),
+            SemanticOperation::EstablishContext { .. } => None,
+        })
+        .collect()
+}
+
+fn semantic_profile_assignment_paths(rules: &[Spanned<SdRule>]) -> Vec<Vec<FshPathSegment>> {
+    SemanticProgram::lower_profile(rules, |_| serde_json::Value::Null)
+        .into_operations()
+        .filter_map(|operation| match operation {
+            SemanticOperation::Assign(assignment) => Some(assignment.path.segments().to_vec()),
+            SemanticOperation::EstablishContext { .. } => None,
+        })
+        .collect()
 }
 
 fn collect_profile_chain<'a>(
@@ -608,7 +640,7 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
         FshValue::Str(s) => serde_json::Value::String(s.clone()),
         FshValue::Bool(b) => serde_json::Value::Bool(*b),
         FshValue::Integer(i) => serde_json::json!(i),
-        FshValue::Decimal(d) => serde_json::json!(d),
+        FshValue::Decimal(d) => fhir_decimal(*d),
         FshValue::Code {
             system,
             code,
@@ -636,7 +668,7 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
             display,
         } => {
             let mut quantity = serde_json::json!({
-                "value": value,
+                "value": fhir_decimal(*value),
                 "system": "http://unitsofmeasure.org",
                 "code": unit,
             });
@@ -693,8 +725,53 @@ fn fsh_value_to_json(value: &FshValue, context: &InstanceExportContext<'_>) -> s
     }
 }
 
+fn fhir_decimal(value: f64) -> serde_json::Value {
+    if value.fract() == 0.0 && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
+        return serde_json::Value::Number(serde_json::Number::from(value as i64));
+    }
+    serde_json::Number::from_f64(value)
+        .map(serde_json::Value::Number)
+        .unwrap_or(serde_json::Value::Null)
+}
+
+fn has_explicit_meta_profile(instance: &Instance) -> bool {
+    instance.rules.iter().any(|rule| {
+        let InstanceRule::Assignment(assignment) = &rule.value else {
+            return false;
+        };
+        matches!(
+            assignment.path.segments.as_slice(),
+            [FshPathSegment::Name(meta), FshPathSegment::Name(profile), ..]
+                if meta == "meta" && profile == "profile"
+        ) || matches!(
+            assignment.path.segments.as_slice(),
+            [FshPathSegment::Name(meta), FshPathSegment::Slice { element, .. }, ..]
+                if meta == "meta" && element == "profile"
+        )
+    })
+}
+
+fn instance_profile_url(
+    instance_of: &str,
+    resource_type: &str,
+    definition_index: &DefinitionIndex,
+) -> Option<String> {
+    let definition = definition_index.lookup(instance_of)?;
+    let is_local_profile = matches!(
+        definition.source,
+        DefinitionSource::Local {
+            kind: LocalDefinitionKind::Profile
+        }
+    );
+    let is_dependency_profile = matches!(definition.source, DefinitionSource::Dependency { .. })
+        && resource_type != instance_of;
+    (is_local_profile || is_dependency_profile)
+        .then(|| definition.url.clone())
+        .flatten()
+}
+
 /// Resolve a local CodeSystem name to its `^url` value if defined in the tank.
-fn resolve_code_system_url(system: &str, tank: &FshTank, config: &FshConfig) -> String {
+pub(crate) fn resolve_code_system_url(system: &str, tank: &FshTank, config: &FshConfig) -> String {
     // If the system already looks like a URL, return as-is
     if system.starts_with("http://") || system.starts_with("https://") || system.starts_with("urn:")
     {
@@ -844,7 +921,7 @@ fn resolve_canonical(value: &str, context: &InstanceExportContext<'_>) -> String
     value.to_string()
 }
 
-fn instance_id(instance: &Instance) -> &str {
+pub(crate) fn instance_id(instance: &Instance) -> &str {
     instance_assigned_string(instance, "id").unwrap_or(&instance.metadata.name)
 }
 
@@ -1084,173 +1161,233 @@ fn handle_slice_segment(
     shape_context: &InstanceShapeContext,
     current_type: &str,
 ) {
-    // Soft-indexing operators: [+] appends, [=] reuses last
     if slice == "+" || slice == "=" {
-        let fi = path_field_info(shape_context.schema_view, current_type, element);
-        let next_type = fi
-            .as_ref()
-            .and_then(|f| field_next_type(f.field_type()))
-            .unwrap_or(current_type);
-        let element_key = element.to_string();
+        apply_soft_index_slice(
+            map,
+            element,
+            slice,
+            segments,
+            value,
+            shape_context,
+            current_type,
+        );
+        return;
+    }
 
-        if fi.as_ref().is_some_and(|field| field.max().is_some()) {
-            if segments.len() == 1 {
-                map.insert(
-                    element_key,
-                    shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
-                );
-            } else {
-                let child = map.entry(element_key).or_insert_with(InstanceNode::object);
-                apply_at_path(child, &segments[1..], value, shape_context, next_type);
-            }
-            return;
-        }
+    if let Ok(idx) = slice.parse::<usize>() {
+        apply_numeric_index_slice(
+            map,
+            element,
+            idx,
+            segments,
+            value,
+            shape_context,
+            current_type,
+        );
+        return;
+    }
 
-        let arr_len = {
-            let arr = map
-                .entry(element_key.clone())
-                .or_insert_with(InstanceNode::array);
-            if slice == "+" {
-                if let InstanceNode::Array(a) = arr {
-                    a.push(InstanceNode::object());
-                }
-            }
-            if let InstanceNode::Array(a) = arr {
-                a.len()
-            } else {
-                0
-            }
-        };
+    apply_named_slice(
+        map,
+        element,
+        slice,
+        segments,
+        value,
+        shape_context,
+        current_type,
+    );
+}
 
-        if arr_len == 0 {
-            return;
-        }
-        let idx = arr_len - 1;
+/// Apply FSH soft indexing (`[+]` appends; `[=]` reuses the latest repetition).
+fn apply_soft_index_slice(
+    map: &mut BTreeMap<String, InstanceNode>,
+    element: &str,
+    operator: &str,
+    segments: &[FshPathSegment],
+    value: InstanceNode,
+    shape_context: &InstanceShapeContext,
+    current_type: &str,
+) {
+    let fi = path_field_info(shape_context.schema_view, current_type, element);
+    let next_type = fi
+        .as_ref()
+        .and_then(|f| field_next_type(f.field_type()))
+        .unwrap_or(current_type);
+    let element_key = element.to_string();
 
-        // Check for FHIR "extension on primitive" pattern.
-        let is_primitive = map
-            .get(&element_key)
-            .and_then(|v| {
-                if let InstanceNode::Array(a) = v {
-                    a.get(idx)
-                } else {
-                    None
-                }
-            })
-            .is_some_and(|v| !v.is_object() && !v.is_null());
-
-        if is_primitive && segments.len() > 1 {
-            let shadow_key = format!("_{element_key}");
-            let shadow_arr = map.entry(shadow_key).or_insert_with(InstanceNode::array);
-            if let InstanceNode::Array(shadow) = shadow_arr {
-                while shadow.len() <= idx {
-                    shadow.push(InstanceNode::Null);
-                }
-                if shadow[idx].is_null() {
-                    shadow[idx] = InstanceNode::object();
-                }
-                apply_at_path(
-                    &mut shadow[idx],
-                    &segments[1..],
-                    value,
-                    shape_context,
-                    "Element",
-                );
-            }
+    if fi.as_ref().is_some_and(|field| field.max().is_some()) {
+        if segments.len() == 1 {
+            map.insert(
+                element_key,
+                shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
+            );
         } else {
-            let arr = map.get_mut(&element_key).unwrap();
-            if let InstanceNode::Array(arr) = arr {
-                if segments.len() == 1 {
-                    arr[idx] =
-                        shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
-                } else {
-                    apply_at_path(
-                        &mut arr[idx],
-                        &segments[1..],
-                        value,
-                        shape_context,
-                        next_type,
-                    );
-                }
-            }
+            let child = map.entry(element_key).or_insert_with(InstanceNode::object);
+            apply_at_path(child, &segments[1..], value, shape_context, next_type);
         }
         return;
     }
 
-    // Numeric index (e.g., extension[0])
-    if let Ok(idx) = slice.parse::<usize>() {
-        let fi = path_field_info(shape_context.schema_view, current_type, element);
-        let next_type = fi
-            .as_ref()
-            .and_then(|f| field_next_type(f.field_type()))
-            .unwrap_or(current_type);
-        let is_primitive = fi
-            .as_ref()
-            .is_some_and(|field| matches!(field.field_type(), FhirFieldType::Primitive(_)));
-        let is_array = fi.as_ref().is_none_or(|field| field.max().is_none());
-        if !is_array && idx == 0 {
-            if is_primitive && segments.len() > 1 {
-                let shadow = map
-                    .entry(format!("_{element}"))
-                    .or_insert_with(InstanceNode::object);
-                apply_at_path(shadow, &segments[1..], value, shape_context, "Element");
-            } else if segments.len() == 1 {
-                map.insert(
-                    element.to_string(),
-                    shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
-                );
-            } else {
-                let child = map
-                    .entry(element.to_string())
-                    .or_insert_with(InstanceNode::object);
-                apply_at_path(child, &segments[1..], value, shape_context, next_type);
+    let arr_len = {
+        let arr = map
+            .entry(element_key.clone())
+            .or_insert_with(InstanceNode::array);
+        if operator == "+" {
+            if let InstanceNode::Array(values) = arr {
+                values.push(InstanceNode::object());
             }
-            return;
         }
+        if let InstanceNode::Array(values) = arr {
+            values.len()
+        } else {
+            0
+        }
+    };
+
+    if arr_len == 0 {
+        return;
+    }
+    let index = arr_len - 1;
+
+    // Check for FHIR's extension-on-primitive pattern.
+    let is_primitive = map
+        .get(&element_key)
+        .and_then(|value| match value {
+            InstanceNode::Array(values) => values.get(index),
+            _ => None,
+        })
+        .is_some_and(|value| !value.is_object() && !value.is_null());
+
+    if is_primitive && segments.len() > 1 {
+        let shadow_key = format!("_{element_key}");
+        let shadow_array = map.entry(shadow_key).or_insert_with(InstanceNode::array);
+        if let InstanceNode::Array(shadow) = shadow_array {
+            while shadow.len() <= index {
+                shadow.push(InstanceNode::Null);
+            }
+            if shadow[index].is_null() {
+                shadow[index] = InstanceNode::object();
+            }
+            apply_at_path(
+                &mut shadow[index],
+                &segments[1..],
+                value,
+                shape_context,
+                "Element",
+            );
+        }
+        return;
+    }
+
+    let arr = map.get_mut(&element_key).unwrap();
+    if let InstanceNode::Array(arr) = arr {
+        if segments.len() == 1 {
+            arr[index] = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
+        } else {
+            apply_at_path(
+                &mut arr[index],
+                &segments[1..],
+                value,
+                shape_context,
+                next_type,
+            );
+        }
+    }
+}
+
+/// Apply FSH numeric indexing (`[0]`, `[1]`, …), including primitive shadows.
+fn apply_numeric_index_slice(
+    map: &mut BTreeMap<String, InstanceNode>,
+    element: &str,
+    index: usize,
+    segments: &[FshPathSegment],
+    value: InstanceNode,
+    shape_context: &InstanceShapeContext,
+    current_type: &str,
+) {
+    let fi = path_field_info(shape_context.schema_view, current_type, element);
+    let next_type = fi
+        .as_ref()
+        .and_then(|f| field_next_type(f.field_type()))
+        .unwrap_or(current_type);
+    let is_primitive = fi
+        .as_ref()
+        .is_some_and(|field| matches!(field.field_type(), FhirFieldType::Primitive(_)));
+    let is_array = fi.as_ref().is_none_or(|field| field.max().is_none());
+
+    if !is_array && index == 0 {
         if is_primitive && segments.len() > 1 {
             let shadow = map
                 .entry(format!("_{element}"))
-                .or_insert_with(InstanceNode::array);
-            if let InstanceNode::Array(values) = shadow {
-                while values.len() <= idx {
-                    values.push(InstanceNode::Null);
-                }
-                if values[idx].is_null() {
-                    values[idx] = InstanceNode::object();
-                }
-                apply_at_path(
-                    &mut values[idx],
-                    &segments[1..],
-                    value,
-                    shape_context,
-                    "Element",
-                );
-            }
-            return;
-        }
-        let arr = map
-            .entry(element.to_string())
-            .or_insert_with(InstanceNode::array);
-        if let InstanceNode::Array(arr) = arr {
-            while arr.len() <= idx {
-                arr.push(InstanceNode::object());
-            }
-            if segments.len() == 1 {
-                arr[idx] = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
-            } else {
-                apply_at_path(
-                    &mut arr[idx],
-                    &segments[1..],
-                    value,
-                    shape_context,
-                    next_type,
-                );
-            }
+                .or_insert_with(InstanceNode::object);
+            apply_at_path(shadow, &segments[1..], value, shape_context, "Element");
+        } else if segments.len() == 1 {
+            map.insert(
+                element.to_string(),
+                shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type)),
+            );
+        } else {
+            let child = map
+                .entry(element.to_string())
+                .or_insert_with(InstanceNode::object);
+            apply_at_path(child, &segments[1..], value, shape_context, next_type);
         }
         return;
     }
 
-    // Regular named slice: navigate to a stable repetition for the slice.
+    if is_primitive && segments.len() > 1 {
+        let shadow = map
+            .entry(format!("_{element}"))
+            .or_insert_with(InstanceNode::array);
+        if let InstanceNode::Array(values) = shadow {
+            while values.len() <= index {
+                values.push(InstanceNode::Null);
+            }
+            if values[index].is_null() {
+                values[index] = InstanceNode::object();
+            }
+            apply_at_path(
+                &mut values[index],
+                &segments[1..],
+                value,
+                shape_context,
+                "Element",
+            );
+        }
+        return;
+    }
+
+    let arr = map
+        .entry(element.to_string())
+        .or_insert_with(InstanceNode::array);
+    if let InstanceNode::Array(arr) = arr {
+        while arr.len() <= index {
+            arr.push(InstanceNode::object());
+        }
+        if segments.len() == 1 {
+            arr[index] = shape_value_for_field(value, fi.as_ref().map(FieldShape::field_type));
+        } else {
+            apply_at_path(
+                &mut arr[index],
+                &segments[1..],
+                value,
+                shape_context,
+                next_type,
+            );
+        }
+    }
+}
+
+/// Apply a named slice, preserving its stable repetition and extension URL.
+fn apply_named_slice(
+    map: &mut BTreeMap<String, InstanceNode>,
+    element: &str,
+    slice: &str,
+    segments: &[FshPathSegment],
+    value: InstanceNode,
+    shape_context: &InstanceShapeContext,
+    current_type: &str,
+) {
     let fi = path_field_info(shape_context.schema_view, current_type, element);
     let next_type = fi
         .as_ref()
@@ -1472,7 +1609,8 @@ fn named_extension_url(
 mod tests {
     use super::*;
     use crate::dependencies::{
-        DependencyDefinitionSet, DependencyExtensionSlice, DependencyStructureDefinition,
+        DependencyDefinitionSet, DependencyExtensionSlice, DependencyFixedValue,
+        DependencyStructureDefinition,
     };
     use crate::parser::ast::{Profile, SdMetadata};
     use crate::{build_definition_index, FshConfig};
@@ -1724,6 +1862,113 @@ InstanceOf: FinalObservation
     }
 
     #[test]
+    fn applies_defaults_in_dependency_local_instance_precedence() {
+        let document = crate::FshParser::parse(
+            r#"
+Profile: LocalObservation
+Parent: DependencyObservation
+* status = #final
+* code = http://loinc.org#local-code
+
+Instance: observation-example
+InstanceOf: LocalObservation
+* status = #amended
+"#,
+            "default-precedence.fsh",
+        )
+        .expect("FSH parses");
+        let mut tank = FshTank::new();
+        tank.add_document(document).expect("document indexes");
+        crate::FshResolver::resolve(&mut tank).expect("FSH resolves");
+
+        let mut dependency = dependency_sd(
+            "example.package",
+            "1.0.0",
+            "DependencyObservation",
+            "dependency-observation",
+            "http://example.org/StructureDefinition/dependency-observation",
+            "Observation",
+        );
+        dependency.fixed_values = vec![
+            DependencyFixedValue {
+                path: "Observation.status".to_string(),
+                slice_name: None,
+                value: serde_json::json!("registered"),
+                required: false,
+            },
+            DependencyFixedValue {
+                path: "Observation.code".to_string(),
+                slice_name: None,
+                value: serde_json::json!({
+                    "system": "http://loinc.org",
+                    "code": "dependency-code"
+                }),
+                required: false,
+            },
+        ];
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![dependency],
+            warnings: Vec::new(),
+        };
+        let config = FshConfig::default();
+        let defs = FhirDefs::r4();
+        let definition_index = build_definition_index(&tank, &config, &dependencies);
+        let schema = CompiledSchema::compile(&tank, defs.as_ref(), &definition_index);
+        let instance = tank
+            .instances
+            .get("observation-example")
+            .expect("instance indexes");
+
+        let resource = export_instance(
+            instance,
+            defs.as_ref(),
+            &config,
+            &tank,
+            &definition_index,
+            &schema,
+        )
+        .expect("instance exports");
+
+        assert_eq!(resource["resourceType"], "Observation");
+        assert_eq!(resource["id"], "observation-example");
+        assert_eq!(resource["status"], "amended");
+        assert_eq!(resource["code"]["coding"][0]["code"], "local-code");
+    }
+
+    #[test]
+    fn applies_local_slice_defaults_used_by_indented_instance_rules() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: ReceivedClaimEob
+Parent: ExplanationOfBenefit
+* supportingInfo contains received 0..1
+* supportingInfo[received].category = http://example.org/CodeSystem/supporting-info#received
+
+Instance: eob-example
+InstanceOf: ReceivedClaimEob
+* supportingInfo[received].
+  * sequence = 1
+  * timingDate = "2024-01-15"
+"#,
+                "indented-slice-default.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "eob-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["supportingInfo"][0]["category"]["coding"][0]["code"],
+            "received"
+        );
+        assert_eq!(instance["supportingInfo"][0]["sequence"], 1);
+        assert_eq!(instance["supportingInfo"][0]["timingDate"], "2024-01-15");
+    }
+
+    #[test]
     fn replaces_repeating_fields_on_plain_assignment() {
         let package = crate::FshCompiler::new(crate::CompilerOptions::default())
             .compile(
@@ -1824,6 +2069,58 @@ InstanceOf: Parameters
     }
 
     #[test]
+    fn embedded_resource_matches_equivalent_top_level_shape() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: EquivalentObservation
+Parent: Observation
+* status = #final
+
+Instance: inline-observation
+InstanceOf: EquivalentObservation
+Usage: #inline
+* component[+].code = http://loinc.org#41950-7
+* component[=].valueQuantity.value = 190.00
+* component[=].valueQuantity.unit = "steps"
+
+Instance: top-level-observation
+InstanceOf: EquivalentObservation
+Usage: #example
+* component[+].code = http://loinc.org#41950-7
+* component[=].valueQuantity.value = 190.00
+* component[=].valueQuantity.unit = "steps"
+
+Instance: observation-bundle
+InstanceOf: Bundle
+Usage: #example
+* type = #collection
+* entry[+].resource = inline-observation
+"#,
+                "embedded-shape-parity.fsh",
+            )
+            .expect("FSH compiles");
+        let top_level = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "top-level-observation")
+            .expect("top-level instance exists");
+        let bundle = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "observation-bundle")
+            .expect("bundle exists");
+        let embedded = &bundle["entry"][0]["resource"];
+
+        assert_eq!(embedded["component"], top_level["component"]);
+        assert!(embedded["component"].is_array());
+        assert_eq!(
+            embedded["component"][0]["valueQuantity"]["value"].as_i64(),
+            Some(190)
+        );
+    }
+
+    #[test]
     fn resolves_bare_references_by_exported_instance_id() {
         let package = crate::FshCompiler::new(crate::CompilerOptions::default())
             .compile(
@@ -1897,6 +2194,41 @@ InstanceOf: CapabilityStatement
         assert_eq!(
             capability["instantiates"][0],
             "http://example.org/fhir/OperationDefinition/local-op"
+        );
+    }
+
+    #[test]
+    fn emits_definition_instance_urls_from_resolved_resource_type_and_id() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions {
+            config: FshConfig {
+                canonical: Some("http://example.org/fhir".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .compile(
+            r#"
+Profile: ExamplePatient
+Parent: Patient
+Id: example-patient
+
+Instance: patient-definition
+InstanceOf: ExamplePatient
+Usage: #definition
+* id = "published-patient"
+"#,
+            "definition-instance.fsh",
+        )
+        .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "published-patient")
+            .expect("definition instance exists");
+
+        assert_eq!(
+            instance["url"],
+            "http://example.org/fhir/Patient/published-patient"
         );
     }
 

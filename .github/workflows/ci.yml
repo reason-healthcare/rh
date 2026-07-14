@@ -146,6 +146,56 @@ jobs:
       - name: Run rh-fsh SUSHI compatibility tests
         run: cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 
+  fsh-conformance-report:
+    name: FSH SUSHI Conformance Report
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-fsh-conformance-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-fsh-conformance-cargo-
+
+      - name: Run project SUSHI comparison
+        run: |
+          CARGO_TARGET_DIR=target/conformance cargo build -p rh-cli
+          python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --timeout-seconds 600
+
+      - name: Upload FSH conformance summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsh-sushi-conformance-summary
+          path: |
+            crates/rh-fsh/conformance/results/latest-summary.json
+            crates/rh-fsh/conformance/results/latest-summary.md
+          if-no-files-found: warn
+
   lints:
     name: Lints
     runs-on: ubuntu-latest

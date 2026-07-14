@@ -24,6 +24,10 @@ python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py
 # Smoke-test only the first N FSH files per project.
 python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --limit-files 10
 
+# Retain aligned raw resources, normalized resources, and per-resource diffs.
+python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py \
+  --artifacts-dir crates/rh-fsh/conformance/results/artifacts
+
 # Restore already-cloned repositories to the revisions in projects.json.
 python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --update-projects
 ```
@@ -31,9 +35,16 @@ python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --update-proje
 Reports are written to `crates/rh-fsh/conformance/results/latest-summary.json`
 and `crates/rh-fsh/conformance/results/latest-summary.md`.
 
-The runner normalizes fields that are expected to differ across tools or runs
-(`text`, `meta`, generated package metadata, and publisher-generated index
-files), then compares resources by `(resourceType, id)`.
+When `--artifacts-dir` is provided, each project receives parallel `sushi/` and
+`rh-fsh/` resource trees with identical percent-encoded filenames, parallel
+`normalized/` trees, per-resource unified diffs, and a `manifest.json`. The
+artifacts directory is opt-in because a full six-project run writes 1,840 raw
+resource files plus normalized copies.
+
+The current normalized comparison recursively removes keys named `date`,
+`experimental`, `meta`, `publisher`, `text`, and `version`, then compares
+resources by `(resourceType, id)`. Use the raw artifact trees for semantic
+analysis; recursive removal can hide meaningful nested values.
 
 SUSHI is pinned to 3.19.0. Project repository URLs and revisions are pinned in
 `projects.json`; the runner refuses to use a different revision unless

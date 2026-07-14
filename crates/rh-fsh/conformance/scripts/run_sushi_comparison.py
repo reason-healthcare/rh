@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -35,11 +37,11 @@ FIXTURE_PROJECTS = {
 }
 
 DEFAULT_THRESHOLDS = {
-    "carin-bb": {"missing": 0, "extra": 0, "mismatch": 76},
-    "mcode": {"missing": 0, "extra": 0, "mismatch": 157},
-    "davinci-crd": {"missing": 0, "extra": 0, "mismatch": 57},
-    "davinci-dtr": {"missing": 0, "extra": 0, "mismatch": 39},
-    "davinci-pas": {"missing": 0, "extra": 0, "mismatch": 109},
+    "carin-bb": {"missing": 0, "extra": 0, "mismatch": 53},
+    "mcode": {"missing": 0, "extra": 0, "mismatch": 155},
+    "davinci-crd": {"missing": 0, "extra": 0, "mismatch": 51},
+    "davinci-dtr": {"missing": 0, "extra": 0, "mismatch": 33},
+    "davinci-pas": {"missing": 0, "extra": 0, "mismatch": 96},
     "fhir-ips": {"missing": 0, "extra": 0, "mismatch": 71},
     "profile-identity-smoke": {"missing": 0, "extra": 0, "mismatch": 1},
 }
@@ -56,7 +58,7 @@ GAP_CATEGORIES = [
 
 IGNORED_JSON_NAMES = {"package.json"}
 IGNORED_JSON_SUFFIXES = (".index.json",)
-NORMALIZED_TOP_LEVEL_FIELDS = {
+NORMALIZATION_IGNORED_KEYS = {
     "date",
     "experimental",
     "meta",
@@ -91,6 +93,7 @@ class ProjectResult:
     mismatched: list[dict[str, Any]] = field(default_factory=list)
     category_summary: dict[str, int] = field(default_factory=dict)
     thresholds: dict[str, int] = field(default_factory=dict)
+    artifacts_path: str | None = None
 
     @property
     def status(self) -> str:
@@ -123,6 +126,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--projects-dir", type=Path, default=PROJECTS_DIR)
     parser.add_argument("--results-dir", type=Path, default=RESULTS_DIR)
+    parser.add_argument("--artifacts-dir", type=Path)
     parser.add_argument("--rh-cli", type=Path, default=DEFAULT_RH_CLI)
     parser.add_argument("--sushi-bin", default=DEFAULT_SUSHI_BIN)
     parser.add_argument("--limit-files", type=int)
@@ -135,6 +139,8 @@ def main() -> int:
 
     args.projects_dir.mkdir(parents=True, exist_ok=True)
     args.results_dir.mkdir(parents=True, exist_ok=True)
+    if args.artifacts_dir:
+        args.artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     selected = args.project or ([] if args.fixture else list(DEFAULT_PROJECTS))
     thresholds = load_thresholds(args.thresholds_file)
@@ -247,19 +253,31 @@ def run_project(
             timeout_seconds=args.timeout_seconds,
         )
         rh = ToolResult(ok=False, duration_seconds=0.0, error="not run")
-        reference = {}
-        actual = {}
+        reference: dict[str, Any] = {}
+        actual: dict[str, Any] = {}
         missing: list[str] = []
         extra: list[str] = []
         mismatched: list[dict[str, Any]] = []
         category_summary: dict[str, int] = {}
+        artifacts_path: str | None = None
 
         if sushi.ok:
-            reference = load_resources(sushi_project / "fsh-generated" / "resources")
-            rh, actual = run_rh_fsh_json(args.rh_cli, fsh_files, args.timeout_seconds)
+            reference_raw = load_resources(sushi_project / "fsh-generated" / "resources")
+            reference = normalize_resources(reference_raw)
+            rh, actual_raw = run_rh_fsh_json(args.rh_cli, fsh_files, args.timeout_seconds)
             if rh.ok:
+                actual = normalize_resources(actual_raw)
                 missing, extra, mismatched = compare_resources(reference, actual)
                 category_summary = categorize_gaps(missing, extra, mismatched)
+                if args.artifacts_dir:
+                    project_artifacts = args.artifacts_dir / name
+                    write_comparison_artifacts(
+                        project_artifacts,
+                        name,
+                        reference_raw,
+                        actual_raw,
+                    )
+                    artifacts_path = str(project_artifacts)
 
         return ProjectResult(
             name=name,
@@ -275,6 +293,7 @@ def run_project(
             mismatched=mismatched,
             category_summary=category_summary,
             thresholds=thresholds,
+            artifacts_path=artifacts_path,
         )
 
 
@@ -400,7 +419,7 @@ def run_rh_fsh_json(
     for value in payload:
         key = resource_key(value)
         if key:
-            resources[key] = normalize_resource(value)
+            resources[key] = value
     return result, resources
 
 
@@ -421,8 +440,115 @@ def load_resources(directory: Path) -> dict[str, Any]:
             continue
         key = resource_key(value)
         if key:
-            resources[key] = normalize_resource(value)
+            resources[key] = value
     return resources
+
+
+def normalize_resources(resources: dict[str, Any]) -> dict[str, Any]:
+    return {key: normalize_resource(value) for key, value in resources.items()}
+
+
+def artifact_filename(resource: str) -> str:
+    return f"{quote(resource, safe='-._~')}.json"
+
+
+def serialize_resource(value: Any) -> str:
+    return json.dumps(value, indent=2, sort_keys=True) + "\n"
+
+
+def write_resource_tree(directory: Path, resources: dict[str, Any]) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    for resource, value in sorted(resources.items()):
+        path = directory / artifact_filename(resource)
+        path.write_text(serialize_resource(value))
+
+
+def write_comparison_artifacts(
+    directory: Path,
+    project: str,
+    sushi: dict[str, Any],
+    rh_fsh: dict[str, Any],
+) -> None:
+    if directory.exists():
+        shutil.rmtree(directory)
+
+    normalized_sushi = normalize_resources(sushi)
+    normalized_rh_fsh = normalize_resources(rh_fsh)
+    write_resource_tree(directory / "sushi", sushi)
+    write_resource_tree(directory / "rh-fsh", rh_fsh)
+    write_resource_tree(directory / "normalized" / "sushi", normalized_sushi)
+    write_resource_tree(directory / "normalized" / "rh-fsh", normalized_rh_fsh)
+
+    diffs_dir = directory / "diffs"
+    diffs_dir.mkdir(parents=True, exist_ok=True)
+    resources = []
+    for resource in sorted(set(sushi) | set(rh_fsh)):
+        filename = artifact_filename(resource)
+        sushi_value = sushi.get(resource)
+        rh_fsh_value = rh_fsh.get(resource)
+        raw_equal = resource in sushi and resource in rh_fsh and sushi_value == rh_fsh_value
+        sushi_text = serialize_resource(sushi_value) if resource in sushi else ""
+        rh_fsh_text = serialize_resource(rh_fsh_value) if resource in rh_fsh else ""
+        serialized_equal = (
+            resource in sushi and resource in rh_fsh and sushi_text == rh_fsh_text
+        )
+        normalized_equal = (
+            resource in normalized_sushi
+            and resource in normalized_rh_fsh
+            and normalized_sushi[resource] == normalized_rh_fsh[resource]
+        )
+        if resource not in sushi:
+            status = "rh-fsh-only"
+        elif resource not in rh_fsh:
+            status = "sushi-only"
+        elif normalized_equal:
+            status = "normalized-match"
+        else:
+            status = "different"
+
+        if not serialized_equal:
+            diff = difflib.unified_diff(
+                sushi_text.splitlines(keepends=True),
+                rh_fsh_text.splitlines(keepends=True),
+                fromfile=f"sushi/{filename}",
+                tofile=f"rh-fsh/{filename}",
+            )
+            (diffs_dir / f"{filename[:-5]}.diff").write_text("".join(diff))
+
+        entry = {
+            "resource": resource,
+            "filename": filename,
+            "status": status,
+            "raw_equal": raw_equal,
+            "serialized_equal": serialized_equal,
+            "normalized_equal": normalized_equal,
+        }
+        if status == "different":
+            entry.update(
+                annotate_mismatch(
+                    first_difference(resource, normalized_sushi[resource], normalized_rh_fsh[resource])
+                )
+            )
+        resources.append(entry)
+
+    manifest = {
+        "project": project,
+        "normalization_ignored_keys_recursively": sorted(NORMALIZATION_IGNORED_KEYS),
+        "sushi_resources": len(sushi),
+        "rh_fsh_resources": len(rh_fsh),
+        "resources": resources,
+    }
+    (directory / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (directory / "README.md").write_text(
+        "# SUSHI and rh-fsh comparison artifacts\n\n"
+        "Raw generated resources use identical deterministic filenames in `sushi/` and "
+        "`rh-fsh/`. The `normalized/` trees apply the same recursive key filtering as "
+        "the conformance summary.\n\n"
+        "```bash\n"
+        "diff -ru sushi rh-fsh\n"
+        "diff -ru normalized/sushi normalized/rh-fsh\n"
+        "```\n"
+    )
 
 
 def resource_key(value: Any) -> str | None:
@@ -440,7 +566,7 @@ def normalize_resource(value: Any) -> Any:
         normalized = {
             key: normalize_resource(child)
             for key, child in value.items()
-            if key not in NORMALIZED_TOP_LEVEL_FIELDS
+            if key not in NORMALIZATION_IGNORED_KEYS
         }
         return dict(sorted(normalized.items()))
     if isinstance(value, list):
@@ -456,7 +582,7 @@ def compare_resources(
     mismatched = []
     for key in sorted(set(reference) & set(actual)):
         if reference[key] != actual[key]:
-            mismatched.append(first_difference(key, reference[key], actual[key]))
+            mismatched.append(annotate_mismatch(first_difference(key, reference[key], actual[key])))
     return missing, extra, mismatched
 
 
@@ -528,6 +654,32 @@ def classify_mismatch(item: dict[str, Any]) -> str:
     if type(sushi) is not type(rh_fsh) or path_matches_json_shape(path):
         return "json_shape"
     return "other"
+
+
+def annotate_mismatch(item: dict[str, Any]) -> dict[str, Any]:
+    category = classify_mismatch(item)
+    annotated = {**item, "category": category}
+    if category == "json_shape":
+        annotated["shape_family"] = json_shape_family(item["path"])
+    return annotated
+
+
+def json_shape_family(path: str) -> str:
+    if ".extension" in path:
+        return "extension"
+    if "._" in path:
+        return "primitive_shadow"
+    if ".contained" in path:
+        return "contained_resource"
+    if ".entry" in path:
+        return "bundle_entry"
+    if ".parameter" in path:
+        return "parameters_part"
+    if any(token in path for token in (".adjudication", ".supportingInfo", ".component", ".item")):
+        return "repeating_backbone"
+    if any(token in path for token in (".coding", ".code", ".reference", ".value", ".dose")):
+        return "typed_value"
+    return "other_json_shape"
 
 
 def path_matches_metadata(path: str) -> bool:
@@ -622,6 +774,7 @@ def project_to_json(result: ProjectResult) -> dict[str, Any]:
         "thresholds": result.thresholds,
         "within_threshold": result.within_threshold,
         "category_summary": result.category_summary,
+        "artifacts_path": result.artifacts_path,
         "missing": result.missing[:100],
         "extra": result.extra[:100],
         "mismatched": result.mismatched[:100],

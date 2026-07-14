@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-explain
+
+## Purpose
+
+Defines human-readable explanations for CQL parsing, compilation, and evaluation.
+
+## Requirements
 
 ### Requirement: explain_parse produces AST pretty-print
 

@@ -1,6 +1,9 @@
 //! Minimal `sushi-config.yaml` ingestion for project-level FSH compilation.
 
-use crate::{FshConfig, FshContact, FshDependency, FshError, FshTelecom};
+use crate::{
+    FshCoding, FshConfig, FshContact, FshDependency, FshError, FshGroup, FshPage,
+    FshResourceMetadata, FshTelecom,
+};
 use indexmap::IndexMap;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -12,12 +15,54 @@ struct SushiConfigFile {
     canonical: Option<String>,
     name: Option<String>,
     status: Option<String>,
+    title: Option<String>,
+    description: Option<String>,
+    license: Option<String>,
+    experimental: Option<bool>,
+    #[serde(default, rename = "extension")]
+    extensions: Vec<serde_json::Value>,
+    jurisdiction: Option<String>,
     publisher: Option<PublisherValue>,
     contact: Option<ScalarOrListContact>,
     version: Option<String>,
     #[serde(rename = "fhirVersion")]
     fhir_version: Option<ScalarOrList>,
     dependencies: Option<IndexMap<String, DependencyValue>>,
+    pages: Option<IndexMap<String, PageValue>>,
+    groups: Option<IndexMap<String, GroupValue>>,
+    parameters: Option<IndexMap<String, serde_yaml::Value>>,
+    resources: Option<IndexMap<String, ResourceValue>>,
+    #[serde(rename = "copyrightYear")]
+    copyright_year: Option<String>,
+    #[serde(rename = "releaseLabel")]
+    release_label: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PageValue {
+    title: Option<String>,
+    #[serde(default, rename = "extension")]
+    extensions: Vec<serde_json::Value>,
+    #[serde(flatten)]
+    pages: IndexMap<String, PageValue>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GroupValue {
+    name: String,
+    description: Option<String>,
+    #[serde(default)]
+    resources: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ResourceValue {
+    name: Option<String>,
+    description: Option<String>,
+    example_canonical: Option<String>,
+    example_boolean: Option<bool>,
+    grouping_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -108,9 +153,31 @@ pub fn parse_sushi_config(input: &str) -> Result<FshConfig, serde_yaml::Error> {
         ScalarOrListContact::Scalar(contact) => vec![contact],
         ScalarOrListContact::List(contacts) => contacts,
     });
-    let contacts = explicit_contacts
-        .map(|contacts| contacts.into_iter().map(normalize_contact).collect())
-        .unwrap_or_else(|| publisher_contact.into_iter().collect());
+    let contacts = publisher_contact
+        .into_iter()
+        .chain(
+            explicit_contacts
+                .unwrap_or_default()
+                .into_iter()
+                .map(normalize_contact),
+        )
+        .collect();
+    let mut parameters = normalize_parameters(raw.parameters.unwrap_or_default());
+    if let Some(value) = raw.copyright_year {
+        parameters.insert(0, ("copyrightyear".to_string(), value));
+    }
+    if let Some(value) = raw.release_label {
+        let index = usize::from(!parameters.is_empty());
+        parameters.insert(index, ("releaselabel".to_string(), value));
+    }
+    if let Some(canonical) = raw.canonical.as_ref() {
+        if !parameters.iter().any(|(code, _)| code == "path-history") {
+            parameters.push((
+                "path-history".to_string(),
+                format!("{}/history.html", canonical.trim_end_matches('/')),
+            ));
+        }
+    }
 
     Ok(FshConfig {
         canonical: raw.canonical,
@@ -121,6 +188,12 @@ pub fn parse_sushi_config(input: &str) -> Result<FshConfig, serde_yaml::Error> {
         id: raw.id,
         name: raw.name,
         status: raw.status,
+        title: raw.title,
+        description: raw.description,
+        license: raw.license,
+        experimental: raw.experimental,
+        extensions: raw.extensions,
+        jurisdiction: raw.jurisdiction.and_then(|value| parse_coding(&value)),
         publisher,
         contacts,
         version: raw.version,
@@ -143,6 +216,92 @@ pub fn parse_sushi_config(input: &str) -> Result<FshConfig, serde_yaml::Error> {
                 },
             })
             .collect(),
+        pages: raw
+            .pages
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(source, page)| normalize_page(source, page))
+            .collect(),
+        groups: raw
+            .groups
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(id, group)| FshGroup {
+                id,
+                name: group.name,
+                description: group.description,
+                resources: group.resources,
+            })
+            .collect(),
+        parameters,
+        resources: raw
+            .resources
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(reference, resource)| {
+                (
+                    reference,
+                    FshResourceMetadata {
+                        name: resource.name,
+                        description: resource.description,
+                        example_canonical: resource.example_canonical,
+                        example_boolean: resource.example_boolean,
+                        grouping_id: resource.grouping_id,
+                    },
+                )
+            })
+            .collect(),
+    })
+}
+
+fn normalize_page(source: String, page: PageValue) -> FshPage {
+    FshPage {
+        title: page.title.unwrap_or_else(|| source.clone()),
+        source,
+        extensions: page.extensions,
+        pages: page
+            .pages
+            .into_iter()
+            .map(|(source, page)| normalize_page(source, page))
+            .collect(),
+    }
+}
+
+fn normalize_parameters(values: IndexMap<String, serde_yaml::Value>) -> Vec<(String, String)> {
+    values
+        .into_iter()
+        .flat_map(|(code, value)| match value {
+            serde_yaml::Value::Sequence(values) => values
+                .into_iter()
+                .filter_map(|value| scalar_string(&value).map(|value| (code.clone(), value)))
+                .collect(),
+            value => scalar_string(&value)
+                .map(|value| vec![(code, value)])
+                .unwrap_or_default(),
+        })
+        .collect()
+}
+
+fn scalar_string(value: &serde_yaml::Value) -> Option<String> {
+    match value {
+        serde_yaml::Value::String(value) => Some(value.clone()),
+        serde_yaml::Value::Bool(value) => Some(value.to_string()),
+        serde_yaml::Value::Number(value) => Some(value.to_string()),
+        _ => None,
+    }
+}
+
+fn parse_coding(value: &str) -> Option<FshCoding> {
+    let (coding, display) = value
+        .split_once(" \"")
+        .map_or((value, None), |(coding, display)| {
+            (coding, Some(display.trim_end_matches('"').to_string()))
+        });
+    let (system, code) = coding.rsplit_once('#')?;
+    Some(FshCoding {
+        system: system.to_string(),
+        code: code.to_string(),
+        display,
     })
 }
 
@@ -236,7 +395,7 @@ dependencies:
     }
 
     #[test]
-    fn explicit_contacts_override_publisher_contact() {
+    fn explicit_contacts_follow_publisher_contact() {
         let config = parse_sushi_config(
             r#"
 publisher:
@@ -250,11 +409,70 @@ contact:
         )
         .expect("config parses");
 
-        assert_eq!(config.contacts.len(), 1);
-        assert_eq!(config.contacts[0].name, None);
+        assert_eq!(config.contacts.len(), 2);
         assert_eq!(
-            config.contacts[0].telecom[0].value,
+            config.contacts[0].name.as_deref(),
+            Some("Example Publisher")
+        );
+        assert_eq!(
+            config.contacts[1].telecom[0].value,
             "http://example.org/committee"
+        );
+    }
+
+    #[test]
+    fn parses_implementation_guide_definition_metadata() {
+        let config = parse_sushi_config(
+            r#"
+title: Example Guide
+description: An example guide.
+license: CC0-1.0
+experimental: false
+jurisdiction: urn:iso:std:iso:3166#US "United States of America"
+extension:
+  - url: http://example.org/work-group
+    valueCode: fhir
+copyrightYear: 2026+
+releaseLabel: STU 1
+parameters:
+  shownav: true
+  special-url:
+    - http://example.org/one
+    - http://example.org/two
+pages:
+  index.md:
+    title: Home
+groups:
+  examples:
+    name: Examples
+    description: Example resources.
+    resources:
+      - Patient/example
+resources:
+  Patient/example:
+    name: Example Patient
+    description: A patient example.
+    exampleCanonical: http://example.org/StructureDefinition/patient
+"#,
+        )
+        .expect("config parses");
+
+        assert_eq!(config.title.as_deref(), Some("Example Guide"));
+        assert_eq!(config.jurisdiction.as_ref().unwrap().code, "US");
+        assert_eq!(config.pages[0].source, "index.md");
+        assert_eq!(config.groups[0].resources, ["Patient/example"]);
+        assert_eq!(
+            config.parameters[0],
+            ("copyrightyear".into(), "2026+".into())
+        );
+        assert_eq!(
+            config.parameters[1],
+            ("releaselabel".into(), "STU 1".into())
+        );
+        assert_eq!(config.parameters.len(), 5);
+        assert_eq!(
+            config.resources["Patient/example"].name.as_deref(),
+            Some("Example Patient")
         );
     }
 }

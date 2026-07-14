@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-eval-engine
+
+## Purpose
+
+Defines CQL runtime values, evaluation semantics, providers, and public evaluation APIs.
+
+## Requirements
 
 ### Requirement: Value enum represents CQL runtime values
 
@@ -233,3 +239,47 @@ The eval engine SHALL expose a public `evaluate_elm_with_libraries(library, incl
 #### Scenario: Cross-library function call with arguments resolves
 - **WHEN** a main library calls `FHIRHelpers.ToInterval(period)` and `FHIRHelpers` is in `included`
 - **THEN** the `ToInterval` function body from `FHIRHelpers` is evaluated with `period` bound and the result returned
+
+### Requirement: Wave-1 operator dispatch closure
+
+The eval engine SHALL provide explicit dispatch for the wave-1 string extraction, date/time
+extraction, and list slice gap set so supported expressions do not fail solely from missing
+dispatch wiring.
+
+#### Scenario: String extraction and search operators dispatch
+- **WHEN** `Substring`, `PositionOf`, `LastPositionOf`, `SplitOnMatches`, `ReplaceMatches`, or string `IndexOf` is evaluated
+- **THEN** evaluation SHALL execute operator-specific logic rather than return an unsupported-operation error
+
+#### Scenario: Date/time extraction operators dispatch
+- **WHEN** `DateFrom`, `TimeFrom`, or `TimezoneOffsetFrom` is evaluated
+- **THEN** evaluation SHALL dispatch to an implemented handler and return a typed result or spec-defined null outcome
+
+#### Scenario: List slice operators dispatch
+- **WHEN** `Tail`, `Skip`, `Take`, or `Slice` is evaluated
+- **THEN** evaluation SHALL dispatch and return a deterministic list output or spec-defined null outcome
+
+### Requirement: Wave-1 semantic registration for function-syntax operators
+
+Wave-1 function-syntax operators SHALL be registered in semantic and operator resolution so
+they compile through the standard pipeline with deterministic overload selection.
+
+#### Scenario: Function compiles through semantic resolution
+- **WHEN** `Substring('abc', 1, 2)` is compiled
+- **THEN** semantic analysis SHALL resolve it without an unknown-function failure
+
+#### Scenario: Overload selection remains deterministic
+- **WHEN** multiple overload candidates exist for a wave-1 function
+- **THEN** semantic resolution SHALL select the same overload for equivalent input types
+
+### Requirement: Wave-1 conformance metrics improve from baseline
+
+Against the 2026-03-09 HL7 full-suite baseline, wave-1 implementation SHALL reduce
+unimplemented-behavior outcomes while preserving zero wrong-answer failures.
+
+#### Scenario: Compile and eval outcomes improve
+- **WHEN** the HL7 conformance suite is rerun after wave-1
+- **THEN** compile-error or eval-error totals SHALL be lower than the documented baseline
+
+#### Scenario: Correctness invariant is preserved
+- **WHEN** post-wave results are reported
+- **THEN** the wrong-answer `Fail` count SHALL remain `0`

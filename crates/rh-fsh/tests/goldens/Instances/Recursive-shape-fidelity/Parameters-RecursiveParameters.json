@@ -1,0 +1,15 @@
+{
+  "resourceType": "Parameters",
+  "id": "RecursiveParameters",
+  "parameter": [
+    {
+      "name": "outer",
+      "part": [
+        {
+          "name": "inner",
+          "valueString": "nested value"
+        }
+      ]
+    }
+  ]
+}

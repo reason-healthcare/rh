@@ -4,10 +4,10 @@ This plan prioritizes high-leverage exporter corrections before long-tail
 metadata work. Each phase should lower the stored project thresholds; thresholds
 must never be raised merely to make a run pass.
 
-**Progress (2026-07-12)**: Phase 0 and Phase 1 are complete. All 61 fixtures are
+**Progress (2026-07-14)**: Phase 0 and Phase 1 are complete. All 63 fixtures are
 verified and passing, all six projects have zero missing and extra resources,
-and the library suite has 138 passing tests. Shared-resource mismatches are down
-from 838 to 509. Phases 2–4 remain in progress; Phase 5 continues with lowered
+and the library suite has 150 passing tests. Shared-resource mismatches are down
+from 838 to 459. Phases 2–4 remain in progress; Phase 5 continues with lowered
 per-project thresholds.
 
 ## Success Criteria
@@ -16,7 +16,7 @@ The end state is:
 
 - Existing library tests remain green, with regression tests added for every
   corrected behavior.
-- All 61 fixture directories have reviewed SUSHI goldens and all fixtures pass.
+- All 62 fixture directories have reviewed SUSHI goldens and all fixtures pass.
 - All six project comparisons have zero missing and zero extra resources.
 - Shared-resource mismatches fall from 838 to zero, or any intentionally accepted
   normalization is explicitly documented and tested.
@@ -71,7 +71,7 @@ implemented alongside BackboneElement metadata, cardinality-aware arrays,
 CodeableConcept wrapping,
 dynamic choice typing, primitive shadows, recursive inline export, dependency
 fixed/pattern defaults, named/repeated slice materialization, and recursively
-materialized local required subextensions. JSON-shape leading gaps are 169; the
+materialized local required subextensions. JSON-shape leading gaps are 176; the
 below-100 milestone remains open.
 
 **Goal**: stop inferring JSON shape from assignment syntax alone.
@@ -220,8 +220,10 @@ SUSHI.
 
 **Status**: In progress. Hierarchical concepts, multiline ValueSet filters,
 SUSHI `fhirVersion` omission, and resource-aware instance titles are complete.
-IG publisher/contact metadata is implemented. Page/grouping/resource metadata
-and remaining terminology aliases are pending.
+IG root metadata, publisher/contact metadata, configured page trees, grouping,
+parameters, and explicit resource metadata are implemented. Inferred pages,
+dependency-supplied grouped resources, globals, and remaining terminology
+aliases are pending. Local resource ordering and default metadata are complete.
 
 **Goal**: close systematic non-instance differences.
 
@@ -237,6 +239,31 @@ and remaining terminology aliases are pending.
 
 **Milestone target**: terminology 22 → 0, metadata 29 → 0, and IG generation
 6 → 0.
+
+### Phase 4 delivery checkpoints
+
+1. **4A — Structured ImplementationGuide configuration (complete).** Parse and
+   export root title/description/license/experimental/extensions/jurisdiction,
+   publisher plus explicit contacts, recursively nested pages with page
+   extensions, artifact grouping, scalar and repeated parameters, automatic
+   history paths, and explicit per-resource metadata. On CRD the leading IG
+   difference moved from `definition.page.page[7].page`, through the completed
+   parameter array, to `definition.resource[0].description`. DTR likewise moved
+   past its nested page tree, while CARIN and mCODE now lead at resource
+   metadata. All six projects remain at zero missing and extra resources and at
+   the existing 509 total mismatch threshold; later differences are now exposed
+   without changing the first-difference resource counts.
+2. **4B — Local ImplementationGuide resource metadata (complete).** Order
+   definition resources by their SUSHI display names, preserve FSH instance
+   titles and descriptions outside the resource payload, emit `exampleBoolean`
+   for artifacts and unprofiled examples, and derive `exampleCanonical` from
+   local or dependency profile identities. CRD now matches its first five
+   definition resources and stops where its configured group introduces a
+   dependency-only CDS Hooks StructureDefinition. CARIN and mCODE likewise move
+   deeper into their resource arrays. All six projects remain at zero missing
+   and extra resources and 509 total first-difference mismatches; the remaining
+   IG ordering gaps require materializing dependency-only group entries before
+   the arrays can align completely.
 
 ## Phase 5: Burn Down Residual Project-specific Gaps
 
@@ -255,17 +282,63 @@ full runs produced identical results.
    improvement.
 5. Require two consecutive clean full runs before declaring project parity.
 
-**Current checkpoint**: 920/920 resource identities match; 411/920 match
-normalized content. Remaining mismatches: CARIN 76, mCODE 157, CRD 57, DTR 39,
-PAS 109, and IPS 71.
+**Current checkpoint**: 920/920 resource identities match; 461/920 match
+normalized content. Remaining mismatches: CARIN 53, mCODE 155, CRD 51, DTR 33,
+PAS 96, and IPS 71.
+
+### JSON-shape wave results (2026-07-14)
+
+Retained artifacts group the leading mCODE and CARIN JSON-shape paths into
+shared implementation families:
+
+| Family | Representative evidence | First implementation focus |
+|---|---|---|
+| Repeating BackboneElement | CARIN `adjudication` and `supportingInfo` slices omit profile-fixed categories or lose a repeated item | Apply dependency slice defaults through the same indexed tree path as explicit assignments |
+| Extension | mCODE named extension URLs and nested extension order differ from SUSHI | Resolve parent-scoped slice URLs and preserve stable named-slice order |
+| Bundle entry | mCODE embedded resources expose missing nested profile/default content | Preserve the embedded resource schema view and profile defaults during Bundle serialization |
+| Typed value | CARIN monetary decimals serialize integral values as `190.0` rather than SUSHI's `190` | Reuse FHIR decimal serialization for non-Quantity decimal assignments |
+
+The comparison manifest now retains each normalized mismatch's category,
+first-difference path, and JSON-shape family so focused fixtures can be tied
+to project evidence.
+
+### Phase 5 delivery checkpoints
+
+1. **5A — Local terminology canonical resolution (complete).** Reuse one local
+   CodeSystem resolver across instance and ValueSet export, and resolve local
+   ValueSet names or ids in compose imports to their canonical URLs. A focused
+   regression covers both system and valueSet references. Total mismatches fell
+   509 → 469: CARIN 76 → 55, mCODE 157 → 156, CRD 57 → 53, DTR 39 → 33, and PAS
+   109 → 101; IPS remained at 71. Missing and extra resources remain zero, and
+   all five improved project thresholds were lowered with the checkpoint.
+
+2. **5B — Differential fidelity and DTR/mCODE-shaped regressions (complete).**
+   Emit complete root invariant constraints, merge differential elements by id,
+   serialize slicing/type/binding/fixed values in their FHIR shapes, and cover
+   DTR Parameters, Questionnaire, QuestionnaireResponse, Bundle, and mCODE
+   dosage instances with SUSHI goldens. Full project comparisons were identical
+   across two consecutive runs. Total mismatches fell 469 → 463: CRD 53 → 52 and
+   PAS 101 → 96; their thresholds were lowered to those verified counts.
+
+3. **5C — Recursive JSON-shape fidelity (complete).** Route recursive
+   Bundle, Parameters, inline, primitive-shadow, extension, and repeating
+   BackboneElement assignments through the typed instance tree; preserve
+   dependency → local → explicit default precedence; serialize integral
+   decimals with SUSHI-compatible JSON numbers; and resolve standard core
+   extension slice URLs without allowing core extension names to shadow resource
+   types. The reviewed fixture now covers those recursive shapes, and retained
+   diagnostics classify their first-difference paths. Two full runs matched
+   exactly by resource status and category summary. Total mismatches fell
+   463 → 459: CARIN 55 → 53, mCODE 156 → 155, and CRD 52 → 51. CARIN, mCODE,
+   and CRD thresholds were lowered to the verified counts.
 
 **Next delivery order**:
 
 1. Complete recursive schema shaping for extension arrays, Bundle entries,
-   Parameters, dependency-default precedence, and primitive shadow fields (169
+   Parameters, dependency-default precedence, and primitive shadow fields (176
    leading JSON-shape gaps).
 2. Export root constraints, context, slicing, bindings, fixed/pattern values,
-   and differential element merging (234 StructureDefinition gaps).
+   and differential element merging (217 StructureDefinition gaps).
 3. Preserve nested indentation context in instance rules and finish local
    CodeSystem/ValueSet canonical resolution.
 4. Map IG pages, grouping, globals, parameters, and resource metadata, then

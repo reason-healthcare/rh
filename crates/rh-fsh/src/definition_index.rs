@@ -237,7 +237,18 @@ fn index_dependency_sd(definition: &DependencyStructureDefinition) -> IndexedStr
 
 fn definition_keys(definition: &IndexedStructureDefinition) -> Vec<String> {
     let mut keys = Vec::new();
-    push_key(&mut keys, definition.name.as_deref());
+    // A core extension's logical name can equal an unrelated resource type
+    // (for example `FamilyMemberHistory`). Its id and canonical URL remain
+    // resolvable, but indexing that display name would shadow the resource
+    // while compiling profile defaults for an instance of the same name.
+    let is_core_extension = matches!(
+        &definition.source,
+        DefinitionSource::Dependency { package_id, .. }
+            if package_id == "hl7.fhir.r4.core"
+    ) && definition.type_.as_deref() == Some("Extension");
+    if !is_core_extension {
+        push_key(&mut keys, definition.name.as_deref());
+    }
     push_key(&mut keys, definition.id.as_deref());
     push_key(&mut keys, definition.url.as_deref());
 
@@ -344,6 +355,42 @@ mod tests {
         assert!(index.lookup("us-core-patient").is_some());
         assert!(index
             .lookup("http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient")
+            .is_some());
+    }
+
+    #[test]
+    fn indexes_core_extensions_by_id_without_shadowing_resource_names() {
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![DependencyStructureDefinition {
+                package_id: "hl7.fhir.r4.core".to_string(),
+                version: "4.0.1".to_string(),
+                path: PathBuf::from(
+                    "StructureDefinition-DiagnosticReport-geneticsFamilyMemberHistory.json",
+                ),
+                id: Some("DiagnosticReport-geneticsFamilyMemberHistory".to_string()),
+                url: Some(
+                    "http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory"
+                        .to_string(),
+                ),
+                name: Some("FamilyMemberHistory".to_string()),
+                title: None,
+                kind: Some("complex-type".to_string()),
+                type_: Some("Extension".to_string()),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Extension".to_string(),
+                ),
+                derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
+            }],
+            warnings: Vec::new(),
+        };
+
+        let index = build_definition_index(&empty_tank(), &FshConfig::default(), &dependencies);
+
+        assert!(index.lookup("FamilyMemberHistory").is_none());
+        assert!(index
+            .lookup("DiagnosticReport-geneticsFamilyMemberHistory")
             .is_some());
     }
 

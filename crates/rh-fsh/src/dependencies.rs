@@ -100,10 +100,28 @@ pub fn load_dependency_structure_definitions_from_dir(
     let mut definitions = DependencyDefinitionSet::default();
 
     let core_package = packages_dir.join("hl7.fhir.r4.core#4.0.1/package");
-    for name in ["vitalsigns", "bodyheight", "bodyweight", "bodytemp"] {
-        let path = core_package.join(format!("StructureDefinition-{name}.json"));
-        if path.is_file() {
-            load_structure_definition_file("hl7.fhir.r4.core", "4.0.1", path, &mut definitions)?;
+    if core_package.is_dir() {
+        // Core extensions are valid `contains` targets even when they are not
+        // declared in sushi-config.yaml. Index their metadata so a named slice
+        // resolves to its canonical URL rather than its local alias.
+        load_package_structure_definitions(
+            "hl7.fhir.r4.core",
+            "4.0.1",
+            &core_package,
+            &mut definitions,
+            true,
+        )?;
+        for name in ["vitalsigns", "bodyheight", "bodyweight", "bodytemp"] {
+            let path = core_package.join(format!("StructureDefinition-{name}.json"));
+            if path.is_file() {
+                load_structure_definition_file(
+                    "hl7.fhir.r4.core",
+                    "4.0.1",
+                    path,
+                    &mut definitions,
+                    false,
+                )?;
+            }
         }
     }
 
@@ -126,11 +144,29 @@ pub fn load_dependency_structure_definitions_from_dir(
             &dependency.version,
             &package_dir,
             &mut definitions,
+            false,
         )?;
     }
 
     definitions.structure_definitions.sort_by(|a, b| {
-        (&a.package_id, &a.version, &a.url, &a.id).cmp(&(&b.package_id, &b.version, &b.url, &b.id))
+        // The built-in core package is a fallback. A declared IG dependency can
+        // legitimately reuse a core definition name (for example, mCODE's
+        // `GenomicVariant` Observation profile versus the core extension of
+        // that name), so it must be indexed first.
+        (
+            a.package_id == "hl7.fhir.r4.core",
+            &a.package_id,
+            &a.version,
+            &a.url,
+            &a.id,
+        )
+            .cmp(&(
+                b.package_id == "hl7.fhir.r4.core",
+                &b.package_id,
+                &b.version,
+                &b.url,
+                &b.id,
+            ))
     });
 
     Ok(definitions)
@@ -141,6 +177,7 @@ fn load_package_structure_definitions(
     version: &str,
     dir: &Path,
     definitions: &mut DependencyDefinitionSet,
+    extensions_only: bool,
 ) -> Result<(), FshError> {
     for entry in fs::read_dir(dir).map_err(|e| FshError::Export {
         message: format!("failed to read dependency package {}: {e}", dir.display()),
@@ -154,7 +191,13 @@ fn load_package_structure_definitions(
         let path = entry.path();
 
         if path.is_dir() {
-            load_package_structure_definitions(package_id, version, &path, definitions)?;
+            load_package_structure_definitions(
+                package_id,
+                version,
+                &path,
+                definitions,
+                extensions_only,
+            )?;
             continue;
         }
 
@@ -162,7 +205,7 @@ fn load_package_structure_definitions(
             continue;
         }
 
-        load_structure_definition_file(package_id, version, path, definitions)?;
+        load_structure_definition_file(package_id, version, path, definitions, extensions_only)?;
     }
 
     Ok(())
@@ -173,6 +216,7 @@ fn load_structure_definition_file(
     version: &str,
     path: PathBuf,
     definitions: &mut DependencyDefinitionSet,
+    extensions_only: bool,
 ) -> Result<(), FshError> {
     let text = fs::read_to_string(&path).map_err(|e| FshError::Export {
         message: format!("failed to read dependency resource {}: {e}", path.display()),
@@ -195,6 +239,10 @@ fn load_structure_definition_file(
                 path.display()
             ),
         })?;
+
+    if extensions_only && raw.type_.as_deref() != Some("Extension") {
+        return Ok(());
+    }
 
     let differential_elements = raw
         .differential
@@ -439,6 +487,104 @@ mod tests {
             "Patient.communication:required.language"
         );
         assert_eq!(definition.fixed_values[0].value["coding"][0]["code"], "en");
+
+        fs::remove_dir_all(packages_dir).ok();
+    }
+
+    #[test]
+    fn loads_core_extension_definitions_for_slice_url_resolution() {
+        let packages_dir = temp_package_root("core-extension");
+        let core_dir = packages_dir.join("hl7.fhir.r4.core#4.0.1/package");
+        fs::create_dir_all(&core_dir).expect("core package dir");
+        fs::write(
+            core_dir.join("StructureDefinition-condition-related.json"),
+            r#"{
+              "resourceType": "StructureDefinition",
+              "id": "condition-related",
+              "url": "http://hl7.org/fhir/StructureDefinition/condition-related",
+              "name": "ConditionRelated",
+              "kind": "complex-type",
+              "type": "Extension",
+              "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+              "derivation": "constraint"
+            }"#,
+        )
+        .expect("write core extension");
+
+        let definitions =
+            load_dependency_structure_definitions_from_dir(&FshConfig::default(), &packages_dir)
+                .expect("core package loads");
+
+        assert_eq!(definitions.warnings, Vec::<String>::new());
+        assert_eq!(definitions.structure_definitions.len(), 1);
+        let definition = &definitions.structure_definitions[0];
+        assert_eq!(definition.package_id, "hl7.fhir.r4.core");
+        assert_eq!(definition.id.as_deref(), Some("condition-related"));
+        assert_eq!(
+            definition.url.as_deref(),
+            Some("http://hl7.org/fhir/StructureDefinition/condition-related")
+        );
+
+        fs::remove_dir_all(packages_dir).ok();
+    }
+
+    #[test]
+    fn indexes_declared_dependency_definitions_before_core_name_collisions() {
+        let packages_dir = temp_package_root("core-collision");
+        let core_dir = packages_dir.join("hl7.fhir.r4.core#4.0.1/package");
+        let dependency_dir = packages_dir.join("example.ig#1.0.0/package");
+        fs::create_dir_all(&core_dir).expect("core package dir");
+        fs::create_dir_all(&dependency_dir).expect("dependency package dir");
+        fs::write(
+            core_dir.join("StructureDefinition-observation-geneticsVariant.json"),
+            r#"{
+              "resourceType": "StructureDefinition",
+              "id": "observation-geneticsVariant",
+              "url": "http://hl7.org/fhir/StructureDefinition/observation-geneticsVariant",
+              "name": "GenomicVariant",
+              "kind": "complex-type",
+              "type": "Extension",
+              "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+              "derivation": "constraint"
+            }"#,
+        )
+        .expect("write core extension");
+        fs::write(
+            dependency_dir.join("StructureDefinition-example-genomic-variant.json"),
+            r#"{
+              "resourceType": "StructureDefinition",
+              "id": "example-genomic-variant",
+              "url": "http://example.org/StructureDefinition/example-genomic-variant",
+              "name": "GenomicVariant",
+              "kind": "resource",
+              "type": "Observation",
+              "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+              "derivation": "constraint"
+            }"#,
+        )
+        .expect("write dependency profile");
+        let config = FshConfig {
+            dependencies: vec![FshDependency {
+                package_id: "example.ig".to_string(),
+                version: "1.0.0".to_string(),
+                id: None,
+                uri: None,
+            }],
+            ..Default::default()
+        };
+
+        let definitions = load_dependency_structure_definitions_from_dir(&config, &packages_dir)
+            .expect("packages load");
+
+        assert_eq!(definitions.structure_definitions.len(), 2);
+        assert_eq!(
+            definitions.structure_definitions[0].package_id,
+            "example.ig"
+        );
+        assert_eq!(
+            definitions.structure_definitions[1].package_id,
+            "hl7.fhir.r4.core"
+        );
 
         fs::remove_dir_all(packages_dir).ok();
     }

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-library-resolution
+
+## Purpose
+
+Defines resolution, compilation, and evaluation of CQL libraries and their dependencies.
+
+## Requirements
 
 ### Requirement: LibrarySourceProvider wired into compile pipeline
 

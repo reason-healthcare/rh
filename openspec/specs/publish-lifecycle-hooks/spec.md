@@ -38,8 +38,8 @@ The following hook stages SHALL be supported:
 
 ### Requirement: Unknown processor names fail at pipeline startup
 
-If `publisher.toml` declares a processor name that is not a registered built-in, the publisher
-SHALL fail immediately at startup before reading any resources.
+The publisher SHALL fail immediately at startup before reading any resources if `publisher.toml`
+declares a processor name that is not a registered built-in.
 
 #### Scenario: Unknown processor name aborts before any work
 - **WHEN** `publisher.toml` contains `before_build = ["unknown-processor"]`
@@ -47,8 +47,8 @@ SHALL fail immediately at startup before reading any resources.
 
 ### Requirement: First processor failure aborts the pipeline
 
-Processors within a stage run sequentially in declaration order. If any processor returns an
-error, the pipeline SHALL abort immediately without running subsequent processors or stages.
+The pipeline SHALL run processors within a stage sequentially in declaration order and abort
+immediately without running subsequent processors or stages if any processor returns an error.
 
 #### Scenario: First failure prevents subsequent processors from running
 - **WHEN** `before_build = ["snapshot", "validate"]` and `snapshot` fails

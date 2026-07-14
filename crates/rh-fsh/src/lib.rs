@@ -50,6 +50,18 @@ pub struct FshConfig {
     pub name: Option<String>,
     /// Resource status: active, draft, retired, unknown
     pub status: Option<String>,
+    /// Human-readable ImplementationGuide title.
+    pub title: Option<String>,
+    /// ImplementationGuide description.
+    pub description: Option<String>,
+    /// SPDX license code.
+    pub license: Option<String>,
+    /// Whether the guide is experimental.
+    pub experimental: Option<bool>,
+    /// Root extensions copied from `sushi-config.yaml`.
+    pub extensions: Vec<serde_json::Value>,
+    /// Jurisdiction coding copied from `sushi-config.yaml`.
+    pub jurisdiction: Option<FshCoding>,
     /// Publisher name
     pub publisher: Option<String>,
     /// Implementation guide contacts normalized from `sushi-config.yaml`.
@@ -58,6 +70,50 @@ pub struct FshConfig {
     pub version: Option<String>,
     /// Dependency packages declared by the project config.
     pub dependencies: Vec<FshDependency>,
+    /// Ordered guide pages.
+    pub pages: Vec<FshPage>,
+    /// Ordered artifact groups.
+    pub groups: Vec<FshGroup>,
+    /// Publisher parameters.
+    pub parameters: Vec<(String, String)>,
+    /// Per-resource ImplementationGuide metadata.
+    pub resources: indexmap::IndexMap<String, FshResourceMetadata>,
+}
+
+/// A simple coding declared in project configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshCoding {
+    pub system: String,
+    pub code: String,
+    pub display: Option<String>,
+}
+
+/// A page declared in project configuration.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FshPage {
+    pub source: String,
+    pub title: String,
+    pub extensions: Vec<serde_json::Value>,
+    pub pages: Vec<FshPage>,
+}
+
+/// An artifact grouping declared in project configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshGroup {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub resources: Vec<String>,
+}
+
+/// Metadata for a resource listed in an ImplementationGuide.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshResourceMetadata {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub example_canonical: Option<String>,
+    pub example_boolean: Option<bool>,
+    pub grouping_id: Option<String>,
 }
 
 /// Contact details declared by a FSH project.

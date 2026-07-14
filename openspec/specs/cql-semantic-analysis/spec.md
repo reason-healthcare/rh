@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-semantic-analysis
+
+## Purpose
+
+Defines semantic analysis from parsed CQL to a fully typed intermediate representation.
+
+## Requirements
 
 ### Requirement: SemanticAnalyzer produces TypedLibrary from parser AST
 

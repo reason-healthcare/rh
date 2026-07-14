@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-parser-conformance
+
+## Purpose
+
+Defines conformance requirements for CQL parser syntax and grammar coverage.
+
+## Requirements
 
 ### Requirement: Parser supports predecessor and successor keywords
 

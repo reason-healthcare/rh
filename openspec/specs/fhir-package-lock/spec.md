@@ -7,7 +7,7 @@ canonical references in FHIR source resources against installed dependency packa
 the resolved mappings in `fhir-lock.json`. Also specifies how `rh package build` applies
 canonical pinning from the lock file.
 
-## Canonical Field Scoping
+**Canonical field scoping.**
 
 Pinning is applied only to JSON fields of FHIR type `canonical`. The following field names
 are recognised as canonical-typed and are the only fields inspected or modified:
@@ -52,8 +52,8 @@ packages.
 
 ### Requirement: rh package lock requires dependency packages to be pre-downloaded
 
-If a package listed in `package.json` `dependencies` is not present in the configured packages
-directory, `rh package lock` SHALL fail with a clear error identifying the missing package.
+`rh package lock` SHALL fail with a clear error identifying a dependency package that is listed
+in `package.json` but absent from the configured packages directory.
 
 #### Scenario: Missing dependency package fails with named error
 - **WHEN** `package.json` declares `"hl7.fhir.us.core": "6.1.0"` as a dependency but that package is not present in `~/.fhir/packages/`

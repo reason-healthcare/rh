@@ -1,18 +1,18 @@
 # rh-fsh Conformance Gap Report
 
-**Run date**: 2026-07-12
+**Run date**: 2026-07-14
 **Reference**: SUSHI 3.19.0, implementing FSH 3.0.0  
-**Scope**: 61 local fixtures and six pinned implementation guide projects
+**Scope**: 63 local fixtures and six pinned implementation guide projects
 
 ## Executive Summary
 
 Resource generation and identity are now complete for the measured corpus. All
-61 fixture comparisons pass, all 138 library tests pass, and rh-fsh emits the
+63 fixture comparisons pass, all 150 library tests pass, and rh-fsh emits the
 same 920 `(resourceType, id)` pairs as SUSHI across 379 real-project FSH files.
 There are no missing or extra resources.
 
-Content parity remains incomplete. Of the 920 shared resources, 411 (44.7%)
-match exactly after normalization and 509 (55.3%) have at least one JSON
+Content parity remains incomplete. Of the 920 shared resources, 461 (50.1%)
+match exactly after normalization and 459 (49.9%) have at least one JSON
 difference.
 
 A project passing its threshold means it did not regress past this checked-in
@@ -48,8 +48,8 @@ restores the pinned revision but refuses to replace a dirty checkout.
 
 | Layer | Passed | Failed | Unverified | Total |
 |---|---:|---:|---:|---:|
-| Library unit tests | 138 | 0 | 0 | 138 |
-| SUSHI golden fixtures | 61 | 0 | 0 | 61 |
+| Library unit tests | 150 | 0 | 0 | 150 |
+| SUSHI golden fixtures | 63 | 0 | 0 | 63 |
 
 All fixture directories contain either reviewed SUSHI JSON or a
 `.sushi-empty` marker proving that SUSHI intentionally emitted no resources.
@@ -60,13 +60,13 @@ workflow explicitly runs the ignored compatibility suite.
 
 | Project | FSH files | SUSHI | rh-fsh | Missing | Extra | Mismatch | Exact match |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | 71 | 134 | 134 | 0 | 0 | 76 | 58 |
-| mCODE | 57 | 350 | 350 | 0 | 0 | 157 | 193 |
-| Da Vinci CRD | 69 | 85 | 85 | 0 | 0 | 57 | 28 |
-| Da Vinci DTR | 39 | 75 | 75 | 0 | 0 | 39 | 36 |
-| Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 109 | 49 |
+| CARIN Blue Button | 71 | 134 | 134 | 0 | 0 | 53 | 81 |
+| mCODE | 57 | 350 | 350 | 0 | 0 | 155 | 195 |
+| Da Vinci CRD | 69 | 85 | 85 | 0 | 0 | 51 | 34 |
+| Da Vinci DTR | 39 | 75 | 75 | 0 | 0 | 33 | 42 |
+| Da Vinci PAS | 20 | 158 | 158 | 0 | 0 | 96 | 62 |
 | IPS | 123 | 118 | 118 | 0 | 0 | 71 | 47 |
-| **Total** | **379** | **920** | **920** | **0** | **0** | **509** | **411** |
+| **Total** | **379** | **920** | **920** | **0** | **0** | **459** | **461** |
 
 ## Closed Gaps
 
@@ -110,11 +110,20 @@ The rerun and implementation work closed the following high-impact gaps:
   are array-wrapped even when the FSH uses `^contact.telecom` shorthand. This
   corrected the leading contact shape on 31 IPS StructureDefinitions; later
   differences keep those resources in the mismatch total.
+- ValueSet compose systems and imported ValueSets resolve local names and ids
+  to their canonical URLs. This removed 40 leading terminology differences
+  across five projects.
 - The harness pins SUSHI and project revisions, detects duplicate identities,
   records complete counts, and no longer accepts missing goldens as passes.
+- Recursive instance export now applies dependency, local-profile, and explicit
+  assignments through one typed tree; preserves primitive shadows, Bundle and
+  Parameters recursion, integral decimal shape, and core extension canonical
+  URLs without allowing core extension names to shadow resources. Two retained
+  full-corpus manifests matched exactly before the CARIN, mCODE, and CRD
+  thresholds were reduced.
 
 These fixes reduced the original 43 missing, 149 extra, and 838 mismatched
-resources to 0 missing, 0 extra, and 509 mismatched resources.
+resources to 0 missing, 0 extra, and 459 mismatched resources.
 
 ## Remaining Gap Categories
 
@@ -123,19 +132,18 @@ difference. Counts therefore measure affected resources, not all bad fields.
 
 | Category | Count | Share | Primary remaining work |
 |---|---:|---:|---|
-| JSON shape | 168 | 33.0% | Dependency-backed extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
-| StructureDefinition | 223 | 43.8% | Root constraints, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
-| Other | 66 | 13.0% | Reference details, uncategorized project-specific fields, and metadata paths that need narrower classifiers |
-| Metadata | 41 | 8.1% | Resource-specific defaults, names, descriptions, and derived metadata |
-| IG generation | 6 | 1.2% | Page trees, grouping, globals, parameters, and definition resource metadata |
-| Terminology | 5 | 1.0% | Concept properties and remaining CodeSystem/ValueSet canonical/compose differences |
+| JSON shape | 176 | 38.3% | Dependency-backed extension ordering, Bundle/Parameters recursion, optional backbone defaults, and remaining primitive shadow alignment |
+| StructureDefinition | 217 | 47.3% | Root constraints, differential merging/order, slices, bindings, fixed/pattern values, cardinalities, and type profiles |
+| Other | 14 | 3.0% | Reference details and uncategorized project-specific fields that need narrower classifiers |
+| Metadata | 41 | 8.9% | Resource-specific defaults, names, descriptions, and derived metadata |
+| IG generation | 6 | 1.3% | Dependency-only grouping resources, inferred pages, globals, and definition resource metadata |
+| Terminology | 5 | 1.1% | Concept properties and remaining CodeSystem/ValueSet compose differences |
 | Resource identity | 0 | 0.0% | Closed for the pinned corpus |
 
-### JSON shape: 168 resources
+### JSON shape: 176 resources
 
-This group has fallen by 268 resources and is now concentrated in mCODE (97),
-CARIN (31), PAS (18), and IPS (12). Canonical local parent lineage removed one
-CARIN leading shape difference in this checkpoint. Repeated examples include:
+This group is now concentrated in mCODE (97), CARIN (30), PAS (18), and IPS
+(11). Repeated examples include:
 
 - extensions emitted at the wrong nesting level or without aligned primitive
   `_field` companions;
@@ -150,12 +158,13 @@ The next implementation slice should make the recursive path-shape service the
 only route for instance, contained, inline, Bundle, and Parameters assignments,
 then define safe precedence rules before enabling dependency-derived defaults.
 
-### StructureDefinition: 223 resources
+### StructureDefinition: 217 resources
 
-FHIR-correct extension context arrays reduced this leading category by 11 PAS
-resources. Parent canonical URLs, logical paths, choice slices, and indexed
-caret paths have also improved within many resources. Remaining first
-differences are dominated by:
+Full invariant constraints, differential element merging, slicing metadata,
+local profile type references, and fixed/pattern scalar values reduced this
+leading category by six resources. Parent canonical URLs, logical paths, choice
+slices, and indexed caret paths have also improved within many resources.
+Remaining first differences are dominated by:
 
 - constraints attached to the root differential element;
 - complex slicing and reslicing;
@@ -166,11 +175,16 @@ differences are dominated by:
 The comparison currently reports only the first difference per resource. A
 differential-aware diagnostic should report all bad element ids in one run.
 
-### IG, terminology, metadata, and other: 85 resources
+### IG, terminology, metadata, and other: 66 resources
 
-Every ImplementationGuide still differs, normally first at `definition.page`
-or `definition.grouping`. Publisher/contact parity is implemented, but page
-trees, grouping, globals, parameters, and resource metadata are not.
+Every ImplementationGuide still differs. Configured page trees, grouping,
+parameters, root metadata, and publisher plus explicit contacts are implemented;
+Local definition resources now use SUSHI display-name ordering, FSH instance
+titles/descriptions, and profile-aware example metadata. CARIN, mCODE, CRD, and
+DTR move deeper into their resource arrays but still diverge where configured
+groups introduce dependency-only entries. Remaining work includes those group
+entries, inferred pages when `pages` is omitted, globals, and long-tail example
+defaults.
 
 Terminology gaps are now small and mainly involve concept properties and local
 canonical resolution. The broad `other` group should be split as fixes proceed;

@@ -1,0 +1,46 @@
+{
+  "resourceType": "Bundle",
+  "id": "DTRQuestionnaireBundle",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "http://example.org/Questionnaire/dtr-questionnaire",
+      "resource": {
+        "resourceType": "Questionnaire",
+        "id": "dtr-questionnaire",
+        "url": "http://example.org/Questionnaire/dtr-questionnaire",
+        "status": "active",
+        "item": [
+          {
+            "linkId": "medication",
+            "text": "Medication",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "http://example.org/QuestionnaireResponse/dtr-questionnaire-response",
+      "resource": {
+        "resourceType": "QuestionnaireResponse",
+        "id": "DTRQuestionnaireResponse",
+        "status": "completed",
+        "questionnaire": "http://example.org/Questionnaire/dtr-questionnaire",
+        "subject": {
+          "reference": "Patient/example"
+        },
+        "item": [
+          {
+            "linkId": "medication",
+            "text": "Medication",
+            "answer": [
+              {
+                "valueString": "Example medication"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

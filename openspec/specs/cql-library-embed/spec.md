@@ -44,8 +44,8 @@ the CQL source and ELM JSON as base64-encoded `content[]` entries per the CQL IG
 
 ### Requirement: cql processor creates a minimal Library resource when none exists
 
-If no matching `Library-<name>.json` exists in the resource map for a given CQL file, the `cql`
-processor SHALL create a minimal conformant `Library` resource, add it to the in-memory resource
+The `cql` processor SHALL create a minimal conformant `Library` resource when no matching
+`Library-<name>.json` exists in the resource map for a CQL file, add it to the in-memory resource
 map, and emit an informational message recommending the author add the resource to the source
 directory.
 
@@ -59,8 +59,8 @@ directory.
 
 ### Requirement: cql processor sets Library type to logic-library when absent
 
-If a matched or auto-created Library resource does not have a `type` element, the `cql`
-processor SHALL set it to the `logic-library` code from the `library-type` CodeSystem.
+The `cql` processor SHALL set a matched or auto-created Library resource without a `type`
+element to the `logic-library` code from the `library-type` CodeSystem.
 
 #### Scenario: Missing type is set to logic-library
 - **WHEN** `Library-MyLibrary.json` exists with no `type` element and a matching CQL file is compiled

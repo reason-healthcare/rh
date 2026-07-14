@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-elm-emitter
+
+## Purpose
+
+Defines deterministic ELM emission from the typed CQL intermediate representation.
+
+## Requirements
 
 ### Requirement: ElmEmitter consumes TypedLibrary and produces elm::Library
 
@@ -14,7 +20,7 @@ The `ElmEmitter` SHALL accept a `TypedLibrary` (from the semantic analyzer) and 
 
 ### Requirement: System functions emit as native ELM types
 
-System functions (`Abs`, `Ceiling`, `Floor`, `Truncate`, `Round`, `Ln`, `Exp`, `Log`, `Power`, `Predecessor`, `Successor`) SHALL emit as their dedicated ELM expression types, not as `FunctionRef` nodes.
+System functions (`Abs`, `Ceiling`, `Floor`, `Truncate`, `Round`, `Ln`, `Exp`, `Log`, `Power`, `Predecessor`, `Successor`) SHALL emit as their dedicated ELM expression types in all supported emitter paths, not as `FunctionRef` nodes.
 
 #### Scenario: Abs emits as native ELM type
 - **WHEN** a Typed AST node for `Abs(-5)` is emitted
@@ -24,9 +30,13 @@ System functions (`Abs`, `Ceiling`, `Floor`, `Truncate`, `Round`, `Ln`, `Exp`, `
 - **WHEN** a Typed AST node for `2 ^ 3` is emitted
 - **THEN** the ELM output is a `Power` expression with two operands
 
+#### Scenario: Log emits as native ELM type
+- **WHEN** a Typed AST node for `Log(100, 10)` is emitted
+- **THEN** the ELM output is a `Log` expression, not a `FunctionRef`
+
 ### Requirement: Negative literals emit as Negate wrapping Literal
 
-Negative numeric literals SHALL emit as `Negate(Literal(n))` where `n` is the positive value, not as `Literal(-n)`.
+Negative numeric literals SHALL emit as `Negate(Literal(n))` where `n` is the positive value, not as `Literal(-n)`, in every emitter path used by conformance tests.
 
 #### Scenario: Negative integer literal
 - **WHEN** the CQL literal `-5` is emitted
@@ -35,6 +45,19 @@ Negative numeric literals SHALL emit as `Negate(Literal(n))` where `n` is the po
 #### Scenario: Negative decimal literal
 - **WHEN** the CQL literal `-3.14` is emitted
 - **THEN** the ELM output is `Negate` wrapping `Literal { valueType: Decimal, value: "3.14" }`
+
+### Requirement: Emitter conformance regression checks preserve native emission
+
+The project SHALL include emitter regression tests that fail when system functions regress to
+`FunctionRef` output or negative literals regress to a single negative literal form.
+
+#### Scenario: System function regression is detected
+- **WHEN** a future change emits `Abs` as `FunctionRef`
+- **THEN** emitter conformance tests SHALL fail with a native-emission expectation failure
+
+#### Scenario: Negative literal regression is detected
+- **WHEN** a future change emits `-5` as a single negative literal
+- **THEN** emitter conformance tests SHALL fail with a canonical literal-shape expectation failure
 
 ### Requirement: Integer division promotes operands to Decimal
 
