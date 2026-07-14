@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -16,6 +17,52 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ComparisonReportTests(unittest.TestCase):
+    def test_new_project_is_checked_out_at_the_pinned_revision(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            projects = root / "projects"
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.org"],
+                cwd=source,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Test User"], cwd=source, check=True
+            )
+            (source / "fixture.fsh").write_text("Profile: Fixture\nParent: Patient\n")
+            subprocess.run(["git", "add", "."], cwd=source, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=source, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=source,
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+
+            project = MODULE.ensure_project(
+                "fixture", str(source), revision, projects, update=False
+            )
+
+            checked_out = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=project,
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+            dirty = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=project,
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            ).stdout.strip()
+            self.assertEqual(checked_out, revision)
+            self.assertEqual(dirty, "")
+
     def test_identity_pairing_retains_duplicate_resource_ids(self):
         missing = ["Coverage/example", "Patient/example"]
         extra = [

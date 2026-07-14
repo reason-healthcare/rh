@@ -1780,6 +1780,34 @@ InstanceOf: Tumor
     }
 
     #[test]
+    fn resolves_named_core_extensions_without_a_package_cache() {
+        let package = crate::FshCompiler::new(crate::CompilerOptions::default())
+            .compile(
+                r#"
+Profile: RelatedCondition
+Parent: Condition
+* extension contains condition-related named relatedPrimaryCancerCondition 0..1
+
+Instance: related-condition-example
+InstanceOf: RelatedCondition
+* extension[relatedPrimaryCancerCondition].valueReference = Reference(Condition/primary-cancer)
+"#,
+                "named-core-extension.fsh",
+            )
+            .expect("FSH compiles");
+        let instance = package
+            .resources
+            .iter()
+            .find(|resource| resource["id"] == "related-condition-example")
+            .expect("instance exists");
+
+        assert_eq!(
+            instance["extension"][0]["url"],
+            "http://hl7.org/fhir/StructureDefinition/condition-related"
+        );
+    }
+
+    #[test]
     fn preserves_required_extension_urls_in_resources_and_recursive_embeddings() {
         let config = FshConfig {
             canonical: Some("http://example.org/fhir".to_string()),

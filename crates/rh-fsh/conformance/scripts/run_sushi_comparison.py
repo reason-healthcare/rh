@@ -180,8 +180,10 @@ def main() -> int:
 def ensure_project(
     name: str, repo: str, revision: str, projects_dir: Path, update: bool
 ) -> Path:
+    projects_dir.mkdir(parents=True, exist_ok=True)
     project_dir = projects_dir / name
-    if not project_dir.exists():
+    created = not project_dir.exists()
+    if created:
         run(
             ["git", "clone", "--filter=blob:none", "--no-checkout", repo, str(project_dir)],
             cwd=projects_dir,
@@ -195,12 +197,12 @@ def ensure_project(
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     ).stdout.strip()
-    if current != revision:
-        if not update:
-            raise RuntimeError(
-                f"{name} is at {current or 'no revision'}, expected {revision}; "
-                "rerun with --update-projects"
-            )
+    if current != revision and not update:
+        raise RuntimeError(
+            f"{name} is at {current or 'no revision'}, expected {revision}; "
+            "rerun with --update-projects"
+        )
+    if current != revision and not created:
         dirty = subprocess.run(
             ["git", "status", "--porcelain"],
             cwd=project_dir,
@@ -210,8 +212,9 @@ def ensure_project(
         ).stdout.strip()
         if dirty:
             raise RuntimeError(f"refusing to replace modified conformance project {name}")
+    if created or current != revision:
         run(["git", "fetch", "--depth", "1", "origin", revision], cwd=project_dir)
-        run(["git", "checkout", "--detach", revision], cwd=project_dir)
+        run(["git", "checkout", "--force", "--detach", revision], cwd=project_dir)
     return project_dir
 
 

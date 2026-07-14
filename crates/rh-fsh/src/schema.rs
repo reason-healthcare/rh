@@ -461,7 +461,10 @@ fn compile_extension_slices(
         })
         .flatten()
         .filter_map(|item| {
-            let url = definitions.lookup(&item.name)?.url.clone()?;
+            let url = definitions
+                .lookup(&item.name)
+                .and_then(|definition| definition.url.clone())
+                .or_else(|| unresolved_core_extension_url(&item.name))?;
             Some(ExtensionSliceShape {
                 name: item.alias.clone().unwrap_or_else(|| item.name.clone()),
                 url,
@@ -470,6 +473,18 @@ fn compile_extension_slices(
             })
         })
         .collect()
+}
+
+fn unresolved_core_extension_url(name: &str) -> Option<String> {
+    // The default package cache is optional, but FSH's hyphenated core
+    // extension identifiers still resolve to R4 canonicals in SUSHI. Keep the
+    // same behavior when that cache is unavailable; declared local and package
+    // definitions above always take precedence.
+    (name.contains('-')
+        && !name.starts_with("http://")
+        && !name.starts_with("https://")
+        && !name.starts_with("urn:"))
+    .then(|| format!("http://hl7.org/fhir/StructureDefinition/{name}"))
 }
 
 fn extension_lookup_keys(value: &str) -> Vec<String> {

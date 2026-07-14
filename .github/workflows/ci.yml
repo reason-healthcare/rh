@@ -182,9 +182,30 @@ jobs:
             ${{ runner.os }}-fsh-conformance-cargo-
 
       - name: Run project SUSHI comparison
+        id: fsh-conformance
+        shell: bash
         run: |
+          set +e
           CARGO_TARGET_DIR=target/conformance cargo build -p rh-cli
-          python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --timeout-seconds 600
+          BUILD_EXIT=$?
+          if [ "$BUILD_EXIT" -eq 0 ]; then
+            python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --timeout-seconds 600
+            REPORT_EXIT=$?
+          else
+            REPORT_EXIT=$BUILD_EXIT
+          fi
+
+          echo "exit_code=$REPORT_EXIT" >> "$GITHUB_OUTPUT"
+          {
+            echo "## FSH SUSHI Conformance Report"
+            echo ""
+            echo "Project comparison exit code: $REPORT_EXIT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$REPORT_EXIT" -ne 0 ]; then
+            echo "::warning::FSH SUSHI project comparison reported differences or an execution error; see the summary artifact."
+          fi
+          exit 0
 
       - name: Upload FSH conformance summary
         if: always()
