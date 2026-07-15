@@ -8,7 +8,9 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
-use crate::output::{Envelope, ExitCode, OutputContext, OutputFormat};
+use crate::output::{
+    error_envelope, Envelope, EnvelopeError, ExitCode, OutputContext, OutputFormat,
+};
 
 use rh_cql::analytics::{
     data_requirements, emit_measure_runtime_manifest, emit_sql_query_library, emit_sql_text,
@@ -783,17 +785,67 @@ fn build_compiler_options(
     opts
 }
 
-/// Print a fatal pipeline error to stderr and exit with the parse-error code.
-fn exit_on_compile_error(e: impl std::fmt::Display) -> ! {
-    eprintln!("✗ {e}");
+fn parse_error_location(message: &str) -> Option<(usize, usize)> {
+    let (_, location) = message.split_once("line ")?;
+    let (line, location) = location.split_once(", column ")?;
+    let column = location
+        .split(|character: char| !character.is_ascii_digit())
+        .next()?;
+    Some((line.parse().ok()?, column.parse().ok()?))
+}
+
+fn compile_envelope_error(
+    code: &'static str,
+    message: impl Into<String>,
+    location: Option<(usize, usize)>,
+) -> EnvelopeError {
+    let error = EnvelopeError::new(code, message);
+    match location {
+        Some((line, column)) => error.with_span(format!("{line}:{column}")),
+        None => error,
+    }
+}
+
+fn exit_with_compile_envelope(
+    ctx: &OutputContext,
+    errors: Vec<EnvelopeError>,
+    human_report: impl FnOnce(),
+) -> ! {
+    if ctx.is_json() {
+        let envelope = error_envelope(errors, "cql compile");
+        if let Err(error) = print_envelope(ctx, &envelope) {
+            eprintln!("error: {error}");
+        }
+    } else {
+        human_report();
+    }
     ExitCode::ParseError.exit();
 }
 
+/// Print a fatal pipeline error and exit with the parse-error code.
+fn exit_on_compile_error(e: impl std::fmt::Display, ctx: &OutputContext) -> ! {
+    let message = e.to_string();
+    let error = compile_envelope_error("parse_error", &message, parse_error_location(&message));
+    exit_with_compile_envelope(ctx, vec![error], || eprintln!("✗ {message}"));
+}
+
 /// Report a failed (non-success) compilation outcome and exit.
-fn exit_on_compile_failure(outcome: &impl ElmOutcome) -> ! {
-    let err = report_compile_failure(outcome.errors(), outcome.warnings());
-    error!("{err}");
-    ExitCode::ParseError.exit();
+fn exit_on_compile_failure(outcome: &impl ElmOutcome, ctx: &OutputContext) -> ! {
+    let errors = outcome
+        .errors()
+        .iter()
+        .map(|diagnostic| {
+            let location = diagnostic
+                .span
+                .as_ref()
+                .map(|span| (span.start.line, span.start.column));
+            compile_envelope_error("compilation_error", &diagnostic.message, location)
+        })
+        .collect();
+    exit_with_compile_envelope(ctx, errors, || {
+        let err = report_compile_failure(outcome.errors(), outcome.warnings());
+        error!("{err}");
+    });
 }
 
 /// Serialize an ELM outcome to JSON, honoring compact mode.
@@ -824,10 +876,10 @@ fn compile_cql(req: &CompileRequest, ctx: &OutputContext) -> Result<()> {
             None,
         ) {
             Ok(r) => r,
-            Err(e) => exit_on_compile_error(e),
+            Err(e) => exit_on_compile_error(e, ctx),
         };
         if !result.is_success() {
-            exit_on_compile_failure(&result);
+            exit_on_compile_failure(&result, ctx);
         }
         let json = serialize_elm(&result, req.compact)?;
         let sm_json = result
@@ -838,11 +890,11 @@ fn compile_cql(req: &CompileRequest, ctx: &OutputContext) -> Result<()> {
         let result =
             match compile_with_search_dirs(&source, &req.input, &req.lib_path, Some(options)) {
                 Ok(r) => r,
-                Err(e) => exit_on_compile_error(e),
+                Err(e) => exit_on_compile_error(e, ctx),
             }
             .result;
         if !result.is_success() {
-            exit_on_compile_failure(&result);
+            exit_on_compile_failure(&result, ctx);
         }
         let json = serialize_elm(&result, req.compact)?;
         (json, None)

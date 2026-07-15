@@ -12,8 +12,11 @@ use super::operators::*;
 use super::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 use super::value::Value;
 use crate::elm::{
-    BinaryExpression, Expression, Library, NaryExpression, StatementDef, UnaryExpression,
+    BinaryExpression, Expression, Library, NaryExpression, StatementDef, TimeBinaryExpression,
+    UnaryExpression,
 };
+
+type TemporalRelationEvaluator = fn(&Value, &Value, Option<&str>) -> Result<Value, EvalError>;
 
 // ---------------------------------------------------------------------------
 // TraceEvent (Task 9.20)
@@ -1191,34 +1194,26 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
                 super::operators::same_as(&a, &b, tb.precision.as_deref())
             }
-            Expression::SameOrBefore(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first())?;
-                let b = self.eval_expr_opt(tb.operand.get(1))?;
-                super::operators::same_or_before(&a, &b, tb.precision.as_deref())
-            }
-            Expression::SameOrAfter(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first())?;
-                let b = self.eval_expr_opt(tb.operand.get(1))?;
-                super::operators::same_or_after(&a, &b, tb.precision.as_deref())
-            }
-            Expression::Before(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first())?;
-                let b = self.eval_expr_opt(tb.operand.get(1))?;
-                if matches!(a, Value::Interval { .. }) || matches!(b, Value::Interval { .. }) {
-                    super::intervals::before(&a, &b)
-                } else {
-                    super::operators::before(&a, &b, tb.precision.as_deref())
-                }
-            }
-            Expression::After(tb) => {
-                let a = self.eval_expr_opt(tb.operand.first())?;
-                let b = self.eval_expr_opt(tb.operand.get(1))?;
-                if matches!(a, Value::Interval { .. }) || matches!(b, Value::Interval { .. }) {
-                    super::intervals::after(&a, &b)
-                } else {
-                    super::operators::after(&a, &b, tb.precision.as_deref())
-                }
-            }
+            Expression::SameOrBefore(tb) => self.eval_temporal_relation(
+                tb,
+                super::operators::same_or_before,
+                super::intervals::same_or_before,
+            ),
+            Expression::SameOrAfter(tb) => self.eval_temporal_relation(
+                tb,
+                super::operators::same_or_after,
+                super::intervals::same_or_after,
+            ),
+            Expression::Before(tb) => self.eval_temporal_relation(
+                tb,
+                super::operators::before,
+                super::intervals::before_at_precision,
+            ),
+            Expression::After(tb) => self.eval_temporal_relation(
+                tb,
+                super::operators::after,
+                super::intervals::after_at_precision,
+            ),
             Expression::DurationBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
@@ -2543,6 +2538,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             .map(|e| self.eval_expr(e))
             .unwrap_or(Ok(Value::Null))?;
         Ok((a, b))
+    }
+
+    fn eval_temporal_relation(
+        &mut self,
+        expression: &TimeBinaryExpression,
+        scalar: TemporalRelationEvaluator,
+        interval: TemporalRelationEvaluator,
+    ) -> Result<Value, EvalError> {
+        let left = self.eval_expr_opt(expression.operand.first())?;
+        let right = self.eval_expr_opt(expression.operand.get(1))?;
+        let evaluator =
+            if matches!(left, Value::Interval { .. }) || matches!(right, Value::Interval { .. }) {
+                interval
+            } else {
+                scalar
+            };
+        evaluator(&left, &right, expression.precision.as_deref())
     }
 
     fn eval_unary_arg(&mut self, unary: &UnaryExpression) -> Result<Value, EvalError> {

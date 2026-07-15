@@ -41,6 +41,10 @@ fn eval_expr(cql: &str, expr_name: &str) -> Value {
     evaluate_elm(&result.library, expr_name, &ctx).expect("evaluation failed")
 }
 
+fn eval_source_expression(source: &str) -> Value {
+    eval_expr(&format!("library T define X: {source}"), "X")
+}
+
 fn compile_or_eval_fails(cql: &str, expr_name: &str) -> bool {
     let Ok(result) = compile_with_model(cql, None, None) else {
         return true;
@@ -173,6 +177,57 @@ fn eval_boolean_or() {
 fn eval_boolean_not() {
     let cql = "library T define X: not true";
     assert_eq!(eval_expr(cql, "X"), Value::Boolean(false));
+}
+
+#[test]
+fn eval_mixed_logical_precedence_and_associativity() {
+    for (source, expected) in [
+        ("false implies true and false", true),
+        ("false and false or true", true),
+        ("true or false and false", true),
+        ("false and false xor true", true),
+        ("true xor true and false", true),
+        ("true or false xor true", false),
+        ("true xor false or true", true),
+        ("false and true implies false", true),
+        ("true or false implies false", false),
+        ("false implies false or false", true),
+        ("true xor false implies true", true),
+        ("false implies false xor true", true),
+        ("true and false and true", false),
+        ("false or false or true", true),
+        ("true xor false xor true", false),
+        ("false implies true implies false", false),
+        ("(false implies true) and false", false),
+    ] {
+        assert_eq!(
+            eval_source_expression(source),
+            Value::Boolean(expected),
+            "unexpected result for {source}"
+        );
+    }
+}
+
+#[test]
+fn eval_corrected_logical_precedence_in_function_and_query() {
+    let function = compile_with_model(
+        "library T define function F(): false implies true and false",
+        None,
+        None,
+    )
+    .expect("function should compile");
+    assert!(
+        function.errors.is_empty(),
+        "function compilation errors: {:?}",
+        function.errors
+    );
+    assert_eq!(
+        eval_expr(
+            "library T define X: from { 1 } N where false implies true and false return N",
+            "X",
+        ),
+        Value::List(vec![Value::Integer(1)])
+    );
 }
 
 #[test]
@@ -337,6 +392,76 @@ fn eval_to_integer_cast() {
 fn eval_is_type_check() {
     let cql = "library T define X: 42 is Integer";
     assert_eq!(eval_expr(cql, "X"), Value::Boolean(true));
+}
+
+#[test]
+fn eval_literal_is_expressions() {
+    for (source, expected) in [
+        ("true is true", true),
+        ("false is false", true),
+        ("null is null", true),
+        ("true is false", false),
+        ("false is true", false),
+        ("null is true", false),
+        ("null is false", false),
+        ("true is null", false),
+    ] {
+        assert_eq!(
+            eval_source_expression(source),
+            Value::Boolean(expected),
+            "unexpected result for {source}"
+        );
+    }
+}
+
+#[test]
+fn eval_negated_literal_is_expressions_match_explicit_not() {
+    for (operand, target) in [
+        ("true", "null"),
+        ("false", "null"),
+        ("null", "null"),
+        ("true", "true"),
+        ("false", "true"),
+        ("null", "true"),
+        ("true", "false"),
+        ("false", "false"),
+        ("null", "false"),
+    ] {
+        let negated = format!("{operand} is not {target}");
+        let explicit = format!("not ({operand} is {target})");
+        assert_eq!(
+            eval_source_expression(&negated),
+            eval_source_expression(&explicit),
+            "negated form differs for {operand} is not {target}"
+        );
+    }
+}
+
+#[test]
+fn eval_legacy_generic_is_null_elm() {
+    use rh_cql::elm::{Expression, StatementDef};
+
+    let mut result = compile_with_model("library T define X: null is Integer", None, None)
+        .expect("compile failed");
+    let statements = result
+        .library
+        .statements
+        .as_mut()
+        .expect("missing statements");
+    let definition = match statements.defs.first_mut() {
+        Some(StatementDef::Expression(definition)) => definition,
+        other => panic!("expected expression definition, got {other:?}"),
+    };
+    let is_expression = match definition.expression.as_deref_mut() {
+        Some(Expression::Is(is_expression)) => is_expression,
+        other => panic!("expected generic Is expression, got {other:?}"),
+    };
+    is_expression.is_type = Some("{urn:hl7-org:elm-types:r1}null".into());
+
+    assert_eq!(
+        evaluate_elm(&result.library, "X", &default_ctx()).expect("evaluation failed"),
+        Value::Boolean(true)
+    );
 }
 
 #[test]
@@ -870,6 +995,48 @@ fn eval_interval_before_after_point_and_interval() {
         eval_expr("library T define X: Interval[11, 20] after 12", "X"),
         Value::Boolean(false)
     );
+}
+
+#[test]
+fn eval_zero_offset_inclusive_temporal_relationships() {
+    for (source, expected) in [
+        ("@2024-01-01 on or before @2024-01-01", true),
+        ("@2024-01-01 before or on @2024-01-01", true),
+        ("@2024-01-01 on or after @2024-01-01", true),
+        ("@2024-01-01 after or on @2024-01-01", true),
+        ("@2024-02-01 on or before month of @2024-01-01", false),
+        ("@T10:00 on or after hour of @T09:00", true),
+        (
+            "Interval[@2012-12-01, @2013-12-01] on or after month of @2012-11-15",
+            true,
+        ),
+        (
+            "@2012-11-15 on or after month of Interval[@2012-12-01, @2013-12-01]",
+            false,
+        ),
+        (
+            "Interval[@T10:00:00.000, @T19:59:59.999] on or after hour of Interval[@T08:00:00.000, @T09:59:59.999]",
+            true,
+        ),
+        ("Interval[6, 10] on or after 6", true),
+        ("2.5 on or after Interval[1.666, 2.50000001]", false),
+        (
+            "Interval[@2012-10-01, @2012-11-01] on or before month of @2012-11-15",
+            true,
+        ),
+        (
+            "@2012-11-15 on or before month of Interval[@2012-10-01, @2013-12-01]",
+            false,
+        ),
+        ("Interval[4, 6] on or before 6", true),
+        ("1.6667 on or before Interval[1.666, 2.50000001]", false),
+    ] {
+        assert_eq!(
+            eval_source_expression(source),
+            Value::Boolean(expected),
+            "unexpected result for {source}"
+        );
+    }
 }
 
 #[test]

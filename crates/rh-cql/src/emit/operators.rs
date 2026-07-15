@@ -1,6 +1,9 @@
 use crate::elm;
 use crate::emit::ElmEmitter;
-use crate::parser::ast::{BinaryOperator, DateTimePrecision, TernaryOperator, UnaryOperator};
+use crate::parser::ast::{
+    BinaryOperator, DateTimePrecision, SameDirection, TernaryOperator, TimingDirection,
+    TimingPhrase, UnaryOperator,
+};
 use crate::semantics::typed_ast::{
     TypedDateTimeComponentFrom, TypedExpression, TypedNode, TypedTimingExpression,
 };
@@ -509,7 +512,7 @@ pub fn emit_timing_expression(
     };
 
     match &te.timing {
-        crate::parser::ast::TimingPhrase::RelativeTiming {
+        TimingPhrase::RelativeTiming {
             left_boundary: None,
             offset: None,
             direction,
@@ -518,23 +521,21 @@ pub fn emit_timing_expression(
         } => {
             let precision = precision.map(|p| datetime_precision_str(p).to_string());
             match direction {
-                crate::parser::ast::TimingDirection::Before
-                | crate::parser::ast::TimingDirection::BeforeOrOn => {
+                TimingDirection::Before => {
                     return elm::Expression::Before(time_binary(precision));
                 }
-                crate::parser::ast::TimingDirection::After
-                | crate::parser::ast::TimingDirection::AfterOrOn => {
+                TimingDirection::After => {
                     return elm::Expression::After(time_binary(precision));
                 }
-                crate::parser::ast::TimingDirection::OnOrBefore => {
+                TimingDirection::OnOrBefore | TimingDirection::BeforeOrOn => {
                     return elm::Expression::SameOrBefore(time_binary(precision));
                 }
-                crate::parser::ast::TimingDirection::OnOrAfter => {
+                TimingDirection::OnOrAfter | TimingDirection::AfterOrOn => {
                     return elm::Expression::SameOrAfter(time_binary(precision));
                 }
             }
         }
-        crate::parser::ast::TimingPhrase::SameTiming {
+        TimingPhrase::SameTiming {
             left_boundary: None,
             precision,
             direction,
@@ -542,13 +543,13 @@ pub fn emit_timing_expression(
         } => {
             let precision = precision.map(|p| datetime_precision_str(p).to_string());
             match direction {
-                crate::parser::ast::SameDirection::As => {
+                SameDirection::As => {
                     return elm::Expression::SameAs(time_binary(precision));
                 }
-                crate::parser::ast::SameDirection::OrBefore => {
+                SameDirection::OrBefore => {
                     return elm::Expression::SameOrBefore(time_binary(precision));
                 }
-                crate::parser::ast::SameDirection::OrAfter => {
+                SameDirection::OrAfter => {
                     return elm::Expression::SameOrAfter(time_binary(precision));
                 }
             }
