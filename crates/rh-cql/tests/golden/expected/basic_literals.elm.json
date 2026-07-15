@@ -104,7 +104,7 @@
     "annotation": [
       {
         "type": "CqlToElmInfo",
-        "translatorVersion": "0.2.6",
+        "translatorVersion": "0.2.7",
         "translatorOptions": "DisableListDemotion,DisableListPromotion,EnableAnnotations,EnableLocators"
       }
     ]

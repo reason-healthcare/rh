@@ -42,11 +42,11 @@ tempfile = "3"
 walkdir = { workspace = true }
 
 # Local workspace crates
-rh-foundation = { path = "../rh-foundation", version = "0.2.6" }
-rh-validator = { path = "../rh-validator", version = "0.2.6" }
-rh-cql = { path = "../rh-cql", version = "0.2.6" }
-rh-fsh = { path = "../rh-fsh", version = "0.2.6" }
-rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.6" }
+rh-foundation = { path = "../rh-foundation", version = "0.2.7" }
+rh-validator = { path = "../rh-validator", version = "0.2.7" }
+rh-cql = { path = "../rh-cql", version = "0.2.7" }
+rh-fsh = { path = "../rh-fsh", version = "0.2.7" }
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.7" }
 
 [dev-dependencies]
 tempfile = "3"

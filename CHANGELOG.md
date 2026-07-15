@@ -5,6 +5,36 @@ All notable user-facing changes to Reason Health are recorded here.
 This project follows semantic versioning while the public API is still in the
 0.x series. Release dates use `YYYY-MM-DD`.
 
+## [0.2.7] - 2026-07-15
+
+### Added
+
+- Added schema-informed, profile-aware FSH compilation and export, including
+  typed instance shaping, recursive instance resolution, dependency-backed
+  extension slices, nested caret paths, and CLI project workflow documentation.
+- Expanded FSH conformance coverage to 63 reviewed fixtures and six real-world
+  implementation guide projects, with `rh-fsh` and SUSHI now emitting the same
+  920 resource identities across the project corpus.
+
+### Changed
+
+- Improved CQL syntax diagnostics for malformed operators and declarations
+  while preserving the CLI syntax-error exit code and structured JSON envelope.
+- Expanded generated R4 and R5 metadata used for schema navigation and
+  profile-aware FSH export.
+- Clarified the project overview around healthcare interoperability, AI agent
+  workflows, and the supported FHIR toolchain.
+
+### Fixed
+
+- Fixed CQL parsing, ELM emission, and evaluation for canonical null and Boolean
+  tests, logical operator precedence, and zero-offset temporal relationships.
+- Fixed validator unknown-property checks for invalid choice-field variants and
+  recursively nested backbone elements.
+- Fixed FSH output for required extension identity, local profile lineage,
+  extension context arrays, repeating root caret fields, and recursive resource
+  shapes.
+
 ## [0.2.6] - 2026-07-10
 
 ### Added
@@ -89,6 +119,7 @@ This project follows semantic versioning while the public API is still in the
   include resolution consistently with normal compilation.
 - Fixed CQL conformance expected-string handling to avoid double-unescaping.
 
+[0.2.7]: https://github.com/reason-healthcare/rh/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/reason-healthcare/rh/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/reason-healthcare/rh/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/reason-healthcare/rh/compare/v0.2.3...v0.2.4

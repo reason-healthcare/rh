@@ -64,7 +64,7 @@ docker run --rm \
 You can also pin to a specific version:
 
 ```bash
-docker run --rm ghcr.io/reason-healthcare/rh:v0.2.6 --version
+docker run --rm ghcr.io/reason-healthcare/rh:v0.2.7 --version
 ```
 
 ## Quick Start
@@ -299,7 +299,7 @@ parseable error envelope on stdout _and_ prints `error: <message>` on stderr:
 {
   "ok": false,
   "errors": [{ "code": "operational_error", "message": "..." }],
-  "meta": { "version": "0.2.6", "command": "rh" }
+  "meta": { "version": "0.2.7", "command": "rh" }
 }
 ```
 
