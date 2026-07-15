@@ -162,24 +162,40 @@ pub fn in_interval(point: &Value, interval: &Value) -> Result<Value, EvalError> 
 
 /// `Before` for interval and interval/point combinations.
 pub fn before(a: &Value, b: &Value) -> Result<Value, EvalError> {
-    if matches!(a, Value::Null) || matches!(b, Value::Null) {
-        return Ok(Value::Null);
-    }
+    before_at_precision(a, b, None)
+}
 
-    let left = before_left_boundary(a)?;
-    let right = before_right_boundary(b)?;
-    match (left, right) {
-        (Some(left), Some(right)) => match cql_compare(left, right) {
-            Some(ord) => Ok(Value::Boolean(ord == Ordering::Less)),
-            None => Ok(Value::Null),
-        },
-        _ => Ok(Value::Null),
-    }
+/// `Before` for interval and interval/point combinations at an optional precision.
+pub fn before_at_precision(
+    a: &Value,
+    b: &Value,
+    precision: Option<&str>,
+) -> Result<Value, EvalError> {
+    compare_before_boundaries(a, b, precision, Ordering::is_lt)
 }
 
 /// `After` for interval and interval/point combinations.
 pub fn after(a: &Value, b: &Value) -> Result<Value, EvalError> {
-    before(b, a)
+    after_at_precision(a, b, None)
+}
+
+/// `After` for interval and interval/point combinations at an optional precision.
+pub fn after_at_precision(
+    a: &Value,
+    b: &Value,
+    precision: Option<&str>,
+) -> Result<Value, EvalError> {
+    before_at_precision(b, a, precision)
+}
+
+/// `SameOrBefore` for interval and interval/point combinations.
+pub fn same_or_before(a: &Value, b: &Value, precision: Option<&str>) -> Result<Value, EvalError> {
+    compare_before_boundaries(a, b, precision, Ordering::is_le)
+}
+
+/// `SameOrAfter` for interval and interval/point combinations.
+pub fn same_or_after(a: &Value, b: &Value, precision: Option<&str>) -> Result<Value, EvalError> {
+    same_or_before(b, a, precision)
 }
 
 fn before_left_boundary(value: &Value) -> Result<Option<&Value>, EvalError> {
@@ -199,6 +215,45 @@ fn before_right_boundary(value: &Value) -> Result<Option<&Value>, EvalError> {
             Ok(low)
         }
         _ => Ok(Some(value)),
+    }
+}
+
+fn compare_before_boundaries(
+    left: &Value,
+    right: &Value,
+    precision: Option<&str>,
+    predicate: impl FnOnce(Ordering) -> bool,
+) -> Result<Value, EvalError> {
+    if matches!(left, Value::Null) || matches!(right, Value::Null) {
+        return Ok(Value::Null);
+    }
+
+    compare_timing_boundaries(
+        before_left_boundary(left)?,
+        before_right_boundary(right)?,
+        precision,
+        predicate,
+    )
+}
+
+fn compare_timing_boundaries(
+    left: Option<&Value>,
+    right: Option<&Value>,
+    precision: Option<&str>,
+    predicate: impl FnOnce(Ordering) -> bool,
+) -> Result<Value, EvalError> {
+    let (Some(left), Some(right)) = (left, right) else {
+        return Ok(Value::Null);
+    };
+    let left = precision
+        .map(|precision| truncate_temporal_value(left, precision))
+        .unwrap_or_else(|| left.clone());
+    let right = precision
+        .map(|precision| truncate_temporal_value(right, precision))
+        .unwrap_or_else(|| right.clone());
+    match cql_compare(&left, &right) {
+        Some(ord) => Ok(Value::Boolean(predicate(ord))),
+        None => Ok(Value::Null),
     }
 }
 

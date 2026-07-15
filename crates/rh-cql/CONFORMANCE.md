@@ -1,6 +1,6 @@
 # rh-cql Conformance
 
-Last updated: 2026-06-23
+Last updated: 2026-07-15
 
 This is the current high-level conformance summary for `rh-cql`. It answers
 three questions:
@@ -22,14 +22,14 @@ The strongest spec-facing signal is the HL7 CQL expression test suite:
 | Signal | Result |
 |---|---:|
 | HL7 parsed expression cases | 1 426 |
-| Correct evaluated results | 1 241 |
+| Correct evaluated results | 1 258 |
 | Invalid expressions correctly rejected | 28 |
 | Wrong answers | 0 |
 | Skipped expected-output/expression cases | 45 |
-| Compile errors | 89 |
+| Compile errors | 72 |
 | Runtime eval errors | 23 |
 | Invalid expressions incorrectly accepted | 0 |
-| Remaining unimplemented outcomes | 112 |
+| Remaining unimplemented outcomes | 95 |
 
 Interpretation:
 
@@ -39,13 +39,35 @@ Interpretation:
 - Invalid-input enforcement is clean in this suite: invalid expressions are not
   being accepted as successes.
 
+### 2026-07-15 Parser Conformance Checkpoints
+
+The command `cargo test -p rh-cql --test hl7_eval_tests -- --nocapture` produced:
+
+| Checkpoint | Pass | Compile Error | Eval Error | Fail | Skip |
+|---|---:|---:|---:|---:|---:|
+| Baseline | 1 241 | 89 | 23 | 0 | 45 |
+| Canonical null/Boolean tests | 1 241 | 89 | 23 | 0 | 45 |
+| Zero-offset temporal relationships | 1 258 | 72 | 23 | 0 | 45 |
+| Logical precedence and parse diagnostics | 1 258 | 72 | 23 | 0 | 45 |
+
+- Canonical source `is null`, `is true`, and `is false` forms did not change the suite totals
+  because the bundled fixtures use function-call forms. Focused tests cover canonical AST, ELM,
+  evaluation, negation, named-type controls, and legacy ELM compatibility.
+- All 17 affected interval/date-time cases moved from compile errors to passing results. Focused
+  tests cover all eight zero-offset relationship spellings, point and interval operands, and
+  optional `month of` and `hour of` precision.
+- Logical-precedence regressions cover all 12 ordered mixed pairings of `and`, `or`, `xor`, and
+  `implies`, left-associative chains, parenthesized overrides, a function body, and a query
+  `where` clause. Parse-diagnostic tests cover committed nested locations and human/JSON CLI
+  failures without changing the conformance totals.
+
 ## Three-Engine Matrix
 
 The same 1 426 HL7 rows are also used as an implementation comparison matrix.
 
 | Implementation | What It Measures | Pass | Compile Error | Eval Error | Fail | Skip |
 |---|---|---:|---:|---:|---:|---:|
-| `rh-cql` | Compile and evaluate with Reason Health | 1 269 | 89 | 23 | 0 | 45 |
+| `rh-cql` | Compile and evaluate with Reason Health | 1 286 | 72 | 23 | 0 | 45 |
 | Java CQL-to-ELM | Translate CQL to ELM with CQFramework Java | 1 410 | 16 | 0 | 0 | 0 |
 | JavaScript `cql-execution` | Execute `rh-cql` ELM in JS | 601 | 89 | 502 | 68 | 166 |
 
@@ -145,7 +167,7 @@ just check
 
 At a high level, the remaining conformance work is:
 
-- Reduce the 89 HL7 compile errors.
+- Reduce the 72 HL7 compile errors.
 - Reduce the 23 HL7 runtime eval errors.
 - Expand Java-inclusive corpus triage when source validity matters.
 - Add more FHIR bundle evaluation cases once retrieve/query semantics are ready.

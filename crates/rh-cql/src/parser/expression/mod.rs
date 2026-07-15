@@ -5,9 +5,9 @@
 //!
 //! ## Operator Precedence (lowest to highest)
 //!
-//! 1. `or`, `xor`
-//! 2. `and`
-//! 3. `implies`
+//! 1. `implies`
+//! 2. `or`, `xor`
+//! 3. `and`
 //! 4. `=`, `!=`, `~`, `!~`, `in`, `contains`
 //! 5. `<`, `>`, `<=`, `>=`
 //! 6. `|` (union)
@@ -30,7 +30,7 @@ mod selectors;
 ///
 /// Entry point for the full CQL expression grammar.
 pub fn expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    precedence::parse_or_expression(input)
+    precedence::parse_implies_expression(input)
 }
 
 /// Parse a type specifier (used by the statement parser for type annotations
@@ -47,6 +47,93 @@ mod tests {
 
     fn parse_expr(s: &str) -> Expression {
         expression(span(s)).unwrap().1
+    }
+
+    fn parse_complete_expr(s: &str) -> Expression {
+        crate::parser::CqlParser::new().parse_expression(s).unwrap()
+    }
+
+    fn medication_request_body(library: &Library) -> &Expression {
+        match library.statements.as_slice() {
+            [Statement::FunctionDef(FunctionDef {
+                name,
+                body: Some(body),
+                ..
+            })] if name == "Is Current Medication Request" => body,
+            other => panic!("expected medication function, got {other:?}"),
+        }
+    }
+
+    fn ast_without_locations(expression: &Expression) -> serde_json::Value {
+        fn remove_locations(value: &mut serde_json::Value) {
+            match value {
+                serde_json::Value::Object(object) => {
+                    object.remove("location");
+                    for child in object.values_mut() {
+                        remove_locations(child);
+                    }
+                }
+                serde_json::Value::Array(items) => {
+                    for child in items {
+                        remove_locations(child);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let mut value = serde_json::to_value(expression).expect("AST should serialize");
+        remove_locations(&mut value);
+        value
+    }
+
+    #[derive(Clone, Copy)]
+    enum NestedSide {
+        Left,
+        Right,
+    }
+
+    fn assert_binary_shape(
+        expression: &Expression,
+        description: &str,
+        root_operator: BinaryOperator,
+        nested_operator: BinaryOperator,
+        nested_side: NestedSide,
+    ) {
+        let Expression::BinaryExpression(root) = expression else {
+            panic!("expected binary root for {description}, got {expression:?}");
+        };
+        assert_eq!(
+            root.operator, root_operator,
+            "unexpected root for {description}"
+        );
+        let nested = match nested_side {
+            NestedSide::Left => &root.left,
+            NestedSide::Right => &root.right,
+        };
+        assert!(
+            matches!(
+                nested.as_ref(),
+                Expression::BinaryExpression(BinaryExpression { operator, .. })
+                    if *operator == nested_operator
+            ),
+            "unexpected nested grouping for {description}: {nested:?}"
+        );
+    }
+
+    fn assert_mixed_logical_shape(
+        source: &str,
+        root_operator: BinaryOperator,
+        nested_operator: BinaryOperator,
+        nested_side: NestedSide,
+    ) {
+        assert_binary_shape(
+            &parse_complete_expr(source),
+            source,
+            root_operator,
+            nested_operator,
+            nested_side,
+        );
     }
 
     // ========================================================================
@@ -186,6 +273,101 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_all_mixed_logical_operator_pairings() {
+        use BinaryOperator::{And, Implies, Or, Xor};
+        use NestedSide::{Left, Right};
+
+        for (source, root, nested, nested_side) in [
+            ("false and false or true", Or, And, Left),
+            ("true or false and false", Or, And, Right),
+            ("false and false xor true", Xor, And, Left),
+            ("true xor true and false", Xor, And, Right),
+            ("true or false xor true", Xor, Or, Left),
+            ("true xor false or true", Or, Xor, Left),
+            ("false and true implies false", Implies, And, Left),
+            ("false implies true and false", Implies, And, Right),
+            ("true or false implies false", Implies, Or, Left),
+            ("false implies false or false", Implies, Or, Right),
+            ("true xor false implies true", Implies, Xor, Left),
+            ("false implies false xor true", Implies, Xor, Right),
+        ] {
+            assert_mixed_logical_shape(source, root, nested, nested_side);
+        }
+    }
+
+    #[test]
+    fn test_logical_operator_associativity() {
+        use BinaryOperator::{And, Implies, Or, Xor};
+
+        for (source, operator) in [
+            ("true and false and true", And),
+            ("true or false or true", Or),
+            ("true xor false xor true", Xor),
+            // CQL 1.5.3's direct-left-recursive grammar declares no
+            // right-associative override, matching the reference translator.
+            ("false implies true implies false", Implies),
+        ] {
+            assert_mixed_logical_shape(source, operator, operator, NestedSide::Left);
+        }
+    }
+
+    #[test]
+    fn test_parenthesized_function_and_query_logical_grouping() {
+        let parenthesized = parse_complete_expr("(false implies true) and false");
+        assert!(matches!(
+            parenthesized,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::And,
+                left,
+                ..
+            }) if matches!(
+                left.as_ref(),
+                Expression::Parenthesized(inner) if matches!(
+                    inner.as_ref(),
+                    Expression::BinaryExpression(BinaryExpression {
+                        operator: BinaryOperator::Implies,
+                        ..
+                    })
+                )
+            )
+        ));
+
+        let parser = crate::parser::CqlParser::new();
+        let library = parser
+            .parse("library T define function F(): false implies true and false")
+            .expect("function should parse");
+        let function_body = match library.statements.as_slice() {
+            [Statement::FunctionDef(FunctionDef {
+                body: Some(body), ..
+            })] => body,
+            other => panic!("expected one function definition, got {other:?}"),
+        };
+        assert_binary_shape(
+            function_body,
+            "function body",
+            BinaryOperator::Implies,
+            BinaryOperator::And,
+            NestedSide::Right,
+        );
+
+        let query = parse_complete_expr("from { 1 } N where false implies true and false return N");
+        let Expression::Query(Query {
+            where_clause: Some(where_clause),
+            ..
+        }) = query
+        else {
+            panic!("expected query with where clause, got {query:?}");
+        };
+        assert_binary_shape(
+            &where_clause,
+            "query where clause",
+            BinaryOperator::Implies,
+            BinaryOperator::And,
+            NestedSide::Right,
+        );
+    }
+
     // ========================================================================
     // Unary Expression Tests
     // ========================================================================
@@ -286,6 +468,297 @@ mod tests {
                 operator: TypeOperator::Is,
                 ..
             })
+        ));
+    }
+
+    #[test]
+    fn test_literal_is_expressions_use_canonical_unary_operators() {
+        for (source, expected) in [
+            ("x is null", UnaryOperator::IsNull),
+            ("x is true", UnaryOperator::IsTrue),
+            ("x is false", UnaryOperator::IsFalse),
+        ] {
+            let expr = parse_complete_expr(source);
+            assert!(
+                matches!(
+                    expr,
+                    Expression::UnaryExpression(UnaryExpression { operator, .. })
+                        if operator == expected
+                ),
+                "unexpected AST for {source}: {expr:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_negated_literal_is_expressions_wrap_canonical_operator() {
+        for (source, expected) in [
+            ("x is not null", UnaryOperator::IsNull),
+            ("x is not true", UnaryOperator::IsTrue),
+            ("x is not false", UnaryOperator::IsFalse),
+        ] {
+            let expr = parse_complete_expr(source);
+            assert!(
+                matches!(
+                    &expr,
+                    Expression::UnaryExpression(UnaryExpression {
+                        operator: UnaryOperator::Not,
+                        operand,
+                        ..
+                    }) if matches!(
+                        operand.as_ref(),
+                        Expression::UnaryExpression(UnaryExpression { operator, .. })
+                            if *operator == expected
+                    )
+                ),
+                "unexpected AST for {source}: {expr:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_literal_is_keywords_do_not_shadow_qualified_type_tests() {
+        for source in ["value is FHIR.Quantity", "value is not FHIR.Quantity"] {
+            let expr = parse_complete_expr(source);
+            let type_expression = match expr {
+                Expression::TypeExpression(type_expression) => type_expression,
+                Expression::UnaryExpression(UnaryExpression {
+                    operator: UnaryOperator::Not,
+                    operand,
+                    ..
+                }) => match *operand {
+                    Expression::TypeExpression(type_expression) => type_expression,
+                    other => panic!("expected type expression for {source}, got {other:?}"),
+                },
+                other => panic!("expected type test for {source}, got {other:?}"),
+            };
+
+            assert_eq!(type_expression.operator, TypeOperator::Is);
+            assert!(matches!(
+                type_expression.type_specifier,
+                TypeSpecifier::Named(NamedTypeSpecifier {
+                    namespace: Some(ref namespace),
+                    ref name,
+                }) if namespace == "FHIR" && name == "Quantity"
+            ));
+        }
+    }
+
+    #[test]
+    fn test_nested_medication_request_null_test_preserves_member_operand() {
+        let expr = parse_complete_expr("medicationRequest.dispenseRequest.validityPeriod is null");
+        let operand = match expr {
+            Expression::UnaryExpression(UnaryExpression {
+                operator: UnaryOperator::IsNull,
+                operand,
+                ..
+            }) => operand,
+            other => panic!("expected IsNull expression, got {other:?}"),
+        };
+
+        let validity_period = match *operand {
+            Expression::MemberInvocation(member) => member,
+            other => panic!("expected validityPeriod member access, got {other:?}"),
+        };
+        assert_eq!(validity_period.name, "validityPeriod");
+
+        let dispense_request = match *validity_period.source {
+            Expression::MemberInvocation(member) => member,
+            other => panic!("expected dispenseRequest member access, got {other:?}"),
+        };
+        assert_eq!(dispense_request.name, "dispenseRequest");
+        assert!(matches!(
+            dispense_request.source.as_ref(),
+            Expression::IdentifierRef(IdentifierRef { name, .. })
+                if name == "medicationRequest"
+        ));
+    }
+
+    #[test]
+    fn test_medication_request_neighboring_expression_controls() {
+        let repeated = parse_complete_expr("A and B and C");
+        assert!(matches!(
+            repeated,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::And,
+                left,
+                ..
+            }) if matches!(
+                left.as_ref(),
+                Expression::BinaryExpression(BinaryExpression {
+                    operator: BinaryOperator::And,
+                    ..
+                })
+            )
+        ));
+
+        let parenthesized = parse_complete_expr("A and (B or C)");
+        assert!(matches!(
+            parenthesized,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::And,
+                right,
+                ..
+            }) if matches!(
+                right.as_ref(),
+                Expression::Parenthesized(inner) if matches!(
+                    inner.as_ref(),
+                    Expression::BinaryExpression(BinaryExpression {
+                        operator: BinaryOperator::Or,
+                        ..
+                    })
+                )
+            )
+        ));
+
+        let qualified = parse_complete_expr(
+            "end of FHIRHelpers.ToInterval(request.dispenseRequest.validityPeriod)",
+        );
+        assert!(matches!(
+            qualified,
+            Expression::UnaryExpression(UnaryExpression {
+                operator: UnaryOperator::End,
+                operand,
+                ..
+            }) if matches!(
+                operand.as_ref(),
+                Expression::FunctionInvocation(FunctionInvocation {
+                    library: Some(library),
+                    name,
+                    arguments,
+                    ..
+                }) if library == "FHIRHelpers" && name == "ToInterval" && arguments.len() == 1
+            )
+        ));
+    }
+
+    #[test]
+    fn test_zero_offset_temporal_relationship_spellings() {
+        let cases = [
+            (
+                "@2024-01-01 on before @2024-02-01",
+                TimingDirection::Before,
+                None,
+            ),
+            (
+                "Interval[@2024-01-01, @2024-02-01] on or before month of @2024-03-01",
+                TimingDirection::OnOrBefore,
+                Some(DateTimePrecision::Month),
+            ),
+            (
+                "@T10:00 on after hour of Interval[@T08:00, @T09:00]",
+                TimingDirection::After,
+                Some(DateTimePrecision::Hour),
+            ),
+            (
+                "Interval[1, 5] on or after Interval[1, 3]",
+                TimingDirection::OnOrAfter,
+                None,
+            ),
+            (
+                "@2024-01-01 before @2024-02-01",
+                TimingDirection::Before,
+                None,
+            ),
+            (
+                "Interval[@2024-01-01, @2024-02-01] before or on month of @2024-03-01",
+                TimingDirection::BeforeOrOn,
+                Some(DateTimePrecision::Month),
+            ),
+            (
+                "@T10:00 after hour of Interval[@T08:00, @T09:00]",
+                TimingDirection::After,
+                Some(DateTimePrecision::Hour),
+            ),
+            (
+                "Interval[1, 5] after or on Interval[1, 3]",
+                TimingDirection::AfterOrOn,
+                None,
+            ),
+        ];
+
+        for (source, expected_direction, expected_precision) in cases {
+            let expr = parse_complete_expr(source);
+            assert!(
+                matches!(
+                    expr,
+                    Expression::TimingExpression(TimingExpression {
+                        timing: TimingPhrase::RelativeTiming {
+                            offset: None,
+                            direction,
+                            precision,
+                            ..
+                        },
+                        ..
+                    }) if direction == expected_direction && precision == expected_precision
+                ),
+                "unexpected timing AST for {source}: {expr:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_current_medication_request_multiline_and_single_line_ast_match() {
+        const MULTILINE: &str = r#"
+library MedicationTest version '1.0.0'
+using FHIR version '4.0.1'
+include FHIRHelpers version '4.0.1' called FHIRHelpers
+
+define function "Is Current Medication Request"(
+  medicationRequest FHIR.MedicationRequest
+):
+  medicationRequest.status in { 'active', 'on-hold' }
+    and medicationRequest.intent in { 'order', 'plan' }
+    and (
+      medicationRequest.dispenseRequest.validityPeriod is null
+        or end of FHIRHelpers.ToInterval(
+          medicationRequest.dispenseRequest.validityPeriod
+        ) on or after Today()
+    )
+"#;
+        const SINGLE_LINE: &str = "library MedicationTest version '1.0.0' using FHIR version \
+'4.0.1' include FHIRHelpers version '4.0.1' called FHIRHelpers define function \
+\"Is Current Medication Request\"(medicationRequest FHIR.MedicationRequest): \
+medicationRequest.status in { 'active', 'on-hold' } and medicationRequest.intent in \
+{ 'order', 'plan' } and (medicationRequest.dispenseRequest.validityPeriod is null or end of \
+FHIRHelpers.ToInterval(medicationRequest.dispenseRequest.validityPeriod) on or after Today())";
+
+        let parser = crate::parser::CqlParser::new();
+        let multiline = parser
+            .parse(MULTILINE)
+            .expect("multiline function should parse");
+        let single_line = parser
+            .parse(SINGLE_LINE)
+            .expect("single-line function should parse");
+        assert_eq!(
+            ast_without_locations(medication_request_body(&multiline)),
+            ast_without_locations(medication_request_body(&single_line))
+        );
+        let outer = medication_request_body(&multiline);
+        assert!(matches!(
+            outer,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::And,
+                left,
+                right,
+                ..
+            }) if matches!(
+                left.as_ref(),
+                Expression::BinaryExpression(BinaryExpression {
+                    operator: BinaryOperator::And,
+                    ..
+                })
+            ) && matches!(
+                right.as_ref(),
+                Expression::Parenthesized(inner) if matches!(
+                    inner.as_ref(),
+                    Expression::BinaryExpression(BinaryExpression {
+                        operator: BinaryOperator::Or,
+                        right,
+                        ..
+                    }) if matches!(right.as_ref(), Expression::TimingExpression(_))
+                )
+            )
         ));
     }
 

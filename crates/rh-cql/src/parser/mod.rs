@@ -13,6 +13,12 @@
 //! - [`expression`]: Expression parsing with operator precedence
 //! - [`statement`]: Library header and definition parsing
 //!
+//! [`CqlParser::parse`] and [`statement::parse_library`] are complete-library
+//! entry points and require the input to end after permitted trailing trivia.
+//! [`CqlParser::parse_expression`] similarly requires a complete expression.
+//! Internal expression and declaration parsers return their unconsumed
+//! [`Span`] so callers can compose them into larger grammar productions.
+//!
 //! ## CQL Grammar Reference
 //!
 //! Based on CQL version 1.5.3 specification. The grammar is translated from
@@ -100,29 +106,7 @@ impl CqlParser {
 
     /// Parse a library from a span
     fn parse_library(&self, span: Span<'_>) -> Result<ast::Library> {
-        match statement::parse_library(span) {
-            Ok((remaining, library)) => {
-                let remaining_str = remaining.fragment().trim();
-                if remaining_str.is_empty() {
-                    Ok(library)
-                } else {
-                    let loc = remaining.location();
-                    Err(CqlError::ParseError {
-                        message: format!(
-                            "Unexpected content after library: {}",
-                            &remaining_str[..remaining_str.len().min(50)]
-                        ),
-                        line: loc.line,
-                        column: loc.column,
-                    })
-                }
-            }
-            Err(e) => Err(CqlError::ParseError {
-                message: format!("Parse error: {e:?}"),
-                line: 1,
-                column: 1,
-            }),
-        }
+        parse_complete(span, "library", statement::parse_library)
     }
 
     /// Parse a single expression (useful for testing)
@@ -144,29 +128,48 @@ impl CqlParser {
 
     /// Parse an expression from a span
     fn parse_expr(&self, span: Span<'_>) -> Result<ast::Expression> {
-        match expression::expression(span) {
-            Ok((remaining, expr)) => {
-                let remaining_str = remaining.fragment().trim();
-                if remaining_str.is_empty() {
-                    Ok(expr)
-                } else {
-                    let loc = remaining.location();
-                    Err(CqlError::ParseError {
-                        message: format!(
-                            "Unexpected content after expression: {}",
-                            &remaining_str[..remaining_str.len().min(50)]
-                        ),
-                        line: loc.line,
-                        column: loc.column,
-                    })
-                }
+        parse_complete(span, "expression", expression::expression)
+    }
+}
+
+fn parse_complete<'a, T>(
+    span: Span<'a>,
+    production: &str,
+    parser: impl FnOnce(Span<'a>) -> nom::IResult<Span<'a>, T>,
+) -> Result<T> {
+    let fallback = span.location();
+    match parser(span) {
+        Ok((remaining, parsed)) => {
+            let trailing = remaining.fragment().trim();
+            if trailing.is_empty() {
+                Ok(parsed)
+            } else {
+                let location = remaining.location();
+                let excerpt: String = trailing.chars().take(50).collect();
+                Err(CqlError::ParseError {
+                    message: format!("Unexpected content after {production}: {excerpt}"),
+                    line: location.line,
+                    column: location.column,
+                })
             }
-            Err(e) => Err(CqlError::ParseError {
-                message: format!("Parse error: {e:?}"),
-                line: 1,
-                column: 1,
-            }),
         }
+        Err(error) => Err(located_parse_error(error, fallback)),
+    }
+}
+
+fn located_parse_error(
+    error: nom::Err<nom::error::Error<Span<'_>>>,
+    fallback: span::SourceLocation,
+) -> CqlError {
+    let message = format!("Parse error: {error:?}");
+    let location = match &error {
+        nom::Err::Error(error) | nom::Err::Failure(error) => error.input.location(),
+        nom::Err::Incomplete(_) => fallback,
+    };
+    CqlError::ParseError {
+        message,
+        line: location.line,
+        column: location.column,
     }
 }
 
@@ -275,6 +278,79 @@ mod tests {
         let parser = CqlParser::new();
         let result = parser.parse_expression("42 garbage");
         assert!(result.is_err());
+    }
+
+    fn assert_parse_error_location(source: &str, expected_line: usize, expected_column: usize) {
+        match CqlParser::new().parse(source) {
+            Err(CqlError::ParseError { line, column, .. }) => {
+                assert_eq!((line, column), (expected_line, expected_column));
+            }
+            other => panic!("expected located parse error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_malformed_temporal_direction_reports_phrase_location() {
+        assert_parse_error_location(
+            "library Bad\ndefine X: @2024-01-01 on or sideways @2024-02-01",
+            2,
+            29,
+        );
+    }
+
+    #[test]
+    fn test_nested_right_operand_reports_deepest_location() {
+        assert_parse_error_location("library Bad\ndefine X: true and (false or )", 2, 30);
+    }
+
+    #[test]
+    fn test_invalid_declaration_reports_after_starter() {
+        assert_parse_error_location("library Bad\ndefine X 1 + 2", 2, 10);
+    }
+
+    #[test]
+    fn test_unexpected_trailing_construct_reports_its_location() {
+        assert_parse_error_location("library Bad\ndefine X: 1\nbogus", 3, 1);
+    }
+
+    #[test]
+    fn test_delimiter_sensitive_expressions_remain_valid() {
+        let parser = CqlParser::new();
+
+        assert!(matches!(
+            parser.parse_expression("3 between 1 and 5").unwrap(),
+            Expression::TernaryExpression(_)
+        ));
+        assert!(matches!(
+            parser
+                .parse_expression("from { 1, 2 } N where N > 1 return N")
+                .unwrap(),
+            Expression::Query(_)
+        ));
+        assert!(matches!(
+            parser.parse_expression("{ 1, 2, 3 }").unwrap(),
+            Expression::ListExpression(ref list) if list.elements.len() == 3
+        ));
+        assert!(matches!(
+            parser
+                .parse_expression("Tuple { first: 1, second: 2 }")
+                .unwrap(),
+            Expression::TupleExpression(ref tuple) if tuple.elements.len() == 2
+        ));
+    }
+
+    #[test]
+    fn test_alternate_statement_productions_remain_valid() {
+        let library = CqlParser::new()
+            .parse(
+                "library Controls\n\
+                 define Value: 1\n\
+                 define function Identity(value Integer): value",
+            )
+            .unwrap();
+
+        assert!(matches!(library.statements[0], Statement::ExpressionDef(_)));
+        assert!(matches!(library.statements[1], Statement::FunctionDef(_)));
     }
 
     #[test]

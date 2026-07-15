@@ -15,7 +15,7 @@ use super::span::Span;
 use nom::{
     branch::alt,
     character::complete::char,
-    combinator::{map, opt, value},
+    combinator::{cut, eof, map, opt, peek, value},
     multi::many0,
     sequence::{delimited, pair, preceded},
     IResult,
@@ -385,26 +385,11 @@ fn parse_function_parameter(input: Span<'_>) -> IResult<Span<'_>, FunctionParame
 /// Parse a statement (expression or function definition)
 pub fn parse_statement(input: Span<'_>) -> IResult<Span<'_>, Statement> {
     let (input, _) = skip_ws_and_comments(input)?;
-
-    // Peek ahead to determine if this is a function or expression definition
-    // Function definitions have: [access] [fluent] define function
-    // Expression definitions have: [access] define Name:
-
-    // Try function first (since it's more specific)
-    if let Ok((remaining, func_def)) = parse_function_def(input) {
-        return Ok((remaining, Statement::FunctionDef(func_def)));
-    }
-
-    // Try expression definition
-    if let Ok((remaining, expr_def)) = parse_expression_def(input) {
-        return Ok((remaining, Statement::ExpressionDef(expr_def)));
-    }
-
-    // Fallback error
-    Err(nom::Err::Error(nom::error::Error::new(
-        input,
-        nom::error::ErrorKind::Alt,
-    )))
+    let (_, _) = starter_with_optional_access("define")(input)?;
+    cut(alt((
+        map(parse_function_def, Statement::FunctionDef),
+        map(parse_expression_def, Statement::ExpressionDef),
+    )))(input)
 }
 
 // ============================================================================
@@ -426,6 +411,51 @@ fn parse_optional_access_modifier(input: Span<'_>) -> IResult<Span<'_>, Option<A
     let (input, _) = skip_ws_and_comments(input)?;
 
     Ok((input, modifier))
+}
+
+fn starter_with_optional_access<'a>(
+    starter: &'static str,
+) -> impl FnMut(Span<'a>) -> IResult<Span<'a>, ()> {
+    move |input| {
+        let (input, _) = parse_optional_access_modifier(input)?;
+        let (input, _) = keyword(starter)(input)?;
+        Ok((input, ()))
+    }
+}
+
+fn keyword_starter<'a>(
+    keyword_value: &'static str,
+) -> impl FnMut(Span<'a>) -> IResult<Span<'a>, ()> {
+    move |input| {
+        let (input, _) = skip_ws_and_comments(input)?;
+        let (input, _) = keyword(keyword_value)(input)?;
+        Ok((input, ()))
+    }
+}
+
+fn terminology_starter(input: Span<'_>) -> IResult<Span<'_>, ()> {
+    let (input, _) = parse_optional_access_modifier(input)?;
+    let (input, _) = alt((
+        keyword("codesystem"),
+        keyword("valueset"),
+        keyword("code"),
+        keyword("concept"),
+    ))(input)?;
+    Ok((input, ()))
+}
+
+fn committed_after<'a, O, S, P>(
+    mut starter: S,
+    mut parser: P,
+) -> impl FnMut(Span<'a>) -> IResult<Span<'a>, O>
+where
+    S: FnMut(Span<'a>) -> IResult<Span<'a>, ()>,
+    P: FnMut(Span<'a>) -> IResult<Span<'a>, O>,
+{
+    move |input| {
+        let (_, _) = peek(&mut starter)(input)?;
+        cut(&mut parser)(input)
+    }
 }
 
 // ============================================================================
@@ -456,16 +486,23 @@ pub fn parse_library(input: Span<'_>) -> IResult<Span<'_>, Library> {
     let (input, _) = skip_ws_and_comments(input)?;
 
     // Parse library identifier (optional)
-    let (input, identifier) = opt(parse_library_identifier)(input)?;
+    let (input, identifier) = opt(committed_after(
+        keyword_starter("library"),
+        parse_library_identifier,
+    ))(input)?;
 
     // Parse using definitions
-    let (input, usings) = many0(parse_using_def)(input)?;
+    let (input, usings) = many0(committed_after(keyword_starter("using"), parse_using_def))(input)?;
 
     // Parse include definitions
-    let (input, includes) = many0(parse_include_def)(input)?;
+    let (input, includes) = many0(committed_after(
+        keyword_starter("include"),
+        parse_include_def,
+    ))(input)?;
 
     // Parse terminology definitions in any order (codesystem, valueset, code, concept)
-    let (input, terminology_defs) = many0(parse_terminology_def)(input)?;
+    let (input, terminology_defs) =
+        many0(committed_after(terminology_starter, parse_terminology_def))(input)?;
 
     // Separate terminology definitions by type
     let mut codesystems = Vec::new();
@@ -483,15 +520,22 @@ pub fn parse_library(input: Span<'_>) -> IResult<Span<'_>, Library> {
     }
 
     // Parse parameter definitions
-    let (input, parameters) = many0(parse_parameter_def)(input)?;
+    let (input, parameters) = many0(committed_after(
+        starter_with_optional_access("parameter"),
+        parse_parameter_def,
+    ))(input)?;
 
     // Parse context definitions
-    let (input, contexts) = many0(parse_context_def)(input)?;
+    let (input, contexts) = many0(committed_after(
+        keyword_starter("context"),
+        parse_context_def,
+    ))(input)?;
 
     // Parse statements (expression and function definitions)
     let (input, statements) = many0(parse_statement)(input)?;
 
     let (input, _) = skip_ws_and_comments(input)?;
+    let (input, _) = eof(input)?;
 
     Ok((
         input,

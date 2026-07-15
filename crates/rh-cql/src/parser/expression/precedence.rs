@@ -5,9 +5,9 @@
 //!
 //! ## Operator Precedence (lowest to highest)
 //!
-//! 1. `or`, `xor`
-//! 2. `and`
-//! 3. `implies`
+//! 1. `implies`
+//! 2. `or`, `xor`
+//! 3. `and`
 //! 4. `=`, `!=`, `~`, `!~`, `in`, `contains`
 //! 5. `<`, `>`, `<=`, `>=`
 //! 6. `|` (union)
@@ -37,9 +37,9 @@ use nom::{
     branch::alt,
     bytes::complete::tag_no_case,
     character::complete::char,
-    combinator::{map, not, opt, peek, value},
+    combinator::{cut, map, not, opt, peek, value},
     multi::{many0, separated_list0},
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, pair, preceded, tuple},
     IResult,
 };
 
@@ -57,57 +57,69 @@ fn binary_expr(op: BinaryOperator, left: Expression, right: Expression) -> Expre
     })
 }
 
-/// Fold a sequence of `(operator, rhs)` pairs into a left-associative binary
-/// expression tree.  All parsers that respect left-to-right associativity use
-/// this helper so the folding logic lives in exactly one place.
+fn unary_expr(operator: UnaryOperator, operand: Expression) -> Expression {
+    Expression::UnaryExpression(UnaryExpression {
+        operator,
+        operand: Box::new(operand),
+        location: None,
+    })
+}
+
 fn fold_left_assoc(first: Expression, rest: Vec<(BinaryOperator, Expression)>) -> Expression {
     rest.into_iter()
         .fold(first, |acc, (op, rhs)| binary_expr(op, acc, rhs))
 }
 
-// ============================================================================
-// Precedence Level 1: OR / XOR (lowest precedence)
-// ============================================================================
-
-pub(crate) fn parse_or_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_and_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((
-            value(BinaryOperator::Or, keyword("or")),
-            value(BinaryOperator::Xor, keyword("xor")),
-        ))),
-        parse_and_expression,
-    )))(input)?;
+fn parse_left_assoc<'a, P>(
+    input: Span<'a>,
+    operand: fn(Span<'a>) -> IResult<Span<'a>, Expression>,
+    operator: P,
+) -> IResult<Span<'a>, Expression>
+where
+    P: FnMut(Span<'a>) -> IResult<Span<'a>, BinaryOperator>,
+{
+    let (input, first) = operand(input)?;
+    let (input, rest) = many0(pair(ws(operator), cut(operand)))(input)?;
     Ok((input, fold_left_assoc(first, rest)))
 }
 
 // ============================================================================
-// Precedence Level 2: AND
+// Precedence Level 1: IMPLIES (lowest precedence)
 // ============================================================================
 
-fn parse_and_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_implies_expression(input)?;
-    let (input, rest) = many0(preceded(ws(keyword("and")), parse_implies_expression))(input)?;
-    Ok((
+pub(crate) fn parse_implies_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    parse_left_assoc(
         input,
-        rest.into_iter()
-            .fold(first, |acc, rhs| binary_expr(BinaryOperator::And, acc, rhs)),
-    ))
+        parse_or_expression,
+        value(BinaryOperator::Implies, keyword("implies")),
+    )
 }
 
 // ============================================================================
-// Precedence Level 3: IMPLIES
+// Precedence Level 2: OR / XOR
 // ============================================================================
 
-fn parse_implies_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_equality_expression(input)?;
-    let (input, rest) = many0(preceded(ws(keyword("implies")), parse_equality_expression))(input)?;
-    Ok((
+fn parse_or_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    parse_left_assoc(
         input,
-        rest.into_iter().fold(first, |acc, rhs| {
-            binary_expr(BinaryOperator::Implies, acc, rhs)
-        }),
-    ))
+        parse_and_expression,
+        alt((
+            value(BinaryOperator::Or, keyword("or")),
+            value(BinaryOperator::Xor, keyword("xor")),
+        )),
+    )
+}
+
+// ============================================================================
+// Precedence Level 3: AND
+// ============================================================================
+
+fn parse_and_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    parse_left_assoc(
+        input,
+        parse_equality_expression,
+        value(BinaryOperator::And, keyword("and")),
+    )
 }
 
 // ============================================================================
@@ -115,9 +127,10 @@ fn parse_implies_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // ============================================================================
 
 fn parse_equality_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_comparison_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((
+    parse_left_assoc(
+        input,
+        parse_comparison_expression,
+        alt((
             // Multi-char operators first
             value(BinaryOperator::NotEqual, tag_no_case("!=")),
             value(BinaryOperator::NotEquivalent, tag_no_case("!~")),
@@ -127,10 +140,8 @@ fn parse_equality_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             // Keyword operators
             value(BinaryOperator::In, keyword("in")),
             value(BinaryOperator::Contains, keyword("contains")),
-        ))),
-        parse_comparison_expression,
-    )))(input)?;
-    Ok((input, fold_left_assoc(first, rest)))
+        )),
+    )
 }
 
 // ============================================================================
@@ -138,19 +149,18 @@ fn parse_equality_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // ============================================================================
 
 fn parse_comparison_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_between_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((
+    parse_left_assoc(
+        input,
+        parse_between_expression,
+        alt((
             // Multi-char operators first
             value(BinaryOperator::LessOrEqual, tag_no_case("<=")),
             value(BinaryOperator::GreaterOrEqual, tag_no_case(">=")),
             // Single-char operators
             value(BinaryOperator::Less, char('<')),
             value(BinaryOperator::Greater, char('>')),
-        ))),
-        parse_between_expression,
-    )))(input)?;
-    Ok((input, fold_left_assoc(first, rest)))
+        )),
+    )
 }
 
 // ============================================================================
@@ -169,9 +179,9 @@ fn parse_between_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     // Try to parse "between X and Y"
     let result = opt(tuple((
         ws(keyword("between")),
-        parse_interval_operator_expression,
-        ws(keyword("and")),
-        parse_interval_operator_expression,
+        cut(parse_interval_operator_expression),
+        cut(ws(keyword("and"))),
+        cut(parse_interval_operator_expression),
     )))(input)?;
 
     match result {
@@ -396,8 +406,12 @@ fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expr
 /// Parse a single interval operator followed by its operand
 fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (IntervalOp, Expression)> {
     // Try timing phrases first (most complex)
-    if let Ok((remaining, (timing, expr))) = parse_timing_phrase_with_operand(input) {
-        return Ok((remaining, (IntervalOp::Timing(timing), expr)));
+    match parse_timing_phrase_with_operand(input) {
+        Ok((remaining, (timing, expr))) => {
+            return Ok((remaining, (IntervalOp::Timing(timing), expr)));
+        }
+        Err(nom::Err::Error(_)) => {}
+        Err(error) => return Err(error),
     }
 
     // First, try to parse compound operators: "starts/ends during/before/after [precision of]"
@@ -416,7 +430,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
 
     match compound_result {
         (remaining, Some((boundary, op, precision))) => {
-            let (remaining, expr) = parse_union_expression(remaining)?;
+            let (remaining, expr) = cut(parse_union_expression)(remaining)?;
             Ok((
                 remaining,
                 (
@@ -450,7 +464,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
                 let precision = precision_opt.map(|(p, _)| p);
                 // Only use this variant if we have precision or boundary
                 if precision.is_some() || boundary.is_some() {
-                    let (remaining, expr) = parse_union_expression(remaining)?;
+                    let (remaining, expr) = cut(parse_union_expression)(remaining)?;
                     return Ok((
                         remaining,
                         (
@@ -488,19 +502,19 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
                     value(BinaryOperator::After, keyword("after")),
                 ))),
                 parse_precision,
-                ws(keyword("of")),
+                cut(ws(keyword("of"))),
             )))(input)?;
 
             match temporal_with_precision {
                 (remaining, Some((op, precision, _))) => {
-                    let (remaining, expr) = parse_union_expression(remaining)?;
+                    let (remaining, expr) = cut(parse_union_expression)(remaining)?;
                     Ok((remaining, (IntervalOp::WithPrecision(op, precision), expr)))
                 }
                 (_, None) => {
                     // Fall back to simple operators
                     let (remaining, op) = parse_simple_interval_operator(input)?;
 
-                    let (remaining, expr) = parse_union_expression(remaining)?;
+                    let (remaining, expr) = cut(parse_union_expression)(remaining)?;
                     Ok((remaining, (IntervalOp::Simple(op), expr)))
                 }
             }
@@ -576,18 +590,11 @@ fn parse_simple_interval_operator(input: Span<'_>) -> IResult<Span<'_>, BinaryOp
 fn parse_timing_phrase_with_operand(
     input: Span<'_>,
 ) -> IResult<Span<'_>, (TimingPhrase, Expression)> {
-    // Try "same" timing first
-    if let Ok(result) = parse_same_timing(input) {
-        return Ok(result);
-    }
-
-    // Try "within" timing
-    if let Ok(result) = parse_within_timing(input) {
-        return Ok(result);
-    }
-
-    // Try relative timing (before/after variants)
-    parse_relative_timing(input)
+    alt((
+        parse_same_timing,
+        parse_within_timing,
+        parse_relative_timing,
+    ))(input)
 }
 
 /// Parse "same" timing phrase
@@ -607,7 +614,7 @@ fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expres
     let (input, precision) = opt(ws(parse_precision))(input)?;
 
     // Direction: "as", "or before", "or after"
-    let (input, direction) = ws(alt((
+    let (input, direction) = cut(ws(alt((
         value(
             SameDirection::OrBefore,
             tuple((keyword("or"), ws(keyword("before")))),
@@ -617,7 +624,7 @@ fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expres
             tuple((keyword("or"), ws(keyword("after")))),
         ),
         value(SameDirection::As, keyword("as")),
-    )))(input)?;
+    ))))(input)?;
 
     // Optional right boundary: start/end
     let (input, right_boundary) = opt(ws(alt((
@@ -625,7 +632,7 @@ fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expres
         value(IntervalBoundary::End, keyword("end")),
     ))))(input)?;
 
-    let (input, expr) = parse_union_expression(input)?;
+    let (input, expr) = cut(parse_union_expression)(input)?;
 
     Ok((
         input,
@@ -651,15 +658,15 @@ fn parse_within_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expr
 
     let (input, properly) = opt(ws(keyword("properly")))(input)?;
     let (input, _) = ws(keyword("within"))(input)?;
-    let (input, quantity) = ws(parse_duration_quantity)(input)?;
-    let (input, _) = ws(keyword("of"))(input)?;
+    let (input, quantity) = cut(ws(parse_duration_quantity))(input)?;
+    let (input, _) = cut(ws(keyword("of")))(input)?;
 
     let (input, right_boundary) = opt(ws(alt((
         value(IntervalBoundary::Start, keyword("start")),
         value(IntervalBoundary::End, keyword("end")),
     ))))(input)?;
 
-    let (input, expr) = parse_union_expression(input)?;
+    let (input, expr) = cut(parse_union_expression)(input)?;
 
     let offset = TimingOffset {
         quantity: QuantityValue {
@@ -699,26 +706,6 @@ fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Ex
     // - more than <quantity> before/after
     let (input, offset) = parse_timing_offset(input)?;
 
-    // Parse direction - must have at least offset or boundary to trigger timing phrase parsing
-    // If we have neither, this isn't a timing phrase
-    if offset.is_none() && left_boundary.is_none() {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
-    }
-
-    // We need an offset for timing phrases (simple before/after without offset is handled elsewhere)
-    let offset = match offset {
-        Some(o) => o,
-        None => {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                nom::error::ErrorKind::Tag,
-            )))
-        }
-    };
-
     let (input, direction) = ws(parse_timing_direction)(input)?;
 
     // Optional precision: day of, hour of, etc.
@@ -730,14 +717,14 @@ fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Ex
         value(IntervalBoundary::End, keyword("end")),
     ))))(input)?;
 
-    let (input, expr) = parse_union_expression(input)?;
+    let (input, expr) = cut(parse_union_expression)(input)?;
 
     Ok((
         input,
         (
             TimingPhrase::RelativeTiming {
                 left_boundary,
-                offset: Some(offset),
+                offset,
                 direction,
                 precision,
                 right_boundary,
@@ -862,28 +849,31 @@ fn parse_duration_unit(input: Span<'_>) -> IResult<Span<'_>, String> {
 
 /// Parse timing direction keyword
 fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection> {
-    alt((
-        // Multi-word variants first (longer match)
-        value(
-            TimingDirection::OnOrBefore,
-            tuple((keyword("on"), ws(keyword("or")), ws(keyword("before")))),
-        ),
-        value(
-            TimingDirection::OnOrAfter,
-            tuple((keyword("on"), ws(keyword("or")), ws(keyword("after")))),
-        ),
-        value(
-            TimingDirection::BeforeOrOn,
-            tuple((keyword("before"), ws(keyword("or")), ws(keyword("on")))),
-        ),
-        value(
-            TimingDirection::AfterOrOn,
-            tuple((keyword("after"), ws(keyword("or")), ws(keyword("on")))),
-        ),
-        // Simple variants
+    if let Ok((input, _)) = keyword("on")(input) {
+        let (input, or) = opt(ws(keyword("or")))(input)?;
+        let (input, direction) = cut(ws(alt((
+            value(TimingDirection::Before, keyword("before")),
+            value(TimingDirection::After, keyword("after")),
+        ))))(input)?;
+        let direction = match direction {
+            TimingDirection::Before if or.is_some() => TimingDirection::OnOrBefore,
+            TimingDirection::After if or.is_some() => TimingDirection::OnOrAfter,
+            direction => direction,
+        };
+        return Ok((input, direction));
+    }
+
+    let (input, direction) = alt((
         value(TimingDirection::Before, keyword("before")),
         value(TimingDirection::After, keyword("after")),
-    ))(input)
+    ))(input)?;
+    let (input, or_on) = opt(preceded(ws(keyword("or")), cut(ws(keyword("on")))))(input)?;
+    let direction = match direction {
+        TimingDirection::Before if or_on.is_some() => TimingDirection::BeforeOrOn,
+        TimingDirection::After if or_on.is_some() => TimingDirection::AfterOrOn,
+        direction => direction,
+    };
+    Ok((input, direction))
 }
 
 // ============================================================================
@@ -891,17 +881,16 @@ fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection>
 // ============================================================================
 
 fn parse_union_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_additive_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((
+    parse_left_assoc(
+        input,
+        parse_additive_expression,
+        alt((
             value(BinaryOperator::Union, char('|')),
             value(BinaryOperator::Union, keyword("union")),
             value(BinaryOperator::Except, keyword("except")),
             value(BinaryOperator::Intersect, keyword("intersect")),
-        ))),
-        parse_additive_expression,
-    )))(input)?;
-    Ok((input, fold_left_assoc(first, rest)))
+        )),
+    )
 }
 
 // ============================================================================
@@ -909,16 +898,15 @@ fn parse_union_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // ============================================================================
 
 fn parse_additive_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_multiplicative_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((
+    parse_left_assoc(
+        input,
+        parse_multiplicative_expression,
+        alt((
             value(BinaryOperator::Add, char('+')),
             value(BinaryOperator::Subtract, char('-')),
             value(BinaryOperator::Concatenate, char('&')),
-        ))),
-        parse_multiplicative_expression,
-    )))(input)?;
-    Ok((input, fold_left_assoc(first, rest)))
+        )),
+    )
 }
 
 // ============================================================================
@@ -926,17 +914,16 @@ fn parse_additive_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // ============================================================================
 
 fn parse_multiplicative_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_power_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((
+    parse_left_assoc(
+        input,
+        parse_power_expression,
+        alt((
             value(BinaryOperator::Multiply, char('*')),
             value(BinaryOperator::Divide, char('/')),
             value(BinaryOperator::TruncatedDivide, keyword("div")),
             value(BinaryOperator::Modulo, keyword("mod")),
-        ))),
-        parse_power_expression,
-    )))(input)?;
-    Ok((input, fold_left_assoc(first, rest)))
+        )),
+    )
 }
 
 // ============================================================================
@@ -944,14 +931,11 @@ fn parse_multiplicative_expression(input: Span<'_>) -> IResult<Span<'_>, Express
 // ============================================================================
 
 fn parse_power_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, first) = parse_unary_expression(input)?;
-    let (input, rest) = many0(preceded(ws(char('^')), parse_unary_expression))(input)?;
-    Ok((
+    parse_left_assoc(
         input,
-        rest.into_iter().fold(first, |acc, rhs| {
-            binary_expr(BinaryOperator::Power, acc, rhs)
-        }),
-    ))
+        parse_unary_expression,
+        value(BinaryOperator::Power, char('^')),
+    )
 }
 
 // ============================================================================
@@ -1234,24 +1218,44 @@ fn parse_convert_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     ))
 }
 
+fn parse_literal_test_operator(input: Span<'_>) -> IResult<Span<'_>, (UnaryOperator, bool)> {
+    let (input, _) = ws(keyword("is"))(input)?;
+    let (input, negated) = opt(ws(keyword("not")))(input)?;
+    let (input, operator) = ws(alt((
+        value(UnaryOperator::IsNull, keyword("null")),
+        value(UnaryOperator::IsTrue, keyword("true")),
+        value(UnaryOperator::IsFalse, keyword("false")),
+    )))(input)?;
+    Ok((input, (operator, negated.is_some())))
+}
+
 fn parse_type_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, first) = parse_invocation_expression(input)?;
 
+    if let Ok((remaining, (operator, negated))) = parse_literal_test_operator(input) {
+        let test = unary_expr(operator, first);
+        let expression = if negated {
+            unary_expr(UnaryOperator::Not, test)
+        } else {
+            test
+        };
+        return Ok((remaining, expression));
+    }
+
     // Check for 'is not' (negated type check)
     if let Ok((input2, _)) = tuple((ws(keyword("is")), ws(keyword("not"))))(input) {
-        let (input, type_spec) = parse_type_specifier(input2)?;
+        let (input, type_spec) = cut(parse_type_specifier)(input2)?;
         return Ok((
             input,
-            Expression::UnaryExpression(UnaryExpression {
-                operator: UnaryOperator::Not,
-                operand: Box::new(Expression::TypeExpression(TypeExpression {
+            unary_expr(
+                UnaryOperator::Not,
+                Expression::TypeExpression(TypeExpression {
                     operator: TypeOperator::Is,
                     operand: Box::new(first),
                     type_specifier: type_spec,
                     location: None,
-                })),
-                location: None,
-            }),
+                }),
+            ),
         ));
     }
 
@@ -1261,7 +1265,7 @@ fn parse_type_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             value(TypeOperator::Is, keyword("is")),
             value(TypeOperator::As, keyword("as")),
         ))),
-        parse_type_specifier,
+        cut(parse_type_specifier),
     )))(input)?;
 
     match type_op {

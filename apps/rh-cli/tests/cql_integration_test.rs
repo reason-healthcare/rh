@@ -9,6 +9,16 @@ fn rh_cmd() -> Command {
     Command::new(PathBuf::from(bin_path))
 }
 
+fn compile_json(input: &str, exit_code: i32) -> serde_json::Value {
+    let assert = rh_cmd()
+        .args(["--format", "json", "cql", "compile", "-"])
+        .write_stdin(input)
+        .assert()
+        .code(exit_code)
+        .stderr(predicate::str::is_empty());
+    serde_json::from_slice(&assert.get_output().stdout).expect("stdout must be one JSON value")
+}
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -321,6 +331,8 @@ define Result: H.Answer + 1
 // ---------------------------------------------------------------------------
 
 const INVALID_CQL: &str = "this is not valid CQL !!!###";
+
+const NESTED_SYNTAX_ERROR_CQL: &str = "library Bad\ndefine X: true and (false or )";
 
 /// CQL that parses correctly but contains a semantic error (undefined reference).
 /// This causes `validate` to return a `ValidationResult` with errors rather
@@ -670,6 +682,42 @@ fn test_compile_exits_nonzero_on_invalid_cql() {
         .failure()
         // Error message is reported on stderr
         .stderr(predicate::str::contains("✗").or(predicate::str::contains("error")));
+}
+
+#[test]
+fn test_compile_syntax_error_uses_parse_exit_code_and_location() {
+    rh_cmd()
+        .args(["cql", "compile", "-"])
+        .write_stdin(NESTED_SYNTAX_ERROR_CQL)
+        .assert()
+        .code(4)
+        .stderr(predicate::str::contains("line 2, column 30"));
+}
+
+#[test]
+fn test_compile_syntax_error_json_envelope() {
+    let envelope = compile_json(NESTED_SYNTAX_ERROR_CQL, 4);
+
+    assert_eq!(envelope["ok"], false);
+    assert!(envelope.get("result").is_none());
+    assert_eq!(envelope["errors"].as_array().map(Vec::len), Some(1));
+    assert_eq!(envelope["errors"][0]["code"], "parse_error");
+    assert!(envelope["errors"][0]["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("line 2, column 30")));
+    assert_eq!(envelope["errors"][0]["span"], "2:30");
+    assert_eq!(envelope["meta"]["command"], "cql compile");
+    assert!(envelope["meta"]["version"].is_string());
+}
+
+#[test]
+fn test_compile_valid_cql_json_success_envelope() {
+    let envelope = compile_json(SIMPLE_CQL, 0);
+
+    assert_eq!(envelope["ok"], true);
+    assert!(envelope["result"].is_object());
+    assert!(envelope["errors"].as_array().is_some_and(Vec::is_empty));
+    assert_eq!(envelope["meta"]["command"], "cql compile");
 }
 
 // ---------------------------------------------------------------------------

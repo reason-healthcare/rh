@@ -57,6 +57,32 @@ fn emitter_with_result_types() -> ElmEmitter {
     ElmEmitter::new(CompilerOptions::new().with_option(CompilerOption::EnableResultTypes))
 }
 
+fn emit_source_expression(source: &str) -> elm::Expression {
+    let cql = format!("library Test version '1.0'\ndefine Expr: {source}\n");
+    let (typed_lib, diags) = analyze(&cql);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+    let body = first_expr_body(&typed_lib);
+    emitter_with_result_types().emit_expression(body)
+}
+
+#[derive(Clone, Copy)]
+enum LiteralTest {
+    Null,
+    True,
+    False,
+}
+
+impl LiteralTest {
+    fn matches(self, expression: &elm::Expression) -> bool {
+        matches!(
+            (self, expression),
+            (Self::Null, elm::Expression::IsNull(_))
+                | (Self::True, elm::Expression::IsTrue(_))
+                | (Self::False, elm::Expression::IsFalse(_))
+        )
+    }
+}
+
 /// Extract the typed expression body of the first `ExpressionDef` statement.
 fn first_expr_body(
     lib: &rh_cql::semantics::typed_ast::TypedLibrary,
@@ -116,6 +142,83 @@ fn test_conformance_boolean_and() {
         matches!(expr, elm::Expression::And(_)),
         "Expected And, got {expr:?}"
     );
+}
+
+#[test]
+fn test_literal_is_expressions_emit_canonical_elm() {
+    for (source, expected) in [
+        ("null is null", LiteralTest::Null),
+        ("true is true", LiteralTest::True),
+        ("false is false", LiteralTest::False),
+    ] {
+        let expression = emit_source_expression(source);
+        assert!(
+            expected.matches(&expression),
+            "unexpected ELM for {source}: {expression:?}"
+        );
+    }
+}
+
+#[test]
+fn test_negated_literal_is_expressions_wrap_canonical_elm() {
+    for (source, expected) in [
+        ("null is not null", LiteralTest::Null),
+        ("true is not true", LiteralTest::True),
+        ("false is not false", LiteralTest::False),
+    ] {
+        let expression = emit_source_expression(source);
+        let operand = match expression {
+            elm::Expression::Not(unary) => unary.operand,
+            other => panic!("expected Not for {source}, got {other:?}"),
+        };
+        assert!(
+            operand
+                .as_deref()
+                .is_some_and(|operand| expected.matches(operand)),
+            "unexpected ELM for {source}: {operand:?}"
+        );
+    }
+}
+
+#[test]
+fn test_named_is_expression_remains_generic_elm() {
+    assert!(matches!(
+        emit_source_expression("1 is Integer"),
+        elm::Expression::Is(_)
+    ));
+}
+
+#[test]
+fn test_zero_offset_temporal_relationships_emit_canonical_elm() {
+    let before = emit_source_expression("@2024-01-01 before @2024-02-01");
+    assert!(matches!(before, elm::Expression::Before(_)));
+
+    let after = emit_source_expression("@2024-02-01 after @2024-01-01");
+    assert!(matches!(after, elm::Expression::After(_)));
+
+    for source in [
+        "@2024-01-01 on or before month of @2024-02-01",
+        "@2024-01-01 before or on month of @2024-02-01",
+    ] {
+        let expression = emit_source_expression(source);
+        assert!(matches!(
+            expression,
+            elm::Expression::SameOrBefore(ref timing)
+                if timing.precision.as_deref() == Some("month")
+        ));
+    }
+
+    for source in [
+        "@T10:00 on or after hour of @T09:00",
+        "@T10:00 after or on hour of @T09:00",
+    ] {
+        let expression = emit_source_expression(source);
+        assert!(matches!(
+            expression,
+            elm::Expression::SameOrAfter(ref timing)
+                if timing.precision.as_deref() == Some("hour")
+        ));
+    }
 }
 
 // ---------------------------------------------------------------------------

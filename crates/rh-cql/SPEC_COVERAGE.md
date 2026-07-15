@@ -53,9 +53,15 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 
 > Counts apply to the **source stage only** (➖ not counted as either present or absent).  
 > **✅ Impl** = operators with full end-to-end evaluation support (Eval count); **Coverage %** = ✅ Impl / total operators.  
-> Last updated: wave-2 (2026-03-09) — added Precision, LowBoundary, HighBoundary, TimeOfDay, Size, Product, GeometricMean, fixed Coalesce list-overload, registered aggregate/nullological semantic signatures.
-> 2026-06-12 — clinical age operators complete: `AgeIn<unit>[At]` (patient context) and `CalculateAgeIn<unit>[At]` (explicit birthDate); Clinical 0% → 100%, total 161 → 169 (97%).
-> 2026-06-12 (wave 2) — task 2.5: Ratio literals (`1 'mg' : 2 'mL'`, `1:128`) parse/emit/eval end-to-end; ELM `Quantity`/`Ratio` nodes evaluate; `ToRatio`, 1-arg `Combine`, `Message` (Error severity raises, others log via `tracing`), `Children`, `Descendants` implemented via FunctionRef dispatch. Error category 0% → 100%; total 170/175.
+>
+> - **2026-07-15** — Canonical source `is null`, `is true`, and `is false` forms lower to unary
+>   AST/ELM nodes; `is not` lowers to `Not` around the canonical test. Focused tests cover positive,
+>   negative, named-type, and legacy ELM paths.
+> - **2026-07-15** — Zero-offset temporal relationships now parse, emit canonical ELM, and
+>   evaluate across point/interval combinations. Logical precedence now follows CQL 1.5.3 as
+>   `implies`, `or`/`xor`, `and`, then comparisons, with all ordered mixed pairings covered.
+> - **2026-06-12** — Clinical age operators reached 100%; Ratio literals, `ToRatio`, one-argument
+>   `Combine`, `Message`, `Children`, and `Descendants` brought total coverage to 170/175 (97%).
 
 ---
 
@@ -65,11 +71,11 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 
 | Operator | CQL Syntax | Parse | Semantic | Emit | Eval | Notes |
 |----------|-----------|-------|----------|------|------|-------|
-| And | `A and B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::And` |
-| Or | `A or B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Or` |
+| And | `A and B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::And`; mixed-pairing and left-associativity parser/eval evidence cited above |
+| Or | `A or B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Or`; mixed-pairing and left-associativity parser/eval evidence cited above |
 | Not | `not A` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::Not` |
-| Xor | `A xor B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Xor` |
-| Implies | `A implies B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Implies` |
+| Xor | `A xor B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Xor`; same precedence as `or`, left-associative, with parser/eval evidence cited above |
+| Implies | `A implies B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Implies`; lowest logical precedence and left-associative per CQL 1.5.3 reference grammar, with parser/eval evidence cited above |
 
 ---
 
@@ -79,9 +85,9 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 
 | Operator | CQL Syntax | Parse | Semantic | Emit | Eval | Notes |
 |----------|-----------|-------|----------|------|------|-------|
-| IsNull | `A is null` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsNull` |
-| IsTrue | `A is true` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsTrue` |
-| IsFalse | `A is false` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsFalse` |
+| IsNull | `A is null` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsNull`; parser `test_literal_is_expressions_use_canonical_unary_operators`; ELM `test_literal_is_expressions_emit_canonical_elm`; eval `eval_literal_is_expressions` |
+| IsTrue | `A is true` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsTrue`; canonical parser/ELM/eval tests listed for `IsNull` cover all three forms |
+| IsFalse | `A is false` | ✅ | ✅ | ✅ | ✅ | `UnaryOperator::IsFalse`; canonical parser/ELM/eval tests listed for `IsNull` cover all three forms and their negations |
 | Coalesce | `Coalesce(A, B, …)` | ➖ | ✅ | ✅ | ✅ | `Expression::Coalesce`; list-overload handled in eval; signature registered in `operators.rs` (wave-2) |
 
 ---
@@ -174,10 +180,10 @@ A ➖ in **Parse** means the operator is invoked with function-call syntax in CQ
 | DateTime | `DateTime(y, m, d, …)` | ➖ | ❌ | ✅ | ✅ | `Expression::DateTime` constructor |
 | Time | `Time(h, m, s, ms)` | ➖ | ❌ | ✅ | ✅ | `Expression::Time` constructor |
 | SameAs | `A same as B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::SameAs`; datetime timing |
-| SameOrBefore | `A same or before B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::SameOrBefore` |
-| SameOrAfter | `A same or after B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::SameOrAfter` |
-| Before | `A before B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::Before`; via timing expression |
-| After | `A after B` | ✅ | ✅ | ✅ | ✅ | `BinaryOperator::After`; via timing expression |
+| SameOrBefore | `A same or before B` | ✅ | ✅ | ✅ | ✅ | Zero-offset `on or before` / `before or on` lower to `SameOrBefore`; point/interval and precision evidence in parser, emitter, evaluator, and 17-case HL7 regression coverage |
+| SameOrAfter | `A same or after B` | ✅ | ✅ | ✅ | ✅ | Zero-offset `on or after` / `after or on` lower to `SameOrAfter`; point/interval and precision evidence in parser, emitter, evaluator, and 17-case HL7 regression coverage |
+| Before | `A before B` | ✅ | ✅ | ✅ | ✅ | Exclusive zero-offset timing expression; point/interval and precision evidence in focused parser/emitter tests |
+| After | `A after B` | ✅ | ✅ | ✅ | ✅ | Exclusive zero-offset timing expression; point/interval and precision evidence in focused parser/emitter tests |
 | DurationBetween | `duration in P between A and B` | ✅ | ✅ | ✅ | ✅ | `Expression::DurationBetween` |
 | DifferenceBetween | `difference in P between A and B` | ✅ | ❌ | ✅ | ✅ | `Expression::DifferenceBetween`; no operator sig |
 | DateFrom | `date from A` | ✅ | ✅ | ✅ | ✅ | unary signature in `operators.rs` + dispatch in `eval/engine.rs`; covered by `tests/eval_integration_tests.rs::eval_date_from_and_time_from` |
