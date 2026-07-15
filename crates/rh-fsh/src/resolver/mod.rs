@@ -233,9 +233,9 @@ fn expand_value(value: &mut FshValue, aliases: &HashMap<String, String>) {
                 *url = resolved.clone();
             }
         }
-        FshValue::Reference(ref mut r) => {
-            if let Some(resolved) = aliases.get(r.as_str()) {
-                *r = resolved.clone();
+        FshValue::Reference { target, .. } => {
+            if let Some(resolved) = aliases.get(target.as_str()) {
+                *target = resolved.clone();
             }
         }
         FshValue::Code {
@@ -408,18 +408,18 @@ fn inline_instance_rules(
                     // SD rule sets can be inlined as instance assignment rules if they match
                     if let Some(rs_rules) = rule_sets.get(&rs_name) {
                         in_progress.insert(rs_name.clone());
-                        // Convert SD assignment rules to instance rules
+                        // Convert instance-compatible SD rules to instance rules.
                         let inst_rules: Vec<Spanned<InstanceRule>> = rs_rules
                             .iter()
                             .filter_map(|r| {
-                                if let SdRule::Assignment(a) = &r.value {
-                                    Some(Spanned::new(
-                                        InstanceRule::Assignment(a.clone()),
-                                        r.location,
-                                    ))
-                                } else {
-                                    None
-                                }
+                                let rule = match &r.value {
+                                    SdRule::Assignment(assignment) => {
+                                        InstanceRule::Assignment(assignment.clone())
+                                    }
+                                    SdRule::Path(path) => InstanceRule::Path(path.clone()),
+                                    _ => return None,
+                                };
+                                Some(Spanned::new(rule, r.location))
                             })
                             .collect();
                         let inlined = inline_instance_rules(

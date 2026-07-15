@@ -1,0 +1,50 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "AnimalCS",
+  "id": "animal-cs",
+  "title": "Animal Code System",
+  "description": "A code system with hierarchical animal categories.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/CodeSystem/animal-cs",
+  "concept": [
+    {
+      "code": "animal",
+      "display": "Animal",
+      "definition": "Any living creature",
+      "concept": [
+        {
+          "code": "mammal",
+          "display": "Mammal",
+          "definition": "A warm-blooded vertebrate",
+          "concept": [
+            {
+              "code": "dog",
+              "display": "Dog",
+              "definition": "Canis lupus familiaris"
+            },
+            {
+              "code": "cat",
+              "display": "Cat",
+              "definition": "Felis catus"
+            }
+          ]
+        },
+        {
+          "code": "bird",
+          "display": "Bird",
+          "definition": "A feathered vertebrate",
+          "concept": [
+            {
+              "code": "eagle",
+              "display": "Eagle",
+              "definition": "A large bird of prey"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "count": 6
+}

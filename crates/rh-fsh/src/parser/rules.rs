@@ -7,8 +7,9 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1},
     character::complete::char,
-    combinator::{map, opt},
-    multi::separated_list1,
+    combinator::{map, opt, recognize},
+    multi::{many1, separated_list1},
+    sequence::delimited,
     IResult,
 };
 
@@ -61,6 +62,7 @@ pub fn parse_instance_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<Instanc
     let (input, rule) = alt((
         map(parse_insert_rule_inner, InstanceRule::Insert),
         map(parse_assignment_rule_inner, InstanceRule::Assignment),
+        map(parse_path_rule_inner, InstanceRule::Path),
     ))(input)?;
 
     let (input, _) = take_while(|c| c != '\n')(input)?;
@@ -188,7 +190,17 @@ fn parse_vs_from_clause(
 
     // could be "system X" or "valueset Y" or "system X and valueset Y" etc.
     loop {
-        let (inp, _) = ws(remaining)?;
+        let (mut inp, _) = ws(remaining)?;
+        if inp.fragment().starts_with('\n') || inp.fragment().starts_with("\r\n") {
+            let (after_cr, _) = opt(char('\r'))(inp)?;
+            let (after_line, _) = char('\n')(after_cr)?;
+            let (after_indent, _) = ws(after_line)?;
+            if after_indent.fragment().starts_with("where")
+                || after_indent.fragment().starts_with("and")
+            {
+                inp = after_indent;
+            }
+        }
         if inp.fragment().starts_with("system") {
             let (inp, _) = tag("system")(inp)?;
             let (inp, _) = ws(inp)?;
@@ -612,7 +624,14 @@ fn parse_caret_value_rule_inner(input: Span<'_>) -> IResult<Span<'_>, CaretValue
     let (input, path) = opt(parse_path_before_caret)(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('^')(input)?;
-    let (input, caret_path_raw) = take_while1(|c: char| !c.is_whitespace() && c != '=')(input)?;
+    let (input, caret_path_raw) = recognize(many1(alt((
+        recognize(delimited(
+            char('['),
+            take_while1(|c: char| c != ']'),
+            char(']'),
+        )),
+        take_while1(|c: char| !c.is_whitespace() && c != '=' && c != '['),
+    ))))(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('=')(input)?;
     let (input, _) = ws(input)?;

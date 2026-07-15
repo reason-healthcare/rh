@@ -1,0 +1,24 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "SnomedFindingsVS",
+  "id": "snomed-findings-vs",
+  "title": "SNOMED Clinical Findings",
+  "description": "ValueSet containing SNOMED CT clinical findings using is-a filtering.",
+  "version": "0.1.0",
+  "url": "http://rh-fsh-test.example.org/ValueSet/snomed-findings-vs",
+  "compose": {
+    "include": [
+      {
+        "system": "http://snomed.info/sct",
+        "filter": [
+          {
+            "property": "concept",
+            "op": "is-a",
+            "value": "404684003"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "resourceType": "Bundle",
+  "id": "RecursiveBundle",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "http://example.org/fhir/Observation/recursive-observation",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "recursive-observation",
+        "meta": {
+          "profile": [
+            "http://rh-fsh-test.example.org/StructureDefinition/RecursiveObservation"
+          ]
+        },
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "code": "55423-8",
+              "system": "http://loinc.org",
+              "display": "Number of steps in 24 hour Measured"
+            }
+          ]
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "code": "41950-7",
+                  "system": "http://loinc.org",
+                  "display": "Number of steps"
+                }
+              ]
+            },
+            "valueQuantity": {
+              "value": 190,
+              "unit": "steps"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "code": "41953-1",
+                  "system": "http://loinc.org",
+                  "display": "Number of flights of stairs"
+                }
+              ]
+            },
+            "valueQuantity": {
+              "value": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

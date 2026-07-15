@@ -143,6 +143,80 @@ jobs:
       - name: Run cargo test
         run: cargo test --workspace --all-features
 
+      - name: Run rh-fsh SUSHI compatibility tests
+        run: cargo test -p rh-fsh --test sushi_compat -- --include-ignored
+
+  fsh-conformance-report:
+    name: FSH SUSHI Conformance Report
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-fsh-conformance-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-fsh-conformance-cargo-
+
+      - name: Run project SUSHI comparison
+        id: fsh-conformance
+        shell: bash
+        run: |
+          set +e
+          CARGO_TARGET_DIR=target/conformance cargo build -p rh-cli
+          BUILD_EXIT=$?
+          if [ "$BUILD_EXIT" -eq 0 ]; then
+            python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --timeout-seconds 600
+            REPORT_EXIT=$?
+          else
+            REPORT_EXIT=$BUILD_EXIT
+          fi
+
+          echo "exit_code=$REPORT_EXIT" >> "$GITHUB_OUTPUT"
+          {
+            echo "## FSH SUSHI Conformance Report"
+            echo ""
+            echo "Project comparison exit code: $REPORT_EXIT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$REPORT_EXIT" -ne 0 ]; then
+            echo "::warning::FSH SUSHI project comparison reported differences or an execution error; see the summary artifact."
+          fi
+          exit 0
+
+      - name: Upload FSH conformance summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsh-sushi-conformance-summary
+          path: |
+            crates/rh-fsh/conformance/results/latest-summary.json
+            crates/rh-fsh/conformance/results/latest-summary.md
+          if-no-files-found: warn
+
   lints:
     name: Lints
     runs-on: ubuntu-latest

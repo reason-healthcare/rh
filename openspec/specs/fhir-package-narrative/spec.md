@@ -8,9 +8,9 @@ Defines how the publisher generates FHIR narrative (`text` element) for resource
 
 ### Requirement: Resource-specific markdown is embedded as FHIR narrative
 
-For each `<stem>.md` file in the source directory where a matching `<stem>.json` FHIR resource
-exists (matched by filename stem), the publisher SHALL convert the markdown to XHTML and embed
-it as the resource's `text` element with `status` set to `"generated"`.
+The publisher SHALL convert every `<stem>.md` file with a matching `<stem>.json` FHIR resource
+(matched by filename stem) to XHTML and embed it as the resource's `text` element with `status`
+set to `"generated"`.
 
 #### Scenario: Matching markdown file is embedded
 - **WHEN** `ValueSet-myVS.json` and `ValueSet-myVS.md` both exist in the source directory

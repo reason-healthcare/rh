@@ -1,0 +1,32 @@
+{
+  "resourceType": "Parameters",
+  "id": "DTRParameters",
+  "parameter": [
+    {
+      "name": "questionnaire",
+      "resource": {
+        "resourceType": "Questionnaire",
+        "id": "dtr-questionnaire",
+        "url": "http://example.org/Questionnaire/dtr-questionnaire",
+        "status": "active",
+        "item": [
+          {
+            "linkId": "medication",
+            "text": "Medication",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "patient",
+      "valueReference": {
+        "reference": "Patient/example"
+      }
+    },
+    {
+      "name": "request-id",
+      "valueString": "request-123"
+    }
+  ]
+}

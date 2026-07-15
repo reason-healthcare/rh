@@ -10,7 +10,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
     character::complete::{char, digit1},
-    combinator::{map, opt, recognize, value},
+    combinator::{map, opt, recognize, value, verify},
     multi::many0,
     sequence::{pair, tuple},
     IResult,
@@ -175,7 +175,13 @@ pub fn multiline_string(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, _) = tag("\"\"\"")(input)?;
     let (input, content) = take_until("\"\"\"")(input)?;
     let (input, _) = tag("\"\"\"")(input)?;
-    Ok((input, content.fragment().to_string()))
+    Ok((
+        input,
+        content
+            .fragment()
+            .trim_end_matches(['\r', '\n'])
+            .to_string(),
+    ))
 }
 
 /// Parse an integer (optional leading `-` then digits)
@@ -245,6 +251,16 @@ pub fn fsh_path(input: Span<'_>) -> IResult<Span<'_>, FshPath> {
     let mut remaining = input;
 
     loop {
+        if remaining.fragment().starts_with('[') {
+            let (input, _) = char('[')(remaining)?;
+            let (input, index) = take_while1(|character: char| character.is_ascii_digit())(input)?;
+            let (input, _) = char(']')(input)?;
+            segments.push(FshPathSegment::Index(
+                index.fragment().parse::<u32>().unwrap(),
+            ));
+            remaining = input;
+            continue;
+        }
         if !remaining.fragment().starts_with('.') {
             break;
         }
@@ -415,6 +431,7 @@ pub fn fsh_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     }
 
     alt((
+        parse_numeric_leading_instance_ref,
         parse_ratio,
         parse_quantity,
         parse_reference,
@@ -434,6 +451,23 @@ pub fn fsh_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
             Ok((input, FshValue::InstanceRef(s.to_string())))
         },
     ))(input)
+}
+
+fn parse_numeric_leading_instance_ref(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
+    let (remaining, token) = take_while1(|c: char| !c.is_whitespace() && c != '\n')(input)?;
+    let value = token.fragment();
+    if value.starts_with(|character: char| character.is_ascii_digit())
+        && value
+            .chars()
+            .any(|character| character.is_ascii_alphabetic() || character == '-')
+    {
+        Ok((remaining, FshValue::InstanceRef(value.to_string())))
+    } else {
+        Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )))
+    }
 }
 
 /// Parse `$identifier` as a canonical reference (for use in value positions referencing aliases).
@@ -540,12 +574,24 @@ fn parse_quantity(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     let (input, unit) = alt((
         single_quoted_string,
         quoted_string,
-        map(
-            take_while1(|c: char| !c.is_whitespace() && c != '\n' && c != '(' && c != ')'),
-            |s: Span<'_>| s.fragment().to_string(),
+        verify(
+            map(
+                take_while1(|c: char| !c.is_whitespace() && c != '\n' && c != '(' && c != ')'),
+                |s: Span<'_>| s.fragment().to_string(),
+            ),
+            |unit: &String| unit.starts_with(char::is_alphabetic),
         ),
     ))(input)?;
-    Ok((input, FshValue::Quantity { value: val, unit }))
+    let (input, _) = ws(input)?;
+    let (input, display) = opt(quoted_string)(input)?;
+    Ok((
+        input,
+        FshValue::Quantity {
+            value: val,
+            unit,
+            display,
+        },
+    ))
 }
 
 /// Parse a single-quoted UCUM unit code like `'kg'`, returning the inner code.
@@ -560,7 +606,15 @@ fn parse_reference(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     let (input, _) = tag("Reference(")(input)?;
     let (input, target) = take_while(|c| c != ')')(input)?;
     let (input, _) = char(')')(input)?;
-    Ok((input, FshValue::Reference(target.fragment().to_string())))
+    let (input, _) = ws(input)?;
+    let (input, display) = opt(quoted_string)(input)?;
+    Ok((
+        input,
+        FshValue::Reference {
+            target: target.fragment().to_string(),
+            display,
+        },
+    ))
 }
 
 fn parse_canonical(input: Span<'_>) -> IResult<Span<'_>, FshValue> {

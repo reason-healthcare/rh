@@ -1,0 +1,79 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "my-logical-model",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/my-logical-model",
+  "version": "0.1.0",
+  "name": "MyLogicalModel",
+  "title": "My Logical Model",
+  "status": "draft",
+  "description": "A logical model with custom elements defined using add element rules.",
+  "fhirVersion": "4.0.1",
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://rh-fsh-test.example.org/StructureDefinition/my-logical-model",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Base",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "my-logical-model",
+        "path": "my-logical-model",
+        "short": "My Logical Model",
+        "definition": "A logical model with custom elements defined using add element rules."
+      },
+      {
+        "id": "my-logical-model.identifier",
+        "path": "my-logical-model.identifier",
+        "short": "Patient identifiers",
+        "definition": "The identifiers for this patient.",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Identifier"
+          }
+        ],
+        "isSummary": true
+      },
+      {
+        "id": "my-logical-model.name",
+        "path": "my-logical-model.name",
+        "short": "Patient name",
+        "definition": "The patient's full name.",
+        "min": 1,
+        "max": "*",
+        "type": [
+          {
+            "code": "HumanName"
+          }
+        ]
+      },
+      {
+        "id": "my-logical-model.birthDate",
+        "path": "my-logical-model.birthDate",
+        "short": "Date of birth",
+        "definition": "The patient's date of birth.",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "date"
+          }
+        ]
+      },
+      {
+        "id": "my-logical-model.active",
+        "path": "my-logical-model.active",
+        "short": "Whether active",
+        "definition": "Whether this is an active record.",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

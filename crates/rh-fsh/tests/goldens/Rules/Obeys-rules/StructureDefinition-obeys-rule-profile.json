@@ -1,0 +1,46 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "obeys-rule-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/obeys-rule-profile",
+  "version": "0.1.0",
+  "name": "ObeysRuleProfile",
+  "title": "Obeys Rule Profile",
+  "status": "draft",
+  "description": "A profile that attaches an invariant via an obeys rule.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient",
+        "path": "Patient",
+        "constraint": [
+          {
+            "key": "pat-1",
+            "severity": "error",
+            "human": "Patient must have a family name or a text name",
+            "expression": "name.family.exists() or name.text.exists()",
+            "source": "http://rh-fsh-test.example.org/StructureDefinition/obeys-rule-profile"
+          }
+        ]
+      },
+      {
+        "id": "Patient.name.family",
+        "path": "Patient.name.family",
+        "constraint": [
+          {
+            "key": "pat-1",
+            "severity": "error",
+            "human": "Patient must have a family name or a text name",
+            "expression": "name.family.exists() or name.text.exists()",
+            "source": "http://rh-fsh-test.example.org/StructureDefinition/obeys-rule-profile"
+          }
+        ]
+      }
+    ]
+  }
+}

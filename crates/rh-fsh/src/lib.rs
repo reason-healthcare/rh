@@ -9,6 +9,8 @@ pub mod export;
 pub mod fhirdefs;
 pub mod parser;
 pub mod resolver;
+pub mod schema;
+pub mod semantic;
 pub mod sushi_config;
 pub mod tank;
 
@@ -18,13 +20,18 @@ pub use definition_index::{
 };
 pub use dependencies::{
     load_dependency_structure_definitions, load_dependency_structure_definitions_from_dir,
-    DependencyDefinitionSet, DependencyStructureDefinition,
+    DependencyDefinitionSet, DependencyExtensionSlice, DependencyStructureDefinition,
 };
 pub use error::FshError;
 pub use export::{FhirPackage, FshExporter};
 pub use fhirdefs::FhirDefs;
 pub use parser::{FshDocument, FshParser, SourceLocation};
 pub use resolver::FshResolver;
+pub use schema::{CompiledProfileView, CompiledSchema, ElementShape, FieldShape, SchemaView};
+pub use semantic::{
+    PathSelection, RepetitionSelection, SemanticAssignment, SemanticOperation, SemanticPath,
+    SemanticProgram,
+};
 pub use sushi_config::{find_sushi_config_for_files, parse_sushi_config, read_sushi_config};
 pub use tank::FshTank;
 
@@ -43,12 +50,88 @@ pub struct FshConfig {
     pub name: Option<String>,
     /// Resource status: active, draft, retired, unknown
     pub status: Option<String>,
+    /// Human-readable ImplementationGuide title.
+    pub title: Option<String>,
+    /// ImplementationGuide description.
+    pub description: Option<String>,
+    /// SPDX license code.
+    pub license: Option<String>,
+    /// Whether the guide is experimental.
+    pub experimental: Option<bool>,
+    /// Root extensions copied from `sushi-config.yaml`.
+    pub extensions: Vec<serde_json::Value>,
+    /// Jurisdiction coding copied from `sushi-config.yaml`.
+    pub jurisdiction: Option<FshCoding>,
     /// Publisher name
     pub publisher: Option<String>,
+    /// Implementation guide contacts normalized from `sushi-config.yaml`.
+    pub contacts: Vec<FshContact>,
     /// Package version string (e.g. "0.1.0")
     pub version: Option<String>,
     /// Dependency packages declared by the project config.
     pub dependencies: Vec<FshDependency>,
+    /// Ordered guide pages.
+    pub pages: Vec<FshPage>,
+    /// Ordered artifact groups.
+    pub groups: Vec<FshGroup>,
+    /// Publisher parameters.
+    pub parameters: Vec<(String, String)>,
+    /// Per-resource ImplementationGuide metadata.
+    pub resources: indexmap::IndexMap<String, FshResourceMetadata>,
+}
+
+/// A simple coding declared in project configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshCoding {
+    pub system: String,
+    pub code: String,
+    pub display: Option<String>,
+}
+
+/// A page declared in project configuration.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FshPage {
+    pub source: String,
+    pub title: String,
+    pub extensions: Vec<serde_json::Value>,
+    pub pages: Vec<FshPage>,
+}
+
+/// An artifact grouping declared in project configuration.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshGroup {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub resources: Vec<String>,
+}
+
+/// Metadata for a resource listed in an ImplementationGuide.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshResourceMetadata {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub example_canonical: Option<String>,
+    pub example_boolean: Option<bool>,
+    pub grouping_id: Option<String>,
+}
+
+/// Contact details declared by a FSH project.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshContact {
+    /// Optional contact name.
+    pub name: Option<String>,
+    /// Contact points for this person or organization.
+    pub telecom: Vec<FshTelecom>,
+}
+
+/// A contact point declared by a FSH project.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FshTelecom {
+    /// FHIR ContactPoint system, such as `url` or `email`.
+    pub system: String,
+    /// Contact point value.
+    pub value: String,
 }
 
 /// Dependency package declaration from project configuration.

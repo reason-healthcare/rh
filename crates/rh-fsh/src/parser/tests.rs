@@ -460,6 +460,19 @@ fn parses_caret_value_rule_nested_caret_path() {
 }
 
 #[test]
+fn parses_current_soft_index_inside_caret_path() {
+    let rule = profile_rule("* ^context[=].expression = \"Claim\"");
+    match rule {
+        SdRule::CaretValue(c) => {
+            assert!(c.path.is_none());
+            assert_eq!(c.caret_path, "context[=].expression");
+            assert!(matches!(c.value, FshValue::Str(ref value) if value == "Claim"));
+        }
+        other => panic!("expected CaretValue, got {other:?}"),
+    }
+}
+
+#[test]
 fn parses_insert_rule() {
     let rule = profile_rule("* insert CommonRules");
     match rule {
@@ -522,6 +535,20 @@ fn parses_integer_value() {
 }
 
 #[test]
+fn parses_integer_before_inline_comment_as_integer() {
+    let entity = single_entity(
+        "Instance: medication\nInstanceOf: MedicationRequest\n* dosageInstruction.timing.repeat.frequency = 1 // once daily\n",
+    );
+    let FshEntity::Instance(instance) = entity else {
+        panic!("expected instance");
+    };
+    assert!(matches!(
+        &instance.rules[0].value,
+        InstanceRule::Assignment(assignment) if matches!(assignment.value, FshValue::Integer(1))
+    ));
+}
+
+#[test]
 fn parses_decimal_value() {
     match assignment_value("* valueDecimal = 3.5") {
         FshValue::Decimal(d) => assert!((d - 3.5).abs() < f64::EPSILON),
@@ -559,9 +586,25 @@ fn parses_bare_code_value() {
 #[test]
 fn parses_quantity_value() {
     match assignment_value("* valueQuantity = 85 'kg'") {
-        FshValue::Quantity { value, unit } => {
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
             assert!((value - 85.0).abs() < f64::EPSILON);
             assert_eq!(unit, "kg");
+            assert_eq!(display, None);
+        }
+        other => panic!("expected Quantity, got {other:?}"),
+    }
+}
+
+#[test]
+fn parses_quantity_display() {
+    match assignment_value("* valueQuantity = 1 'd' \"day\"") {
+        FshValue::Quantity { unit, display, .. } => {
+            assert_eq!(unit, "d");
+            assert_eq!(display.as_deref(), Some("day"));
         }
         other => panic!("expected Quantity, got {other:?}"),
     }
@@ -570,7 +613,21 @@ fn parses_quantity_value() {
 #[test]
 fn parses_reference_value() {
     match assignment_value("* subject = Reference(patient-1)") {
-        FshValue::Reference(r) => assert_eq!(r, "patient-1"),
+        FshValue::Reference { target, display } => {
+            assert_eq!(target, "patient-1");
+            assert_eq!(display, None);
+        }
+        other => panic!("expected Reference, got {other:?}"),
+    }
+}
+
+#[test]
+fn parses_reference_value_with_display() {
+    match assignment_value("* subject = Reference(patient-1) \"Example Patient\"") {
+        FshValue::Reference { target, display } => {
+            assert_eq!(target, "patient-1");
+            assert_eq!(display.as_deref(), Some("Example Patient"));
+        }
         other => panic!("expected Reference, got {other:?}"),
     }
 }
@@ -628,6 +685,19 @@ fn parses_numeric_index_path() {
         .iter()
         .any(|s| matches!(s, FshPathSegment::Index(0) | FshPathSegment::Slice { .. })));
     assert_eq!(path.to_fhir_path("Patient"), "Patient.name.given");
+}
+
+#[test]
+fn parses_chained_slice_and_numeric_index() {
+    let path = assignment_path("* component[gene][0].valueString = \"BRCA1\"");
+    assert!(matches!(
+        path.segments.as_slice(),
+        [
+            FshPathSegment::Slice { element, slice },
+            FshPathSegment::Index(0),
+            FshPathSegment::Name(value)
+        ] if element == "component" && slice == "gene" && value == "valueString"
+    ));
 }
 
 #[test]
@@ -718,6 +788,40 @@ fn parses_vs_filter_is_a() {
 }
 
 #[test]
+fn parses_value_set_filter_on_continuation_line() {
+    let document = FshParser::parse(
+        "ValueSet: Findings\n* include codes from system http://snomed.info/sct\n    where concept is-a #404684003\n",
+        "filter.fsh",
+    )
+    .expect("value set parses");
+    let FshEntity::ValueSet(value_set) = &document.entities[0].value else {
+        panic!("expected value set");
+    };
+
+    assert_eq!(value_set.components[0].value.filters.len(), 1);
+    assert_eq!(value_set.components[0].value.filters[0].op, "is-a");
+}
+
+#[test]
+fn parses_code_system_concept_hierarchy() {
+    let document = FshParser::parse(
+        "CodeSystem: Animals\n* #animal \"Animal\" \"Animal definition\"\n  * #mammal \"Mammal\" \"Mammal definition\"\n    * #dog \"Dog\" \"Dog definition\"\n",
+        "hierarchy.fsh",
+    )
+    .expect("code system parses");
+    let FshEntity::CodeSystem(code_system) = &document.entities[0].value else {
+        panic!("expected code system");
+    };
+
+    assert!(code_system.concepts[0].value.hierarchy.is_empty());
+    assert_eq!(code_system.concepts[1].value.hierarchy, ["animal"]);
+    assert_eq!(
+        code_system.concepts[2].value.hierarchy,
+        ["animal", "mammal"]
+    );
+}
+
+#[test]
 fn parses_vs_direct_concept_includes() {
     let vs = value_set("ValueSet: V\n* http://loinc.org#1234-5 \"Display\"\n");
     let rule = &vs.components[0].value;
@@ -751,6 +855,34 @@ fn parses_instance_inline_instance_reference() {
         i.rules[0].value,
         InstanceRule::Assignment(ref a) if matches!(a.value, FshValue::InstanceRef(ref r) if r == "myInstance")
     ));
+}
+
+#[test]
+fn parses_numeric_leading_inline_instance_reference() {
+    let src = "Instance: ex\nInstanceOf: Bundle\n* entry[+].resource = 30551ce1-5a28-4356-b684-1e639094ad4d\n";
+    let FshEntity::Instance(instance) = single_entity(src) else {
+        panic!("expected instance");
+    };
+    assert!(matches!(
+        instance.rules[0].value,
+        InstanceRule::Assignment(ref assignment)
+            if matches!(assignment.value, FshValue::InstanceRef(ref value) if value == "30551ce1-5a28-4356-b684-1e639094ad4d")
+    ));
+}
+
+#[test]
+fn parses_instance_path_context_rules() {
+    let src = "Instance: ex\nInstanceOf: Appointment\n* participant[patient]\n  * actor = Reference(Patient/example)\n  * status = #accepted\n";
+    let FshEntity::Instance(instance) = single_entity(src) else {
+        panic!("expected instance");
+    };
+
+    assert!(matches!(
+        instance.rules[0].value,
+        InstanceRule::Path(ref rule) if rule.path.to_dot_string() == "participant[patient]"
+    ));
+    assert_eq!(instance.rules[0].location.column, 1);
+    assert_eq!(instance.rules[1].location.column, 3);
 }
 
 // ============================================================================

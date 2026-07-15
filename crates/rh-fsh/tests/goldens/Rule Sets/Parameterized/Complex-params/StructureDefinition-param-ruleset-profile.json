@@ -1,0 +1,42 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "param-ruleset-profile",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/param-ruleset-profile",
+  "version": "0.1.0",
+  "name": "ParamRuleSetProfile",
+  "title": "Parameterized RuleSet Profile",
+  "status": "draft",
+  "description": "Profile demonstrating parameterized rule sets.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.status",
+        "path": "Observation.status",
+        "short": "Required element: status",
+        "mustSupport": true
+      },
+      {
+        "id": "Observation.code",
+        "path": "Observation.code",
+        "short": "Required element: code",
+        "mustSupport": true,
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://loinc.org/vs/LL715-4"
+        }
+      },
+      {
+        "id": "Observation.subject",
+        "path": "Observation.subject",
+        "short": "Required element: subject",
+        "mustSupport": true
+      }
+    ]
+  }
+}

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-typed-ast
+
+## Purpose
+
+Defines the typed CQL abstract syntax tree and its semantic metadata.
+
+## Requirements
 
 ### Requirement: TypedNode wrapper carries semantic metadata on every node
 

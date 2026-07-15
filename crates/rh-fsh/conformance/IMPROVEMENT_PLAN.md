@@ -1,0 +1,361 @@
+# rh-fsh Conformance Improvement Plan
+
+This plan prioritizes high-leverage exporter corrections before long-tail
+metadata work. Each phase should lower the stored project thresholds; thresholds
+must never be raised merely to make a run pass.
+
+**Progress (2026-07-14)**: Phase 0 and Phase 1 are complete. All 63 fixtures are
+verified and passing, all six projects have zero missing and extra resources,
+and the library suite has 150 passing tests. Shared-resource mismatches are down
+from 838 to 459. Phases 2–4 remain in progress; Phase 5 continues with lowered
+per-project thresholds.
+
+## Success Criteria
+
+The end state is:
+
+- Existing library tests remain green, with regression tests added for every
+  corrected behavior.
+- All 62 fixture directories have reviewed SUSHI goldens and all fixtures pass.
+- All six project comparisons have zero missing and zero extra resources.
+- Shared-resource mismatches fall from 838 to zero, or any intentionally accepted
+  normalization is explicitly documented and tested.
+- A clean checkout can build the CLI and run the complete comparison suite with
+  pinned tool and project versions.
+
+## Phase 0: Make the Evidence Reproducible
+
+**Status**: Complete.
+
+**Goal**: turn the current measurements into a reliable development gate.
+
+1. Resolve the `rh-cli` build failure caused by duplicate packaged/workspace
+   `serde_json` and `rust_decimal` types.
+2. Pin SUSHI 3.19.0 in the harness instead of relying on an unversioned `npx`
+   resolution.
+3. Record or configure the six project revisions in a checked-in manifest.
+4. Generate and review goldens for the 31 skipped fixtures.
+5. Split fixture reporting into passed, failed, and unverified counts in CI.
+6. Add unit tests for duplicate resource ids in identity-gap categorization and
+   for count/detail truncation behavior.
+
+**Exit gate**: a clean environment reproduces the documented counts, and no
+fixture is silently treated as passing without goldens.
+
+## Phase 1: Eliminate Missing and Extra Resources
+
+**Status**: Complete. Missing resources are 0 and extra resources are 0 across
+the pinned six-project corpus.
+
+**Goal**: correct resource identity and instance lifecycle before field parity.
+
+1. Resolve every instance's `InstanceOf` chain through local and dependency
+   StructureDefinitions to its base FHIR resource type.
+2. Preserve the profile canonical in `meta.profile` while emitting the base type
+   in `resourceType`.
+3. Model instance usage explicitly in the compiler output.
+4. Exclude `Usage: #inline` instances from top-level package resources.
+5. Materialize inline instances only at assignment/reference sites, including
+   contained resources and Bundle entries.
+6. Add focused fixtures for local profiles, dependency profiles, datatype inline
+   instances, contained resources, and repeated ids such as CRD's `example`.
+
+**Expected impact**: missing 43 → 0 and extra 149 → 0. This also removes 86
+identity-category gaps and 106 other-category gaps.
+
+## Phase 2: Introduce Schema-informed Instance Export
+
+**Status**: In progress. The compiled-schema boundary, semantic assignment IR,
+profile-aware schema-typed instance tree, and deterministic serializer are
+implemented alongside BackboneElement metadata, cardinality-aware arrays,
+CodeableConcept wrapping,
+dynamic choice typing, primitive shadows, recursive inline export, dependency
+fixed/pattern defaults, named/repeated slice materialization, and recursively
+materialized local required subextensions. JSON-shape leading gaps are 176; the
+below-100 milestone remains open.
+
+**Goal**: stop inferring JSON shape from assignment syntax alone.
+
+1. Build a path-shape service from loaded FHIR StructureDefinitions that returns
+   cardinality, datatype, choice type, and primitive-extension information.
+2. Use cardinality to decide object versus array representation, including a
+   one-element assignment to a repeating field.
+3. Export coded values according to their target datatype: `Coding`,
+   `CodeableConcept.coding`, primitive `code`, and quantity code/system/unit.
+4. Make extension construction always preserve array wrapping, `url`, nested
+   `extension`, and the correct `value[x]` member.
+5. Emit aligned primitive shadow fields (`_field`) for primitive extensions in
+   arrays and scalar values.
+6. Apply the same shape engine recursively inside Bundle resources, Parameters,
+   contained resources, and inline instances.
+
+**Milestone target**: golden fixtures 61/61 passing and project JSON-shape
+first-difference count 481 → below 100.
+
+### Phase 2 architecture migration
+
+Phase 2 will replace incremental exporter conditionals with a staged pipeline:
+
+```text
+resolved FSH → semantic assignments → compiled schema views
+             → typed instance tree → deterministic JSON serializer
+```
+
+This migration is split into behavior-preserving checkpoints so conformance and
+performance remain measurable throughout:
+
+1. **2A — Compiled schema foundation (complete).** Build one immutable schema
+   index per compilation, share it across rayon workers, route instance field-shape
+   queries through it, and benchmark the lookup boundary against generated core
+   metadata. Generated PHF metadata remains the zero-copy fast path.
+2. **2B — Semantic assignment IR (complete).** Lower resolved instance and local
+   profile rules into explicit operations with normalized paths, selection
+   semantics, source locations, and
+   resolved values. Indentation and path-context interpretation now occurs once
+   during lowering instead of inside export. Typed-tree application replaces the
+   remaining JSON path walker in 2C.
+3. **2C — Profile-aware schema views and typed instance tree (complete).**
+   Compile observed local, dependency, and versioned profile identities into
+   views over the core shape index; apply defaults, slicing, cardinality, and
+   primitive companions while building a schema-typed tree. Views include the
+   resolved lineage and base type and drive inherited default application
+   without eagerly indexing the dependency corpus. Dependency/local element
+   overrides can be added to the view without changing tree callers.
+4. **2D — Deterministic serializer and legacy removal (complete).** Serialize
+   typed nodes without schema lookups, remove the mutable JSON walker and cleanup
+   pass, and centralize mixed-version compatibility shapes as declarative schema
+   data instead of exporter branches.
+5. **2E — Navigable inline metadata (complete).** Generate static metadata for
+   inline snapshot structures and `contentReference` fields, exclude profile
+   roots from nested inference, and preserve O(1) PHF lookups in the exporter.
+   The checkpoint benchmark measured core schema lookup at 65.7–66.0 ns,
+   generated-core lookup at 74.0–74.3 ns, and profile-view lookup at
+   24.0–24.4 ns.
+6. **2F — Compiled extension slices (complete).** Compile local extension URLs,
+   child cardinalities, and stable ordering once in the immutable shared
+   schema. The typed tree recursively materializes required children and uses
+   parent-scoped URL lookup without rebuilding a map per instance. PAS
+   mismatches fell 121 → 120 and total mismatches fell 530 → 529. Compile
+   benchmarks detected no material performance change: 1,000-instance compile
+   time was 4.41–4.45 ms, core lookup 65.7–66.0 ns, and profile-view lookup
+   24.0–24.1 ns.
+7. **2G — Dependency extension navigation (complete).** Extract child slice
+   names, profile/fixed URLs, and cardinalities from dependency differentials
+   into the parent-scoped compiled registry. Explicit nested assignments use
+   this metadata, but dependency cardinalities do not materialize defaults
+   because the pinned corpus showed that doing so regresses local project
+   source. Project counts remain at 529 mismatches. Benchmarks detected no
+   compile regression: 1,000-instance compile time was 4.38–4.44 ms, core
+   lookup 65.8–66.3 ns, and profile-view lookup 21.9–22.2 ns.
+8. **2H — Lazy required extension identity (complete).** Keep required named
+   extension placeholders internal until the instance actually assigns content,
+   then attach the canonical URL from the compiled schema. The same typed node
+   is reused when resources are embedded recursively in Bundle entries and
+   Parameters. This corrects root and embedded DTR extension output without
+   emitting unused placeholders; project totals remain at 529 mismatches because
+   later differences in those resources become the first reported gap. The
+   checkpoint measured 1,000-instance compile time at 4.79–5.01 ms (within the
+   benchmark noise threshold on the confirmation run), core lookup at
+   66.0–66.6 ns, and profile-view lookup at 24.6–25.2 ns. The changed branch is
+   outside schema lookup and adds one object-key check only when navigating a
+   named extension slice.
+9. **2I — Canonical local profile lineage (complete).** Resolve local parent
+   references written as an FSH `Id` to the canonical local entity name while
+   compiling profile views. This lets inherited defaults and required extension
+   ordering flow through one schema lineage for root and recursively embedded
+   instances. CARIN mismatches fell 77 → 76, DTR fell 47 → 39, and total
+   mismatches fell 529 → 520; the other four projects were unchanged. Two
+   consecutive full runs reproduced the same project counts. Benchmarks improved or remained
+   neutral: 1,000-instance compile time was 4.41–4.45 ms, core lookup
+   65.7–68.9 ns, and profile-view lookup 23.8–24.1 ns.
+
+Every checkpoint must keep missing and extra resources at zero, must not raise a
+comparison threshold, must run the field-lookup and compile benchmarks, and must
+pass `just check` before its commit. Phases 2A–2D landed with unchanged project
+comparison counts. The architecture migration is complete; focused correctness
+slices now own the below-100 JSON-shape target.
+
+## Phase 3: StructureDefinition Differential Parity
+
+**Status**: In progress. Logical paths, choice slices, indexed caret paths,
+FHIR-correct extension context arrays, local parent resolution, and
+dependency/local parent canonical resolution are implemented; detailed
+differential parity remains.
+
+**Goal**: make profiles, extensions, logicals, and resources structurally match
+SUSHI.
+
+1. Normalize `baseDefinition` resolution for local and dependency parents.
+2. Implement FHIR-correct extension `context` representation.
+3. Reconcile differential element ids, paths, slice names, ordering, and merging.
+4. Complete constraint, binding, fixed/pattern, min/max, and type/profile export.
+5. Verify contains/slicing behavior across reslicing and named/profile slices.
+6. Add differential-specific comparisons that report every bad element rather
+   than only the first resource difference.
+
+### Phase 3 delivery checkpoints
+
+1. **3A — Stateful root caret paths and extension context (complete).** Parse
+   `[=]` inside caret paths without confusing it with assignment syntax, resolve
+   append/current/numeric selectors through one stateful writer, and serialize
+   bare caret codes as primitive codes. PAS mismatches fell 120 → 109 and total
+   mismatches fell 520 → 509; the other five projects were unchanged. The
+   checkpoint measured 1,000-instance compile time at 4.47–4.54 ms, core lookup
+   at 64.8–65.2 ns, and profile-view lookup at 24.6–25.1 ns. The changed code is
+   confined to StructureDefinition parsing/export and does not run in instance
+   schema lookups.
+2. **3B — Schema-shaped root caret metadata (complete).** Use generated FHIR
+   field metadata while resolving root caret paths so omitted indices on
+   repeating fields materialize the first array entry. This corrects `contact[]`
+   and nested `telecom[]` shape on 31 IPS StructureDefinitions without a
+   resource-specific path list. Project mismatch totals remain at 509 because
+   each corrected resource exposes a later metadata or differential difference.
+   Benchmarks improved or remained neutral: 1,000-instance compile time was
+   4.39–4.45 ms, core lookup 64.6–65.3 ns, and profile-view lookup
+   23.2–23.5 ns.
+
+**Milestone target**: StructureDefinition first-difference count 234 → below 25.
+
+## Phase 4: Terminology, Metadata, and IG Parity
+
+**Status**: In progress. Hierarchical concepts, multiline ValueSet filters,
+SUSHI `fhirVersion` omission, and resource-aware instance titles are complete.
+IG root metadata, publisher/contact metadata, configured page trees, grouping,
+parameters, and explicit resource metadata are implemented. Inferred pages,
+dependency-supplied grouped resources, globals, and remaining terminology
+aliases are pending. Local resource ordering and default metadata are complete.
+
+**Goal**: close systematic non-instance differences.
+
+1. Match CodeSystem nested concepts, counts, hierarchy, and SUSHI's metadata
+   omission/default rules, including `fhirVersion`.
+2. Match ValueSet compose include/exclude/filter/concept/valueSet shapes.
+3. Expand `sushi-config.yaml` mapping for IG contact, page, global, parameter,
+   dependency, and resource metadata.
+4. Reconcile entity titles, descriptions, names, urls, status, and other derived
+   metadata with SUSHI defaults.
+5. Decide which volatile fields should remain normalized and document each
+   intentional exception.
+
+**Milestone target**: terminology 22 → 0, metadata 29 → 0, and IG generation
+6 → 0.
+
+### Phase 4 delivery checkpoints
+
+1. **4A — Structured ImplementationGuide configuration (complete).** Parse and
+   export root title/description/license/experimental/extensions/jurisdiction,
+   publisher plus explicit contacts, recursively nested pages with page
+   extensions, artifact grouping, scalar and repeated parameters, automatic
+   history paths, and explicit per-resource metadata. On CRD the leading IG
+   difference moved from `definition.page.page[7].page`, through the completed
+   parameter array, to `definition.resource[0].description`. DTR likewise moved
+   past its nested page tree, while CARIN and mCODE now lead at resource
+   metadata. All six projects remain at zero missing and extra resources and at
+   the existing 509 total mismatch threshold; later differences are now exposed
+   without changing the first-difference resource counts.
+2. **4B — Local ImplementationGuide resource metadata (complete).** Order
+   definition resources by their SUSHI display names, preserve FSH instance
+   titles and descriptions outside the resource payload, emit `exampleBoolean`
+   for artifacts and unprofiled examples, and derive `exampleCanonical` from
+   local or dependency profile identities. CRD now matches its first five
+   definition resources and stops where its configured group introduces a
+   dependency-only CDS Hooks StructureDefinition. CARIN and mCODE likewise move
+   deeper into their resource arrays. All six projects remain at zero missing
+   and extra resources and 509 total first-difference mismatches; the remaining
+   IG ordering gaps require materializing dependency-only group entries before
+   the arrays can align completely.
+
+## Phase 5: Burn Down Residual Project-specific Gaps
+
+**Status**: In progress. Resource output and ValueSet grouping are deterministic,
+thresholds have been lowered to the current stable counts, and two consecutive
+full runs produced identical results.
+
+**Goal**: reach parity without hiding differences behind broad normalization.
+
+1. Re-run all projects after every focused exporter wave.
+2. Replace the broad `other` category with specific classifiers as patterns are
+   understood.
+3. Add a minimal fixture for each newly diagnosed project-only failure before
+   changing exporter behavior.
+4. Reduce thresholds to the newly achieved counts in the same change as each
+   improvement.
+5. Require two consecutive clean full runs before declaring project parity.
+
+**Current checkpoint**: 920/920 resource identities match; 461/920 match
+normalized content. Remaining mismatches: CARIN 53, mCODE 155, CRD 51, DTR 33,
+PAS 96, and IPS 71.
+
+### JSON-shape wave results (2026-07-14)
+
+Retained artifacts group the leading mCODE and CARIN JSON-shape paths into
+shared implementation families:
+
+| Family | Representative evidence | First implementation focus |
+|---|---|---|
+| Repeating BackboneElement | CARIN `adjudication` and `supportingInfo` slices omit profile-fixed categories or lose a repeated item | Apply dependency slice defaults through the same indexed tree path as explicit assignments |
+| Extension | mCODE named extension URLs and nested extension order differ from SUSHI | Resolve parent-scoped slice URLs and preserve stable named-slice order |
+| Bundle entry | mCODE embedded resources expose missing nested profile/default content | Preserve the embedded resource schema view and profile defaults during Bundle serialization |
+| Typed value | CARIN monetary decimals serialize integral values as `190.0` rather than SUSHI's `190` | Reuse FHIR decimal serialization for non-Quantity decimal assignments |
+
+The comparison manifest now retains each normalized mismatch's category,
+first-difference path, and JSON-shape family so focused fixtures can be tied
+to project evidence.
+
+### Phase 5 delivery checkpoints
+
+1. **5A — Local terminology canonical resolution (complete).** Reuse one local
+   CodeSystem resolver across instance and ValueSet export, and resolve local
+   ValueSet names or ids in compose imports to their canonical URLs. A focused
+   regression covers both system and valueSet references. Total mismatches fell
+   509 → 469: CARIN 76 → 55, mCODE 157 → 156, CRD 57 → 53, DTR 39 → 33, and PAS
+   109 → 101; IPS remained at 71. Missing and extra resources remain zero, and
+   all five improved project thresholds were lowered with the checkpoint.
+
+2. **5B — Differential fidelity and DTR/mCODE-shaped regressions (complete).**
+   Emit complete root invariant constraints, merge differential elements by id,
+   serialize slicing/type/binding/fixed values in their FHIR shapes, and cover
+   DTR Parameters, Questionnaire, QuestionnaireResponse, Bundle, and mCODE
+   dosage instances with SUSHI goldens. Full project comparisons were identical
+   across two consecutive runs. Total mismatches fell 469 → 463: CRD 53 → 52 and
+   PAS 101 → 96; their thresholds were lowered to those verified counts.
+
+3. **5C — Recursive JSON-shape fidelity (complete).** Route recursive
+   Bundle, Parameters, inline, primitive-shadow, extension, and repeating
+   BackboneElement assignments through the typed instance tree; preserve
+   dependency → local → explicit default precedence; serialize integral
+   decimals with SUSHI-compatible JSON numbers; and resolve standard core
+   extension slice URLs without allowing core extension names to shadow resource
+   types. The reviewed fixture now covers those recursive shapes, and retained
+   diagnostics classify their first-difference paths. Two full runs matched
+   exactly by resource status and category summary. Total mismatches fell
+   463 → 459: CARIN 55 → 53, mCODE 156 → 155, and CRD 52 → 51. CARIN, mCODE,
+   and CRD thresholds were lowered to the verified counts.
+
+**Next delivery order**:
+
+1. Complete recursive schema shaping for extension arrays, Bundle entries,
+   Parameters, dependency-default precedence, and primitive shadow fields (176
+   leading JSON-shape gaps).
+2. Export root constraints, context, slicing, bindings, fixed/pattern values,
+   and differential element merging (217 StructureDefinition gaps).
+3. Preserve nested indentation context in instance rules and finish local
+   CodeSystem/ValueSet canonical resolution.
+4. Map IG pages, grouping, globals, parameters, and resource metadata, then
+   split the remaining `other` classifier into actionable categories.
+
+**Exit gate**: 920 of 920 reference resources match by identity and normalized
+content for the pinned project corpus.
+
+## Recommended Delivery Slices
+
+The first implementation cycle should contain three small, reviewable changes:
+
+1. Fix top-level suppression for `Usage: #inline` and add lifecycle fixtures.
+2. Fix local-profile base resource type resolution and add CARIN/CRD/PAS-shaped
+   regression fixtures.
+3. Add the schema-informed array and `CodeableConcept.coding` behavior needed to
+   make the two currently failing golden fixtures pass.
+
+Together, these slices address every missing/extra resource and the clearest
+fixture failures before undertaking the larger differential exporter work.

@@ -1,0 +1,44 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "caret-nested-profile",
+  "url": "http://example.org/StructureDefinition/CaretNestedProfile",
+  "version": "1.0.0",
+  "name": "CaretNestedProfile",
+  "title": "Caret Nested Profile",
+  "status": "active",
+  "publisher": "Example Organization",
+  "contact": [
+    {
+      "name": "Example Contact",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "contact@example.org"
+        }
+      ]
+    }
+  ],
+  "description": "Uses nested caret paths to set StructureDefinition metadata.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient.name",
+        "path": "Patient.name",
+        "short": "Patient's legal name",
+        "definition": "The legal name(s) used by the patient.",
+        "comment": "May include multiple name representations."
+      },
+      {
+        "id": "Patient.name.family",
+        "path": "Patient.name.family",
+        "short": "Family name (surname)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "MCODENMedicationRequest",
+  "status": "active",
+  "intent": "order",
+  "medicationCodeableConcept": {
+    "coding": [
+      {
+        "code": "1049502",
+        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "display": "Acetaminophen 325 MG Oral Tablet"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "dosageInstruction": [
+    {
+      "text": "Take one tablet by mouth daily",
+      "timing": {
+        "repeat": {
+          "frequency": 1,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      },
+      "doseAndRate": [
+        {
+          "doseQuantity": {
+            "value": 325,
+            "code": "mg",
+            "system": "http://unitsofmeasure.org"
+          }
+        }
+      ]
+    }
+  ]
+}

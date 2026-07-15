@@ -1,0 +1,20 @@
+{
+  "resourceType": "Condition",
+  "id": "RelatedConditionExample",
+  "meta": {
+    "profile": [
+      "http://rh-fsh-test.example.org/StructureDefinition/RelatedCondition"
+    ]
+  },
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/condition-related",
+      "valueReference": {
+        "reference": "Condition/primary-cancer"
+      }
+    }
+  ],
+  "subject": {
+    "reference": "Patient/example"
+  }
+}

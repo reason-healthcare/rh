@@ -106,6 +106,8 @@ pub struct ElementDefinition {
     pub max: Option<String>,
     #[serde(rename = "type")]
     pub element_type: Option<Vec<ElementType>>,
+    #[serde(rename = "contentReference")]
+    pub content_reference: Option<String>,
     pub fixed: Option<serde_json::Value>,
     pub pattern: Option<serde_json::Value>,
     pub binding: Option<ElementBinding>,

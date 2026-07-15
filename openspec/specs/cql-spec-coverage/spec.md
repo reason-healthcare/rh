@@ -1,5 +1,11 @@
 # Spec: CQL Specification Coverage Tracking
 
+## Purpose
+
+Defines verifiable tracking of CQL specification coverage across the compiler pipeline.
+
+## Requirements
+
 ### Requirement: Category summary dashboard
 The SPEC_COVERAGE.md document SHALL include a summary table at the top listing every CQL 1.5.3 Appendix B category (§9.1 through §9.13) with columns for category name, total operator count, implemented count, not-implemented count, and coverage percentage.
 
@@ -88,3 +94,29 @@ Each operator/function closed in wave-2 SHALL include traceable references from 
 #### Scenario: Deferred items remain explicit after wave-2
 - **WHEN** wave-2 completes with remaining out-of-scope gaps
 - **THEN** deferred gaps are still explicitly listed and not implied as complete
+
+### Requirement: Wave-1 coverage and conformance deltas are documented
+
+After wave-1 implementation, `SPEC_COVERAGE.md` and `CONFORMANCE.md` SHALL include a dated
+before-and-after summary against the 2026-03-09 baseline and the commands that produced it.
+
+#### Scenario: Baseline and post-wave metrics are visible
+- **WHEN** a reader reviews the wave-1 coverage and conformance documents
+- **THEN** both baseline and post-wave values with their deltas SHALL be present
+
+#### Scenario: Update evidence is present
+- **WHEN** wave-1 metrics are updated
+- **THEN** the run date and conformance command or commands SHALL be documented
+
+### Requirement: Wave-1 closed gaps retain evidence traceability
+
+Each operator or function closed by wave-1 SHALL reference implementation and test evidence,
+while deferred gaps SHALL remain explicit.
+
+#### Scenario: Closed gap references code and tests
+- **WHEN** a wave-1 gap is marked implemented
+- **THEN** coverage notes SHALL reference its implementation location and validating test artifact
+
+#### Scenario: Deferred items remain explicit after wave-1
+- **WHEN** wave-1 closes only part of the backlog
+- **THEN** deferred gaps SHALL remain explicitly listed and not be implied complete

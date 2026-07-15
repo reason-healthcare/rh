@@ -21,10 +21,6 @@ pub fn export_code_system(
     if let Some(v) = &config.version {
         json["version"] = serde_json::Value::String(v.clone());
     }
-    if let Some(fv) = &config.fhir_version {
-        json["fhirVersion"] = serde_json::Value::String(fv.clone());
-    }
-
     if let Some(canonical) = &config.canonical {
         let cs_id = cs.metadata.id.as_deref().unwrap_or(&cs.metadata.name);
         json["url"] = serde_json::Value::String(format!(
@@ -44,20 +40,12 @@ pub fn export_code_system(
     let concepts: Vec<serde_json::Value> = cs
         .concepts
         .iter()
-        .map(|c| {
-            let mut cv = serde_json::json!({ "code": c.value.code });
-            if let Some(disp) = &c.value.display {
-                cv["display"] = serde_json::Value::String(disp.clone());
-            }
-            if let Some(def) = &c.value.definition {
-                cv["definition"] = serde_json::Value::String(def.clone());
-            }
-            cv
-        })
+        .filter(|concept| concept.value.hierarchy.is_empty())
+        .map(|c| export_concept(&c.value, &cs.concepts))
         .collect();
 
     if !concepts.is_empty() {
-        json["count"] = serde_json::json!(concepts.len());
+        json["count"] = serde_json::json!(cs.concepts.len());
         json["concept"] = serde_json::json!(concepts);
     }
 
@@ -71,6 +59,27 @@ pub fn export_code_system(
     Ok(json)
 }
 
+fn export_concept(concept: &ConceptRule, all: &[Spanned<ConceptRule>]) -> serde_json::Value {
+    let mut json = serde_json::json!({ "code": concept.code });
+    if let Some(display) = &concept.display {
+        json["display"] = serde_json::Value::String(display.clone());
+    }
+    if let Some(definition) = &concept.definition {
+        json["definition"] = serde_json::Value::String(definition.clone());
+    }
+    let mut child_path = concept.hierarchy.clone();
+    child_path.push(concept.code.clone());
+    let children: Vec<_> = all
+        .iter()
+        .filter(|candidate| candidate.value.hierarchy == child_path)
+        .map(|candidate| export_concept(&candidate.value, all))
+        .collect();
+    if !children.is_empty() {
+        json["concept"] = serde_json::Value::Array(children);
+    }
+    json
+}
+
 fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json::Value {
     use crate::parser::ast::FshValue;
     match value {
@@ -82,8 +91,28 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
         FshValue::InstanceRef(s) => serde_json::Value::String(s.clone()),
-        FshValue::Reference(r) => serde_json::json!({ "reference": r }),
-        FshValue::Quantity { value, unit } => serde_json::json!({ "value": value, "unit": unit }),
+        FshValue::Reference { target, display } => {
+            let mut reference = serde_json::json!({ "reference": target });
+            if let Some(display) = display {
+                reference["display"] = serde_json::Value::String(display.clone());
+            }
+            reference
+        }
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
+            let mut quantity = serde_json::json!({
+                "value": value,
+                "system": "http://unitsofmeasure.org",
+                "code": unit,
+            });
+            if let Some(display) = display {
+                quantity["unit"] = serde_json::Value::String(display.clone());
+            }
+            quantity
+        }
         FshValue::Ratio {
             numerator,
             denominator,
@@ -100,7 +129,7 @@ mod tests {
     use crate::parser::span::SourceLocation;
 
     #[test]
-    fn emits_count_for_top_level_concepts() {
+    fn emits_count_for_all_concepts() {
         let code_system = CodeSystem {
             metadata: CsMetadata {
                 name: "ExampleCodeSystem".to_string(),

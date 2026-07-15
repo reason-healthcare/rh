@@ -6,9 +6,10 @@ highlighting key design choices and their rationale.
 ## Overview
 
 `rh-fsh` transforms FHIR Shorthand (FSH) source text into FHIR R4 JSON resources.
-The architecture is a four-stage pipeline — parse, index, resolve, export — with
-parallel export via rayon. Validation is explicitly out of scope; structural errors
-are delegated to `rh-validator`.
+The architecture is a staged pipeline — parse, index, resolve, compile schema,
+lower semantic assignments, apply them to a schema-typed instance tree, serialize
+deterministically, and export in parallel via rayon. Validation is explicitly out
+of scope; structural errors are delegated to `rh-validator`.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -37,7 +38,31 @@ are delegated to `rh-validator`.
                                     │  FshTank (resolved)
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│             Stage 4 — Export  (FshExporter, rayon parallel)                  │
+│       Stage 4 — Compiled Schema  (immutable, shared read-only)              │
+│       schema.rs · generated core PHF fast path · compiled overrides       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │  Arc<CompiledSchema>
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│              Stage 5 — Semantic Assignment IR  (semantic.rs)                │
+│  qualified paths · explicit selectors · source locations · resolved values  │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  SemanticProgram
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│              Stage 6 — Schema-Typed Instance Tree                           │
+│       profile view · typed traversal · defaults · slices · cardinality       │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│              Stage 7 — Deterministic Serializer                             │
+│       typed nodes · sorted object keys · internal marker elision             │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │  serde_json::Value
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│             Stage 8 — Export  (FshExporter, rayon parallel)                  │
 │   export/structure_def.rs · export/value_set.rs · export/code_system.rs      │
 │            export/instance.rs · export/mapping.rs · export/mod.rs            │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -122,11 +147,68 @@ enabling multi-file compilation with cross-file reference resolution.
 
 Passes are strictly sequential because each depends on the result of the previous.
 
-### 4. Parallel Export with rayon
+### 4. Immutable Compiled Schema
+
+`CompiledSchema` is built once after resolution and shared read-only by every
+instance exporter. It is the single field-shape boundary for cardinality and
+datatype decisions. Generated R4 metadata remains borrowed directly from its
+compile-time PHF registry; this avoids cloning field metadata or copying the core
+schema into a runtime map. The runtime index contains observed concrete-choice
+shapes and sparse profile views; dependency/local element overrides can extend
+the same boundary without changing tree application.
+
+This boundary is intentionally separate from JSON construction. The migration
+target lowers rules into semantic assignments, applies them to a typed instance
+tree using a profile-aware schema view, then serializes the completed tree with
+no further schema lookup. That design removes repeated path interpretation and
+makes compatibility behavior declarative instead of accumulating exporter
+branches.
+
+The criterion suite measures schema lookup beside direct generated-core lookup,
+as well as end-to-end small, medium, and large compilation.
+
+### 5. Semantic Assignment IR
+
+Before export, `SemanticProgram` lowers resolved instance and local-profile
+rules into ordered operations. Each assignment has a fully qualified path,
+preclassified index/named/append/current selection behavior, its original source
+location and `exactly` modifier, and a resolved JSON value. Path contexts and
+indentation are interpreted once during lowering. Soft-index contexts emit an
+explicit context operation and subsequent assignments target the current
+repetition.
+
+The semantic layer is deliberately independent of schema lookup and tree
+mutation. Its operations feed the schema-typed instance tree directly.
+
+### 6. Profile-Aware Schema-Typed Instance Tree
+
+Each exported instance receives a lightweight `SchemaView` compiled for its
+`InstanceOf` reference. The view contains the resolved base resource type and
+the local/dependency profile lineage. Only profiles referenced by instances are
+cached, so profile-only compilation and unused dependency definitions pay no
+view-construction cost.
+
+`TypedInstanceTree` owns an `InstanceNode` tree between semantic lowering and
+serialization. All explicit assignments, inherited fixed/pattern defaults,
+required slices, extension URLs, cardinality shaping, and primitive companions
+flow through its schema-aware `apply` boundary. Objects, arrays, primitive
+values, and nulls are distinct node variants; no mutable `serde_json::Value`
+walker remains.
+
+### 7. Deterministic Typed-Node Serialization
+
+The serializer consumes the typed tree exactly once. Object fields use sorted
+keys, while array order remains semantic. Internal named-slice markers and
+object fields made empty by marker removal are elided during that same pass, so
+there is no cleanup traversal or second intermediate JSON tree. Mixed-version
+field exceptions live in a declarative schema compatibility table rather than
+conditional branches in tree application.
+
+### 8. Parallel Export with rayon
 
 `FshExporter::export` collects all entities from the resolved tank and dispatches
 to per-type exporter functions in parallel using a shared `export_par` helper.
-Each exporter receives a shared `Arc<FhirDefs>` for read-only element lookups.
+Each exporter receives shared read-only definition and schema indexes.
 
 ```rust
 // Generic parallel export helper — avoids duplicating the collect/par_iter/collect pattern
@@ -154,7 +236,7 @@ Non-fatal export errors (e.g. unresolvable parent SD) are collected into
 `FhirPackage::errors` rather than aborting compilation. The caller decides
 whether to treat them as hard failures.
 
-### 5. Differential-Only StructureDefinitions
+### 9. Differential-Only StructureDefinitions
 
 The `structure_def` exporter produces FHIR `StructureDefinition` resources
 containing only a `differential` — the minimal set of element overrides derived
@@ -166,7 +248,7 @@ This matches the output of sushi and keeps the exporter fast: computing a full
 snapshot requires walking the entire parent SD hierarchy, which is expensive
 and only needed for validation.
 
-### 6. `FhirDefs` — Pluggable Definition Registry
+### 10. `FhirDefs` — Pluggable Definition Registry
 
 `FhirDefs` is an `Arc`-wrapped registry of FHIR StructureDefinition summaries
 used by the exporter for:
@@ -181,10 +263,10 @@ pub fn export(tank: &FshTank, defs: Arc<FhirDefs>) -> FhirPackage
 ```
 
 `FhirDefs::r4()` currently returns a registry pre-populated with a representative
-set of common R4 resource names. **Full element-level indexing from
-`rh-hl7_fhir_r4_core` is a planned follow-on.** Exporters handle a missing
-SD lookup gracefully by producing the element differential without type
-constraints, keeping compilation non-fatal.
+set of common R4 resource names. Element-level cardinality and datatype lookup
+uses generated `rh-hl7_fhir_r4_core` metadata through `CompiledSchema`.
+Exporters handle a missing SD lookup gracefully by producing the element
+differential without type constraints, keeping compilation non-fatal.
 
 ## Performance vs. sushi
 
@@ -213,6 +295,8 @@ src/
 │   └── mod.rs              # FshTank, FshEntityRef, fish() lookup
 ├── resolver/
 │   └── mod.rs              # FshResolver, alias expansion, RuleSet inlining
+├── schema.rs                 # Immutable compiled field-shape boundary
+├── semantic.rs               # Qualified semantic assignment programs
 ├── fhirdefs/
 │   └── mod.rs              # FhirDefs, SdSummary, ElementSummary
 ├── export/

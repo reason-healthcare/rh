@@ -2,11 +2,13 @@
 
 use crate::error::FshError;
 use crate::parser::ast::*;
-use std::collections::HashMap;
+use crate::tank::FshTank;
+use indexmap::IndexMap;
 
 pub fn export_value_set(
     vs: &ValueSet,
     config: &crate::FshConfig,
+    tank: &FshTank,
 ) -> Result<serde_json::Value, FshError> {
     let mut json = serde_json::json!({
         "resourceType": "ValueSet",
@@ -21,10 +23,6 @@ pub fn export_value_set(
     if let Some(v) = &config.version {
         json["version"] = serde_json::Value::String(v.clone());
     }
-    if let Some(fv) = &config.fhir_version {
-        json["fhirVersion"] = serde_json::Value::String(fv.clone());
-    }
-
     if let Some(canonical) = &config.canonical {
         let vs_id = vs.metadata.id.as_deref().unwrap_or(&vs.metadata.name);
         json["url"] = serde_json::Value::String(format!(
@@ -42,22 +40,35 @@ pub fn export_value_set(
     }
 
     // Group include/exclude rules by system for same-system concept merging
-    let mut include_map: HashMap<Option<String>, Vec<serde_json::Value>> = HashMap::new();
+    let mut include_map: IndexMap<Option<String>, Vec<serde_json::Value>> = IndexMap::new();
     let mut include_with_from: Vec<serde_json::Value> = Vec::new();
-    let mut exclude_map: HashMap<Option<String>, Vec<serde_json::Value>> = HashMap::new();
+    let mut exclude_map: IndexMap<Option<String>, Vec<serde_json::Value>> = IndexMap::new();
     let mut exclude_with_from: Vec<serde_json::Value> = Vec::new();
 
     for comp in &vs.components {
         let c = &comp.value;
         let has_from = !c.from_vs.is_empty() || !c.filters.is_empty();
+        let system = c
+            .system
+            .as_deref()
+            .map(|system| super::instance::resolve_code_system_url(system, tank, config));
 
         if has_from {
             let mut entry = serde_json::json!({});
-            if let Some(sys) = &c.system {
+            if let Some(sys) = &system {
                 entry["system"] = serde_json::Value::String(sys.clone());
             }
             if !c.from_vs.is_empty() {
-                entry["valueSet"] = serde_json::json!(c.from_vs);
+                entry["valueSet"] = serde_json::Value::Array(
+                    c.from_vs
+                        .iter()
+                        .map(|value_set| {
+                            serde_json::Value::String(resolve_value_set_url(
+                                value_set, tank, config,
+                            ))
+                        })
+                        .collect(),
+                );
             }
             if !c.filters.is_empty() {
                 let filters: Vec<serde_json::Value> = c
@@ -89,15 +100,9 @@ pub fn export_value_set(
                 })
                 .collect();
             if c.inclusion {
-                include_map
-                    .entry(c.system.clone())
-                    .or_default()
-                    .extend(concepts);
+                include_map.entry(system).or_default().extend(concepts);
             } else {
-                exclude_map
-                    .entry(c.system.clone())
-                    .or_default()
-                    .extend(concepts);
+                exclude_map.entry(system).or_default().extend(concepts);
             }
         }
     }
@@ -143,10 +148,77 @@ pub fn export_value_set(
     for cr in &vs.caret_rules {
         let val = fsh_value_to_json_simple(&cr.value.value);
         let key = &cr.value.caret_path;
-        json[key] = val;
+        set_value_set_caret(&mut json, key, val);
     }
 
     Ok(json)
+}
+
+pub(crate) fn resolve_value_set_url(
+    value_set: &str,
+    tank: &FshTank,
+    config: &crate::FshConfig,
+) -> String {
+    if value_set.starts_with("http://")
+        || value_set.starts_with("https://")
+        || value_set.starts_with("urn:")
+    {
+        return value_set.to_string();
+    }
+    let local = tank.value_sets.get(value_set).or_else(|| {
+        tank.value_sets
+            .values()
+            .find(|candidate| candidate.metadata.id.as_deref() == Some(value_set))
+    });
+    let Some(local) = local else {
+        return value_set.to_string();
+    };
+    if let Some(url) = local.caret_rules.iter().find_map(|rule| {
+        if rule.value.caret_path != "url" {
+            return None;
+        }
+        match &rule.value.value {
+            FshValue::Str(url) | FshValue::Canonical(url) => Some(url.clone()),
+            _ => None,
+        }
+    }) {
+        return url;
+    }
+    let Some(canonical) = &config.canonical else {
+        return value_set.to_string();
+    };
+    let id = local.metadata.id.as_deref().unwrap_or(&local.metadata.name);
+    format!("{}/ValueSet/{id}", canonical.trim_end_matches('/'))
+}
+
+fn set_value_set_caret(resource: &mut serde_json::Value, path: &str, value: serde_json::Value) {
+    let Some(contact_path) = path.strip_prefix("contact.") else {
+        resource[path] = value;
+        return;
+    };
+    let contact = resource
+        .as_object_mut()
+        .unwrap()
+        .entry("contact")
+        .or_insert_with(|| serde_json::json!([{}]));
+    let contacts = contact.as_array_mut().unwrap();
+    if contacts.is_empty() {
+        contacts.push(serde_json::json!({}));
+    }
+    if let Some(telecom_path) = contact_path.strip_prefix("telecom.") {
+        let telecom = contacts[0]
+            .as_object_mut()
+            .unwrap()
+            .entry("telecom")
+            .or_insert_with(|| serde_json::json!([{}]));
+        let telecoms = telecom.as_array_mut().unwrap();
+        if telecoms.is_empty() {
+            telecoms.push(serde_json::json!({}));
+        }
+        telecoms[0][telecom_path] = value;
+    } else {
+        contacts[0][contact_path] = value;
+    }
 }
 
 fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json::Value {
@@ -159,8 +231,28 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
         FshValue::Code { code, .. } => serde_json::Value::String(code.clone()),
         FshValue::Canonical(c) => serde_json::Value::String(c.clone()),
         FshValue::Date(s) | FshValue::DateTime(s) => serde_json::Value::String(s.clone()),
-        FshValue::Reference(r) => serde_json::json!({ "reference": r }),
-        FshValue::Quantity { value, unit } => serde_json::json!({ "value": value, "unit": unit }),
+        FshValue::Reference { target, display } => {
+            let mut reference = serde_json::json!({ "reference": target });
+            if let Some(display) = display {
+                reference["display"] = serde_json::Value::String(display.clone());
+            }
+            reference
+        }
+        FshValue::Quantity {
+            value,
+            unit,
+            display,
+        } => {
+            let mut quantity = serde_json::json!({
+                "value": value,
+                "system": "http://unitsofmeasure.org",
+                "code": unit,
+            });
+            if let Some(display) = display {
+                quantity["unit"] = serde_json::Value::String(display.clone());
+            }
+            quantity
+        }
         FshValue::Ratio {
             numerator,
             denominator,
@@ -169,5 +261,107 @@ fn fsh_value_to_json_simple(value: &crate::parser::ast::FshValue) -> serde_json:
             "denominator": fsh_value_to_json_simple(denominator),
         }),
         FshValue::InstanceRef(s) => serde_json::Value::String(s.clone()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{CompilerOptions, FshCompiler};
+
+    #[test]
+    fn exports_nested_contact_caret_paths() {
+        let package = FshCompiler::new(CompilerOptions::default())
+            .compile(
+                r#"
+ValueSet: ContactValueSet
+* ^contact.telecom.system = #url
+* ^contact.telecom.value = "http://example.org/contact"
+"#,
+                "contact-caret.fsh",
+            )
+            .expect("ValueSet compiles");
+        let value_set = &package.resources[0];
+
+        assert_eq!(value_set["contact"][0]["telecom"][0]["system"], "url");
+        assert_eq!(
+            value_set["contact"][0]["telecom"][0]["value"],
+            "http://example.org/contact"
+        );
+        assert!(value_set.get("contact.telecom.system").is_none());
+    }
+
+    #[test]
+    fn preserves_first_system_occurrence_order() {
+        let package = FshCompiler::new(CompilerOptions::default())
+            .compile(
+                r#"
+ValueSet: OrderedSystems
+* include #a from system http://example.org/first
+* include #b from system http://example.org/second
+* include #c from system http://example.org/first
+"#,
+                "ordered-systems.fsh",
+            )
+            .expect("ValueSet compiles");
+        let value_set = &package.resources[0];
+
+        assert_eq!(
+            value_set["compose"]["include"][0]["system"],
+            "http://example.org/first"
+        );
+        assert_eq!(
+            value_set["compose"]["include"][1]["system"],
+            "http://example.org/second"
+        );
+        assert_eq!(
+            value_set["compose"]["include"][0]["concept"][1]["code"],
+            "c"
+        );
+    }
+
+    #[test]
+    fn resolves_local_terminology_names_to_canonical_urls() {
+        let package = FshCompiler::new(CompilerOptions {
+            config: crate::FshConfig {
+                canonical: Some("http://example.org/fhir".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .compile(
+            r#"
+ValueSet: LocalStatusVS
+Id: local-status-vs
+* include codes from system LocalStatus
+
+ValueSet: CombinedStatusVS
+* include codes from valueset LocalStatusVS
+
+CodeSystem: LocalStatus
+Id: local-status
+* #active "Active"
+"#,
+            "local-terminology.fsh",
+        )
+        .expect("terminology compiles");
+        let local = package
+            .resources
+            .iter()
+            .find(|resource| resource["name"] == "LocalStatusVS")
+            .expect("local ValueSet exists");
+        let combined = package
+            .resources
+            .iter()
+            .find(|resource| resource["name"] == "CombinedStatusVS")
+            .expect("combined ValueSet exists");
+
+        assert_eq!(
+            local["compose"]["include"][0]["system"],
+            "http://example.org/fhir/CodeSystem/local-status"
+        );
+        assert_eq!(
+            combined["compose"]["include"][0]["valueSet"][0],
+            "http://example.org/fhir/ValueSet/local-status-vs"
+        );
     }
 }

@@ -1,0 +1,134 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "race-ext",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/race-ext",
+  "version": "0.1.0",
+  "name": "RaceExt",
+  "title": "Race Extension",
+  "status": "draft",
+  "description": "An extension for capturing detailed race information with sub-extensions.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Race Extension",
+        "definition": "An extension for capturing detailed race information with sub-extensions."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "min": 1
+      },
+      {
+        "id": "Extension.extension:ombCategory",
+        "path": "Extension.extension",
+        "sliceName": "ombCategory",
+        "short": "OMB race category",
+        "min": 0,
+        "max": "5",
+        "mustSupport": true
+      },
+      {
+        "id": "Extension.extension:ombCategory.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:ombCategory.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "ombCategory"
+      },
+      {
+        "id": "Extension.extension:ombCategory.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://hl7.org/fhir/us/core/ValueSet/omb-race-category"
+        }
+      },
+      {
+        "id": "Extension.extension:detailed",
+        "path": "Extension.extension",
+        "sliceName": "detailed",
+        "short": "Detailed race codes",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:detailed.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:detailed.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "detailed"
+      },
+      {
+        "id": "Extension.extension:detailed.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:text",
+        "path": "Extension.extension",
+        "sliceName": "text",
+        "short": "Race text",
+        "min": 1,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Extension.extension:text.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:text.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "text"
+      },
+      {
+        "id": "Extension.extension:text.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "http://rh-fsh-test.example.org/StructureDefinition/race-ext"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

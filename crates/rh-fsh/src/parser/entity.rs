@@ -950,6 +950,7 @@ fn parse_vs_component_rules(input: Span<'_>) -> VsComponentRulesResult<'_> {
 
 fn parse_concept_rules(input: Span<'_>) -> ConceptRulesResult<'_> {
     let mut concepts = Vec::new();
+    let mut hierarchy: Vec<(usize, String)> = Vec::new();
     let mut caret_rules: Vec<Spanned<CaretValueRule>> = Vec::new();
     let mut remaining = input;
     loop {
@@ -979,7 +980,15 @@ fn parse_concept_rules(input: Span<'_>) -> ConceptRulesResult<'_> {
             }
         }
         match parse_concept_rule(peek) {
-            Ok((inp, rule)) => {
+            Ok((inp, mut rule)) => {
+                while hierarchy
+                    .last()
+                    .is_some_and(|(column, _)| *column >= rule.location.column)
+                {
+                    hierarchy.pop();
+                }
+                rule.value.hierarchy = hierarchy.iter().map(|(_, code)| code.clone()).collect();
+                hierarchy.push((rule.location.column, rule.value.code.clone()));
                 concepts.push(rule);
                 remaining = inp;
             }

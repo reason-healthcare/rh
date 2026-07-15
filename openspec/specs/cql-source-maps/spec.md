@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cql-source-maps
+
+## Purpose
+
+Defines source-to-ELM mapping metadata for CQL compilation diagnostics and tooling.
+
+## Requirements
 
 ### Requirement: SourceMap correlates CQL spans to ELM nodes
 

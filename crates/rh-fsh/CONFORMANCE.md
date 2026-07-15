@@ -1,6 +1,6 @@
 # rh-fsh Conformance
 
-**Last updated**: 2026-06-25 (metadata/CLI wave)
+**Last updated**: 2026-07-14 (recursive JSON-shape conformance wave)
 **SUSHI version**: 3.19.0 locally (`fsh-sushi`; implements FSH 3.0.0)
 **Test suites**:
 - Fixture golden comparison (`tests/sushi_compat.rs`)
@@ -28,51 +28,57 @@ python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py --timeout-seco
 Report files:
 - `crates/rh-fsh/conformance/results/latest-summary.md`
 - `crates/rh-fsh/conformance/results/latest-summary.json`
+- `crates/rh-fsh/conformance/GAP_REPORT.md`
+- `crates/rh-fsh/conformance/IMPROVEMENT_PLAN.md`
 
 | Project | Status | Threshold | FSH files | SUSHI resources | rh-fsh resources | Missing | Extra | Mismatch |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | different | pass | 71 | 134 | 134 | 22 | 22 | 112 |
-| mCODE | different | pass | 57 | 350 | 350 | 0 | 0 | 329 |
-| Da Vinci CRD | different | pass | 69 | 85 | 86 | 7 | 8 | 74 |
-| Da Vinci DTR | different | pass | 39 | 75 | 80 | 0 | 5 | 64 |
-| Da Vinci PAS | different | pass | 20 | 158 | 161 | 14 | 17 | 142 |
-| IPS | different | pass | 123 | 118 | 215 | 0 | 97 | 117 |
+| CARIN Blue Button | different | pass | 71 | 134 | 134 | 0 | 0 | 53 |
+| mCODE | different | pass | 57 | 350 | 350 | 0 | 0 | 155 |
+| Da Vinci CRD | different | pass | 69 | 85 | 85 | 0 | 0 | 51 |
+| Da Vinci DTR | different | pass | 39 | 75 | 75 | 0 | 0 | 33 |
+| Da Vinci PAS | different | pass | 20 | 158 | 158 | 0 | 0 | 96 |
+| IPS | different | pass | 123 | 118 | 118 | 0 | 0 | 71 |
 
-Baseline thresholds are intentionally set to the current post-wave counts so
-regressions are visible while the project-level comparison remains non-blocking.
-The dependency/profile resolution wave reduced mCODE missing/extra resources
-from 83/82 to 1/0 and reduced Da Vinci DTR missing/extra resources from 2/6 to
-1/5. The metadata/CLI wave now emits project `ImplementationGuide` resources,
-which improves missing counts by one across the default project set. The new IG
-resources currently add one mismatch per project because detailed IG metadata
-such as contact/page/global fields is not yet SUSHI-identical.
+All six projects pass their lowered regression thresholds, but none is yet
+SUSHI-identical. Across 379 FSH files, both tools emit the same 920 resource
+identities: there are zero missing and zero extra resources. Of those, 461
+match exactly after normalization and 459 have at least one JSON difference.
 
 Categorized latest results:
 
 | Project | Resource identity | JSON shape | StructureDefinition | Metadata | Terminology | IG generation | Other |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| CARIN Blue Button | 44 | 47 | 16 | 13 | 12 | 1 | 23 |
-| mCODE | 0 | 270 | 53 | 3 | 1 | 1 | 1 |
-| Da Vinci CRD | 4 | 27 | 27 | 0 | 3 | 1 | 27 |
-| Da Vinci DTR | 0 | 22 | 25 | 3 | 5 | 1 | 13 |
-| Da Vinci PAS | 28 | 47 | 81 | 3 | 1 | 1 | 12 |
-| IPS | 0 | 72 | 32 | 6 | 0 | 1 | 103 |
+| CARIN Blue Button | 0 | 30 | 16 | 1 | 0 | 1 | 5 |
+| mCODE | 0 | 97 | 53 | 2 | 1 | 1 | 1 |
+| Da Vinci CRD | 0 | 18 | 26 | 2 | 3 | 1 | 1 |
+| Da Vinci DTR | 0 | 2 | 25 | 5 | 0 | 1 | 0 |
+| Da Vinci PAS | 0 | 18 | 65 | 9 | 1 | 1 | 2 |
+| IPS | 0 | 11 | 32 | 22 | 0 | 1 | 5 |
+| **Total** | **0** | **176** | **217** | **41** | **5** | **6** | **14** |
+
+Categories count missing, extra, and mismatched resources. Each mismatched
+resource is assigned from its first observed JSON difference, so the categories
+identify the leading gap rather than every difference in that resource.
 
 ### 1.2 Fixture corpus
 
 The SUSHI compatibility test suite compares rh-fsh output against SUSHI-generated
 golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature category.
 
-#### Fixture inventory (2026-06-12)
+#### Fixture inventory (2026-07-14)
 
-**Total: 61 fixtures** (plan target was ≥60)
+**Total: 63 fixtures** (plan target was ≥60)
+
+Latest run: all 63 fixtures passed against reviewed SUSHI goldens; none failed
+or remained unverified. The library unit suite passes all 150 tests.
 
 | Category | Count | Coverage notes |
 |---|---|---|
 | Aliases | 6 | Plain, `$`-prefixed, FHIR/HL7/V2/V3/US Core aliases |
 | Code Systems | 2 | Simple codes, hierarchical concept trees |
 | Extensions | 3 | Simple, complex (multi-component), race/sub-extension |
-| Instances | 5 | Basic, contained, bundle, inline, quantity values |
+| Instances | 6 | Basic, contained, bundle, inline, DTR/mCODE-shaped, quantity values |
 | Invariants | 4 | Regex, OR/XOR require, string length |
 | Logicals | 1 | Custom element definitions |
 | Mappings | 1 | Element mapping rules |
@@ -88,7 +94,7 @@ golden files. All fixtures are in `tests/fixtures/`, organized by FSH feature ca
 
 ```bash
 # Run project-level comparison (requires Node.js, npx, git, and built rh CLI):
-cargo build -p rh-cli
+CARGO_TARGET_DIR=target/conformance cargo build -p rh-cli
 python3 crates/rh-fsh/conformance/scripts/run_sushi_comparison.py
 
 # Run fast profile identity smoke fixture:
@@ -105,7 +111,7 @@ cargo test -p rh-fsh --test sushi_compat -- --include-ignored
 cargo test -p rh-fsh --lib
 ```
 
-Unit tests (83 cases) cover parser, resolver, dependency loading, definition
+Unit tests (150 cases) cover parser, resolver, semantic lowering, dependency loading, definition
 indexing, and export behavior without requiring SUSHI.
 
 ---
@@ -199,10 +205,10 @@ Recent fixes made while bringing up the project runner:
 | Code (`#code`) | ✅ | |
 | Coded (`system#code "display"`) | ✅ | URL and alias systems |
 | Quantity (`n 'unit'`) | ✅ | UCUM single-quote units parsed and stripped |
-| Reference | ✅ | |
+| Reference | ✅ | Target and optional display |
 | Canonical | ✅ | |
 | InstanceRef (inline) | ✅ | `contained[+] = instance` |
-| Ratio | ❌ | Not yet in FSH lexer |
+| Ratio | ✅ | Numerator and denominator values |
 
 ---
 
@@ -210,13 +216,20 @@ Recent fixes made while bringing up the project runner:
 
 | Gap | Impact | Notes |
 |---|---|---|
-| Ratio value literals | Low | `numerator : denominator` syntax not lexed |
 | `defineVariable` in rules | Low | FHIRPath 2.0 feature, not in SUSHI 3.x either |
 | Deep ParamRuleSet template nesting | Medium | Multi-level `{param}` inside nested rules |
-| SUSHI golden-file CI | Blocked | Requires Node.js + SUSHI in CI environment; tests are `#[ignore]` |
-| Project-level exporter parity | High | mCODE and DTR still differ from SUSHI in resource identity and JSON shape |
+| Project-level exporter parity | High | All identities match, but 459 shared resources still differ in content |
 | IG metadata parity | Medium | Minimal `ImplementationGuide/*` resources are generated, but detailed SUSHI metadata still differs |
-| Array/scalar JSON shape fidelity | High | Remaining mismatches include arrays vs scalars for fields such as `supportedProfile`, `targetProfile`, and nested instance fields |
+| Array/scalar JSON shape fidelity | High | 176 resources first differ in nested cardinality/datatype shape, especially extensions, Bundle entries, and Parameters |
 | Primitive extension shadow fields | Medium | SUSHI emits `_field` companion arrays for extensions on primitive values; rh-fsh has partial support |
-| Extension JSON fidelity | Medium | Nested extension paths can miss wrapping arrays, `url`, or `value[x]` shape in complex examples |
-| Parser unit tests for SUSHI compat assertions | N/A | 70 parser unit tests cover entity/rule/path/value forms |
+| Extension JSON fidelity | Medium | Local required subextensions are recursively materialized, and dependency child URLs are parent-scoped; dependency defaults, wrapping arrays, and some `value[x]` shapes remain incomplete |
+| StructureDefinition differential parity | High | 217 resources first differ in constraints, slicing, fixed values, or element merging; extension context export is complete for the measured corpus |
+
+---
+
+## 4. Improvement Work
+
+The detailed findings are in
+[`conformance/GAP_REPORT.md`](conformance/GAP_REPORT.md). The sequenced delivery
+plan, acceptance criteria, and milestone targets are in
+[`conformance/IMPROVEMENT_PLAN.md`](conformance/IMPROVEMENT_PLAN.md).

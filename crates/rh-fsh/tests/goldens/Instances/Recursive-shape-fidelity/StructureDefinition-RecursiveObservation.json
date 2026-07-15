@@ -1,0 +1,23 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "RecursiveObservation",
+  "url": "http://rh-fsh-test.example.org/StructureDefinition/RecursiveObservation",
+  "version": "0.1.0",
+  "name": "RecursiveObservation",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation.status",
+        "path": "Observation.status",
+        "patternCode": "final"
+      }
+    ]
+  }
+}

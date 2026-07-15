@@ -10,6 +10,7 @@ use crate::fhir_types::{ElementDefinition, StructureDefinition};
 use crate::metadata::{
     FhirFieldType, FhirPrimitiveType, FieldInfo, MetadataRegistry, TypeMetadata,
 };
+use convert_case::{Case, Casing};
 use std::collections::HashMap;
 
 /// Category for partitioning metadata types into separate files
@@ -87,7 +88,11 @@ pub fn build_metadata_registry(structure_defs: &[StructureDefinition]) -> Metada
 
     for structure_def in sorted_structure_definitions(structure_defs) {
         if let Some(type_metadata) = extract_type_metadata(structure_def) {
-            // Only add if not already present (avoid duplicates)
+            if !registry.types.contains_key(&type_metadata.name) {
+                registry.add_type(type_metadata);
+            }
+        }
+        for type_metadata in extract_nested_metadata(structure_def) {
             if !registry.types.contains_key(&type_metadata.name) {
                 registry.add_type(type_metadata);
             }
@@ -102,16 +107,15 @@ fn extract_type_metadata(structure_def: &StructureDefinition) -> Option<TypeMeta
     let type_name = structure_def.name.as_str();
     let mut fields = HashMap::new();
 
-    // Get the snapshot elements
     let snapshot = structure_def.snapshot.as_ref()?;
     let elements = &snapshot.element;
 
-    // Skip the first element (it's the resource itself, e.g., "Patient")
     for element in elements.iter().skip(1) {
-        if let Some(field_info) = extract_field_info(element, type_name) {
-            if let Some(field_name) = extract_field_name(&element.path, type_name) {
-                fields.insert(field_name, field_info);
-            }
+        let Some(field_name) = extract_field_name(&element.path, type_name) else {
+            continue;
+        };
+        if let Some(field_info) = extract_field_info(element, elements) {
+            fields.insert(field_name, field_info);
         }
     }
 
@@ -131,21 +135,74 @@ fn extract_field_name(path: &str, type_name: &str) -> Option<String> {
 
     let field_path = &path[prefix.len()..];
 
-    // Only take the immediate child field (not nested paths like "name.given")
-    // We'll handle those through recursive resolution
-    let field_name = field_path.split('.').next()?;
+    (!field_path.contains('.')).then(|| field_path.to_string())
+}
 
-    Some(field_name.to_string())
+fn extract_nested_metadata(structure_def: &StructureDefinition) -> Vec<TypeMetadata> {
+    let Some(snapshot) = &structure_def.snapshot else {
+        return Vec::new();
+    };
+    snapshot
+        .element
+        .iter()
+        .filter(|element| {
+            element.path.contains('.') && is_nested_element(element, &snapshot.element)
+        })
+        .map(|nested| {
+            let prefix = format!("{}.", nested.path);
+            let mut fields = HashMap::new();
+            for element in &snapshot.element {
+                let Some(field_path) = element.path.strip_prefix(&prefix) else {
+                    continue;
+                };
+                if field_path.contains('.') {
+                    continue;
+                }
+                if let Some(field_info) = extract_field_info(element, &snapshot.element) {
+                    fields.insert(field_path.to_string(), field_info);
+                }
+            }
+            TypeMetadata {
+                name: backbone_type_name(&nested.path),
+                fields,
+            }
+        })
+        .collect()
+}
+
+fn is_nested_element(element: &ElementDefinition, elements: &[ElementDefinition]) -> bool {
+    is_backbone_element(element) || has_direct_children(&element.path, elements)
+}
+
+fn has_direct_children(path: &str, elements: &[ElementDefinition]) -> bool {
+    let prefix = format!("{path}.");
+    elements.iter().any(|candidate| {
+        candidate
+            .path
+            .strip_prefix(&prefix)
+            .is_some_and(|suffix| !suffix.contains('.'))
+    })
+}
+
+fn is_backbone_element(element: &ElementDefinition) -> bool {
+    element.element_type.as_ref().is_some_and(|types| {
+        types
+            .iter()
+            .any(|item| item.code.as_deref() == Some("BackboneElement"))
+    })
+}
+
+fn backbone_type_name(path: &str) -> String {
+    path.split('.')
+        .map(|part| part.replace("[x]", "").to_case(Case::Pascal))
+        .collect()
 }
 
 /// Extract field information from an ElementDefinition
-fn extract_field_info(element: &ElementDefinition, _type_name: &str) -> Option<FieldInfo> {
-    let element_types = element.element_type.as_ref()?;
-
-    if element_types.is_empty() {
-        return None;
-    }
-
+fn extract_field_info(
+    element: &ElementDefinition,
+    elements: &[ElementDefinition],
+) -> Option<FieldInfo> {
     // Get cardinality
     let min = element.min.unwrap_or(0);
     let max = element.max.as_ref().and_then(|m| {
@@ -160,14 +217,30 @@ fn extract_field_info(element: &ElementDefinition, _type_name: &str) -> Option<F
     let is_choice_type = element.path.contains("[x]");
 
     // Collect all types (for choice types)
-    let choice_types: Vec<String> = element_types
+    let choice_types: Vec<String> = element
+        .element_type
+        .as_deref()
+        .unwrap_or_default()
         .iter()
-        .filter_map(|et| et.code.clone())
+        .filter_map(|element_type| element_type.code.clone())
         .collect();
 
-    // Use the first type as the primary field type
-    let primary_type_code = element_types[0].code.as_ref()?;
-    let field_type = determine_field_type(primary_type_code);
+    let field_type = if has_direct_children(&element.path, elements) {
+        FhirFieldType::BackboneElement(backbone_type_name(&element.path))
+    } else if let Some(type_code) = element
+        .element_type
+        .as_ref()
+        .and_then(|types| types.first())
+        .and_then(|element_type| element_type.code.as_deref())
+    {
+        determine_field_type(type_code, &element.path)
+    } else {
+        let reference = element.content_reference.as_deref()?;
+        let target = reference
+            .rsplit_once('#')
+            .map_or(reference, |(_, fragment)| fragment);
+        FhirFieldType::BackboneElement(backbone_type_name(target))
+    };
 
     Some(FieldInfo {
         field_type,
@@ -179,7 +252,7 @@ fn extract_field_info(element: &ElementDefinition, _type_name: &str) -> Option<F
 }
 
 /// Determine the FhirFieldType from a FHIR type code string
-fn determine_field_type(type_code: &str) -> FhirFieldType {
+fn determine_field_type(type_code: &str, path: &str) -> FhirFieldType {
     // Check if it's a primitive type
     if let Some(primitive) = FhirPrimitiveType::from_fhir_type(type_code) {
         return FhirFieldType::Primitive(primitive);
@@ -192,7 +265,7 @@ fn determine_field_type(type_code: &str) -> FhirFieldType {
 
     // Check for BackboneElement (typically internal structures)
     if type_code == "BackboneElement" {
-        return FhirFieldType::BackboneElement(type_code.to_string());
+        return FhirFieldType::BackboneElement(backbone_type_name(path));
     }
 
     // Otherwise it's a complex type
@@ -659,6 +732,10 @@ pub fn resolve_path(path: &str) -> Option<&'static FhirFieldType> {
 mod tests {
     use super::*;
 
+    fn element(value: serde_json::Value) -> ElementDefinition {
+        serde_json::from_value(value).expect("element definition parses")
+    }
+
     #[test]
     fn test_extract_field_name() {
         assert_eq!(
@@ -666,10 +743,7 @@ mod tests {
             Some("birthDate".to_string())
         );
 
-        assert_eq!(
-            extract_field_name("Patient.name.given", "Patient"),
-            Some("name".to_string())
-        );
+        assert_eq!(extract_field_name("Patient.name.given", "Patient"), None);
 
         assert_eq!(extract_field_name("Patient", "Patient"), None);
     }
@@ -677,20 +751,70 @@ mod tests {
     #[test]
     fn test_determine_field_type() {
         assert_eq!(
-            determine_field_type("date"),
+            determine_field_type("date", "Patient.birthDate"),
             FhirFieldType::Primitive(FhirPrimitiveType::Date)
         );
 
         assert_eq!(
-            determine_field_type("string"),
+            determine_field_type("string", "Patient.id"),
             FhirFieldType::Primitive(FhirPrimitiveType::String)
         );
 
-        assert_eq!(determine_field_type("Reference"), FhirFieldType::Reference);
+        assert_eq!(
+            determine_field_type("Reference", "Patient.managingOrganization"),
+            FhirFieldType::Reference
+        );
 
         assert!(matches!(
-            determine_field_type("HumanName"),
+            determine_field_type("HumanName", "Patient.name"),
             FhirFieldType::Complex(_)
         ));
+        assert_eq!(
+            determine_field_type("BackboneElement", "Patient.communication"),
+            FhirFieldType::BackboneElement("PatientCommunication".to_string())
+        );
+    }
+
+    #[test]
+    fn inline_element_with_children_uses_navigable_nested_type() {
+        let elements = vec![
+            element(serde_json::json!({
+                "path": "Timing.repeat",
+                "min": 0,
+                "max": "1",
+                "type": [{"code": "Element"}]
+            })),
+            element(serde_json::json!({
+                "path": "Timing.repeat.periodUnit",
+                "min": 0,
+                "max": "1",
+                "type": [{"code": "code"}]
+            })),
+        ];
+
+        let field = extract_field_info(&elements[0], &elements).expect("repeat metadata");
+
+        assert_eq!(
+            field.field_type,
+            FhirFieldType::BackboneElement("TimingRepeat".to_string())
+        );
+    }
+
+    #[test]
+    fn content_reference_reuses_target_nested_type() {
+        let elements = vec![element(serde_json::json!({
+            "path": "ClaimResponse.addItem.adjudication",
+            "min": 1,
+            "max": "*",
+            "contentReference": "http://hl7.org/fhir/StructureDefinition/ClaimResponse#ClaimResponse.item.adjudication"
+        }))];
+
+        let field = extract_field_info(&elements[0], &elements).expect("reference metadata");
+
+        assert_eq!(
+            field.field_type,
+            FhirFieldType::BackboneElement("ClaimResponseItemAdjudication".to_string())
+        );
+        assert_eq!(field.max, None);
     }
 }

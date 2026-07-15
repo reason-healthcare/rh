@@ -1,4 +1,10 @@
-## ADDED Requirements
+# fsh-parser
+
+## Purpose
+
+Defines parsing of FHIR Shorthand source into a typed, source-spanned abstract syntax tree.
+
+## Requirements
 
 ### Requirement: Parse FSH source text into a typed AST
 The system SHALL parse FSH source text (a string or file contents) into a `FshDocument` containing a `Vec<Spanned<FshEntity>>`. All 11 FSH entity types SHALL be supported: Alias, Profile, Extension, Logical, Resource, Instance, ValueSet, CodeSystem, Invariant, RuleSet, and ParamRuleSet.

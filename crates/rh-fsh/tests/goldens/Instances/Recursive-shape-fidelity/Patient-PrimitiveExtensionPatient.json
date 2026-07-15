@@ -1,0 +1,28 @@
+{
+  "resourceType": "Patient",
+  "id": "PrimitiveExtensionPatient",
+  "name": [
+    {
+      "family": "Anyperson",
+      "_family": {
+        "extension": [
+          {
+            "url": "http://example.org/StructureDefinition/family-note",
+            "valueString": "preferred family name"
+          }
+        ]
+      }
+    }
+  ],
+  "extension": [
+    {
+      "url": "http://example.org/StructureDefinition/outer-note",
+      "extension": [
+        {
+          "url": "inner-note",
+          "valueString": "nested extension"
+        }
+      ]
+    }
+  ]
+}

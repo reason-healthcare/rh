@@ -1,0 +1,26 @@
+{
+  "carin-bb": {
+    "repo": "https://github.com/HL7/carin-bb.git",
+    "revision": "d23e3b70d641633d6944024a68b0fb535be8a168"
+  },
+  "mcode": {
+    "repo": "https://github.com/HL7/fhir-mCODE-ig.git",
+    "revision": "543477b5585f2dcc717820a2bea141ea85f03012"
+  },
+  "davinci-crd": {
+    "repo": "https://github.com/HL7/davinci-crd.git",
+    "revision": "138d34a517753f2e4aa286a7f17ceb53f4354310"
+  },
+  "davinci-dtr": {
+    "repo": "https://github.com/HL7/davinci-dtr.git",
+    "revision": "ca6c657644e60405010f11d5b98ad5ebd9ff3b45"
+  },
+  "davinci-pas": {
+    "repo": "https://github.com/HL7/davinci-pas.git",
+    "revision": "e5329c6a216e1bf8ff32894e3827f9223e77628a"
+  },
+  "fhir-ips": {
+    "repo": "https://github.com/HL7/fhir-ips.git",
+    "revision": "df270978cf5bf4ee7c907f005d722bed7235f384"
+  }
+}

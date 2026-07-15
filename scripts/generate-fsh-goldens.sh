@@ -7,7 +7,7 @@
 #
 # Output structure: goldens/<category>/<fixture-stem>/<ResourceType-id>.json
 
-set -uo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -17,10 +17,22 @@ SUSHI_CONFIG="$REPO_ROOT/crates/rh-fsh/tests/sushi-config.yaml"
 
 mkdir -p "$GOLDENS_DIR"
 
-pass=0
-skip=0
+generated=0
+empty=0
+failed=0
 
-while IFS= read -r fsh_file; do
+fixture_files=()
+if [ "$#" -gt 0 ]; then
+    for fixture in "$@"; do
+        fixture_files+=("$FIXTURES_DIR/$fixture")
+    done
+else
+    while IFS= read -r fixture; do
+        fixture_files+=("$fixture")
+    done < <(find "$FIXTURES_DIR" -name "*.fsh" | sort)
+fi
+
+for fsh_file in "${fixture_files[@]}"; do
     rel_path="${fsh_file#$FIXTURES_DIR/}"
     # Fixture stem: relative path without .fsh extension
     fixture_stem="${rel_path%.fsh}"
@@ -32,8 +44,14 @@ while IFS= read -r fsh_file; do
     cp "$fsh_file" "$tmpdir/input/fsh/input.fsh"
     cp "$SUSHI_CONFIG" "$tmpdir/sushi-config.yaml"
 
-    # Run sushi; FSHOnly: true means output goes to fsh-generated/resources/
-    npx --yes fsh-sushi "$tmpdir" >/dev/null 2>&1 || true
+    # Run pinned SUSHI; FSHOnly: true means output goes to fsh-generated/resources/
+    if ! npx --yes fsh-sushi@3.19.0 "$tmpdir" >"$tmpdir/sushi.log" 2>&1; then
+        echo "  ERROR: SUSHI failed"
+        sed -n '1,120p' "$tmpdir/sushi.log"
+        failed=$((failed + 1))
+        rm -rf "$tmpdir"
+        continue
+    fi
 
     output_dir="$tmpdir/fsh-generated/resources"
     found=0
@@ -44,6 +62,7 @@ while IFS= read -r fsh_file; do
             # Each fixture gets its own subdirectory to avoid collisions
             golden_subdir="$GOLDENS_DIR/$fixture_stem"
             mkdir -p "$golden_subdir"
+            rm -f "$golden_subdir/.sushi-empty"
             cp "$json_file" "$golden_subdir/$json_basename"
             echo "  → $json_basename"
             found=1
@@ -51,15 +70,23 @@ while IFS= read -r fsh_file; do
     fi
 
     if [ "$found" -eq 1 ]; then
-        pass=$((pass + 1))
+        generated=$((generated + 1))
     else
-        echo "  ⚠ No JSON output — skipping (aliases-only or unsupported)"
-        skip=$((skip + 1))
+        golden_subdir="$GOLDENS_DIR/$fixture_stem"
+        mkdir -p "$golden_subdir"
+        find "$golden_subdir" -type f -name '*.json' -delete
+        touch "$golden_subdir/.sushi-empty"
+        echo "  → verified empty output"
+        empty=$((empty + 1))
     fi
 
     rm -rf "$tmpdir"
-done < <(find "$FIXTURES_DIR" -name "*.fsh" | sort)
+done
 
 echo ""
 echo "Done! Goldens written to $GOLDENS_DIR"
-echo "  Generated: $pass  Skipped: $skip"
+echo "  Generated: $generated  Empty: $empty  Failed: $failed"
+
+if [ "$failed" -ne 0 ]; then
+    exit 1
+fi

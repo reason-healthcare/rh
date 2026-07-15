@@ -1,6 +1,9 @@
 //! StructureDefinition lookup index for local FSH definitions and package dependencies.
 
-use crate::dependencies::{DependencyDefinitionSet, DependencyStructureDefinition};
+use crate::dependencies::{
+    DependencyDefinitionSet, DependencyExtensionSlice, DependencyFixedValue,
+    DependencyStructureDefinition,
+};
 use crate::fhirdefs::FhirDefs;
 use crate::parser::ast::SdMetadata;
 use crate::tank::FshTank;
@@ -35,6 +38,8 @@ pub struct IndexedStructureDefinition {
     pub base_definition: Option<String>,
     pub parent: Option<String>,
     pub source: DefinitionSource,
+    pub fixed_values: Vec<DependencyFixedValue>,
+    pub extension_slices: Vec<DependencyExtensionSlice>,
 }
 
 /// Lookup index keyed by FSH name, id, canonical URL, aliases, and URL tail.
@@ -49,6 +54,10 @@ impl DefinitionIndex {
     pub fn lookup(&self, key: &str) -> Option<&IndexedStructureDefinition> {
         self.keys
             .get(key)
+            .or_else(|| {
+                key.split_once('|')
+                    .and_then(|(canonical, _)| self.keys.get(canonical))
+            })
             .and_then(|idx| self.definitions.get(*idx))
     }
 
@@ -202,6 +211,8 @@ fn index_local_sd(
         base_definition: None,
         parent: metadata.parent.clone(),
         source: DefinitionSource::Local { kind },
+        fixed_values: Vec::new(),
+        extension_slices: Vec::new(),
     }
 }
 
@@ -219,12 +230,25 @@ fn index_dependency_sd(definition: &DependencyStructureDefinition) -> IndexedStr
             package_id: definition.package_id.clone(),
             version: definition.version.clone(),
         },
+        fixed_values: definition.fixed_values.clone(),
+        extension_slices: definition.extension_slices.clone(),
     }
 }
 
 fn definition_keys(definition: &IndexedStructureDefinition) -> Vec<String> {
     let mut keys = Vec::new();
-    push_key(&mut keys, definition.name.as_deref());
+    // A core extension's logical name can equal an unrelated resource type
+    // (for example `FamilyMemberHistory`). Its id and canonical URL remain
+    // resolvable, but indexing that display name would shadow the resource
+    // while compiling profile defaults for an instance of the same name.
+    let is_core_extension = matches!(
+        &definition.source,
+        DefinitionSource::Dependency { package_id, .. }
+            if package_id == "hl7.fhir.r4.core"
+    ) && definition.type_.as_deref() == Some("Extension");
+    if !is_core_extension {
+        push_key(&mut keys, definition.name.as_deref());
+    }
     push_key(&mut keys, definition.id.as_deref());
     push_key(&mut keys, definition.url.as_deref());
 
@@ -313,6 +337,8 @@ mod tests {
                     "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                 ),
                 derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
             }],
             warnings: vec!["missing other package".to_string()],
         };
@@ -329,6 +355,42 @@ mod tests {
         assert!(index.lookup("us-core-patient").is_some());
         assert!(index
             .lookup("http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient")
+            .is_some());
+    }
+
+    #[test]
+    fn indexes_core_extensions_by_id_without_shadowing_resource_names() {
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![DependencyStructureDefinition {
+                package_id: "hl7.fhir.r4.core".to_string(),
+                version: "4.0.1".to_string(),
+                path: PathBuf::from(
+                    "StructureDefinition-DiagnosticReport-geneticsFamilyMemberHistory.json",
+                ),
+                id: Some("DiagnosticReport-geneticsFamilyMemberHistory".to_string()),
+                url: Some(
+                    "http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory"
+                        .to_string(),
+                ),
+                name: Some("FamilyMemberHistory".to_string()),
+                title: None,
+                kind: Some("complex-type".to_string()),
+                type_: Some("Extension".to_string()),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Extension".to_string(),
+                ),
+                derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
+            }],
+            warnings: Vec::new(),
+        };
+
+        let index = build_definition_index(&empty_tank(), &FshConfig::default(), &dependencies);
+
+        assert!(index.lookup("FamilyMemberHistory").is_none());
+        assert!(index
+            .lookup("DiagnosticReport-geneticsFamilyMemberHistory")
             .is_some());
     }
 
@@ -352,6 +414,8 @@ mod tests {
                     "http://hl7.org/fhir/StructureDefinition/Practitioner".to_string(),
                 ),
                 derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
             }],
             warnings: Vec::new(),
         };
@@ -369,5 +433,53 @@ mod tests {
             ),
             Some("Practitioner".to_string())
         );
+    }
+
+    #[test]
+    fn resolves_versioned_profile_references_to_base_resource_type() {
+        let dependencies = DependencyDefinitionSet {
+            structure_definitions: vec![DependencyStructureDefinition {
+                package_id: "hl7.fhir.us.core".to_string(),
+                version: "7.0.0".to_string(),
+                path: PathBuf::from("StructureDefinition-us-core-patient.json"),
+                id: Some("us-core-patient".to_string()),
+                url: Some(
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient".to_string(),
+                ),
+                name: Some("USCorePatientProfile".to_string()),
+                title: None,
+                kind: Some("resource".to_string()),
+                type_: Some("Patient".to_string()),
+                base_definition: Some(
+                    "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
+                ),
+                derivation: Some("constraint".to_string()),
+                fixed_values: Vec::new(),
+                extension_slices: Vec::new(),
+            }],
+            warnings: Vec::new(),
+        };
+        let mut tank = empty_tank();
+        tank.profiles.insert(
+            "ProjectPatient".to_string(),
+            Profile {
+                metadata: SdMetadata {
+                    name: "ProjectPatient".to_string(),
+                    parent: Some("USCorePatientProfile|7.0.0".to_string()),
+                    id: Some("project-patient".to_string()),
+                    title: None,
+                    description: None,
+                    characteristics: Vec::new(),
+                },
+                rules: Vec::new(),
+            },
+        );
+        let index = build_definition_index(&tank, &FshConfig::default(), &dependencies);
+
+        assert_eq!(
+            index.resolve_base_type("ProjectPatient", FhirDefs::r4().as_ref()),
+            Some("Patient".to_string())
+        );
+        assert!(index.lookup("USCorePatientProfile|7.0.0").is_some());
     }
 }

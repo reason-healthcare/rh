@@ -1,6 +1,6 @@
 # rh fsh — FHIR Shorthand Compiler
 
-The `rh fsh` command compiles [FHIR Shorthand (FSH)](https://build.fhir.org/ig/HL7/fhir-shorthand/) source files into FHIR R4 JSON resources. It is powered by [`rh-fsh`](../../../crates/rh-fsh/README.md), a Rust-native FSH compiler that is significantly faster than the reference [sushi](https://github.com/FHIR/sushi) implementation.
+The `rh fsh` command compiles [FHIR Shorthand (FSH)](https://build.fhir.org/ig/HL7/fhir-shorthand/) source files into FHIR R4 JSON resources. It is powered by [`rh-fsh`](../../../crates/rh-fsh/README.md), a Rust-native FSH compiler. It can run directly on individual files, as part of an RH package build, or alongside an existing [SUSHI](https://github.com/FHIR/sushi) project.
 
 ## Subcommands
 
@@ -9,6 +9,124 @@ The `rh fsh` command compiles [FHIR Shorthand (FSH)](https://build.fhir.org/ig/H
 | `rh fsh compile` | Compile FSH files to FHIR JSON |
 | `rh fsh parse` | Parse a FSH file and print the AST as JSON |
 | `rh fsh tank` | Parse FSH files and print a summary of the entity tank |
+
+---
+
+## Quick workflows
+
+### Start a new RH project
+
+`rh package init` creates a package source tree with `input/fsh/` for FSH files.
+Enable the built-in `fsh` processor in the generated `packager.toml`, then check
+and build the package:
+
+```bash
+# 1. Scaffold the project.
+rh package init my-ig \
+  --canonical https://example.org/fhir/my-ig \
+  --name example.fhir.my-ig \
+  --title "Example IG"
+
+# 2. Add "fsh" to the generated hook list in my-ig/packager.toml:
+# [hooks]
+# before_build = ["fsh"]
+
+# 3. Create FSH source under the generated input/fsh directory.
+cat > my-ig/input/fsh/MyPatient.fsh <<'FSH'
+Profile: MyPatient
+Parent: Patient
+Id: my-patient
+Title: "My Patient"
+* name 1..* MS
+FSH
+
+# 4. Inspect, validate the project configuration, and build it.
+rh fsh parse my-ig/input/fsh/MyPatient.fsh
+rh fsh tank my-ig/input/fsh/MyPatient.fsh
+rh package check my-ig
+rh package build my-ig
+```
+
+The package build reads canonical URL, version, status, package ID, publisher,
+and FHIR version from `packager.toml`. The FSH processor recursively compiles
+`*.fsh` below `input/fsh/` and injects the generated resources into the package.
+The expanded package is written to `my-ig/output/` and a `.tgz` is created next
+to it.
+
+For a quick compiler-only iteration without running the package pipeline:
+
+```bash
+rh fsh compile my-ig/input/fsh/*.fsh --output my-ig/fsh-preview
+```
+
+That direct command does not read `packager.toml`; use caret rules in the FSH or
+the full `rh package build` workflow when package metadata matters.
+
+### Add FSH to an existing RH project
+
+For a project that already contains `packager.toml`, add an `input/fsh/`
+directory and ensure the configured build hooks include `fsh` before processors
+that consume generated resources:
+
+```toml
+[hooks]
+before_build = ["fsh", "snapshot", "validate"]
+```
+
+If the project uses a custom source layout, configure it explicitly:
+
+```toml
+[input]
+dir = "input"
+fsh_dir = "shorthand"
+```
+
+Then run:
+
+```bash
+rh package check existing-project
+rh package build existing-project
+```
+
+FSH-generated resources with the same resource identity as an existing JSON
+resource replace that resource during the build, with a warning. Keep one
+authoritative source for each `(resourceType, id)` to avoid accidental
+overrides.
+
+### Use rh-fsh in an existing SUSHI project
+
+Point `rh fsh compile` at the FSH files below the SUSHI project's `input/fsh/`
+directory. The compiler walks upward from the first input file and automatically
+loads the nearest `sushi-config.yaml` or `sushi-config.yml`:
+
+```bash
+cd my-sushi-ig
+
+# Install dependencies declared by sushi-config.yaml when they are not already
+# present in ~/.fhir/packages.
+rh download package hl7.fhir.r4.core 4.0.1
+
+# Compile every FSH file recursively into a separate preview directory.
+rh fsh compile $(find input/fsh -type f -name '*.fsh' | sort) \
+  --output rh-generated
+```
+
+Use a separate output directory such as `rh-generated/`; do not point this at
+SUSHI's `fsh-generated/` directory unless replacing its contents is intentional.
+SUSHI remains the reference tool for a complete IG Publisher workflow. rh-fsh
+is useful as a fast compile/inspection step and currently tracks remaining
+content differences in [`rh-fsh/CONFORMANCE.md`](../../../crates/rh-fsh/CONFORMANCE.md).
+
+For CI or scripts, use the global JSON envelope and inspect `.ok`, `.result`,
+and `.errors`:
+
+```bash
+rh --format json fsh compile \
+  $(find input/fsh -type f -name '*.fsh' | sort) > rh-fsh-result.json
+
+jq -e '.ok == true' rh-fsh-result.json
+jq '.result.diagnostics' rh-fsh-result.json
+```
 
 ---
 
@@ -26,7 +144,7 @@ rh fsh compile <FILES...> [OPTIONS]
 
 | Argument | Description |
 |----------|-------------|
-| `<FILES...>` | One or more FSH input files (globs supported via shell) |
+| `<FILES...>` | One or more FSH input files. Shell globs are expanded by the shell; directories are not recursively expanded by the command. |
 
 ### Options
 
@@ -46,6 +164,9 @@ rh fsh compile profiles/*.fsh --output output/
 
 # Compact JSON output
 rh fsh compile myprofile.fsh --compact
+
+# Recursively compile a conventional IG source tree
+rh fsh compile $(find input/fsh -type f -name '*.fsh' | sort) --output output/
 ```
 
 ### Output
@@ -61,16 +182,25 @@ output/
 
 Non-fatal errors (e.g. unresolvable parent SDs) are printed to stderr as warnings. The compiler continues and outputs as many resources as possible.
 
-### Metadata via CLI flags
+### Project configuration
 
-You can supply package metadata as CLI flags. These populate the `meta.profile`, `url`, and related fields that sushi would read from `sushi-config.yml`:
+When an input file is below a SUSHI project, `rh fsh compile` discovers the
+nearest `sushi-config.yaml` or `sushi-config.yml` by walking up its ancestor
+directories. The first input file with a discoverable config selects the project
+configuration, so do not mix files from unrelated projects in one invocation.
 
-| Flag | Description |
-|------|-------------|
-| `--canonical <URL>` | Canonical base URL for all resources |
-| `--status <STATUS>` | Publication status (`draft`, `active`, `retired`, `unknown`). Default: `draft` |
+The supported configuration mapping includes core package/IG metadata,
+dependencies, contacts, publisher information, and FHIR version. Dependency
+StructureDefinitions are loaded from the local FHIR package cache. Install a
+missing dependency with:
 
-> **Note**: Full `sushi-config.yml` support is planned. For now, metadata can be encoded directly in FSH using `^` caret-value rules (e.g. `* ^url = "http://example.org/fhir/StructureDefinition/MyProfile"`).
+```bash
+rh download package <package-id> <version>
+```
+
+When no SUSHI config is found, compiler defaults are used. Direct compilation
+does not read `packager.toml`; the RH package build's FSH processor supplies
+that project metadata instead.
 
 ---
 
@@ -176,15 +306,17 @@ Tank summary:
 
 ## Performance
 
-`rh fsh` is built on a Rust-native nom parser and rayon parallel export, delivering substantially faster compile times than the Node.js-based sushi compiler:
+`rh fsh` is built on a Rust-native nom parser, compiled schema views, and rayon
+parallel export. This makes it suitable for editor feedback, CI checks, and
+package build pipelines without a Node.js startup cost.
 
-| Input Size | rh-fsh | sushi | Speedup |
-|------------|--------|-------|---------|
-| 1 profile | ~105 µs | ~3.9 s | ~37,000× |
-| 10 profiles | ~306 µs | ~4.0 s | ~13,000× |
-| 1,000 profiles | ~2.0 ms | ~9.8 s | ~4,900× |
+| Operation | rh-fsh | SUSHI | Notes |
+|-----------|--------|-------|-------|
+| 1,000 simple instances | ~4.5 ms | — | Local Criterion benchmark |
+| Core schema field lookup | ~65 ns | — | Precompiled metadata lookup |
+| Compiled profile-view lookup | ~25 ns | — | Shared immutable schema view |
 
-> Benchmarks run on Apple M-series hardware. Sushi startup overhead dominates small inputs; rh-fsh scales linearly.
+> Representative Apple M-series measurements; exact results vary by machine and input corpus.
 
 ---
 
