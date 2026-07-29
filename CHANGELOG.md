@@ -5,6 +5,39 @@ All notable user-facing changes to Reason Health are recorded here.
 This project follows semantic versioning while the public API is still in the
 0.x series. Release dates use `YYYY-MM-DD`.
 
+## [0.2.8] - 2026-07-29
+
+### Changed
+
+- Expanded the `rh cql lower-check` classification to a three-tier model
+  (supported / fallback / unsupported), so already-implemented structural and
+  value ELM node kinds (Add, If, Case, Coalesce, IsNull, List, Tuple, Instance,
+  SingletonFrom, First, In, As, Today, ToDateTime, ToQuantity, ToConcept) are
+  no longer reported as unsupported, and user-defined or context-dependent
+  `FunctionRef` nodes are reported as runtime fallback rather than failures.
+- Routed `Today`, `First`, `AgeIn<unit>`, `ToDateTime`, `ToQuantity`, and
+  `ToConcept` system functions to canonical ELM nodes instead of a generic
+  `FunctionRef`, so they no longer trip the lower-check allow-list.
+- Consolidated duplicated ELM node-kind classification logic into shared
+  constants and helpers so the first-pass lowerer boundary has a single source
+  of truth.
+
+### Fixed
+
+- Made `rh-codegen` `TypeRegistry` deterministic for same-named
+  StructureDefinitions so a genuine resource is never displaced by a same-named
+  extension or complex type regardless of registration order; FHIR R4/R5
+  regeneration now produces identical output on macOS and Linux/CI.
+- Fixed `rh-cql` SQL-on-FHIR `SortMeta` detail quoting and sort-node planning
+  so the sort clause is recorded as an opaque placeholder rather than an
+  unsupported expression child.
+
+### Added
+
+- Added a CI workflow to regenerate FHIR R4/R5 crates with the CI toolchain.
+- Added the HypertensionManagement CQL lower-check fixture and baseline
+  snapshot test.
+
 ## [0.2.7] - 2026-07-15
 
 ### Added
@@ -119,6 +152,7 @@ This project follows semantic versioning while the public API is still in the
   include resolution consistently with normal compilation.
 - Fixed CQL conformance expected-string handling to avoid double-unescaping.
 
+[0.2.8]: https://github.com/reason-healthcare/rh/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/reason-healthcare/rh/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/reason-healthcare/rh/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/reason-healthcare/rh/compare/v0.2.4...v0.2.5
