@@ -357,13 +357,6 @@ pub fn emit_system_function(
             "Flatten" => Some(elm::Expression::Flatten(unary)),
             "Distinct" => Some(elm::Expression::Distinct(unary)),
             "First" => Some(elm::Expression::First(unary)),
-            "AgeInYears" => Some(elm::Expression::CalculateAge(unary)),
-            "AgeInMonths" => Some(elm::Expression::CalculateAge(unary)),
-            "AgeInWeeks" => Some(elm::Expression::CalculateAge(unary)),
-            "AgeInDays" => Some(elm::Expression::CalculateAge(unary)),
-            "AgeInHours" => Some(elm::Expression::CalculateAge(unary)),
-            "AgeInMinutes" => Some(elm::Expression::CalculateAge(unary)),
-            "AgeInSeconds" => Some(elm::Expression::CalculateAge(unary)),
 
             // ----- Aggregate functions -----
             "Count" => Some(elm::Expression::Count(aggregate())),

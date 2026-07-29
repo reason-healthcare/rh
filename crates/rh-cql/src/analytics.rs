@@ -1459,7 +1459,11 @@ fn plan_expression(value: &Value) -> RelNode {
             "SortMeta",
             [(
                 "kind",
-                value.get("type").unwrap_or(&Value::Null).to_string(),
+                value
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
             )],
             Vec::new(),
         ),
@@ -1528,8 +1532,10 @@ fn plan_query(value: &Value) -> RelNode {
         current = node("Project", [], vec![current, plan_expression(return_expr)]);
     }
 
-    if let Some(sort) = value.get("sort") {
-        current = node("Sort", [], vec![current, plan_expression(sort)]);
+    if value.get("sort").is_some() {
+        // The sort clause is not an expression node; record it as opaque
+        // metadata rather than passing it through plan_expression.
+        current = node("Sort", [], vec![current, node("SortMeta", [], Vec::new())]);
     }
 
     if value.get("aggregate").is_some() {
@@ -1649,9 +1655,9 @@ define "Has Diabetes":
     /// The HypertensionManagement fixture should lower cleanly: no bare
     /// unsupported nodes remain. The 7 user-defined/context-dependent
     /// `FunctionRef`s are classified as runtime fallback (see the companion
-    /// `lower_check_hyper_tension_fixture_fallback_classification` test).
+    /// `lower_check_hypertension_fixture_fallback_classification` test).
     #[test]
-    fn lower_check_hyper_tension_fixture_has_no_unsupported_nodes() {
+    fn lower_check_hypertension_fixture_has_no_unsupported_nodes() {
         let report = lower_check(&fixture_library(), "sql-on-fhir");
         let unsupported: BTreeMap<&str, usize> = report
             .unsupported_nodes
@@ -1724,7 +1730,7 @@ define "Has Diabetes":
     /// runtime fallback rather than bare unsupported nodes, so the report is
     /// `supported` with an explicit `fallbackNodes` section.
     #[test]
-    fn lower_check_hyper_tension_fixture_fallback_classification() {
+    fn lower_check_hypertension_fixture_fallback_classification() {
         const FIXTURE: &str =
             include_str!("../conformance/corpus/generated/lowerer/HypertensionManagement.cql");
         let library = compile(FIXTURE, None).expect("compile fixture").library;
