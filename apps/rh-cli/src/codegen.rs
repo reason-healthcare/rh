@@ -327,13 +327,19 @@ fn process_json_files_organized(
     input_dir: &Path,
     output_dir: &Path,
 ) -> Result<()> {
-    let entries = fs::read_dir(input_dir)?;
+    // Collect and sort directory entries so codegen output is deterministic
+    // across platforms (readdir ordering varies between macOS/Linux/Windows).
+    // Sorting is essential for the TypeRegistry: several FHIR R4 StructureDefinitions
+    // share the same `name` (e.g. the FamilyMemberHistory resource and the
+    // DiagnosticReport-geneticsFamilyMemberHistory extension), and registration
+    // order must not depend on filesystem iteration order.
+    let mut entries: Vec<_> = fs::read_dir(input_dir)?.filter_map(|e| e.ok()).collect();
+    entries.sort_by_key(|e| e.file_name());
     let mut structure_definitions = Vec::new();
 
     // Phase 1: Load all StructureDefinitions and register them in TypeRegistry
     info!("Phase 1: Loading and registering all StructureDefinitions...");
     for entry in entries {
-        let entry = entry?;
         let path = entry.path();
 
         if path.is_file() && path.extension().is_some_and(|ext| ext == "json") {

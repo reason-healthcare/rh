@@ -208,14 +208,35 @@ pub struct RelNode {
 pub struct LowerCheckReport {
     /// Lowering target name.
     pub target: String,
-    /// Whether all encountered node kinds are supported by the first-pass lowerer.
+    /// Whether all encountered node kinds are supported by the first-pass lowerer
+    /// (node kinds supported via runtime fallback are excluded from this
+    /// determination — see `fallback_nodes`).
     pub supported: bool,
     /// Supported ELM node kinds encountered in the library.
     pub supported_nodes: Vec<NodeSupport>,
-    /// Unsupported ELM node kinds encountered in the library.
+    /// Unsupported ELM node kinds encountered in the library. These have no
+    /// relational lowering path *and* no runtime fallback.
     pub unsupported_nodes: Vec<NodeSupport>,
+    /// ELM node kinds that are not lowered relationally but are supported at
+    /// runtime via fallback evaluation (for example, user-defined CQL function
+    /// calls and context-dependent functions such as `AgeIn<unit>At`). These
+    /// are reported separately so the `supported` flag reflects genuinely
+    /// unsupported nodes only.
+    pub fallback_nodes: Vec<FallbackSupport>,
     /// Human-readable notes about the lowering boundary.
     pub notes: Vec<String>,
+}
+
+/// A node kind supported via runtime fallback rather than relational lowering.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FallbackSupport {
+    /// ELM node kind.
+    pub node_type: String,
+    /// Encounter count.
+    pub count: usize,
+    /// Human-readable reason for the fallback classification.
+    pub reason: String,
 }
 
 /// Count for a supported or unsupported ELM node kind.
@@ -530,28 +551,42 @@ pub fn lower_check(library: &Library, target: impl Into<String>) -> LowerCheckRe
     let inspection = inspect_elm(library);
     let mut supported_nodes = Vec::new();
     let mut unsupported_nodes = Vec::new();
+    let mut fallback_nodes = Vec::new();
 
     for (node_type, count) in inspection.expression_node_counts {
         let item = NodeSupport { node_type, count };
         if is_supported_for_first_pass(&item.node_type) {
             supported_nodes.push(item);
+        } else if let Some(reason) = fallback_reason_for_first_pass(&item.node_type) {
+            fallback_nodes.push(FallbackSupport {
+                node_type: item.node_type,
+                count: item.count,
+                reason: reason.to_string(),
+            });
         } else {
             unsupported_nodes.push(item);
         }
     }
 
     let supported = unsupported_nodes.is_empty();
-    let notes = vec![
+    let mut notes = vec![
         "This report covers the first-pass relational lowerer, not full CQL semantics."
             .to_string(),
         "Terminology expansion, complete interval precision, quantities, and complex list semantics may still require fallback evaluation.".to_string(),
     ];
+    if !fallback_nodes.is_empty() {
+        notes.push(
+            "fallbackNodes: these node kinds are evaluated at runtime rather than lowered relationally (supported via fallback)."
+                .to_string(),
+        );
+    }
 
     LowerCheckReport {
         target,
         supported,
         supported_nodes,
         unsupported_nodes,
+        fallback_nodes,
         notes,
     }
 }
@@ -830,6 +865,15 @@ pub fn format_lower_check(report: &LowerCheckReport) -> String {
         out.push_str("\nUnsupported nodes:\n");
         for node in &report.unsupported_nodes {
             out.push_str(&format!("  - {}: {}\n", node.node_type, node.count));
+        }
+    }
+    if !report.fallback_nodes.is_empty() {
+        out.push_str("\nFallback nodes (evaluated at runtime):\n");
+        for node in &report.fallback_nodes {
+            out.push_str(&format!(
+                "  - {}: {} - {}\n",
+                node.node_type, node.count, node.reason
+            ));
         }
     }
     if !report.notes.is_empty() {
@@ -1129,11 +1173,118 @@ fn expression_to_value(expression: &Expression) -> Value {
     serde_json::to_value(expression).unwrap_or(Value::Null)
 }
 
+// ELM node-kind classification tables shared by `collect_node_counts`,
+// `is_supported_for_first_pass`, and `plan_expression`. Keeping these in one
+// place makes the first-pass lowerer boundary a single source of truth rather
+// than three duplicated match arms.
+
+/// ELM type-specifier node kinds. These are type annotations, not runtime
+/// operations, so they must never be counted as lowering targets.
+const TYPE_SPECIFIER_TYPES: &[&str] = &[
+    "NamedTypeSpecifier",
+    "ListTypeSpecifier",
+    "IntervalTypeSpecifier",
+    "TupleTypeSpecifier",
+    "ChoiceTypeSpecifier",
+    "ParameterTypeSpecifier",
+];
+
+/// Sort-clause discriminator node kinds. These are sort metadata on a Query's
+/// `sort.by` items, not runtime operators. The enclosing Query remains the
+/// lowering target.
+const SORT_DISCRIMINATOR_TYPES: &[&str] = &["ByColumn", "ByExpression", "ByDirection"];
+
+/// ELM node kinds that `plan_expression` renders as a generic `Expr` node with
+/// a `kind` detail equal to the ELM type. These are the boolean, comparison,
+/// terminology, timing, property, literal, reference, arithmetic, control-
+/// flow, nullological, list, structured-value, membership, clock, and
+/// conversion forms that are already implemented end-to-end by the evaluator.
+const EXPR_KINDS: &[&str] = &[
+    // Logical
+    "And",
+    "Or",
+    "Not",
+    // Comparison
+    "Equal",
+    "Equivalent",
+    "NotEqual",
+    "Less",
+    "LessOrEqual",
+    "Greater",
+    "GreaterOrEqual",
+    // Terminology membership
+    "InValueSet",
+    "AnyInValueSet",
+    // List set operations
+    "Union",
+    "Intersect",
+    "Except",
+    // Aggregates
+    "Count",
+    "Sum",
+    "Min",
+    "Max",
+    "Avg",
+    // Intervals
+    "Interval",
+    "Start",
+    "End",
+    "Overlaps",
+    "IncludedIn",
+    "Includes",
+    "Before",
+    "After",
+    "SameOrBefore",
+    "SameOrAfter",
+    // List membership
+    "In",
+    // Property / literal / reference
+    "Property",
+    "Literal",
+    "ValueSetRef",
+    "CodeRef",
+    "ExpressionRef",
+    "ParameterRef",
+    "AliasRef",
+    // Arithmetic
+    "Add",
+    // Control flow / nullological
+    "If",
+    "Case",
+    "Coalesce",
+    "IsNull",
+    // Structured values / lists
+    "List",
+    "Tuple",
+    "Instance",
+    "SingletonFrom",
+    "First",
+    // Clock / type conversions
+    "Today",
+    "ToDateTime",
+    "ToQuantity",
+    "ToConcept",
+];
+
+/// Return `true` if `node_type` is metadata (type specifier or sort discriminator)
+/// and should never be counted as a lowering target.
+fn is_lowering_metadata(node_type: &str) -> bool {
+    TYPE_SPECIFIER_TYPES.contains(&node_type) || SORT_DISCRIMINATOR_TYPES.contains(&node_type)
+}
+
+/// Return `true` if `node_type` is recognized by the first-pass relational
+/// lowerer (either as a dedicated relational node or as a generic `Expr`).
+fn is_lowering_expr_kind(node_type: &str) -> bool {
+    EXPR_KINDS.contains(&node_type)
+}
+
 fn collect_node_counts(value: &Value, counts: &mut BTreeMap<String, usize>) {
     match value {
         Value::Object(map) => {
             if let Some(node_type) = map.get("type").and_then(Value::as_str) {
-                *counts.entry(node_type.to_string()).or_default() += 1;
+                if !is_lowering_metadata(node_type) {
+                    *counts.entry(node_type.to_string()).or_default() += 1;
+                }
             }
             for child in map.values() {
                 collect_node_counts(child, counts);
@@ -1254,6 +1405,23 @@ fn normalize_resource_type(data_type: &str) -> String {
         .to_string()
 }
 
+/// Extract the target type name from an ELM `As` node, preferring the
+/// `asType` qualified name and falling back to the `asTypeSpecifier.name`.
+fn as_expression_type(value: &Value) -> String {
+    value
+        .get("asType")
+        .and_then(Value::as_str)
+        .map(ToString::to_string)
+        .or_else(|| {
+            value
+                .get("asTypeSpecifier")
+                .and_then(|ts| ts.get("name"))
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        })
+        .unwrap_or_default()
+}
+
 fn plan_expression(value: &Value) -> RelNode {
     match value.get("type").and_then(Value::as_str) {
         Some("Retrieve") => {
@@ -1284,17 +1452,33 @@ fn plan_expression(value: &Value) -> RelNode {
                 .map(|operand| vec![plan_expression(operand)])
                 .unwrap_or_default(),
         ),
-        Some(
-            "And" | "Or" | "Not" | "InValueSet" | "AnyInValueSet" | "Equal" | "NotEqual" | "Less"
-            | "LessOrEqual" | "Greater" | "GreaterOrEqual" | "Overlaps" | "IncludedIn" | "Includes"
-            | "Before" | "After" | "SameOrBefore" | "SameOrAfter" | "Property" | "Literal"
-            | "ValueSetRef" | "CodeRef" | "ExpressionRef" | "ParameterRef" | "AliasRef",
-        ) => {
-            let op = value
-                .get("type")
-                .and_then(Value::as_str)
-                .unwrap_or("Predicate");
-            node("Expr", [("kind", op.to_string())], Vec::new())
+        // Sort metadata is opaque to the first-pass relational lowering. The
+        // enclosing Query carries the semantic order and remains the real
+        // lowering target.
+        Some("ByColumn" | "ByExpression" | "ByDirection") => node(
+            "SortMeta",
+            [(
+                "kind",
+                value
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+            )],
+            Vec::new(),
+        ),
+        // `As` is a type annotation around its operand. The operand remains the
+        // real expression target; the typed name is recorded as plan detail.
+        Some("As") => {
+            let as_detail = as_expression_type(value);
+            let operand = value
+                .get("operand")
+                .map(|o| vec![plan_expression(o)])
+                .unwrap_or_default();
+            node("As", [("type", as_detail)], operand)
+        }
+        Some(kind) if is_lowering_expr_kind(kind) => {
+            node("Expr", [("kind", kind.to_string())], Vec::new())
         }
         Some(other) => node("Unsupported", [("elmType", other.to_string())], Vec::new()),
         None => node(
@@ -1348,6 +1532,12 @@ fn plan_query(value: &Value) -> RelNode {
         current = node("Project", [], vec![current, plan_expression(return_expr)]);
     }
 
+    if value.get("sort").is_some() {
+        // The sort clause is not an expression node; record it as opaque
+        // metadata rather than passing it through plan_expression.
+        current = node("Sort", [], vec![current, node("SortMeta", [], Vec::new())]);
+    }
+
     if value.get("aggregate").is_some() {
         current = node("Aggregate", [], vec![current]);
     }
@@ -1372,53 +1562,33 @@ fn node(
 }
 
 fn is_supported_for_first_pass(node_type: &str) -> bool {
+    // Dedicated relational nodes.
     matches!(
         node_type,
-        "Retrieve"
-            | "Query"
-            | "AliasRef"
-            | "IdentifierRef"
-            | "ExpressionRef"
-            | "ParameterRef"
-            | "ValueSetRef"
-            | "CodeRef"
-            | "CodeSystemRef"
-            | "ConceptRef"
-            | "Property"
-            | "Literal"
-            | "Null"
-            | "And"
-            | "Or"
-            | "Not"
-            | "Equal"
-            | "Equivalent"
-            | "NotEqual"
-            | "Less"
-            | "LessOrEqual"
-            | "Greater"
-            | "GreaterOrEqual"
-            | "Exists"
-            | "InValueSet"
-            | "AnyInValueSet"
-            | "Union"
-            | "Intersect"
-            | "Except"
-            | "Count"
-            | "Sum"
-            | "Min"
-            | "Max"
-            | "Avg"
-            | "Interval"
-            | "Start"
-            | "End"
-            | "Overlaps"
-            | "IncludedIn"
-            | "Includes"
-            | "Before"
-            | "After"
-            | "SameOrBefore"
-            | "SameOrAfter"
-    )
+        "Retrieve" | "Query" | "Exists" | "Null" | "IdentifierRef" | "CodeSystemRef" | "As"
+    ) // Sort-clause metadata on a Query; the Query carries the semantic order
+      // and these discriminators never become lowering targets.
+      || SORT_DISCRIMINATOR_TYPES.contains(&node_type)
+      // Generic `Expr` kinds already implemented end-to-end by the evaluator.
+      || is_lowering_expr_kind(node_type)
+}
+
+/// Return a human-readable fallback reason for node kinds that have no
+/// relational lowering path but are supported at runtime via fallback
+/// evaluation. Returns `None` for kinds that are either relationally supported
+/// or genuinely unsupported.
+fn fallback_reason_for_first_pass(node_type: &str) -> Option<&'static str> {
+    match node_type {
+        // User-defined CQL function calls cannot be lowered relationally
+        // without function inlining, but the evaluator resolves them at
+        // runtime. Context-dependent functions (e.g. `AgeIn<unit>At`, whose
+        // birth date comes from the Patient context) also cannot be expressed
+        // relationally, so they fall back to the evaluator as well.
+        "FunctionRef" => Some(
+            "user-defined or context-dependent function; relational lowering requires runtime fallback evaluation",
+        ),
+        _ => None,
+    }
 }
 
 fn format_list(out: &mut String, label: &str, values: &[String]) {
@@ -1474,6 +1644,112 @@ define "Has Diabetes":
 
     fn library() -> Library {
         compile(CQL, None).expect("compile").library
+    }
+
+    fn fixture_library() -> Library {
+        const FIXTURE: &str =
+            include_str!("../conformance/corpus/generated/lowerer/HypertensionManagement.cql");
+        compile(FIXTURE, None).expect("compile fixture").library
+    }
+
+    /// The HypertensionManagement fixture should lower cleanly: no bare
+    /// unsupported nodes remain. The 7 user-defined/context-dependent
+    /// `FunctionRef`s are classified as runtime fallback (see the companion
+    /// `lower_check_hypertension_fixture_fallback_classification` test).
+    #[test]
+    fn lower_check_hypertension_fixture_has_no_unsupported_nodes() {
+        let report = lower_check(&fixture_library(), "sql-on-fhir");
+        let unsupported: BTreeMap<&str, usize> = report
+            .unsupported_nodes
+            .iter()
+            .map(|n| (n.node_type.as_str(), n.count))
+            .collect();
+        let expected: BTreeMap<&str, usize> = BTreeMap::new();
+        assert_eq!(unsupported, expected);
+    }
+
+    /// `As` plans as a typed projection of its operand and records the target
+    /// type as plan detail.
+    #[test]
+    fn plan_expression_as_records_type_and_passes_through_operand() {
+        let value = serde_json::json!({
+            "type": "As",
+            "asType": "{http://hl7.org/fhir}dateTime",
+            "operand": {"type": "Property", "source": {"type": "Literal"}}
+        });
+        let plan = plan_expression(&value);
+        assert_eq!(plan.op, "As");
+        assert_eq!(
+            plan.detail.get("type"),
+            Some(&"{http://hl7.org/fhir}dateTime".to_string())
+        );
+        assert_eq!(plan.inputs.len(), 1);
+        assert_eq!(plan.inputs[0].op, "Expr");
+        assert_eq!(
+            plan.inputs[0].detail.get("kind"),
+            Some(&"Property".to_string())
+        );
+    }
+
+    /// Structural/value ELM kinds already implemented by the evaluator are now
+    /// recognized by the first-pass lowerer and render as `Expr` with a stable
+    /// `kind` discriminator.
+    #[test]
+    fn plan_expression_recognizes_structural_value_kinds() {
+        let kinds = [
+            "Add",
+            "If",
+            "Case",
+            "Coalesce",
+            "IsNull",
+            "List",
+            "Tuple",
+            "Instance",
+            "SingletonFrom",
+            "First",
+            "In",
+        ];
+        for kind in kinds {
+            let value = serde_json::json!({"type": kind});
+            let plan = plan_expression(&value);
+            assert_eq!(plan.op, "Expr", "{kind}");
+            assert_eq!(plan.detail.get("kind"), Some(&kind.to_string()));
+        }
+    }
+
+    /// Sort-clause discriminators are opaque metadata, never lowering targets.
+    #[test]
+    fn plan_expression_sort_metadata_is_opaque() {
+        let value = serde_json::json!({"type": "ByColumn", "direction": "desc", "path": "date"});
+        let plan = plan_expression(&value);
+        assert_eq!(plan.op, "SortMeta");
+        assert!(plan.inputs.is_empty());
+    }
+
+    /// User-defined and context-dependent FunctionRefs are classified as
+    /// runtime fallback rather than bare unsupported nodes, so the report is
+    /// `supported` with an explicit `fallbackNodes` section.
+    #[test]
+    fn lower_check_hypertension_fixture_fallback_classification() {
+        const FIXTURE: &str =
+            include_str!("../conformance/corpus/generated/lowerer/HypertensionManagement.cql");
+        let library = compile(FIXTURE, None).expect("compile fixture").library;
+        let report = lower_check(&library, "sql-on-fhir");
+
+        assert!(report.supported);
+        assert!(report.unsupported_nodes.is_empty());
+
+        let fallback = report
+            .fallback_nodes
+            .iter()
+            .find(|n| n.node_type == "FunctionRef")
+            .expect("FunctionRef fallback classification");
+        // 6 user-defined function references (`Observation Date` x2,
+        // `Systolic Value` x2, `Diastolic Value` x2) plus 1 context-dependent
+        // reference (`AgeInYearsAt` x1) remain as FunctionRef nodes, all
+        // classified as runtime fallback.
+        assert_eq!(fallback.count, 7);
+        assert!(fallback.reason.contains("runtime fallback"));
     }
 
     #[test]

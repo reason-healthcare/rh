@@ -302,6 +302,9 @@ pub fn emit_system_function(
             "TimeOfDay" => Some(elm::Expression::TimeOfDay(elm::NullaryExpression {
                 element: element.clone(),
             })),
+            "Today" => Some(elm::Expression::Today(elm::NullaryExpression {
+                element: element.clone(),
+            })),
             _ => None,
         };
     }
@@ -353,6 +356,7 @@ pub fn emit_system_function(
             "Exists" => Some(elm::Expression::Exists(unary)),
             "Flatten" => Some(elm::Expression::Flatten(unary)),
             "Distinct" => Some(elm::Expression::Distinct(unary)),
+            "First" => Some(elm::Expression::First(unary)),
 
             // ----- Aggregate functions -----
             "Count" => Some(elm::Expression::Count(aggregate())),
@@ -371,6 +375,14 @@ pub fn emit_system_function(
 
             // ----- Interval -----
             "Size" => Some(elm::Expression::Size(unary)),
+
+            // ----- Type conversions -----
+            // These mirror the `UnaryOperator` routes above for qualified system
+            // function spells (e.g. `FHIRHelpers.ToDateTime(x)`) that arrive at
+            // `emit_system_function` instead of through the unary-operator path.
+            "ToDateTime" => Some(elm::Expression::ToDateTime(unary)),
+            "ToQuantity" => Some(elm::Expression::ToQuantity(unary)),
+            "ToConcept" => Some(elm::Expression::ToConcept(unary)),
 
             _ => None,
         }

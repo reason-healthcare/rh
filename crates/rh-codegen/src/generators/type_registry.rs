@@ -53,14 +53,53 @@ impl TypeRegistry {
         }
     }
 
-    /// Register a type with a specific classification and structure definition
+    /// Register a type with a specific classification and structure definition.
+    ///
+    /// When two StructureDefinitions share the same `name` (this happens in the
+    /// FHIR R4 core package — e.g. the `FamilyMemberHistory` resource and the
+    /// `DiagnosticReport-geneticsFamilyMemberHistory` complex-type extension are
+    /// both named "FamilyMemberHistory"), the filesystem iteration order can
+    /// determine which one "wins" the registry entry.  To make the registry
+    /// deterministic regardless of iteration order, a more "authoritative"
+    /// classification is never overwritten by a less authoritative one.  The
+    /// priority order is: Resource > Profile > NestedStructure > ComplexType >
+    /// ValueSetEnum > Primitive > Trait.  This guarantees that a genuine FHIR
+    /// resource (kind = "resource") always wins the entry over a same-named
+    /// extension/datatype (kind = "complex-type"), which in turn makes the
+    /// generated `use crate::resources::...` imports stable across platforms.
     pub fn register_type(
         type_name: &str,
         classification: TypeClassification,
         structure_def: StructureDefinition,
     ) {
         if let Ok(mut registry) = TYPE_REGISTRY.lock() {
-            registry.insert(type_name.to_string(), (classification, structure_def));
+            let key = type_name.to_string();
+            if let Some((existing, _)) = registry.get(&key) {
+                // Only overwrite when the new classification is at least as
+                // authoritative as the existing one.
+                if Self::classification_authority(&classification)
+                    < Self::classification_authority(existing)
+                {
+                    return;
+                }
+            }
+            registry.insert(key, (classification, structure_def));
+        }
+    }
+
+    /// Return a relative authority rank for a classification.
+    ///
+    /// Higher numbers win — a Resource entry is never displaced by a
+    /// ComplexType entry that happens to share the same `name`.
+    fn classification_authority(classification: &TypeClassification) -> u8 {
+        match classification {
+            TypeClassification::Resource => 7,
+            TypeClassification::Profile => 6,
+            TypeClassification::NestedStructure { .. } => 5,
+            TypeClassification::ComplexType => 4,
+            TypeClassification::ValueSetEnum => 3,
+            TypeClassification::Primitive => 2,
+            TypeClassification::Trait => 1,
         }
     }
 
@@ -1210,6 +1249,97 @@ mod tests {
         assert_eq!(
             TypeRegistry::get_import_path_for_type("ConditionStage"),
             "crate::resources::condition::ConditionStage"
+        );
+    }
+
+    /// Regression test for the codegen drift on PR #66.
+    ///
+    /// The FHIR R4 core package contains two StructureDefinitions that share
+    /// `name = "FamilyMemberHistory"`:
+    ///   1. The real `FamilyMemberHistory` resource (kind = "resource").
+    ///   2. The `DiagnosticReport-geneticsFamilyMemberHistory` extension
+    ///      (kind = "complex-type", type = "Extension").
+    ///
+    /// Previously `register_from_structure_definition` blindly overwrote the
+    /// registry entry keyed on `name`, so whichever SD loaded second won.  On
+    /// Ubuntu CI the extension loaded after the resource, so
+    /// `FamilyMemberHistory` was classified as a `ComplexType`, which made the
+    /// `familymemberhistory-genetic` profile import it from
+    /// `crate::datatypes::family_member_history` (nonexistent) instead of
+    /// `crate::resources::family_member_history`.  The resource classification
+    /// must always win regardless of registration order.
+    #[test]
+    #[serial]
+    fn test_resource_wins_over_same_named_complex_type() {
+        TypeRegistry::clear();
+
+        let resource = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "FamilyMemberHistory".to_string(),
+            url: "http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory".to_string(),
+            version: None,
+            name: "FamilyMemberHistory".to_string(),
+            title: Some("FamilyMemberHistory".to_string()),
+            status: "active".to_string(),
+            description: None,
+            purpose: None,
+            kind: "resource".to_string(),
+            is_abstract: false,
+            base_type: "DomainResource".to_string(),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/DomainResource".to_string(),
+            ),
+            differential: None,
+            snapshot: None,
+        };
+
+        let extension = StructureDefinition {
+            resource_type: "StructureDefinition".to_string(),
+            id: "DiagnosticReport-geneticsFamilyMemberHistory".to_string(),
+            url:
+                "http://hl7.org/fhir/StructureDefinition/DiagnosticReport-geneticsFamilyMemberHistory"
+                    .to_string(),
+            version: None,
+            name: "FamilyMemberHistory".to_string(),
+            title: Some("FamilyMemberHistory".to_string()),
+            status: "active".to_string(),
+            description: None,
+            purpose: None,
+            kind: "complex-type".to_string(),
+            is_abstract: false,
+            base_type: "Extension".to_string(),
+            base_definition: Some(
+                "http://hl7.org/fhir/StructureDefinition/Extension".to_string(),
+            ),
+            differential: None,
+            snapshot: None,
+        };
+
+        // Order 1: resource first, then extension.
+        TypeRegistry::register_from_structure_definition(&resource);
+        TypeRegistry::register_from_structure_definition(&extension);
+        assert_eq!(
+            TypeRegistry::get_classification("FamilyMemberHistory"),
+            Some(TypeClassification::Resource),
+            "resource classification must survive a later same-named complex-type"
+        );
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("FamilyMemberHistory"),
+            "crate::resources::family_member_history::FamilyMemberHistory"
+        );
+
+        // Order 2: extension first, then resource — must end up identical.
+        TypeRegistry::clear();
+        TypeRegistry::register_from_structure_definition(&extension);
+        TypeRegistry::register_from_structure_definition(&resource);
+        assert_eq!(
+            TypeRegistry::get_classification("FamilyMemberHistory"),
+            Some(TypeClassification::Resource),
+            "resource classification must overwrite a prior same-named complex-type"
+        );
+        assert_eq!(
+            TypeRegistry::get_import_path_for_type("FamilyMemberHistory"),
+            "crate::resources::family_member_history::FamilyMemberHistory"
         );
     }
 }
