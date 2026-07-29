@@ -374,17 +374,37 @@ with CQL/FHIR-specific metadata:
 | `target` | Planning metadata extension | Names the backend vocabulary being inspected, such as `relational` or `sql-on-fhir`. |
 
 Currently recognized expression kinds include boolean, comparison, terminology,
-timing, property, literal, and reference forms:
+timing, property, literal, reference, arithmetic, control-flow, nullological,
+list, structured-value, membership, clock, conversion, and sort-metadata forms:
 
 ```text
 And, Or, Not,
-Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual,
+Equal, Equivalent, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual,
 InValueSet, AnyInValueSet,
-Overlaps, IncludedIn, Includes,
+Overlaps, IncludedIn, Includes, In,
 Before, After, SameOrBefore, SameOrAfter,
 Property, Literal,
-ValueSetRef, CodeRef, ExpressionRef, ParameterRef, AliasRef
+ValueSetRef, CodeRef, ExpressionRef, ParameterRef, AliasRef,
+Add, If, Case, Coalesce, IsNull,
+List, Tuple, Instance, SingletonFrom, First, As,
+Today, ToDateTime, ToQuantity, ToConcept,
+ByColumn, ByExpression, ByDirection
 ```
+
+Notes on the boundary:
+
+- `As` plans as an `As` relational node carrying the target type as plan
+  detail, with the operand as its input.
+- Type specifiers (`NamedTypeSpecifier`, `ListTypeSpecifier`,
+  `IntervalTypeSpecifier`, `TupleTypeSpecifier`, `ChoiceTypeSpecifier`,
+  `ParameterTypeSpecifier`) are counted as type metadata, never as lowering
+  targets.
+- `ByColumn`, `ByExpression`, and `ByDirection` are sort metadata carried by a
+  `Query`; the `Query` remains the real lowering target.
+- `FunctionRef` nodes that remain after canonical system-function emission
+  (user-defined CQL functions and context-dependent functions such as
+  `AgeIn<unit>At`) are reported under `fallbackNodes` as supported via runtime
+  fallback evaluation, not as bare unsupported nodes.
 
 These are placeholders for an evolving typed predicate model. They make the
 lowering boundary visible without pretending the first-pass IR captures all CQL

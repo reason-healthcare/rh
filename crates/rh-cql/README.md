@@ -303,6 +303,15 @@ FHIR `Library` resources carrying SQLQuery content. Complete CQL semantics,
 terminology expansion, interval precision, quantity handling, and complex list
 semantics may still require runtime fallback evaluation.
 
+The `cql lower-check` report distinguishes three cases:
+
+- `supportedNodes`: ELM node kinds the first-pass lowerer recognizes.
+- `fallbackNodes`: ELM node kinds evaluated at runtime rather than lowered
+  relationally (e.g. user-defined or context-dependent `FunctionRef`s such as
+  `AgeIn<unit>At`). These still count toward `supported: true`.
+- `unsupportedNodes`: ELM node kinds with no relational lowering path and no
+  runtime fallback. An empty list means the library is `supported: true`.
+
 ### Working with CompilationResult
 
 ```rust
