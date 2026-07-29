@@ -1173,6 +1173,11 @@ fn expression_to_value(expression: &Expression) -> Value {
     serde_json::to_value(expression).unwrap_or(Value::Null)
 }
 
+// ELM node-kind classification tables shared by `collect_node_counts`,
+// `is_supported_for_first_pass`, and `plan_expression`. Keeping these in one
+// place makes the first-pass lowerer boundary a single source of truth rather
+// than three duplicated match arms.
+
 /// ELM type-specifier node kinds. These are type annotations, not runtime
 /// operations, so they must never be counted as lowering targets.
 const TYPE_SPECIFIER_TYPES: &[&str] = &[
@@ -1189,15 +1194,95 @@ const TYPE_SPECIFIER_TYPES: &[&str] = &[
 /// lowering target.
 const SORT_DISCRIMINATOR_TYPES: &[&str] = &["ByColumn", "ByExpression", "ByDirection"];
 
+/// ELM node kinds that `plan_expression` renders as a generic `Expr` node with
+/// a `kind` detail equal to the ELM type. These are the boolean, comparison,
+/// terminology, timing, property, literal, reference, arithmetic, control-
+/// flow, nullological, list, structured-value, membership, clock, and
+/// conversion forms that are already implemented end-to-end by the evaluator.
+const EXPR_KINDS: &[&str] = &[
+    // Logical
+    "And",
+    "Or",
+    "Not",
+    // Comparison
+    "Equal",
+    "Equivalent",
+    "NotEqual",
+    "Less",
+    "LessOrEqual",
+    "Greater",
+    "GreaterOrEqual",
+    // Terminology membership
+    "InValueSet",
+    "AnyInValueSet",
+    // List set operations
+    "Union",
+    "Intersect",
+    "Except",
+    // Aggregates
+    "Count",
+    "Sum",
+    "Min",
+    "Max",
+    "Avg",
+    // Intervals
+    "Interval",
+    "Start",
+    "End",
+    "Overlaps",
+    "IncludedIn",
+    "Includes",
+    "Before",
+    "After",
+    "SameOrBefore",
+    "SameOrAfter",
+    // List membership
+    "In",
+    // Property / literal / reference
+    "Property",
+    "Literal",
+    "ValueSetRef",
+    "CodeRef",
+    "ExpressionRef",
+    "ParameterRef",
+    "AliasRef",
+    // Arithmetic
+    "Add",
+    // Control flow / nullological
+    "If",
+    "Case",
+    "Coalesce",
+    "IsNull",
+    // Structured values / lists
+    "List",
+    "Tuple",
+    "Instance",
+    "SingletonFrom",
+    "First",
+    // Clock / type conversions
+    "Today",
+    "ToDateTime",
+    "ToQuantity",
+    "ToConcept",
+];
+
+/// Return `true` if `node_type` is metadata (type specifier or sort discriminator)
+/// and should never be counted as a lowering target.
+fn is_lowering_metadata(node_type: &str) -> bool {
+    TYPE_SPECIFIER_TYPES.contains(&node_type) || SORT_DISCRIMINATOR_TYPES.contains(&node_type)
+}
+
+/// Return `true` if `node_type` is recognized by the first-pass relational
+/// lowerer (either as a dedicated relational node or as a generic `Expr`).
+fn is_lowering_expr_kind(node_type: &str) -> bool {
+    EXPR_KINDS.contains(&node_type)
+}
+
 fn collect_node_counts(value: &Value, counts: &mut BTreeMap<String, usize>) {
     match value {
         Value::Object(map) => {
             if let Some(node_type) = map.get("type").and_then(Value::as_str) {
-                // Type specifiers and sort-clause discriminators are metadata,
-                // not runtime lowering targets.
-                let is_metadata = TYPE_SPECIFIER_TYPES.contains(&node_type)
-                    || SORT_DISCRIMINATOR_TYPES.contains(&node_type);
-                if !is_metadata {
+                if !is_lowering_metadata(node_type) {
                     *counts.entry(node_type.to_string()).or_default() += 1;
                 }
             }
@@ -1320,6 +1405,23 @@ fn normalize_resource_type(data_type: &str) -> String {
         .to_string()
 }
 
+/// Extract the target type name from an ELM `As` node, preferring the
+/// `asType` qualified name and falling back to the `asTypeSpecifier.name`.
+fn as_expression_type(value: &Value) -> String {
+    value
+        .get("asType")
+        .and_then(Value::as_str)
+        .map(ToString::to_string)
+        .or_else(|| {
+            value
+                .get("asTypeSpecifier")
+                .and_then(|ts| ts.get("name"))
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        })
+        .unwrap_or_default()
+}
+
 fn plan_expression(value: &Value) -> RelNode {
     match value.get("type").and_then(Value::as_str) {
         Some("Retrieve") => {
@@ -1364,38 +1466,15 @@ fn plan_expression(value: &Value) -> RelNode {
         // `As` is a type annotation around its operand. The operand remains the
         // real expression target; the typed name is recorded as plan detail.
         Some("As") => {
-            let as_detail = value
-                .get("asType")
-                .and_then(Value::as_str)
-                .map(ToString::to_string)
-                .or_else(|| {
-                    value
-                        .get("asTypeSpecifier")
-                        .and_then(|ts| ts.get("name"))
-                        .and_then(Value::as_str)
-                        .map(ToString::to_string)
-                })
-                .unwrap_or_default();
+            let as_detail = as_expression_type(value);
             let operand = value
                 .get("operand")
                 .map(|o| vec![plan_expression(o)])
                 .unwrap_or_default();
             node("As", [("type", as_detail)], operand)
         }
-        Some(
-            "And" | "Or" | "Not" | "InValueSet" | "AnyInValueSet" | "Equal" | "Equivalent"
-            | "NotEqual" | "Less" | "LessOrEqual" | "Greater" | "GreaterOrEqual" | "Overlaps"
-            | "IncludedIn" | "Includes" | "In" | "Before" | "After" | "SameOrBefore"
-            | "SameOrAfter" | "Property" | "Literal" | "ValueSetRef" | "CodeRef" | "ExpressionRef"
-            | "ParameterRef" | "AliasRef" | "Add" | "If" | "Case" | "Coalesce" | "IsNull" | "List"
-            | "Tuple" | "Instance" | "SingletonFrom" | "First" | "Today" | "ToDateTime"
-            | "ToQuantity" | "ToConcept",
-        ) => {
-            let op = value
-                .get("type")
-                .and_then(Value::as_str)
-                .unwrap_or("Predicate");
-            node("Expr", [("kind", op.to_string())], Vec::new())
+        Some(kind) if is_lowering_expr_kind(kind) => {
+            node("Expr", [("kind", kind.to_string())], Vec::new())
         }
         Some(other) => node("Unsupported", [("elmType", other.to_string())], Vec::new()),
         None => node(
@@ -1477,79 +1556,15 @@ fn node(
 }
 
 fn is_supported_for_first_pass(node_type: &str) -> bool {
+    // Dedicated relational nodes.
     matches!(
         node_type,
-        "Retrieve"
-            | "Query"
-            | "AliasRef"
-            | "IdentifierRef"
-            | "ExpressionRef"
-            | "ParameterRef"
-            | "ValueSetRef"
-            | "CodeRef"
-            | "CodeSystemRef"
-            | "ConceptRef"
-            | "Property"
-            | "Literal"
-            | "Null"
-            | "And"
-            | "Or"
-            | "Not"
-            | "Equal"
-            | "Equivalent"
-            | "NotEqual"
-            | "Less"
-            | "LessOrEqual"
-            | "Greater"
-            | "GreaterOrEqual"
-            | "Exists"
-            | "InValueSet"
-            | "AnyInValueSet"
-            | "Union"
-            | "Intersect"
-            | "Except"
-            | "Count"
-            | "Sum"
-            | "Min"
-            | "Max"
-            | "Avg"
-            | "Interval"
-            | "Start"
-            | "End"
-            | "Overlaps"
-            | "IncludedIn"
-            | "Includes"
-            | "Before"
-            | "After"
-            | "SameOrBefore"
-            | "SameOrAfter"
-            // Structural/value ELM kinds already implemented end-to-end by the
-            // evaluator. They are recognized by the first-pass relational
-            // lowerer even when the eventual SQL backend lowers them via a
-            // scalar-fragment fallback rather than a dedicated relational
-            // operator.
-            | "Add"
-            | "If"
-            | "Case"
-            | "Coalesce"
-            | "IsNull"
-            | "List"
-            | "Tuple"
-            | "Instance"
-            | "SingletonFrom"
-            | "First"
-            | "In"
-            | "As"
-            | "Today"
-            | "ToDateTime"
-            | "ToQuantity"
-            | "ToConcept"
-            // Sort-clause metadata on a Query; the Query carries the semantic
-            // order and these discriminators never become lowering targets.
-            | "ByColumn"
-            | "ByExpression"
-            | "ByDirection"
-    )
+        "Retrieve" | "Query" | "Exists" | "Null" | "IdentifierRef" | "CodeSystemRef" | "As"
+    ) // Sort-clause metadata on a Query; the Query carries the semantic order
+      // and these discriminators never become lowering targets.
+      || SORT_DISCRIMINATOR_TYPES.contains(&node_type)
+      // Generic `Expr` kinds already implemented end-to-end by the evaluator.
+      || is_lowering_expr_kind(node_type)
 }
 
 /// Return a human-readable fallback reason for node kinds that have no
@@ -1631,28 +1646,18 @@ define "Has Diabetes":
         compile(FIXTURE, None).expect("compile fixture").library
     }
 
-    /// Snapshot of the first-pass lowerer boundary for the HypertensionManagement
-    /// fixture. Before the plan in docs/LOWER_CHECK_GAP_PLAN.md, the first-pass
-    /// lowerer flagged these 14 ELM node kinds as unsupported even though all
-    /// have a working parser->ELM->eval path. After the gap-closeout, the only
-    /// remaining unsupported entry should be the user-defined `FunctionRef`s.
+    /// The HypertensionManagement fixture should lower cleanly: no bare
+    /// unsupported nodes remain. The 7 user-defined/context-dependent
+    /// `FunctionRef`s are classified as runtime fallback (see the companion
+    /// `lower_check_hyper_tension_fixture_fallback_classification` test).
     #[test]
-    fn lower_check_hyper_tension_fixture_snapshot_before_closeout() {
+    fn lower_check_hyper_tension_fixture_has_no_unsupported_nodes() {
         let report = lower_check(&fixture_library(), "sql-on-fhir");
         let unsupported: BTreeMap<&str, usize> = report
             .unsupported_nodes
             .iter()
             .map(|n| (n.node_type.as_str(), n.count))
             .collect();
-
-        // Snapshot tightened after step 4: Today, First, ToConcept, ToDateTime
-        // and ToQuantity are now canonical ELM nodes and recognized by the
-        // lowerer. The 7 remaining `FunctionRef`s are `AgeInYearsAt` (implicit
-        // patient-context age function) and the user-defined functions
-        // `Observation Date` / `Systolic Value` / `Diastolic Value`. Step 5
-        // reclassified these via a runtime-fallback note instead of leaving
-        // them as bare unsupported nodes, so the expected unsupported set is
-        // now empty (see the companion fallback test).
         let expected: BTreeMap<&str, usize> = BTreeMap::new();
         assert_eq!(unsupported, expected);
     }
@@ -1715,8 +1720,8 @@ define "Has Diabetes":
         assert!(plan.inputs.is_empty());
     }
 
-    /// Step 5: user-defined and context-dependent FunctionRefs are classified
-    /// as runtime fallback rather than bare unsupported nodes, so the report is
+    /// User-defined and context-dependent FunctionRefs are classified as
+    /// runtime fallback rather than bare unsupported nodes, so the report is
     /// `supported` with an explicit `fallbackNodes` section.
     #[test]
     fn lower_check_hyper_tension_fixture_fallback_classification() {
@@ -1733,7 +1738,7 @@ define "Has Diabetes":
             .iter()
             .find(|n| n.node_type == "FunctionRef")
             .expect("FunctionRef fallback classification");
-        // 4 user-defined function references (`Observation Date` x2,
+        // 6 user-defined function references (`Observation Date` x2,
         // `Systolic Value` x2, `Diastolic Value` x2) plus 1 context-dependent
         // reference (`AgeInYearsAt` x1) remain as FunctionRef nodes, all
         // classified as runtime fallback.
