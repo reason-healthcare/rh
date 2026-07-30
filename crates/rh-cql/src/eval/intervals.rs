@@ -9,6 +9,7 @@
 
 use super::context::EvalError;
 use super::operators::cql_compare;
+use super::operators::conversion::{to_datetime, to_date};
 use super::value::{CqlDate, CqlDateTime, CqlTime, Value};
 use std::cmp::Ordering;
 
@@ -18,6 +19,56 @@ use std::cmp::Ordering;
 
 fn err(op: &str, msg: &str) -> EvalError {
     EvalError::General(format!("{op}: {msg}"))
+}
+
+/// Coerce a FHIR Period Tuple to a CQL `Interval<DateTime>`.
+///
+/// FHIR Period objects arrive as raw JSON Tuples with optional `"start"` /
+/// `"end"` string fields. Interval operators need a `Value::Interval`. This
+/// function converts the Tuple in-place; non-Tuple values are returned
+/// unchanged.
+///
+/// String fields are parsed as DateTime (datetime strings) or Date
+/// (date-only strings). Missing fields become open (unbounded) bounds.
+pub(crate) fn coerce_fhir_period(v: Value) -> Value {
+    let fields = match &v {
+        Value::Tuple(f) if f.contains_key("start") || f.contains_key("end") => f.clone(),
+        _ => return v,
+    };
+
+    let parse_bound = |key: &str| -> Option<Box<Value>> {
+        let raw = fields.get(key)?;
+        let s = match raw {
+            Value::String(s) => s.clone(),
+            _ => return Some(Box::new(raw.clone())),
+        };
+        // Try DateTime first, then Date.
+        if s.contains('T') {
+            if let Ok(dt @ Value::DateTime(_)) = to_datetime(&Value::String(s.clone())) {
+                return Some(Box::new(dt));
+            }
+        }
+        if let Ok(d @ Value::Date(_)) = to_date(&Value::String(s.clone())) {
+            return Some(Box::new(d));
+        }
+        // Fall back to the raw string if parsing fails.
+        Some(Box::new(Value::String(s)))
+    };
+
+    let low = parse_bound("start");
+    let high = parse_bound("end");
+
+    // A Period with neither start nor end is not a valid interval.
+    if low.is_none() && high.is_none() {
+        return v;
+    }
+
+    Value::Interval {
+        low,
+        high,
+        low_closed: true,
+        high_closed: true,
+    }
 }
 
 /// Extract the bounds of an Interval value or return an error.

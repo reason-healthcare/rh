@@ -1866,6 +1866,20 @@ fn date_duration_between(a: &Value, b: &Value, unit: &str) -> Result<Value, Eval
         (Value::DateTime(dt1), Value::DateTime(dt2)) => {
             Ok(Value::Integer(datetime_duration_diff(dt1, dt2, unit)?))
         }
+        // Cross-type: Date vs DateTime — truncate the DateTime to date precision.
+        // CQL promotes the lower-precision operand; we instead demote the DateTime
+        // to a Date by stripping time components, which is safe for year/month/day
+        // precision units used in age calculations.
+        (Value::Date(d1), Value::DateTime(dt2)) => {
+            use crate::eval::value::CqlDate;
+            let d2 = CqlDate { year: dt2.year, month: dt2.month, day: dt2.day };
+            Ok(Value::Integer(date_duration_diff(d1, &d2, unit)?))
+        }
+        (Value::DateTime(dt1), Value::Date(d2)) => {
+            use crate::eval::value::CqlDate;
+            let d1 = CqlDate { year: dt1.year, month: dt1.month, day: dt1.day };
+            Ok(Value::Integer(date_duration_diff(&d1, d2, unit)?))
+        }
         _ => Err(err(
             "DurationBetween",
             "arguments must be same temporal type",
