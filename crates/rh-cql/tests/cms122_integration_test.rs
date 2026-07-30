@@ -308,3 +308,35 @@ fn cms122_patient_no_diabetes_initial_population() {
         assert_eq!(result, Some(false), "patient-no-diabetes should NOT be in Initial Population");
     });
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2k: Additional patient assertions
+// ---------------------------------------------------------------------------
+
+#[test]
+fn cms122_patient_no_hba1c_initial_population() {
+    with_large_stack(|| {
+        let Some(example) = example_dir() else {
+            eprintln!("Skipping: reasonhealth-analytics example not found");
+            return;
+        };
+        let data = load_patient_data(&example);
+        let (provider, patient) = data["patient-no-hba1c"].clone();
+        let result = eval_bool(&example, "patient-no-hba1c", "Initial Population", provider, patient);
+        assert_eq!(result, Some(true), "patient-no-hba1c should be in Initial Population");
+    });
+}
+
+#[test]
+fn cms122_patient_too_young_initial_population() {
+    with_large_stack(|| {
+        let Some(example) = example_dir() else {
+            eprintln!("Skipping: reasonhealth-analytics example not found");
+            return;
+        };
+        let data = load_patient_data(&example);
+        let (provider, patient) = data["patient-too-young"].clone();
+        let result = eval_bool(&example, "patient-too-young", "Initial Population", provider, patient);
+        assert_eq!(result, Some(false), "patient-too-young should NOT be in Initial Population");
+    });
+}
