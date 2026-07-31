@@ -8,8 +8,8 @@
 //! `high_closed` flags.
 
 use super::context::EvalError;
+use super::operators::conversion::{to_date, to_datetime};
 use super::operators::cql_compare;
-use super::operators::conversion::{to_datetime, to_date};
 use super::value::{CqlDate, CqlDateTime, CqlTime, Value};
 use std::cmp::Ordering;
 

@@ -1872,12 +1872,20 @@ fn date_duration_between(a: &Value, b: &Value, unit: &str) -> Result<Value, Eval
         // precision units used in age calculations.
         (Value::Date(d1), Value::DateTime(dt2)) => {
             use crate::eval::value::CqlDate;
-            let d2 = CqlDate { year: dt2.year, month: dt2.month, day: dt2.day };
+            let d2 = CqlDate {
+                year: dt2.year,
+                month: dt2.month,
+                day: dt2.day,
+            };
             Ok(Value::Integer(date_duration_diff(d1, &d2, unit)?))
         }
         (Value::DateTime(dt1), Value::Date(d2)) => {
             use crate::eval::value::CqlDate;
-            let d1 = CqlDate { year: dt1.year, month: dt1.month, day: dt1.day };
+            let d1 = CqlDate {
+                year: dt1.year,
+                month: dt1.month,
+                day: dt1.day,
+            };
             Ok(Value::Integer(date_duration_diff(&d1, d2, unit)?))
         }
         _ => Err(err(

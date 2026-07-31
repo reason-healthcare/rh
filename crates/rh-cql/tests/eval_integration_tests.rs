@@ -1672,8 +1672,9 @@ define TestInterval:
         .data_provider(provider)
         .build();
 
-    let value = evaluate_elm_with_libraries(&out.result.library, &out.included, "TestInterval", &ctx)
-        .expect("evaluation failed");
+    let value =
+        evaluate_elm_with_libraries(&out.result.library, &out.included, "TestInterval", &ctx)
+            .expect("evaluation failed");
 
     assert!(
         matches!(value, Value::Interval { .. }),

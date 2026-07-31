@@ -198,12 +198,17 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 
     /// Evaluate a user-defined function by binding arguments to operand names,
     /// pushing a scope, evaluating the body, and popping the scope.
-    fn eval_user_function(&mut self, fd: &crate::elm::FunctionDef, args: Vec<Value>) -> Result<Value, EvalError> {
-        let body = fd.expression.as_ref()
-            .ok_or_else(|| EvalError::General(format!(
+    fn eval_user_function(
+        &mut self,
+        fd: &crate::elm::FunctionDef,
+        args: Vec<Value>,
+    ) -> Result<Value, EvalError> {
+        let body = fd.expression.as_ref().ok_or_else(|| {
+            EvalError::General(format!(
                 "Function '{}' has no body",
                 fd.name.as_deref().unwrap_or("?")
-            )))?;
+            ))
+        })?;
 
         // Bind operand names to argument values.
         let mut scope = BTreeMap::new();
@@ -1180,8 +1185,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                         // try suffixed FHIR variants (onsetDateTime, onsetPeriod,
                         // onsetAge, onsetRange, onsetString, abatementDateTime, etc.)
                         for suffix in &[
-                            "DateTime", "Period", "Age", "Range", "String",
-                            "Instant", "Timing", "Boolean", "Code",
+                            "DateTime", "Period", "Age", "Range", "String", "Instant", "Timing",
+                            "Boolean", "Code",
                         ] {
                             let candidate = format!("{path}{suffix}");
                             if let Some(v) = fields.get(&candidate) {
@@ -1429,17 +1434,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                         let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
                             alias: alias.to_string(),
                         })?;
-                        let inc_lib = included.get(alias).ok_or_else(|| EvalError::LibraryNotFound {
-                            alias: alias.to_string(),
-                        })?;
+                        let inc_lib =
+                            included
+                                .get(alias)
+                                .ok_or_else(|| EvalError::LibraryNotFound {
+                                    alias: alias.to_string(),
+                                })?;
 
                         // Find the function definition in the included library.
                         if let Some(stmts) = &inc_lib.statements {
                             for def in &stmts.defs {
                                 if let crate::elm::StatementDef::Function(fd) = def {
                                     if fd.name.as_deref() == Some(name) {
-                                        let mut sub_engine =
-                                            Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
+                                        let mut sub_engine = Engine::new_with_libraries(
+                                            inc_lib,
+                                            Some(included),
+                                            self.ctx,
+                                        );
                                         return sub_engine.eval_user_function(fd, args);
                                     }
                                 }
@@ -2118,17 +2129,26 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::Meets(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
-                let (a, b) = (super::intervals::coerce_fhir_period(a), super::intervals::coerce_fhir_period(b));
+                let (a, b) = (
+                    super::intervals::coerce_fhir_period(a),
+                    super::intervals::coerce_fhir_period(b),
+                );
                 super::intervals::meets(&a, &b)
             }
             Expression::MeetsBefore(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
-                let (a, b) = (super::intervals::coerce_fhir_period(a), super::intervals::coerce_fhir_period(b));
+                let (a, b) = (
+                    super::intervals::coerce_fhir_period(a),
+                    super::intervals::coerce_fhir_period(b),
+                );
                 super::intervals::meets_before(&a, &b)
             }
             Expression::MeetsAfter(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
-                let (a, b) = (super::intervals::coerce_fhir_period(a), super::intervals::coerce_fhir_period(b));
+                let (a, b) = (
+                    super::intervals::coerce_fhir_period(a),
+                    super::intervals::coerce_fhir_period(b),
+                );
                 super::intervals::meets_after(&a, &b)
             }
             Expression::Includes(timed_bin) => {
@@ -2471,15 +2491,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
                         alias: alias.to_string(),
                     })?;
-                    let inc_lib = included.get(alias).ok_or_else(|| EvalError::LibraryNotFound {
-                        alias: alias.to_string(),
-                    })?;
+                    let inc_lib =
+                        included
+                            .get(alias)
+                            .ok_or_else(|| EvalError::LibraryNotFound {
+                                alias: alias.to_string(),
+                            })?;
                     let code_def = inc_lib
                         .codes
                         .as_ref()
                         .and_then(|c| c.defs.iter().find(|d| d.name.as_deref() == Some(name)))
                         .ok_or_else(|| {
-                            EvalError::General(format!("CodeRef: code '{name}' not found in library {alias}"))
+                            EvalError::General(format!(
+                                "CodeRef: code '{name}' not found in library {alias}"
+                            ))
                         })?;
                     let system_url = code_def
                         .code_system

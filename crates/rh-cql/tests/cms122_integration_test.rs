@@ -9,7 +9,7 @@
 //!   cargo test -p rh-cql --test cms122_integration_test -- --nocapture
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use rh_cql::{
     compile_with_libraries, evaluate_elm_with_libraries, CqlDateTime, EvalContextBuilder,
@@ -49,7 +49,9 @@ fn json_to_cql_value(v: serde_json::Value) -> Value {
             }
         }
         serde_json::Value::String(s) => Value::String(s),
-        serde_json::Value::Array(arr) => Value::List(arr.into_iter().map(json_to_cql_value).collect()),
+        serde_json::Value::Array(arr) => {
+            Value::List(arr.into_iter().map(json_to_cql_value).collect())
+        }
         serde_json::Value::Object(map) => Value::Tuple(
             map.into_iter()
                 .map(|(k, v)| (k, json_to_cql_value(v)))
@@ -60,12 +62,12 @@ fn json_to_cql_value(v: serde_json::Value) -> Value {
 
 /// Load patient data from data.ndjson, returning a map:
 ///   patient_id → (InMemoryDataProvider, patient_context_value)
-fn load_patient_data(example: &PathBuf) -> BTreeMap<String, (InMemoryDataProvider, Value)> {
+fn load_patient_data(example: &Path) -> BTreeMap<String, (InMemoryDataProvider, Value)> {
     let ndjson_path = example.join("data.ndjson");
     let content = std::fs::read_to_string(ndjson_path).expect("data.ndjson not found");
 
     // First pass: collect all non-patient resources per patient-id.
-    let mut all_resources: Vec<serde_json::Value> = content
+    let all_resources: Vec<serde_json::Value> = content
         .lines()
         .filter(|l| !l.trim().is_empty())
         .map(|l| serde_json::from_str(l).expect("invalid JSON line"))
@@ -140,7 +142,7 @@ fn measurement_period_clock() -> FixedClock {
     })
 }
 
-fn load_terminology(example: &PathBuf) -> rh_cql::InMemoryTerminologyProvider {
+fn load_terminology(example: &Path) -> rh_cql::InMemoryTerminologyProvider {
     let vs_path = example.join("valueset-expansions.json");
     let vs_content = std::fs::read_to_string(&vs_path).expect("valueset-expansions.json");
     let vs_json: serde_json::Value = serde_json::from_str(&vs_content).unwrap();
@@ -152,12 +154,15 @@ fn load_terminology(example: &PathBuf) -> rh_cql::InMemoryTerminologyProvider {
                     let system = code.get("system").and_then(|s| s.as_str()).unwrap_or("");
                     let code_val = code.get("code").and_then(|c| c.as_str()).unwrap_or("");
                     if !system.is_empty() && !code_val.is_empty() {
-                        term_provider.add_code(url, rh_cql::CqlCode {
-                            code: code_val.to_string(),
-                            system: system.to_string(),
-                            display: None,
-                            version: None,
-                        });
+                        term_provider.add_code(
+                            url,
+                            rh_cql::CqlCode {
+                                code: code_val.to_string(),
+                                system: system.to_string(),
+                                display: None,
+                                version: None,
+                            },
+                        );
                     }
                 }
             }
@@ -169,14 +174,24 @@ fn load_terminology(example: &PathBuf) -> rh_cql::InMemoryTerminologyProvider {
 fn make_measurement_period() -> Value {
     Value::Interval {
         low: Some(Box::new(Value::DateTime(CqlDateTime {
-            year: 2019, month: Some(1), day: Some(1),
-            hour: Some(0), minute: Some(0), second: Some(0),
-            millisecond: None, offset_seconds: Some(0),
+            year: 2019,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: Some(0),
         }))),
         high: Some(Box::new(Value::DateTime(CqlDateTime {
-            year: 2020, month: Some(1), day: Some(1),
-            hour: Some(0), minute: Some(0), second: Some(0),
-            millisecond: None, offset_seconds: Some(0),
+            year: 2020,
+            month: Some(1),
+            day: Some(1),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: Some(0),
         }))),
         low_closed: true,
         high_closed: false,
@@ -184,7 +199,7 @@ fn make_measurement_period() -> Value {
 }
 
 fn eval_bool(
-    example: &PathBuf,
+    example: &Path,
     patient_id: &str,
     expression: &str,
     provider: InMemoryDataProvider,
@@ -200,7 +215,10 @@ fn eval_bool(
         .expect("compile_with_libraries failed");
 
     if !out.result.is_success() {
-        eprintln!("[{patient_id}] {expression}: compile errors: {:?}", out.result.errors);
+        eprintln!(
+            "[{patient_id}] {expression}: compile errors: {:?}",
+            out.result.errors
+        );
         return None;
     }
 
@@ -262,8 +280,18 @@ fn cms122_patient_numer_initial_population() {
         };
         let data = load_patient_data(&example);
         let (provider, patient) = data["patient-numer"].clone();
-        let result = eval_bool(&example, "patient-numer", "Initial Population", provider, patient);
-        assert_eq!(result, Some(true), "patient-numer should be in Initial Population");
+        let result = eval_bool(
+            &example,
+            "patient-numer",
+            "Initial Population",
+            provider,
+            patient,
+        );
+        assert_eq!(
+            result,
+            Some(true),
+            "patient-numer should be in Initial Population"
+        );
     });
 }
 
@@ -290,8 +318,18 @@ fn cms122_patient_no_encounter_initial_population() {
         };
         let data = load_patient_data(&example);
         let (provider, patient) = data["patient-no-encounter"].clone();
-        let result = eval_bool(&example, "patient-no-encounter", "Initial Population", provider, patient);
-        assert_eq!(result, Some(false), "patient-no-encounter should NOT be in Initial Population");
+        let result = eval_bool(
+            &example,
+            "patient-no-encounter",
+            "Initial Population",
+            provider,
+            patient,
+        );
+        assert_eq!(
+            result,
+            Some(false),
+            "patient-no-encounter should NOT be in Initial Population"
+        );
     });
 }
 
@@ -304,8 +342,18 @@ fn cms122_patient_no_diabetes_initial_population() {
         };
         let data = load_patient_data(&example);
         let (provider, patient) = data["patient-no-diabetes"].clone();
-        let result = eval_bool(&example, "patient-no-diabetes", "Initial Population", provider, patient);
-        assert_eq!(result, Some(false), "patient-no-diabetes should NOT be in Initial Population");
+        let result = eval_bool(
+            &example,
+            "patient-no-diabetes",
+            "Initial Population",
+            provider,
+            patient,
+        );
+        assert_eq!(
+            result,
+            Some(false),
+            "patient-no-diabetes should NOT be in Initial Population"
+        );
     });
 }
 
@@ -322,8 +370,18 @@ fn cms122_patient_no_hba1c_initial_population() {
         };
         let data = load_patient_data(&example);
         let (provider, patient) = data["patient-no-hba1c"].clone();
-        let result = eval_bool(&example, "patient-no-hba1c", "Initial Population", provider, patient);
-        assert_eq!(result, Some(true), "patient-no-hba1c should be in Initial Population");
+        let result = eval_bool(
+            &example,
+            "patient-no-hba1c",
+            "Initial Population",
+            provider,
+            patient,
+        );
+        assert_eq!(
+            result,
+            Some(true),
+            "patient-no-hba1c should be in Initial Population"
+        );
     });
 }
 
@@ -336,7 +394,17 @@ fn cms122_patient_too_young_initial_population() {
         };
         let data = load_patient_data(&example);
         let (provider, patient) = data["patient-too-young"].clone();
-        let result = eval_bool(&example, "patient-too-young", "Initial Population", provider, patient);
-        assert_eq!(result, Some(false), "patient-too-young should NOT be in Initial Population");
+        let result = eval_bool(
+            &example,
+            "patient-too-young",
+            "Initial Population",
+            provider,
+            patient,
+        );
+        assert_eq!(
+            result,
+            Some(false),
+            "patient-too-young should NOT be in Initial Population"
+        );
     });
 }
