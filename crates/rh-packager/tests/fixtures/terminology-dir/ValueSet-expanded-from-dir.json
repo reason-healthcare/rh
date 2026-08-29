@@ -1,0 +1,9 @@
+{
+  "resourceType": "ValueSet",
+  "expansion": {
+    "contains": [
+      {"system": "http://test.org/cs", "code": "X", "display": "Xavier"},
+      {"system": "http://test.org/cs", "code": "Y", "display": "Yankee"}
+    ]
+  }
+}
