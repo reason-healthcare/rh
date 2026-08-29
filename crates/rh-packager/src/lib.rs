@@ -50,4 +50,6 @@ pub use error::{PublisherError, Result};
 pub use init::{init_package, name_from_canonical, InitOptions};
 pub use lock::{CanonicalRef, LockReport};
 pub use manifest::PackageJson;
-pub use pipeline::{build, check, check_lock, lock as lock_package, pack_dir};
+pub use pipeline::{
+    build, check, check_lock, link as link_package, lock as lock_package, pack_dir,
+};
