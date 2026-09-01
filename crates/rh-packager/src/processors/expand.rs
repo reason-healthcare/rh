@@ -328,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn cannot_expand_compose_with_valueSet_references() {
+    fn cannot_expand_compose_with_value_set_references() {
         let vs = json!({
             "resourceType": "ValueSet",
             "compose": {
@@ -378,8 +378,10 @@ mod tests {
             }),
         );
 
-        let mut link_config = LinkConfig::default();
-        link_config.terminology_dir = Some(term_dir.to_string_lossy().to_string());
+        let link_config = LinkConfig {
+            terminology_dir: Some(term_dir.to_string_lossy().to_string()),
+            ..Default::default()
+        };
 
         let mut ctx = make_ctx(&tmp, resources, link_config);
         ExpandValueSetsProcessor.run(&mut ctx).unwrap();
