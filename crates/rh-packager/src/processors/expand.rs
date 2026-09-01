@@ -173,28 +173,24 @@ fn expand_from_compose(vs: &Value) -> Option<Value> {
         let system = include.get("system").and_then(|s| s.as_str())?;
         let version = include.get("version").and_then(|v| v.as_str());
 
-        if let Some(concepts) = include.get("concept").and_then(|c| c.as_array()) {
-            for concept in concepts {
-                let code = concept.get("code").and_then(|c| c.as_str())?;
-                let display = concept.get("display").and_then(|d| d.as_str());
+        let concepts = include.get("concept").and_then(|c| c.as_array())?;
+        for concept in concepts {
+            let code = concept.get("code").and_then(|c| c.as_str())?;
+            let display = concept.get("display").and_then(|d| d.as_str());
 
-                let mut entry = serde_json::json!({
-                    "system": system,
-                    "code": code,
-                });
+            let mut entry = serde_json::json!({
+                "system": system,
+                "code": code,
+            });
 
-                if let Some(v) = version {
-                    entry["version"] = Value::String(v.to_string());
-                }
-                if let Some(d) = display {
-                    entry["display"] = Value::String(d.to_string());
-                }
-
-                contains.push(entry);
+            if let Some(v) = version {
+                entry["version"] = Value::String(v.to_string());
             }
-        } else {
-            // No explicit concepts — can't expand without a terminology server.
-            return None;
+            if let Some(d) = display {
+                entry["display"] = Value::String(d.to_string());
+            }
+
+            contains.push(entry);
         }
     }
 
