@@ -200,7 +200,7 @@ fn make_measurement_period() -> Value {
 
 fn eval_bool(
     example: &Path,
-    patient_id: &str,
+    _patient_id: &str,
     expression: &str,
     provider: InMemoryDataProvider,
     patient_val: Value,
@@ -216,7 +216,7 @@ fn eval_bool(
 
     if !out.result.is_success() {
         eprintln!(
-            "[{patient_id}] {expression}: compile errors: {:?}",
+            "[fixture] {expression}: compile errors: {:?}",
             out.result.errors
         );
         return None;
@@ -243,11 +243,11 @@ fn eval_bool(
         }
         Ok(Value::Null) => Some(false),
         Ok(other) => {
-            eprintln!("[{patient_id}] {expression}: unexpected value {:?}", other);
+            eprintln!("[fixture] {expression}: unexpected value {:?}", other);
             None
         }
         Err(e) => {
-            eprintln!("[{patient_id}] {expression}: eval error: {:?}", e);
+            eprintln!("[fixture] {expression}: eval error: {:?}", e);
             None
         }
     }
