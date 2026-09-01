@@ -1,0 +1,18 @@
+{
+  "resourceType": "ValueSet",
+  "id": "test-codes",
+  "url": "http://test.org/fhir/ValueSet/test-codes",
+  "name": "TestCodes",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "http://test.org/cs",
+        "concept": [
+          {"code": "A", "display": "Alpha"},
+          {"code": "B", "display": "Beta"}
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+id = "test.executable"
+version = "1.0.0"
+fhir_version = "4.0.1"
+canonical = "http://test.org/fhir"
+
+[dependencies]
+
+[hooks]
+before_build = ["cql"]
+after_build = []
+
+[link]
+format = "bundle"

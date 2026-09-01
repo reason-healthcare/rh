@@ -11,7 +11,7 @@ use crate::{
     loader::load_source_dir,
     lock::{apply_pinning, generate_lock, load_lock, lock_status, LockReport},
     narrative::process_narrative,
-    pack::{create_tarball, write_output_dir},
+    pack::{create_tarball, write_executable_bundle, write_output_dir},
     utils::resolve_packages_dir,
     Result,
 };
@@ -206,6 +206,84 @@ pub fn pack_dir(output_dir: &Path) -> Result<PathBuf> {
     Ok(tgz)
 }
 
+/// Run `rh package link` — build an executable bundle from a source directory.
+///
+/// Steps:
+/// 1. Load source directory (same as build)
+/// 2. Run before_build hook processors (fsh, cql, snapshot, validate)
+/// 3. Process narrative, populate IG, apply canonical pinning (same as build)
+/// 4. Run after_build hooks + resolve-dependencies + expand-valuesets
+/// 5. Run link-validate (completeness check)
+/// 6. Write output as a self-contained FHIR Bundle or resource directory
+///
+/// The output is an "executable bundle" — all ValueSets pre-expanded,
+/// all StructureDefinitions snapshotted, all CQL compiled to ELM,
+/// all transitive dependencies resolved and included.
+///
+/// # Examples
+///
+/// ```no_run
+/// use rh_packager::link_package;
+/// use std::path::Path;
+///
+/// let output = link_package(Path::new("my-package"), Path::new("executable")).unwrap();
+/// println!("Executable bundle written to {}", output.display());
+/// ```
+pub fn link(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
+    let mut ctx = load_source_dir(source_dir, output_dir.to_path_buf())?;
+    warn_if_likely_implementation_guide_resource_url(ctx.package_json.url.as_deref());
+    check_ig_sync(&ctx)?;
+
+    let registry = build_registry_with_config(&ctx.config);
+
+    // Phase 1: Same as build — compile FSH, CQL, generate snapshots, validate
+    let before = ctx.config.hooks.before_build.clone();
+    run_stage(&registry, &before, &mut ctx)?;
+
+    process_narrative(&mut ctx)?;
+    populate_ig(&mut ctx)?;
+
+    // Apply canonical pinning
+    match load_lock(&ctx)? {
+        Some(lock) => {
+            let pin_map: HashMap<String, String> = lock
+                .canonicals
+                .iter()
+                .map(|c| (c.url.clone(), c.resolved_version.clone()))
+                .collect();
+            apply_pinning(&mut ctx, &pin_map);
+        }
+        None => {
+            warn!(
+                "No fhir-lock.json found; canonical references will not be pinned. \
+                 Run `rh package lock` to generate a lock file."
+            );
+        }
+    }
+
+    // Phase 2: Link-specific — resolve dependencies, expand ValueSets
+    let mut after = ctx.config.hooks.after_build.clone();
+    // Always run resolve-dependencies before expand-valuesets
+    if !after.contains(&"resolve-dependencies".to_string()) {
+        after.push("resolve-dependencies".to_string());
+    }
+    if !after.contains(&"expand-valuesets".to_string()) {
+        after.push("expand-valuesets".to_string());
+    }
+    run_stage(&registry, &after, &mut ctx)?;
+
+    warn_resource_canonical_url_mismatches(&ctx);
+
+    // Phase 3: Validate completeness
+    let link_validate = vec!["link-validate".to_string()];
+    run_stage(&registry, &link_validate, &mut ctx)?;
+
+    // Phase 4: Write executable bundle output
+    let output = write_executable_bundle(&ctx, output_dir)?;
+    info!("Executable bundle written to {}", output.display());
+
+    Ok(output)
+}
 #[cfg(test)]
 mod tests {
     use super::*;

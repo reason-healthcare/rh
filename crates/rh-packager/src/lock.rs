@@ -256,7 +256,7 @@ fn pin_canonical_value(val: &mut Value, pin_map: &HashMap<String, String>) {
 }
 
 /// Collect unversioned canonical URL strings from canonical-typed fields in a resource.
-fn collect_canonicals(value: &Value) -> Vec<String> {
+pub(crate) fn collect_canonicals(value: &Value) -> Vec<String> {
     let mut urls = Vec::new();
     walk_canonical_fields(value, "", &mut |_path, url| {
         if !url.contains('|') {
@@ -272,7 +272,7 @@ fn collect_canonicals(value: &Value) -> Vec<String> {
 /// `path` is the dot-notation path to the current position (empty at root, bracket-indexed for
 /// arrays). Only object keys listed in [`CANONICAL_FIELDS`] trigger visitor calls; other keys
 /// are recursed into to discover nested canonical fields.
-fn walk_canonical_fields<F>(value: &Value, path: &str, visitor: &mut F)
+pub(crate) fn walk_canonical_fields<F>(value: &Value, path: &str, visitor: &mut F)
 where
     F: FnMut(&str, &str),
 {
@@ -331,11 +331,11 @@ fn looks_like_canonical_any(s: &str) -> bool {
     looks_like_canonical(base)
 }
 
-fn is_canonical_field(key: &str) -> bool {
+pub(crate) fn is_canonical_field(key: &str) -> bool {
     CANONICAL_FIELDS.contains(&key)
 }
 
-fn is_excluded(url: &str) -> bool {
+pub(crate) fn is_excluded(url: &str) -> bool {
     EXCLUDED_PREFIXES
         .iter()
         .any(|prefix| url.starts_with(prefix))

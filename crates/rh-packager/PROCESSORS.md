@@ -382,6 +382,9 @@ files are touched.
 | `validate` | `before_build` or `after_build` | Validates all FHIR resources using `rh-validator`. Fails the pipeline on any ERROR-severity issue. |
 | `cql` | `before_build` | Compiles `.cql` source files to ELM JSON and embeds source + ELM into `Library.content[]`. Auto-creates a minimal `Library` resource if none exists (with a warning). |
 | `fsh` | `before_build` | Compiles FHIR Shorthand (`*.fsh`) files into FHIR resources and injects them into the build context. FSH-compiled resources overwrite any pre-existing resource with the same stem. |
+| `resolve-dependencies` | `after_build` | Pulls in transitive dependencies from installed FHIR packages so the resource set is self-contained. Walks canonical references, loads missing resources from dependency packages (fixpoint iteration). |
+| `expand-valuesets` | `after_build` | Pre-expands ValueSets that have `compose` but no `expansion`. Uses terminology directory or `expand_from_compose` (when explicit concepts are listed). |
+| `link-validate` | `after_build` | Verifies executable bundle completeness: no dangling canonicals, all ValueSets expanded, all SDs snapshotted, all Libraries have ELM, FHIRHelpers present, no circular Library deps. |
 
 Built-in processors are configured via their own sections in `packager.toml`
 (`[validate]`, `[cql]`, `[fsh]`). See [packager.toml Reference](README.md#packagertoml-reference) for
@@ -440,6 +443,82 @@ before_build = ["fsh", "snapshot", "validate"]
   pre-compiled JSON for a given resource — not both.
 
 ---
+
+### `resolve-dependencies` — Transitive dependency resolver
+
+Pulls in transitive dependencies from installed FHIR packages so the resource set
+is self-contained for executable bundle production.
+
+**Typical stage:** `after_build` (run before `expand-valuesets`)
+
+**Behavior:**
+
+- Collects all canonical references from all resources using the same
+  `walk_canonical_fields` logic as the lock pipeline.
+- For each canonical URL not already in the resource map, searches dependency
+  packages using the same `search_package_for_canonical` pattern.
+- Loads found resources into the resource map using the `<ResourceType>-<id>` key.
+- Repeats (fixpoint iteration) until no new unresolved references are found.
+- Logs a warning for any canonical that cannot be resolved.
+
+**Configuration:** Uses `[link] packages_dir` (falls back to top-level
+`packages_dir` or `~/.fhir/packages`).
+
+---
+
+### `expand-valuesets` — ValueSet pre-expander
+
+Pre-expands all ValueSets that have `compose` but no `expansion` (or an empty
+expansion), so the bundle is self-contained for WASM terminology evaluation.
+
+**Typical stage:** `after_build` (run after `resolve-dependencies`)
+
+**Configuration (`[link]` in `packager.toml`):**
+
+```toml
+[link]
+terminology_server = "https://tx.fhir.org/r4"
+# terminology_dir = "/path/to/terminology-snapshots"
+```
+
+**Behavior:**
+
+- Finds ValueSet resources that need expansion (have `compose`, no `expansion`).
+- Expands from, in priority order:
+  1. Local terminology directory (`terminology_dir`) — looks for `ValueSet-<id>.json`
+  2. `expand_from_compose` — builds expansion directly from `compose.include.concept`
+     entries (works when all concepts are explicitly listed, no filters, no nested
+     ValueSet references)
+  3. Terminology server (`terminology_server`) — planned, not yet implemented
+- Skips ValueSets that already have a non-empty `expansion.contains`.
+- Logs a warning for any ValueSet that cannot be expanded.
+
+---
+
+### `link-validate` — Executable bundle completeness validator
+
+Verifies the resource set is self-contained and executable. This is the
+completeness gate — if it fails, the bundle is not executable.
+
+**Typical stage:** `after_build` (run last, after `resolve-dependencies` and
+`expand-valuesets`)
+
+**Checks:**
+
+1. **No dangling canonical references** — every canonical-typed field reference
+   resolves to a resource in the resource map.
+2. **All ValueSets are expanded** — every ValueSet has `expansion.contains`
+   with at least one entry.
+3. **All StructureDefinitions are snapshotted** — every SD has `snapshot.element`.
+4. **All Libraries have ELM** — every Library has an `application/elm+json`
+   attachment in `content[]`.
+5. **FHIRHelpers is present** — if any Library's `relatedArtifact` references
+   FHIRHelpers, a FHIRHelpers Library resource is in the resource map.
+6. **No circular Library dependencies** — detects cycles in Library
+   `relatedArtifact` (type: depends-on) references via DFS.
+
+On failure, returns `PublisherError::LinkValidation` with one message per
+failing check.
 
 ## 4. Processor Ordering and Isolation
 

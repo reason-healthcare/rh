@@ -47,6 +47,10 @@ pub enum PackageCommands {
 
     /// Pack an expanded output directory into a .tgz tarball
     Pack(PackArgs),
+    /// Build an executable bundle -- all dependencies resolved, ValueSets expanded,
+    /// StructureDefinitions snapshotted, CQL compiled to ELM. Self-contained for
+    /// WASM evaluation.
+    Link(LinkArgs),
 }
 
 #[derive(Args)]
@@ -128,6 +132,32 @@ pub struct PackArgs {
     /// Output path for the resulting .tgz file (default: <dir>/../<name>-<version>.tgz)
     #[clap(short, long)]
     pub out: Option<PathBuf>,
+}
+
+#[derive(Args)]
+pub struct LinkArgs {
+    /// Path to the source directory containing packager.toml and FHIR resources
+    pub dir: PathBuf,
+
+    /// Output directory for the executable bundle (default: <dir>/executable)
+    #[clap(short, long)]
+    pub out: Option<PathBuf>,
+
+    /// Output format: "bundle" (single FHIR Bundle JSON) or "directory" (one file per resource)
+    #[clap(long)]
+    pub format: Option<String>,
+
+    /// Override terminology server URL from packager.toml
+    #[clap(long)]
+    pub terminology: Option<String>,
+
+    /// Override terminology directory from packager.toml
+    #[clap(long)]
+    pub terminology_dir: Option<PathBuf>,
+
+    /// Skip link-validate completeness check
+    #[clap(long)]
+    pub no_validate: bool,
 }
 
 pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result<()> {
@@ -276,6 +306,22 @@ pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result
                 )?;
             } else {
                 println!("Packed: {}", tgz.display());
+            }
+            Ok(())
+        }
+        PackageCommands::Link(args) => {
+            let output_dir = args.out.unwrap_or_else(|| args.dir.join("executable"));
+            let output = rh_packager::link_package(&args.dir, &output_dir)?;
+            if ctx.is_json() {
+                print_envelope(
+                    ctx,
+                    &Envelope::ok(
+                        serde_json::json!({ "path": output.to_string_lossy() }),
+                        "package link",
+                    ),
+                )?;
+            } else {
+                println!("Executable bundle: {}", output.display());
             }
             Ok(())
         }

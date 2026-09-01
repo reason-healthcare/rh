@@ -841,29 +841,34 @@ pub(crate) fn decode_base64(input: &str) -> anyhow::Result<Vec<u8>> {
 
     // Process in 4-byte chunks
     let mut result = Vec::with_capacity(clean.len() * 3 / 4);
-    let mut chunks = clean.chunks_exact(4);
+    let (chunks, remainder) = clean.as_chunks::<4>();
 
-    for chunk in chunks.by_ref() {
-        let a =
-            char_to_value(chunk[0]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
-        let b =
-            char_to_value(chunk[1]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
-        let c =
-            char_to_value(chunk[2]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
-        let d =
-            char_to_value(chunk[3]).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+    for chunk in chunks {
+        let [a, b, raw_c, raw_d] = *chunk;
+
+        let a = char_to_value(a).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+        let b = char_to_value(b).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?;
+        let c = if raw_c == b'=' {
+            0
+        } else {
+            char_to_value(raw_c).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?
+        };
+        let d = if raw_d == b'=' {
+            0
+        } else {
+            char_to_value(raw_d).ok_or_else(|| anyhow::anyhow!("Invalid base64 character"))?
+        };
 
         result.push((a << 2) | (b >> 4));
-        if chunk[2] != b'=' {
+        if raw_c != b'=' {
             result.push((b << 4) | (c >> 2));
         }
-        if chunk[3] != b'=' {
+        if raw_d != b'=' {
             result.push((c << 6) | d);
         }
     }
 
     // Handle remainder (should be empty if properly padded)
-    let remainder = chunks.remainder();
     if !remainder.is_empty() {
         anyhow::bail!("Invalid base64: length not a multiple of 4");
     }

@@ -1,0 +1,13 @@
+{
+  "resourceType": "Library",
+  "id": "TestLogic",
+  "url": "http://test.org/fhir/Library/TestLogic",
+  "name": "TestLogic",
+  "status": "active",
+  "type": {
+    "coding": [{
+      "system": "http://terminology.hl7.org/CodeSystem/library-type",
+      "code": "logic-library"
+    }]
+  }
+}

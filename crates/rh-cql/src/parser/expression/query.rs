@@ -62,6 +62,56 @@ impl QueryTail {
     }
 }
 
+const RESERVED_SINGLE_SOURCE_ALIASES: &[&str] = &[
+    "define",
+    "context",
+    "using",
+    "include",
+    "codesystem",
+    "valueset",
+    "code",
+    "concept",
+    "parameter",
+    "library",
+    "let",
+    "where",
+    "return",
+    "sort",
+    "with",
+    "without",
+    "from",
+    "select",
+    "distinct",
+    "flatten",
+];
+
+const RESERVED_QUERY_ALIASES: &[&str] = &["union", "except", "intersect", "start", "end", "of"];
+
+const TIMING_ALIAS_KEYWORDS: &[&str] = &[
+    "start",
+    "end",
+    "of",
+    "union",
+    "except",
+    "intersect",
+    "before",
+    "after",
+    "during",
+    "on",
+    "or",
+];
+
+fn is_reserved_single_source_alias(alias: &str) -> bool {
+    let lowered = alias.to_lowercase();
+    RESERVED_SINGLE_SOURCE_ALIASES.contains(&lowered.as_str())
+        || RESERVED_QUERY_ALIASES.contains(&lowered.as_str())
+        || is_timing_alias_keyword(alias)
+}
+
+fn is_timing_alias_keyword(alias: &str) -> bool {
+    TIMING_ALIAS_KEYWORDS.contains(&alias.to_lowercase().as_str())
+}
+
 /// Parse the tail clauses (`let…`, `with`/`without`, `where`, `return`,
 /// `aggregate`, `sort`) that appear after the source alias in every query
 /// form.  Using a single parser here avoids repeating the same 7-line block
@@ -108,31 +158,7 @@ pub(crate) fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Ex
     // If no alias, fail - this should be handled as a plain retrieve
     let alias = match alias_opt {
         Some(a) => {
-            // Reject statement-level and query keywords as aliases
-            let lower = a.to_lowercase();
-            if matches!(
-                lower.as_str(),
-                "define"
-                    | "context"
-                    | "using"
-                    | "include"
-                    | "codesystem"
-                    | "valueset"
-                    | "code"
-                    | "concept"
-                    | "parameter"
-                    | "library"
-                    | "let"
-                    | "where"
-                    | "return"
-                    | "sort"
-                    | "with"
-                    | "without"
-                    | "from"
-                    | "select"
-                    | "distinct"
-                    | "flatten"
-            ) {
+            if is_reserved_single_source_alias(&a) {
                 return Err(nom::Err::Error(nom::error::Error::new(
                     input,
                     nom::error::ErrorKind::Tag,
@@ -216,6 +242,13 @@ pub(crate) fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, alias) = any_identifier(input)?;
 
+    if is_timing_alias_keyword(&alias) {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+
     let (input, tail) = parse_query_tail(input)?;
 
     // Must have at least one clause to be a query
@@ -265,6 +298,13 @@ pub(crate) fn parse_unquoted_identifier_source_query(
     // Then look for an alias (with whitespace handling)
     let (input, _) = skip_ws_and_comments(input)?;
     let (input, alias) = any_identifier(input)?;
+
+    if is_timing_alias_keyword(&alias) {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
 
     let (input, tail) = parse_query_tail(input)?;
 

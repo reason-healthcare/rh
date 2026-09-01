@@ -22,14 +22,18 @@ pub trait HookProcessor: Send + Sync {
 /// Build the default registry with all built-in processors registered.
 pub fn build_registry() -> ProcessorRegistry {
     use crate::processors::{
-        cql::CqlProcessor, fsh::FshProcessor, snapshot::SnapshotProcessor,
-        validate::ValidateProcessor,
+        cql::CqlProcessor, expand::ExpandValueSetsProcessor, fsh::FshProcessor,
+        link_validate::LinkValidateProcessor, resolve_deps::ResolveDependenciesProcessor,
+        snapshot::SnapshotProcessor, validate::ValidateProcessor,
     };
     let mut registry = ProcessorRegistry::new();
     registry.register(SnapshotProcessor);
     registry.register(ValidateProcessor);
     registry.register(CqlProcessor);
     registry.register(FshProcessor::new());
+    registry.register(ExpandValueSetsProcessor);
+    registry.register(ResolveDependenciesProcessor);
+    registry.register(LinkValidateProcessor);
     registry
 }
 

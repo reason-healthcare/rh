@@ -549,6 +549,45 @@ pub fn is_type(v: &Value, type_name: &str) -> Value {
         (List(_), "List") => true,
         (Tuple(_), "Tuple") => true,
         (Interval { .. }, "Interval") => true,
+        // FHIR type checks on Tuple values — recognized by field structure.
+        // This allows case expressions like Normalize Interval to work with
+        // raw FHIR JSON resources converted via json_to_cql_value.
+        (Tuple(fields), "Period") => fields.contains_key("start") || fields.contains_key("end"),
+        (Tuple(fields), "CodeableConcept") => fields.contains_key("coding"),
+        (Tuple(fields), "Coding") => fields.contains_key("system") && fields.contains_key("code"),
+        (Tuple(fields), "Reference") => fields.contains_key("reference"),
+        (Tuple(fields), "Quantity") => {
+            fields.contains_key("value") && fields.contains_key("system")
+        }
+        (Tuple(fields), "Range") => fields.contains_key("low") && fields.contains_key("high"),
+        (Tuple(fields), "Age") => {
+            // FHIR Age is a Quantity with a specific system/code
+            fields.contains_key("value") && fields.contains_key("code")
+        }
+        // FHIR dateTime/instant: represented as String values
+        (String(_), "dateTime") => true,
+        (String(_), "instant") => true,
+        // FHIR date: represented as String values
+        (String(_), "date") => true,
+        // FHIR uri/oid/uuid/canonical: represented as String
+        (String(_), "uri") => true,
+        (String(_), "url") => true,
+        (String(_), "canonical") => true,
+        (String(_), "oid") => true,
+        (String(_), "uuid") => true,
+        // FHIR code: represented as String
+        (String(_), "code") => true,
+        // FHIR boolean: same as CQL Boolean
+        (Boolean(_), "boolean") => true,
+        // FHIR integer/positiveInt/unsignedInt: same as CQL Integer
+        (Integer(_), "integer") => true,
+        (Integer(_), "positiveInt") => true,
+        (Integer(_), "unsignedInt") => true,
+        // FHIR decimal: same as CQL Decimal
+        (Decimal(_), "decimal") => true,
+        // FHIR string/id/markdown: same as CQL String
+        (String(_), "id") => true,
+        (String(_), "markdown") => true,
         _ => false,
     };
     Value::Boolean(result)

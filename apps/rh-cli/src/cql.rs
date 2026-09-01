@@ -25,8 +25,8 @@ use rh_cql::{
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
     explain_parse, get_default_packages_dir, CompilationError, CompilationResult, CompilerOptions,
     CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, PackageLibrarySourceProvider, SignatureLevel, SourceMapCompilationResult,
-    Value,
+    InMemoryDataProvider, InMemoryTerminologyProvider, PackageLibrarySourceProvider,
+    SignatureLevel, SourceMapCompilationResult, Value,
 };
 
 #[derive(Serialize)]
@@ -376,6 +376,12 @@ pub enum CqlCommands {
         #[clap(long, value_name = "DIR", num_args = 1)]
         lib_path: Vec<PathBuf>,
 
+        /// JSON file mapping value set URLs to member code lists, for
+        /// terminology membership checks during evaluation.
+        /// Format: {"<valueset-url>": {"codes": [{"system": "...", "code": "..."}, ...]}}
+        #[clap(long, value_name = "FILE")]
+        valuesets: Option<String>,
+
         /// Output a step-by-step evaluation trace
         #[clap(long)]
         trace: bool,
@@ -517,9 +523,17 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             expression,
             data,
             lib_path,
+            valuesets,
             trace,
         } => {
-            eval_cql(&file, &expression, data.as_deref(), &lib_path, trace)?;
+            eval_cql(
+                &file,
+                &expression,
+                data.as_deref(),
+                &lib_path,
+                valuesets.as_deref(),
+                trace,
+            )?;
         }
     }
 
@@ -1602,6 +1616,7 @@ fn eval_cql(
     expression: &str,
     data: Option<&str>,
     lib_paths: &[PathBuf],
+    valuesets_path: Option<&str>,
     show_trace: bool,
 ) -> Result<()> {
     let source = read_source(input)?;
@@ -1649,6 +1664,37 @@ fn eval_cql(
         if let Some(cv) = context_value {
             builder = builder.context_value(cv);
         }
+    }
+
+    // Load value set expansions from a JSON file if provided.
+    if let Some(vs_path) = valuesets_path {
+        let vs_content = read_source(vs_path)?;
+        let vs_json: serde_json::Value = serde_json::from_str(&vs_content)
+            .context("Failed to parse value set expansions JSON")?;
+
+        let mut term_provider = InMemoryTerminologyProvider::new();
+        if let Some(obj) = vs_json.as_object() {
+            for (url, entry) in obj {
+                if let Some(codes) = entry.get("codes").and_then(|c| c.as_array()) {
+                    for code in codes {
+                        let system = code.get("system").and_then(|s| s.as_str()).unwrap_or("");
+                        let code_val = code.get("code").and_then(|c| c.as_str()).unwrap_or("");
+                        if !system.is_empty() && !code_val.is_empty() {
+                            term_provider.add_code(
+                                url,
+                                rh_cql::CqlCode {
+                                    code: code_val.to_string(),
+                                    system: system.to_string(),
+                                    display: None,
+                                    version: None,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        builder = builder.terminology_provider(term_provider);
     }
 
     let ctx = builder.build();

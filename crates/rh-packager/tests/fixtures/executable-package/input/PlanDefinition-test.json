@@ -1,0 +1,22 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "test",
+  "url": "http://test.org/fhir/PlanDefinition/test",
+  "name": "TestPlan",
+  "status": "active",
+  "library": ["http://test.org/fhir/Library/TestLogic"],
+  "action": [
+    {
+      "title": "Check condition",
+      "condition": [
+        {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/cql-identifier",
+            "expression": "AlwaysTrue"
+          }
+        }
+      ]
+    }
+  ]
+}
