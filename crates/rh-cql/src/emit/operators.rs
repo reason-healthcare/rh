@@ -1,8 +1,8 @@
 use crate::elm;
 use crate::emit::ElmEmitter;
 use crate::parser::ast::{
-    BinaryOperator, DateTimePrecision, SameDirection, TernaryOperator, TimingDirection,
-    TimingPhrase, UnaryOperator,
+    BinaryOperator, DateTimePrecision, IntervalBoundary, SameDirection, TernaryOperator,
+    TimingDirection, TimingPhrase, UnaryOperator,
 };
 use crate::semantics::typed_ast::{
     TypedDateTimeComponentFrom, TypedExpression, TypedNode, TypedTimingExpression,
@@ -523,6 +523,23 @@ pub fn emit_timing_expression(
         precision,
     };
 
+    // Wrap an expression with a boundary (Start/End) unary operator if needed.
+    let apply_boundary = |op: &UnaryOperator, expr: elm::Expression| -> elm::Expression {
+        match op {
+            UnaryOperator::Start => elm::Expression::Start(elm::UnaryExpression {
+                element: element.clone(),
+                operand: Some(Box::new(expr)),
+                signature: Vec::new(),
+            }),
+            UnaryOperator::End => elm::Expression::End(elm::UnaryExpression {
+                element: element.clone(),
+                operand: Some(Box::new(expr)),
+                signature: Vec::new(),
+            }),
+            _ => expr,
+        }
+    };
+
     match &te.timing {
         TimingPhrase::RelativeTiming {
             left_boundary: None,
@@ -569,12 +586,76 @@ pub fn emit_timing_expression(
         _ => {}
     }
 
-    elm::Expression::IncludedIn(elm::TimeBinaryExpression {
-        element,
-        operand: vec![left, right],
+    // General timing case with boundaries and/or offset.
+    // For now, emit the boundary-wrapped operands with the appropriate
+    // temporal relation. Offset semantics will require runtime fallback.
+    let left_final = match &te.timing {
+        TimingPhrase::RelativeTiming {
+            left_boundary: Some(b),
+            ..
+        }
+        | TimingPhrase::WithinTiming {
+            left_boundary: Some(b),
+            ..
+        }
+        | TimingPhrase::SameTiming {
+            left_boundary: Some(b),
+            ..
+        } => {
+            let un_op = match b {
+                IntervalBoundary::Start => UnaryOperator::Start,
+                IntervalBoundary::End => UnaryOperator::End,
+            };
+            apply_boundary(&un_op, left.clone())
+        }
+        _ => left.clone(),
+    };
+    let right_final = match &te.timing {
+        TimingPhrase::RelativeTiming {
+            right_boundary: Some(b),
+            ..
+        }
+        | TimingPhrase::WithinTiming {
+            right_boundary: Some(b),
+            ..
+        }
+        | TimingPhrase::SameTiming {
+            right_boundary: Some(b),
+            ..
+        } => {
+            let un_op = match b {
+                IntervalBoundary::Start => UnaryOperator::Start,
+                IntervalBoundary::End => UnaryOperator::End,
+            };
+            apply_boundary(&un_op, right.clone())
+        }
+        _ => right.clone(),
+    };
+    let (direction, precision) = match &te.timing {
+        TimingPhrase::RelativeTiming {
+            direction,
+            precision,
+            ..
+        } => (
+            *direction,
+            precision.map(|p| datetime_precision_str(p).to_string()),
+        ),
+        _ => (TimingDirection::Before, None),
+    };
+    let tb = elm::TimeBinaryExpression {
+        element: element.clone(),
+        operand: vec![left_final, right_final],
         signature: Vec::new(),
-        precision: None,
-    })
+        precision,
+    };
+    match direction {
+        TimingDirection::Before => elm::Expression::Before(tb),
+        TimingDirection::After => elm::Expression::After(tb),
+        TimingDirection::OnOrBefore | TimingDirection::BeforeOrOn => {
+            elm::Expression::SameOrBefore(tb)
+        }
+        TimingDirection::OnOrAfter | TimingDirection::AfterOrOn => elm::Expression::SameOrAfter(tb),
+    }
 }
 
 /// Emit a `DateTimeComponentFrom` extraction expression.

@@ -83,6 +83,24 @@ where
     Ok((input, fold_left_assoc(first, rest)))
 }
 
+fn parse_unary_right_boundary(input: Span<'_>) -> IResult<Span<'_>, Option<UnaryOperator>> {
+    let (input, boundary) = opt(ws(alt((
+        value(UnaryOperator::Start, keyword("start")),
+        value(UnaryOperator::End, keyword("end")),
+    ))))(input)?;
+    let (input, _) = opt(ws(keyword("of")))(input)?;
+    Ok((input, boundary))
+}
+
+fn parse_interval_right_boundary(input: Span<'_>) -> IResult<Span<'_>, Option<IntervalBoundary>> {
+    let (input, boundary) = opt(ws(alt((
+        value(IntervalBoundary::Start, keyword("start")),
+        value(IntervalBoundary::End, keyword("end")),
+    ))))(input)?;
+    let (input, _) = opt(ws(keyword("of")))(input)?;
+    Ok((input, boundary))
+}
+
 // ============================================================================
 // Precedence Level 1: IMPLIES (lowest precedence)
 // ============================================================================
@@ -243,8 +261,13 @@ fn parse_precision_plural(input: Span<'_>) -> IResult<Span<'_>, DateTimePrecisio
     )))(input)
 }
 
-/// Parse `duration in <precision> between X and Y`
-/// or     `difference in <precision> between X and Y`.
+/// Parse `duration in <precision> between X and Y`,
+///        `difference in <precision> between X and Y`,
+/// or     `duration in <precision> of <interval>`.
+///
+/// The `of` form computes the width of a single interval at the given
+/// precision, equivalent to `difference in <precision> between start of
+/// <interval> and end of <interval>`.
 fn parse_duration_difference_between(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, is_difference) = ws(alt((
         value(false, keyword("duration")),
@@ -252,6 +275,37 @@ fn parse_duration_difference_between(input: Span<'_>) -> IResult<Span<'_>, Expre
     )))(input)?;
     let (input, _) = ws(keyword("in"))(input)?;
     let (input, prec) = parse_precision_plural(input)?;
+
+    // Try "of <interval>" form first.
+    //
+    // This arm intentionally returns the same `DifferenceBetween` node for
+    // both duration and difference spellings, mirroring the previous
+    // implementation's behavior.
+    if let Ok((remaining, _)) = ws(keyword("of"))(input) {
+        let (remaining, operand) = cut(parse_interval_operator_expression)(remaining)?;
+        // "duration in <prec> of I" = "difference in <prec> between start of I and end of I"
+        let start_expr = Expression::UnaryExpression(UnaryExpression {
+            operator: UnaryOperator::Start,
+            operand: Box::new(operand.clone()),
+            location: None,
+        });
+        let end_expr = Expression::UnaryExpression(UnaryExpression {
+            operator: UnaryOperator::End,
+            operand: Box::new(operand),
+            location: None,
+        });
+        return Ok((
+            remaining,
+            Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::DifferenceBetween(prec),
+                left: Box::new(start_expr),
+                right: Box::new(end_expr),
+                precision: None,
+                location: None,
+            }),
+        ));
+    }
+
     let (input, _) = ws(keyword("between"))(input)?;
     let (input, left) = parse_interval_operator_expression(input)?;
     let (input, _) = ws(keyword("and"))(input)?;
@@ -262,16 +316,7 @@ fn parse_duration_difference_between(input: Span<'_>) -> IResult<Span<'_>, Expre
     } else {
         BinaryOperator::DurationBetween(prec)
     };
-    Ok((
-        input,
-        Expression::BinaryExpression(BinaryExpression {
-            operator,
-            left: Box::new(left),
-            right: Box::new(right),
-            precision: None,
-            location: None,
-        }),
-    ))
+    Ok((input, binary_expr(operator, left, right)))
 }
 
 /// Parse datetime precision specifier (singular only):
@@ -303,11 +348,13 @@ enum IntervalOp {
     /// Simple binary operator
     Simple(BinaryOperator),
     /// starts/ends followed by during/before/after with optional precision
-    /// (interval_boundary, relationship, precision)
+    /// and optional right boundary (start of / end of)
+    /// (interval_boundary, relationship, precision, right_boundary)
     Compound {
         boundary: UnaryOperator, // Start or End
         operator: BinaryOperator,
         precision: Option<DateTimePrecision>,
+        right_boundary: Option<UnaryOperator>, // Start or End applied to right operand
     },
     /// during/before/after with precision
     WithPrecision(BinaryOperator, DateTimePrecision),
@@ -342,6 +389,7 @@ fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expr
                 boundary,
                 operator,
                 precision,
+                right_boundary,
             } => {
                 // "X ends during Y" => BinaryOp(End(X), Y) with `during` becoming `In`
                 let boundary_expr = Expression::UnaryExpression(UnaryExpression {
@@ -354,10 +402,19 @@ fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expr
                     BinaryOperator::During => BinaryOperator::In,
                     other => other,
                 };
+                // Apply right boundary if present: "ends before start of Y" => Before(End(X), Start(Y))
+                let right_expr = match right_boundary {
+                    Some(rb) => Expression::UnaryExpression(UnaryExpression {
+                        operator: rb,
+                        operand: Box::new(expr),
+                        location: None,
+                    }),
+                    None => expr,
+                };
                 Expression::BinaryExpression(BinaryExpression {
                     operator: mapped_op,
                     left: Box::new(boundary_expr),
-                    right: Box::new(expr),
+                    right: Box::new(right_expr),
                     precision,
                     location: None,
                 })
@@ -414,7 +471,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
         Err(error) => return Err(error),
     }
 
-    // First, try to parse compound operators: "starts/ends during/before/after [precision of]"
+    // First, try to parse compound operators: "starts/ends during/before/after [precision of] [start|end]"
     let compound_result = opt(tuple((
         ws(alt((
             value(UnaryOperator::Start, keyword("starts")),
@@ -426,11 +483,16 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
             value(BinaryOperator::After, keyword("after")),
         ))),
         parse_optional_precision_of,
+        parse_unary_right_boundary,
     )))(input)?;
 
     match compound_result {
-        (remaining, Some((boundary, op, precision))) => {
-            let (remaining, expr) = cut(parse_union_expression)(remaining)?;
+        (remaining, Some((boundary, op, precision, right_boundary))) => {
+            let (remaining, expr) = if right_boundary.is_some() {
+                cut(parse_invocation_expression)(remaining)?
+            } else {
+                cut(parse_union_expression)(remaining)?
+            };
             Ok((
                 remaining,
                 (
@@ -438,6 +500,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
                         boundary,
                         operator: op,
                         precision,
+                        right_boundary,
                     },
                     expr,
                 ),
@@ -454,10 +517,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
                     value(BinaryOperator::Includes, keyword("includes")),
                 ))),
                 opt(tuple((parse_precision, ws(keyword("of"))))),
-                opt(ws(alt((
-                    value(UnaryOperator::Start, keyword("start")),
-                    value(UnaryOperator::End, keyword("end")),
-                )))),
+                parse_unary_right_boundary,
             )))(input)?;
 
             if let (remaining, Some((op, precision_opt, boundary))) = includes_result {
@@ -626,13 +686,17 @@ fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expres
         value(SameDirection::As, keyword("as")),
     ))))(input)?;
 
-    // Optional right boundary: start/end
-    let (input, right_boundary) = opt(ws(alt((
-        value(IntervalBoundary::Start, keyword("start")),
-        value(IntervalBoundary::End, keyword("end")),
-    ))))(input)?;
+    // Optional right boundary: start/end, optionally followed by "of"
+    // When a right boundary is present (e.g. "start of X"), the operand
+    // uses parse_invocation_expression so that quoted identifiers and
+    // member-access chains are parsed correctly.
+    let (input, right_boundary) = parse_interval_right_boundary(input)?;
 
-    let (input, expr) = cut(parse_union_expression)(input)?;
+    let (input, expr) = if right_boundary.is_some() {
+        cut(parse_invocation_expression)(input)?
+    } else {
+        cut(parse_union_expression)(input)?
+    };
 
     Ok((
         input,
@@ -661,10 +725,7 @@ fn parse_within_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expr
     let (input, quantity) = cut(ws(parse_duration_quantity))(input)?;
     let (input, _) = cut(ws(keyword("of")))(input)?;
 
-    let (input, right_boundary) = opt(ws(alt((
-        value(IntervalBoundary::Start, keyword("start")),
-        value(IntervalBoundary::End, keyword("end")),
-    ))))(input)?;
+    let (input, right_boundary) = parse_interval_right_boundary(input)?;
 
     let (input, expr) = cut(parse_union_expression)(input)?;
 
@@ -711,13 +772,14 @@ fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Ex
     // Optional precision: day of, hour of, etc.
     let (input, precision) = parse_optional_precision_of(input)?;
 
-    // Optional right boundary: start/end
-    let (input, right_boundary) = opt(ws(alt((
-        value(IntervalBoundary::Start, keyword("start")),
-        value(IntervalBoundary::End, keyword("end")),
-    ))))(input)?;
+    // Optional right boundary: start/end, optionally followed by "of"
+    let (input, right_boundary) = parse_interval_right_boundary(input)?;
 
-    let (input, expr) = cut(parse_union_expression)(input)?;
+    let (input, expr) = if right_boundary.is_some() {
+        cut(parse_invocation_expression)(input)?
+    } else {
+        cut(parse_union_expression)(input)?
+    };
 
     Ok((
         input,
@@ -848,7 +910,14 @@ fn parse_duration_unit(input: Span<'_>) -> IResult<Span<'_>, String> {
 }
 
 /// Parse timing direction keyword
+///
+/// Handles all direction forms:
+/// - `before` / `after` (plain)
+/// - `on or before` / `on or after` (with or without a preceding offset)
+/// - `before or on` / `after or on` (alternative ordering)
 fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection> {
+    // Try "on or before" / "on or after" first — this form can appear with or
+    // without a preceding offset (e.g. "ends 1 hour or less on or before start of X").
     if let Ok((input, _)) = keyword("on")(input) {
         let (input, or) = opt(ws(keyword("or")))(input)?;
         let (input, direction) = cut(ws(alt((
@@ -863,6 +932,8 @@ fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection>
         return Ok((input, direction));
     }
 
+    // Then try "before" / "after" with optional "or on" suffix.
+    // This handles "before or on" / "after or on".
     let (input, direction) = alt((
         value(TimingDirection::Before, keyword("before")),
         value(TimingDirection::After, keyword("after")),
@@ -943,7 +1014,7 @@ fn parse_power_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // ============================================================================
 
 fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    alt((
+    let (input, result) = alt((
         // "not" expression
         map(
             preceded(ws(keyword("not")), parse_unary_expression),
@@ -1177,7 +1248,23 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         parse_convert_expression,
         // Type expression suffix handling
         parse_type_expression,
-    ))(input)
+    ))(input)?;
+
+    // After the alt() completes, check for literal test operators
+    // ('is null', 'is true', 'is false', 'is not null', etc.) on the
+    // result. This handles cases like 'start of X is null' where the
+    // 'start of' alt() arm matches before parse_type_expression is reached.
+    if let Ok((remaining, (operator, negated))) = parse_literal_test_operator(input) {
+        let test = unary_expr(operator, result);
+        let final_expr = if negated {
+            unary_expr(UnaryOperator::Not, test)
+        } else {
+            test
+        };
+        return Ok((remaining, final_expr));
+    }
+
+    Ok((input, result))
 }
 
 // ============================================================================
