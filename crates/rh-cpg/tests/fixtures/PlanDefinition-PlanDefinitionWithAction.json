@@ -1,0 +1,32 @@
+{
+  "resourceType" : "PlanDefinition",
+  "id" : "PlanDefinitionWithAction",
+  "url" : "http://example.org/PlanDefinition/PlanDefinitionWithAction",
+  "version" : "0.1.0",
+  "name" : "PlanDefinitionWithAction",
+  "status" : "active",
+  "date" : "2023-01-23T15:45:25-05:00",
+  "publisher" : "Example Publisher",
+  "contact" : [{
+    "name" : "Example Publisher",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://example.org/example-publisher"
+    }]
+  }],
+  "action" : [{
+    "id" : "action-1",
+    "prefix" : "action-1 prefix",
+    "title" : "action-1 title",
+    "description" : "action-1 description",
+    "textEquivalent" : "action-1 textEquivalent",
+    "priority" : "routine",
+    "code" : [{
+      "text" : "action-1 code"
+    }],
+    "relatedAction" : [{
+      "actionId" : "action-1 relatedActionId",
+      "relationship" : "before"
+    }]
+  }]
+}
