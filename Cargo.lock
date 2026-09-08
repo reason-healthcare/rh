@@ -2046,6 +2046,7 @@ dependencies = [
  "openssl",
  "predicates",
  "rh-codegen",
+ "rh-cpg",
  "rh-cql",
  "rh-fhirpath",
  "rh-foundation",
@@ -2087,6 +2088,20 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+]
+
+[[package]]
+name = "rh-cpg"
+version = "0.2.8"
+dependencies = [
+ "base64",
+ "rh-cql",
+ "rh-fhirpath",
+ "rh-hl7-fhir-r4-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]

@@ -35,6 +35,7 @@ is-terminal = "0.4"
 # Local workspace crates
 rh-foundation = { path = "../../crates/rh-foundation", version = "0.2.8", features = ["http"] }
 rh-codegen = { path = "../../crates/rh-codegen", version = "0.2.8" }
+rh-cpg = { path = "../../crates/rh-cpg" }
 rh-cql = { path = "../../crates/rh-cql", version = "0.2.8", features = ["repl"] }
 rh-fhirpath = { path = "../../crates/rh-fhirpath", version = "0.2.8", features = ["repl"] }
 rh-packager = { path = "../../crates/rh-packager", version = "0.2.8" }

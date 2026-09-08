@@ -1,0 +1,22 @@
+[package]
+name = "rh-cpg"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Clinical Practice Guidelines (CPG) capabilities for FHIR resources"
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+keywords = ["cpg", "fhir", "clinical-guidelines", "healthcare"]
+categories = ["science", "api-bindings"]
+
+[dependencies]
+base64 = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+rh-cql = { path = "../rh-cql", version = "0.2.0-beta.2" }
+rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.0-beta.2" }
+rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.0-beta.2" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
