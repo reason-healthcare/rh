@@ -1,0 +1,22 @@
+{
+  "resourceType" : "PlanDefinition",
+  "id" : "SimplePlanDefinitionWithGoal",
+  "url" : "http://example.org/PlanDefinition/SimplePlanDefinitionWithGoal",
+  "version" : "0.1.0",
+  "name" : "SimplePlanDefinitionWithGoal",
+  "status" : "active",
+  "date" : "2023-01-23T15:45:25-05:00",
+  "publisher" : "Example Publisher",
+  "contact" : [{
+    "name" : "Example Publisher",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://example.org/example-publisher"
+    }]
+  }],
+  "goal" : [{
+    "description" : {
+      "text" : "to improve"
+    }
+  }]
+}
