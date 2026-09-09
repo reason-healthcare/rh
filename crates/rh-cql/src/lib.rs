@@ -88,7 +88,7 @@ pub mod reporting;
 pub mod semantics;
 pub mod sourcemap;
 pub mod types;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 pub mod wasm;
 
 // Primary public API - compile CQL to ELM

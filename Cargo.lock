@@ -2096,14 +2096,16 @@ version = "0.2.8"
 dependencies = [
  "base64",
  "chrono",
+ "console_error_panic_hook",
  "rh-cql",
  "rh-fhirpath",
- "rh-hl7-fhir-r4-core",
+ "rh-foundation",
  "rh-validator",
  "serde",
  "serde_json",
  "thiserror",
  "uuid",
+ "wasm-bindgen",
 ]
 
 [[package]]

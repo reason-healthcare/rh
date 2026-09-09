@@ -8,3 +8,6 @@ pub mod apply;
 pub mod context;
 pub mod expression;
 pub mod fhir_to_cql;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;

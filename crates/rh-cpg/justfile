@@ -1,0 +1,54 @@
+# Justfile for rh-cpg WASM builds
+
+default:
+    @just --list
+
+check-wasm-pack:
+    #!/usr/bin/env bash
+    if ! command -v wasm-pack >/dev/null 2>&1; then
+        echo "wasm-pack not found. Installing..."
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+    fi
+
+wasm: wasm-web wasm-node wasm-bundler
+
+wasm-web: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building CPG WASM for web target..."
+    mkdir -p pkg/web
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target web --out-dir pkg/web --features wasm
+    else
+        wasm-pack build --target web --out-dir pkg/web --features wasm
+    fi
+    echo "Web WASM build complete! Output in pkg/web/"
+
+wasm-node: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building CPG WASM for Node.js target..."
+    mkdir -p pkg/node
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target nodejs --out-dir pkg/node --features wasm
+    else
+        wasm-pack build --target nodejs --out-dir pkg/node --features wasm
+    fi
+    echo "Node.js WASM build complete! Output in pkg/node/"
+
+wasm-bundler: check-wasm-pack
+    #!/usr/bin/env bash
+    echo "Building CPG WASM for bundler target..."
+    mkdir -p pkg/bundler
+    if command -v rustup >/dev/null 2>&1; then
+        PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" \
+            wasm-pack build --target bundler --out-dir pkg/bundler --features wasm
+    else
+        wasm-pack build --target bundler --out-dir pkg/bundler --features wasm
+    fi
+    echo "Bundler WASM build complete! Output in pkg/bundler/"
+
+clean-wasm:
+    @echo "Cleaning CPG WASM build artifacts..."
+    @rm -rf pkg/
+    @echo "WASM artifacts cleaned"

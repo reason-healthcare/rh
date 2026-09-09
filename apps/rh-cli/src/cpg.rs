@@ -5,12 +5,12 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use clap::Subcommand;
-use serde_json::{json, Map, Value};
+use serde_json::Value;
 
 use crate::output::{Envelope, OutputContext, OutputFormat};
 use rh_cpg::apply::plan_definition::apply_plan_definition;
 use rh_cpg::context::ApplyContext;
-use rh_cpg::resolver::BundleResolver;
+use rh_cpg::resolver::{as_content_bundle, BundleResolver};
 
 #[derive(Subcommand)]
 pub enum CpgCommands {
@@ -92,48 +92,4 @@ fn read_json(path: &PathBuf) -> Result<Value> {
         .with_context(|| format!("failed to read JSON file {}", path.display()))?;
     serde_json::from_str(&contents)
         .with_context(|| format!("failed to parse JSON file {}", path.display()))
-}
-
-fn as_content_bundle(value: Value) -> Result<Value> {
-    if value.get("resourceType").and_then(Value::as_str) == Some("Bundle") {
-        return Ok(value);
-    }
-
-    let resources = match value {
-        Value::Array(resources) => resources,
-        Value::Object(_) => vec![value],
-        Value::Null => return Err(anyhow::anyhow!("content JSON must contain resources")),
-        other => {
-            return Err(anyhow::anyhow!(
-                "content JSON must be a Bundle, resource object, or resource array; got {}",
-                json_type_name(&other)
-            ))
-        }
-    };
-
-    let entries: Vec<Value> = resources
-        .into_iter()
-        .map(|resource| {
-            let mut entry = Map::new();
-            entry.insert("resource".to_string(), resource);
-            Value::Object(entry)
-        })
-        .collect();
-
-    Ok(json!({
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": entries,
-    }))
-}
-
-fn json_type_name(value: &Value) -> &'static str {
-    match value {
-        Value::Null => "null",
-        Value::Bool(_) => "boolean",
-        Value::Number(_) => "number",
-        Value::String(_) => "string",
-        Value::Array(_) => "array",
-        Value::Object(_) => "object",
-    }
 }
