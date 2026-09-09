@@ -5,6 +5,17 @@ export interface CpgApplyOptions {
   organization?: string;
 }
 
+export interface CpgContextOptions {
+  data?: unknown;
+  encounter?: string;
+  practitioner?: string;
+  organization?: string;
+}
+
+export interface QuestionnaireValidationResult {
+  issues: string[];
+}
+
 export interface WasmCallResult<T = unknown> {
   success: boolean;
   data?: string;

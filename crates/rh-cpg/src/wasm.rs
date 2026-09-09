@@ -1,11 +1,17 @@
 use std::sync::Arc;
 
-use serde_json::Value;
+use serde_json::{json, Value};
 use wasm_bindgen::prelude::*;
 
 use crate::apply::activity_definition::apply_activity_definition as apply_activity_definition_native;
 use crate::apply::plan_definition::apply_plan_definition as apply_plan_definition_native;
 use crate::context::ApplyContext;
+use crate::measure::evaluate_measure as evaluate_measure_native;
+use crate::questionnaire::{
+    assemble_questionnaire as assemble_questionnaire_native,
+    populate_questionnaire as populate_questionnaire_native,
+    validate_questionnaire_response as validate_questionnaire_response_native,
+};
 use crate::resolver::{as_content_bundle, BundleResolver};
 
 pub use rh_foundation::wasm::WasmResult;
@@ -15,9 +21,144 @@ pub fn init() {
     rh_foundation::wasm::init_panic_hook();
 }
 
+fn parse_content_bundle(json: &str) -> Result<Value, WasmResult> {
+    let value = parse_json(json, "content")?;
+    as_content_bundle(value).map_err(|error| WasmResult::err(error.to_string()))
+}
+
 fn parse_json(json: &str, description: &str) -> Result<Value, WasmResult> {
     serde_json::from_str(json)
         .map_err(|error| WasmResult::err(format!("Failed to parse {description} JSON: {error}")))
+}
+
+/// Evaluate a Measure. Returns WasmResult whose data is a MeasureReport JSON.
+#[wasm_bindgen]
+pub fn evaluate_measure(
+    measure: &str,
+    subject: &str,
+    content_bundle: &str,
+    data_bundle: Option<String>,
+    encounter: Option<String>,
+    practitioner: Option<String>,
+    organization: Option<String>,
+) -> WasmResult {
+    let measure = match parse_json(measure, "Measure") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let content_bundle = match parse_content_bundle(content_bundle) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let context = match apply_context(
+        content_bundle,
+        subject,
+        data_bundle,
+        encounter,
+        practitioner,
+        organization,
+    ) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+
+    match evaluate_measure_native(&measure, &context) {
+        Ok(result) => match serialize_json(&result) {
+            Ok(json) => WasmResult::ok(json),
+            Err(error) => error,
+        },
+        Err(error) => WasmResult::err(error.to_string()),
+    }
+}
+
+/// Assemble sub-questionnaires. Returns WasmResult whose data is the assembled
+/// Questionnaire JSON.
+#[wasm_bindgen]
+pub fn assemble_questionnaire(questionnaire: &str, content_bundle: &str) -> WasmResult {
+    let questionnaire = match parse_json(questionnaire, "Questionnaire") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let content_bundle = match parse_content_bundle(content_bundle) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let resolver = match BundleResolver::new(&content_bundle)
+        .map_err(|error| WasmResult::err(error.to_string()))
+    {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let context = ApplyContext::new(Arc::new(resolver), "Patient/example");
+
+    match assemble_questionnaire_native(&questionnaire, &context) {
+        Ok(result) => match serialize_json(&result) {
+            Ok(json) => WasmResult::ok(json),
+            Err(error) => error,
+        },
+        Err(error) => WasmResult::err(error.to_string()),
+    }
+}
+
+/// Populate a Questionnaire for a subject. Returns WasmResult whose data is a
+/// QuestionnaireResponse JSON.
+#[wasm_bindgen]
+pub fn populate_questionnaire(
+    questionnaire: &str,
+    subject: &str,
+    content_bundle: &str,
+    data_bundle: Option<String>,
+    encounter: Option<String>,
+    practitioner: Option<String>,
+    organization: Option<String>,
+) -> WasmResult {
+    let questionnaire = match parse_json(questionnaire, "Questionnaire") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let content_bundle = match parse_content_bundle(content_bundle) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let context = match apply_context(
+        content_bundle,
+        subject,
+        data_bundle,
+        encounter,
+        practitioner,
+        organization,
+    ) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+
+    match populate_questionnaire_native(&questionnaire, &context) {
+        Ok(result) => match serialize_json(&result) {
+            Ok(json) => WasmResult::ok(json),
+            Err(error) => error,
+        },
+        Err(error) => WasmResult::err(error.to_string()),
+    }
+}
+
+/// Validate a QuestionnaireResponse. Returns WasmResult whose data is an
+/// issues object JSON; success is true even when issues are present.
+#[wasm_bindgen]
+pub fn validate_questionnaire_response(questionnaire: &str, response: &str) -> WasmResult {
+    let questionnaire = match parse_json(questionnaire, "Questionnaire") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let response = match parse_json(response, "QuestionnaireResponse") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+
+    let issues = validate_questionnaire_response_native(&questionnaire, &response);
+    match serde_json::to_string(&json!({ "issues": issues })) {
+        Ok(json) => WasmResult::ok(json),
+        Err(error) => WasmResult::err(format!("Failed to serialize result to JSON: {error}")),
+    }
 }
 
 fn apply_context(
