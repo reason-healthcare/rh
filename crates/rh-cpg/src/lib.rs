@@ -1,6 +1,8 @@
 //! Clinical Practice Guidelines (CPG) support for FHIR resources.
 
 pub mod error;
+pub mod measure;
+pub mod questionnaire;
 pub mod resolver;
 
 pub mod apply;

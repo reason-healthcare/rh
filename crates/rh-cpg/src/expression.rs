@@ -29,8 +29,8 @@ pub fn evaluate_expression(
 }
 
 #[derive(Serialize, Deserialize)]
-struct ElmWrapper {
-    library: Library,
+pub(crate) struct ElmWrapper {
+    pub(crate) library: Library,
 }
 
 fn language(expression: &Value) -> CpgResult<&str> {
