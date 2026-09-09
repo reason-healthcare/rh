@@ -14,9 +14,6 @@ categories = ["science", "api-bindings"]
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
 [features]
 wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
 
