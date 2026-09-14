@@ -58,6 +58,17 @@ pub fn evaluate_measure(
     Ok(report)
 }
 
+/// Measure population and stratifier criteria (FHIRPath) are evaluated
+/// against the subject resource, matching the patient-centered Measure
+/// evaluation context. When the subject cannot be resolved, evaluate
+/// against an empty resource: patient-literal expressions then yield
+/// empty collections (no data means no membership) instead of leaking
+/// Measure fields into population criteria.
+fn subject_context_root(ctx: &ApplyContext) -> Value {
+    ctx.resolve_context_resource(&ctx.subject)
+        .unwrap_or_else(|| serde_json::Map::new().into())
+}
+
 fn measure_library_canonicals(measure: &Value) -> Vec<String> {
     measure
         .get("library")
@@ -155,17 +166,19 @@ fn evaluate_population(
 ) -> CpgResult<(Value, Vec<String>)> {
     let code = population.get("code").cloned().unwrap_or(Value::Null);
     let expression = population.get("criteria");
+    let subject_root = subject_context_root(ctx);
     let (count, issue) = match expression {
-        Some(expression) => match evaluate_expression(expression, measure, library_canonicals, ctx)
-        {
-            Ok(result) => (u64::from(is_member(&result)), Vec::new()),
-            Err(error) => (
-                0,
-                vec![format!(
-                    "group {group_index}, population {population_index}: {error}"
-                )],
-            ),
-        },
+        Some(expression) => {
+            match evaluate_expression(expression, &subject_root, library_canonicals, ctx) {
+                Ok(result) => (u64::from(is_member(&result)), Vec::new()),
+                Err(error) => (
+                    0,
+                    vec![format!(
+                        "group {group_index}, population {population_index}: {error}"
+                    )],
+                ),
+            }
+        }
         None => (0, Vec::new()),
     };
 
@@ -200,17 +213,28 @@ fn evaluate_stratifier(
 ) -> CpgResult<(Value, Vec<String>)> {
     let mut stratifiers = Vec::new();
     let mut issues = Vec::new();
+    let subject_root = subject_context_root(ctx);
     if let Some(criteria) = stratifier.get("criteria") {
-        match evaluate_expression(criteria, measure, library_canonicals, ctx) {
+        match evaluate_expression(criteria, &subject_root, library_canonicals, ctx) {
             Ok(result) => {
                 if let Some(value) = stratifier_value(&result) {
-                    stratifiers.push(stratum(value, population_code(populations)));
+                    stratifiers.push(stratum(value, populations));
                 }
             }
             Err(error) => {
                 issues.push(format!("group {group_index}, stratifier: {error}"));
             }
         }
+    } else if stratifier
+        .get("component")
+        .and_then(Value::as_array)
+        .is_some_and(|components| !components.is_empty())
+    {
+        // Component-based stratifiers are valid FHIR but not supported yet;
+        // surface that instead of silently emitting an incomplete report.
+        issues.push(format!(
+            "group {group_index}, stratifier: component-based stratifiers are not supported yet"
+        ));
     }
 
     let mut report_stratifier = Map::new();
@@ -239,24 +263,21 @@ fn stratifier_value(result: &Value) -> Option<Value> {
     })
 }
 
-fn stratum(value: Value, population_code: Option<&Value>) -> Value {
-    let mut stratum = json!({
-        "value": value,
-        "population": [{
-            "count": 1,
-        }],
-    });
-    if let Some(code) = population_code {
-        stratum["population"][0]["code"] = code.clone();
-    }
-    stratum
-}
-
-fn population_code(populations: &[(Value, Vec<String>)]) -> Option<&Value> {
-    populations
-        .first()
-        .and_then(|(population, _)| population.get("code"))
-        .filter(|code| !code.is_null())
+/// Build an individual-report stratum: the subject's stratifier value and
+/// the group's full population list with the subject's 0/1 membership.
+fn stratum(value: Value, populations: &[(Value, Vec<String>)]) -> Value {
+    let mut stratum = Map::new();
+    stratum.insert("valueCodeableConcept".to_string(), value);
+    stratum.insert(
+        "population".to_string(),
+        Value::Array(
+            populations
+                .iter()
+                .map(|(population, _)| population.clone())
+                .collect(),
+        ),
+    );
+    Value::Object(stratum)
 }
 
 fn unzip_groups(groups: Vec<(Value, Vec<String>)>) -> (Vec<Value>, Vec<String>) {
@@ -354,9 +375,11 @@ mod tests {
             json!({"code": {"coding": [{"code": "numerator"}]}, "count": 0})
         );
         assert_eq!(
-            report["group"][0]["stratifier"][0]["stratum"][0]["value"],
+            report["group"][0]["stratifier"][0]["stratum"][0]["valueCodeableConcept"],
             json!({"coding": [{"code": "adult"}]})
         );
+        // The stratum carries the group's full population list with the
+        // subject's 0/1 membership.
         assert_eq!(
             report["group"][0]["stratifier"][0]["stratum"][0]["population"][0]["code"],
             json!({"coding": [{"code": "initial-population"}]})
@@ -365,7 +388,64 @@ mod tests {
             report["group"][0]["stratifier"][0]["stratum"][0]["population"][0]["count"],
             json!(1)
         );
+        assert_eq!(
+            report["group"][0]["stratifier"][0]["stratum"][0]["population"][1]["code"],
+            json!({"coding": [{"code": "numerator"}]})
+        );
+        assert_eq!(
+            report["group"][0]["stratifier"][0]["stratum"][0]["population"][1]["count"],
+            json!(0)
+        );
         assert!(report.get("extension").is_none());
+    }
+
+    #[test]
+    fn fhirpath_criteria_evaluate_against_the_subject() {
+        let measure = json!({
+            "resourceType": "Measure",
+            "group": [{
+                "population": [
+                    {"code": {"coding": [{"code": "initial-population"}]}, "criteria": {"language": "text/fhirpath", "expression": "active = true"}},
+                    {"code": {"coding": [{"code": "numerator"}]}, "criteria": {"language": "text/fhirpath", "expression": "gender = 'male'"}},
+                ],
+                "stratifier": [{"code": {"coding": [{"code": "gender"}]}, "criteria": {"language": "text/fhirpath", "expression": "gender"}}],
+            }],
+        });
+        let ctx = test_context_with_data(json!({
+            "resourceType": "Bundle",
+            "entry": [{
+                "resource": {"resourceType": "Patient", "id": "123", "active": true, "gender": "female"}
+            }]
+        }));
+
+        let report = evaluate_measure(&measure, &ctx).expect("measure should evaluate");
+
+        assert_eq!(report["group"][0]["population"][0]["count"], json!(1));
+        assert_eq!(report["group"][0]["population"][1]["count"], json!(0));
+        assert_eq!(
+            report["group"][0]["stratifier"][0]["stratum"][0]["valueCodeableConcept"],
+            json!({"coding": [{"code": "female"}]})
+        );
+    }
+
+    #[test]
+    fn component_stratifiers_report_an_issue() {
+        let measure = json!({
+            "resourceType": "Measure",
+            "group": [{
+                "population": [{"code": {"coding": [{"code": "initial-population"}]}}],
+                "stratifier": [{"code": {"text": "combo"}, "component": [{"code": {"text": "part"}}]}],
+            }],
+        });
+        let ctx = test_context(None);
+
+        let report = evaluate_measure(&measure, &ctx).expect("measure should evaluate");
+
+        assert!(report["group"][0]["stratifier"][0].get("stratum").is_none());
+        let issues = report["extension"].as_array().expect("issues");
+        assert!(issues[0]["valueString"]
+            .as_str()
+            .is_some_and(|issue| issue.contains("component-based")));
     }
 
     #[test]
@@ -436,6 +516,15 @@ mod tests {
         let resolver =
             Arc::new(BundleResolver::new(&content_bundle).expect("test bundle should be valid"));
         ApplyContext::new(resolver, "Patient/123")
+    }
+
+    fn test_context_with_data(data: Value) -> ApplyContext {
+        let content_bundle = json!({"resourceType": "Bundle"});
+        let resolver =
+            Arc::new(BundleResolver::new(&content_bundle).expect("test bundle should be valid"));
+        let mut ctx = ApplyContext::new(resolver, "Patient/123");
+        ctx.data = Some(data);
+        ctx
     }
 
     fn compiled_test_library() -> Library {

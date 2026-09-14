@@ -35,10 +35,12 @@ pub fn assemble_questionnaire(questionnaire: &Value, ctx: &ApplyContext) -> CpgR
 /// questionnaire's initial values and initial expressions.
 pub fn populate_questionnaire(questionnaire: &Value, ctx: &ApplyContext) -> CpgResult<Value> {
     validate_questionnaire(questionnaire)?;
+    // `authored` is intentionally omitted: population happens at preview
+    // time in a fixed evaluation context with no clock; a hard-coded
+    // date would become stale metadata.
     let mut response = json!({
         "resourceType": "QuestionnaireResponse",
         "status": "in-progress",
-        "authored": "2026-01-01T00:00:00Z",
         "item": [],
     });
     if let Some(url) = questionnaire.get("url").and_then(Value::as_str) {
@@ -156,7 +158,12 @@ fn assemble_item(
         .iter()
         .find(|resource| {
             resource.get("resourceType").and_then(Value::as_str) == Some("Questionnaire")
-                && canonical_url(resource).is_some_and(|url| url == canonical)
+                && canonical_identity(resource).is_some_and(|identity| {
+                    // A versioned reference must match the resource identity
+                    // exactly; an unversioned reference matches the url alone.
+                    identity == canonical
+                        || canonical_url(resource).is_some_and(|url| url == canonical)
+                })
         })
         .cloned();
     let resolved = match resolved {
@@ -197,8 +204,17 @@ fn assemble_item(
     }
 
     visited.insert(canonical.clone());
+    // Also track the resolved resource's identity so a reference omitting
+    // the version cannot bypass cycle detection against the versioned
+    // resource.
+    if let Some(identity) = canonical_identity(&sub_questionnaire) {
+        visited.insert(identity);
+    }
     let assembled_sub = assemble_with_visited(&sub_questionnaire, visited, ctx);
     visited.remove(&canonical);
+    if let Some(identity) = canonical_identity(&sub_questionnaire) {
+        visited.remove(&identity);
+    }
     let assembled_sub = assembled_sub?;
     let Some(items) = questionnaire_items(&assembled_sub) else {
         let link_id = item
@@ -463,26 +479,38 @@ fn required_item_issues(items: &[Value], response: &Value, issues: &mut Vec<Stri
             .and_then(Value::as_bool)
             .unwrap_or(false);
         let link_id = item.get("linkId").and_then(Value::as_str);
+        let matching_response = link_id.and_then(|link_id| {
+            required_response.iter().find(|response_item| {
+                response_item.get("linkId").and_then(Value::as_str) == Some(link_id)
+            })
+        });
         if is_required {
             if let Some(link_id) = link_id {
-                let answered = required_response
-                    .iter()
-                    .filter(|response_item| {
-                        response_item.get("linkId").and_then(Value::as_str) == Some(link_id)
-                    })
-                    .any(|response_item| {
-                        response_item
-                            .get("answer")
-                            .and_then(Value::as_array)
-                            .is_some_and(|answers| !answers.is_empty())
-                    });
+                let item_type = item.get("type").and_then(Value::as_str);
+                // Groups (and displays) are "answered" by their nested
+                // response items; questions require non-empty answers.
+                let answered = if item_type == Some("group") || item_type == Some("display") {
+                    matching_response
+                        .and_then(|response_item| response_items(response_item))
+                        .is_some_and(|nested| !nested.is_empty())
+                } else {
+                    matching_response
+                        .and_then(|response_item| {
+                            response_item.get("answer").and_then(Value::as_array)
+                        })
+                        .is_some_and(|answers| !answers.is_empty())
+                };
                 if !answered {
                     issues.push(format!("Item {link_id} is required but has no answer"));
                 }
             }
         }
         if let Some(nested) = item.get("item").and_then(Value::as_array) {
-            required_item_issues(nested, response, issues);
+            // Recurse with the response item matching this linkId so nested
+            // required questions are judged against their own answers
+            // rather than the root response.
+            let nested_response = matching_response.cloned().unwrap_or(Value::Null);
+            required_item_issues(nested, &nested_response, issues);
         }
     }
 }
@@ -514,6 +542,16 @@ fn canonical_url(resource: &Value) -> Option<String> {
         .get("url")
         .and_then(Value::as_str)
         .map(str::to_string)
+}
+
+/// The versioned canonical identity of a resource (`url|version`), used
+/// for sub-questionnaire matching and cycle detection.
+fn canonical_identity(resource: &Value) -> Option<String> {
+    let url = canonical_url(resource)?;
+    Some(match resource.get("version").and_then(Value::as_str) {
+        Some(version) => format!("{url}|{version}"),
+        None => url,
+    })
 }
 
 fn find_extension<'value>(value: &'value Value, url: &str) -> Option<&'value Value> {

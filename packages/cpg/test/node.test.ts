@@ -43,7 +43,7 @@ describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
           population: [
             {
               code: { coding: [{ code: "initial-population" }] },
-              criteria: { language: "text/fhirpath", expression: "url" }
+              criteria: { language: "text/fhirpath", expression: "active = true" }
             }
           ]
         }
@@ -54,6 +54,14 @@ describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
       resourceType: "Bundle",
       type: "collection",
       entry: []
+    }, {
+      data: {
+        resourceType: "Bundle",
+        type: "collection",
+        entry: [
+          { resource: { resourceType: "Patient", id: "123", active: true } }
+        ]
+      }
     });
 
     expect(result.success).toBe(true);
