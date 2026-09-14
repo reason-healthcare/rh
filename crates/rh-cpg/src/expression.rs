@@ -126,14 +126,12 @@ fn evaluate_cql_identifier(
     let eval_context = builder.build();
 
     let definition_name = expression_source(expression)?;
-    let result = evaluate_elm_with_libraries(
-        elm.as_ref()
-            .expect("library must contain ELM or CQL content"),
-        &included_libraries,
-        definition_name,
-        &eval_context,
-    )
-    .map_err(|error| CpgError::CqlEval(error.to_string()))?;
+    let elm = elm.ok_or_else(|| {
+        CpgError::ExpressionError("library contains neither ELM nor CQL content".to_string())
+    })?;
+    let result =
+        evaluate_elm_with_libraries(&elm, &included_libraries, definition_name, &eval_context)
+            .map_err(|error| CpgError::CqlEval(error.to_string()))?;
 
     Ok(cql_value_to_json(&result))
 }

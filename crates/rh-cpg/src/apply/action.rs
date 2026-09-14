@@ -119,7 +119,7 @@ fn apply_definition(
         Some("ActivityDefinition") => {
             let applied = apply_activity_definition(
                 &definition_resource,
-                &library_canonical_strings(
+                &canonical_strings(
                     definition_resource
                         .get("library")
                         .and_then(Value::as_array)
@@ -255,6 +255,16 @@ fn expression_for_condition(condition: &Value) -> Option<&Value> {
         .and_then(Value::as_str)
         .is_some_and(|source| !source.trim().is_empty());
     has_source.then_some(expression)
+}
+
+/// Extract canonical URL strings from a FHIR `library` array (which holds
+/// canonical strings, not Library resources).
+fn canonical_strings(canonicals: &[Value]) -> Vec<String> {
+    canonicals
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::to_string)
+        .collect()
 }
 
 fn library_canonical_strings(libraries: &[Value]) -> Vec<String> {

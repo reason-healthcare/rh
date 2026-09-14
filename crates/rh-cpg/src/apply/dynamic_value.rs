@@ -132,7 +132,11 @@ fn get_or_create_array<'a>(target: &'a mut Value, field_name: &str) -> Option<&'
     }
 
     match object.get_mut(field_name) {
-        Some(Value::Array(_)) | Some(Value::Null) => object.get_mut(field_name),
+        Some(Value::Array(_)) => object.get_mut(field_name),
+        Some(Value::Null) => {
+            object.insert(field_name.to_string(), Value::Array(Vec::new()));
+            object.get_mut(field_name)
+        }
         _ => None,
     }
 }

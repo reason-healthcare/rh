@@ -10,7 +10,12 @@ pub fn fhir_to_cql_value(json: &Value) -> CqlValue {
         Value::Bool(boolean) => CqlValue::Boolean(*boolean),
         Value::Number(number) => match number.as_i64() {
             Some(integer) => CqlValue::Integer(integer),
-            None => CqlValue::Decimal(number.as_f64().unwrap_or_default()),
+            None => number
+                .as_f64()
+                .map(CqlValue::Decimal)
+                // Preserve unrepresentable values rather than corrupting
+                // them to 0.0 (for example, very large integers).
+                .unwrap_or_else(|| CqlValue::String(number.to_string())),
         },
         Value::String(string) => CqlValue::String(string.clone()),
         Value::Array(items) => CqlValue::List(items.iter().map(fhir_to_cql_value).collect()),
