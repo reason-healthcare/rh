@@ -21,7 +21,10 @@ wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
 base64 = { workspace = true }
 chrono = { workspace = true }
 uuid = { version = "1", features = ["v4", "js"] }
-rh-cql = { path = "../rh-cql", version = "0.2.8" }
+# CPG only uses the in-memory CQL compile/evaluate APIs; the rh-cql
+# default "fs" feature (filesystem library providers) is unnecessary and
+# must not leak into the composed WASM build.
+rh-cql = { path = "../rh-cql", version = "0.2.8", default-features = false }
 rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.8" }
 serde = { workspace = true }
 serde_json = { workspace = true }
