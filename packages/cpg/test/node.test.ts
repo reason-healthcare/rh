@@ -135,6 +135,24 @@ describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
     expect(result.value?.item?.map((item) => item.linkId)).toContain("sub-item");
   });
 
+  it("keeps the authored versioned canonical in an assembled response", () => {
+    const root = {
+      resourceType: "Questionnaire",
+      url: "http://example.org/Questionnaire/root",
+      version: "0.2.0",
+      item: [{ linkId: "screen", type: "boolean" }]
+    };
+    const content = { resourceType: "Bundle", type: "collection", entry: [] };
+
+    const assembled = assembleQuestionnaire(root, content);
+    expect(assembled.success).toBe(true);
+    expect(assembled.value?.version).toBe("0.2.0-assembled");
+
+    const populated = populateQuestionnaire(assembled.value, "Patient/example", content);
+    expect(populated.success).toBe(true);
+    expect(populated.value?.questionnaire).toBe("http://example.org/Questionnaire/root|0.2.0");
+  });
+
   it("reports missing required QuestionnaireResponse answers", () => {
     const result = validateQuestionnaireResponse(
       {
