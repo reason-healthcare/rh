@@ -294,6 +294,10 @@ pub struct UnaryExpression {
     pub element: ElementFields,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operand: Option<Box<Expression>>,
+    /// Optional temporal precision used by clinical unary operators such as
+    /// `CalculateAge` in reference ELM.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signature: Vec<TypeSpecifier>,
 }

@@ -118,6 +118,7 @@ fn emit_numeric_literal<T: NumericLiteral>(
         elm::Expression::Negate(elm::UnaryExpression {
             element: ctx.element_fields(node),
             operand: Some(Box::new(lit_expr)),
+            precision: None,
             signature: vec![],
         })
     } else {
@@ -146,6 +147,7 @@ fn emit_quantity(
         elm::Expression::Negate(elm::UnaryExpression {
             element: ctx.element_fields(node),
             operand: Some(Box::new(q_expr)),
+            precision: None,
             signature: vec![],
         })
     } else {

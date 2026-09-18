@@ -1322,7 +1322,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // distinct from DifferenceBetween's boundary counting.
             Expression::CalculateAge(unary) => {
                 let birth = self.eval_unary_arg(unary)?;
-                self.eval_calculate_age(birth, Value::Date(self.ctx.today()), None)
+                self.eval_calculate_age(
+                    birth,
+                    Value::Date(self.ctx.today()),
+                    unary.precision.as_deref(),
+                )
             }
             Expression::CalculateAgeAt(binary) => {
                 let (birth, as_of) = self.eval_binary_args(binary)?;
@@ -3082,6 +3086,33 @@ mod tests {
             resolve_property(Value::Tuple(patient), "birthDate.value").unwrap(),
             Value::String("1961-06-16".to_string())
         );
+    }
+
+    #[test]
+    fn calculate_age_uses_month_precision_from_reference_elm_shape() {
+        let birth = Expression::Literal(Literal {
+            value: Some("2020-01-15".to_string()),
+            value_type: Some("Date".to_string()),
+            ..Default::default()
+        });
+        let expr = Expression::CalculateAge(UnaryExpression {
+            operand: Some(Box::new(birth)),
+            precision: Some("Month".to_string()),
+            ..Default::default()
+        });
+        let lib = make_library("Age", expr);
+        let clock = FixedClock::new(CqlDateTime {
+            year: 2020,
+            month: Some(3),
+            day: Some(14),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: None,
+        });
+        let ctx = EvalContextBuilder::new(clock).build();
+        assert_eq!(evaluate_elm(&lib, "Age", &ctx).unwrap(), Value::Integer(1));
     }
 
     #[test]

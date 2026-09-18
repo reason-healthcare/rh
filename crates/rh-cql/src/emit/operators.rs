@@ -43,6 +43,7 @@ pub fn emit_unary_operator(
     let unary = elm::UnaryExpression {
         element: element.clone(),
         operand: Some(Box::new(emit_expr(operand, ctx))),
+        precision: None,
         signature: Vec::new(),
     };
 
@@ -133,6 +134,7 @@ pub fn emit_binary_operator(
                 l_expr = elm::Expression::ToDecimal(elm::UnaryExpression {
                     element: ctx.element_fields(left),
                     operand: Some(Box::new(l_expr)),
+                    precision: None,
                     signature: Vec::new(),
                 });
             }
@@ -143,6 +145,7 @@ pub fn emit_binary_operator(
                 r_expr = elm::Expression::ToDecimal(elm::UnaryExpression {
                     element: ctx.element_fields(right),
                     operand: Some(Box::new(r_expr)),
+                    precision: None,
                     signature: Vec::new(),
                 });
             }
@@ -166,6 +169,7 @@ pub fn emit_binary_operator(
             elm::Expression::Not(elm::UnaryExpression {
                 element: element.clone(),
                 operand: Some(Box::new(equiv)),
+                precision: None,
                 signature: Vec::new(),
             })
         }
@@ -319,6 +323,7 @@ pub fn emit_system_function(
         let unary = elm::UnaryExpression {
             element: element.clone(),
             operand: operand.clone(),
+            precision: None,
             signature: Vec::new(),
         };
         // Build aggregate expression for aggregate functions (source is the list arg).
