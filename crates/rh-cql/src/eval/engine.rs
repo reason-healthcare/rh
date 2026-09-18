@@ -1626,6 +1626,42 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// birthDate argument). Returns `None` if `name` is not a recognised age
     /// function.
     fn eval_age_function(&self, name: &str, args: &[Value]) -> Option<Result<Value, EvalError>> {
+        // RH's native compiler represents the generic CQL forms as FunctionRef
+        // rather than the precision-bearing ELM CalculateAge[At] operators.
+        // CQL defaults these forms to whole elapsed years.
+        if matches!(name, "CalculateAge" | "CalculateAgeAt") {
+            let birth_raw = match args.first() {
+                Some(value) => value.clone(),
+                None => {
+                    return Some(Err(EvalError::General(format!(
+                        "{name}: expected a birthDate argument"
+                    ))))
+                }
+            };
+            let birth = match birth_raw {
+                Value::Date(_) | Value::DateTime(_) => birth_raw,
+                Value::Null => return Some(Ok(Value::Null)),
+                ref value @ Value::String(_) => match to_date(value) {
+                    Ok(value) => value,
+                    Err(error) => return Some(Err(error)),
+                },
+                _ => return Some(Ok(Value::Null)),
+            };
+            let as_of = if name == "CalculateAgeAt" {
+                match args.get(1) {
+                    Some(value) => value.clone(),
+                    None => {
+                        return Some(Err(EvalError::General(format!(
+                            "{name}: expected an as-of date argument"
+                        ))))
+                    }
+                }
+            } else {
+                Value::Date(self.ctx.today())
+            };
+            return Some(self.eval_calculate_age(birth, as_of, Some("Year")));
+        }
+
         let explicit_birth = name.starts_with("CalculateAgeIn");
         let unit_part = name
             .strip_prefix("CalculateAgeIn")
@@ -1707,6 +1743,17 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             return Ok(Value::Null);
         }
         let unit = precision.unwrap_or("Year");
+        // CQL permits the Date and DateTime overloads of CalculateAge[At].
+        // A standard FHIR model supplies Patient.birthDate as Date while
+        // FHIRHelpers.ToDateTime(Encounter.period.start) is DateTime. Bring
+        // the Date operand to DateTime precision before asking the temporal
+        // operator for whole elapsed periods, rather than rejecting the
+        // otherwise valid FHIR-model expression as mixed temporal types.
+        let (birth, as_of) = match (&birth, &as_of) {
+            (Value::Date(_), Value::DateTime(_)) => (to_datetime(&birth)?, as_of),
+            (Value::DateTime(_), Value::Date(_)) => (birth, to_datetime(&as_of)?),
+            _ => (birth, as_of),
+        };
         duration_between(&birth, &as_of, unit)
     }
 
@@ -3127,6 +3174,38 @@ mod tests {
         let expr = Expression::CalculateAgeAt(BinaryExpression {
             operand: vec![date("1961-06-16"), date("2026-06-15")],
             precision: Some("Year".to_string()),
+            ..Default::default()
+        });
+        let lib = make_library("Age", expr);
+        assert_eq!(
+            evaluate_elm(&lib, "Age", &fixed_ctx()).unwrap(),
+            Value::Integer(64)
+        );
+    }
+
+    #[test]
+    fn calculate_age_at_function_ref_uses_elapsed_years() {
+        // CQFramework's FHIR 4.0.1 model translates the portable CQL form
+        // `CalculateAgeAt(Patient.birthDate.value, asOf)` to a FunctionRef,
+        // rather than to the precision-bearing CalculateAgeAt ELM operator.
+        use crate::elm::FunctionRef;
+
+        let date = |value: &str| {
+            Expression::Literal(Literal {
+                value: Some(value.to_string()),
+                value_type: Some("Date".to_string()),
+                ..Default::default()
+            })
+        };
+        let expr = Expression::FunctionRef(FunctionRef {
+            name: Some("CalculateAgeAt".to_string()),
+            operand: vec![
+                date("1961-06-16"),
+                Expression::ToDateTime(UnaryExpression {
+                    operand: Some(Box::new(date("2026-06-15"))),
+                    ..Default::default()
+                }),
+            ],
             ..Default::default()
         });
         let lib = make_library("Age", expr);
