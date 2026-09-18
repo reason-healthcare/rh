@@ -197,6 +197,7 @@ struct BooleanItem {
 
 fn extraction_specification(questionnaire: &Value) -> CpgResult<ExtractionSpecification> {
     require_resource_type(questionnaire, "Questionnaire")?;
+    reject_modifier_extensions(questionnaire, "Questionnaire")?;
     if !has_sdc_extraction_profile(questionnaire) {
         return Err(invalid(format!(
             "Questionnaire.meta.profile must include {SDC_EXTRACTION_PROFILE}"
@@ -311,6 +312,7 @@ fn reject_unsupported_item_metadata(item: &Value) -> CpgResult<()> {
         .get("linkId")
         .and_then(Value::as_str)
         .unwrap_or("unknown");
+    reject_modifier_extensions(item, &format!("Questionnaire.item '{link_id}'"))?;
     if item.get("item").is_some() {
         return Err(invalid(format!(
             "Questionnaire item '{link_id}' has nested items, unsupported by the SDC Boolean extraction subset"
@@ -340,6 +342,7 @@ fn reject_unsupported_item_metadata(item: &Value) -> CpgResult<()> {
 
 fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMap<String, bool>> {
     require_resource_type(response, "QuestionnaireResponse")?;
+    reject_modifier_extensions(response, "QuestionnaireResponse")?;
     let supported = items
         .iter()
         .map(|item| item.link_id.as_str())
@@ -347,6 +350,7 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
     let mut answers = HashMap::new();
 
     for item in flatten_response_items(response.get("item")) {
+        reject_modifier_extensions(item, "QuestionnaireResponse.item")?;
         let Some(link_id) = item.get("linkId").and_then(Value::as_str) else {
             continue;
         };
@@ -361,7 +365,23 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
                 "QuestionnaireResponse item '{link_id}' must contain exactly one Boolean answer"
             )));
         }
-        let Some(value) = answer_array[0].get("valueBoolean").and_then(Value::as_bool) else {
+        let answer = &answer_array[0];
+        reject_modifier_extensions(answer, "QuestionnaireResponse.item.answer")?;
+        let value_fields = answer
+            .as_object()
+            .map(|fields| {
+                fields
+                    .keys()
+                    .filter(|field| field.starts_with("value"))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if value_fields.len() != 1 || value_fields[0] != "valueBoolean" {
+            return Err(invalid(format!(
+                "QuestionnaireResponse item '{link_id}' must contain exactly one value[x], valueBoolean"
+            )));
+        }
+        let Some(value) = answer.get("valueBoolean").and_then(Value::as_bool) else {
             return Err(invalid(format!(
                 "QuestionnaireResponse item '{link_id}' must contain valueBoolean"
             )));
@@ -483,6 +503,19 @@ fn flatten_response_items(items: Option<&Value>) -> Vec<&Value> {
         }
     }
     flattened
+}
+
+fn reject_modifier_extensions(resource: &Value, path: &str) -> CpgResult<()> {
+    if resource
+        .get("modifierExtension")
+        .and_then(Value::as_array)
+        .is_some_and(|extensions| !extensions.is_empty())
+    {
+        return Err(invalid(format!(
+            "{path}.modifierExtension is unsupported by the SDC Boolean extraction subset"
+        )));
+    }
+    Ok(())
 }
 
 fn optional_security_labels(response: &Value) -> CpgResult<Option<Value>> {
@@ -792,6 +825,26 @@ mod tests {
         assert!(extract_completed_sdc_boolean_observations(
             &questionnaire(),
             &invalid_authored,
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut ambiguous_choice = response("completed");
+        ambiguous_choice["item"][0]["answer"][0]["valueString"] = Value::String("true".to_string());
+        assert!(extract_completed_sdc_boolean_observations(
+            &questionnaire(),
+            &ambiguous_choice,
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut modifier_extension = response("completed");
+        modifier_extension["modifierExtension"] = json!([{"url":"https://example.org/modifier"}]);
+        assert!(extract_completed_sdc_boolean_observations(
+            &questionnaire(),
+            &modifier_extension,
             SUBJECT,
             ENCOUNTER
         )
