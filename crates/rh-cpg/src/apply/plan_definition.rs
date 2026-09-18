@@ -130,6 +130,7 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
             Value::Array(request_group_notes),
         );
     }
+    prune_filtered_related_actions(&mut request_group);
 
     let mut bundle = Map::new();
     bundle.insert("resourceType".to_string(), json!("Bundle"));
@@ -148,6 +149,65 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
     }
 
     Ok(bundle)
+}
+
+/// PlanDefinition applicability can remove an action while leaving a sibling's
+/// authored relatedAction reference behind. RequestGroup only carries emitted
+/// actions, so remove those dangling generated references while preserving the
+/// source PlanDefinition's complete sequencing information.
+fn prune_filtered_related_actions(request_group: &mut Value) {
+    let mut emitted_action_ids = std::collections::HashSet::new();
+    if let Some(actions) = request_group.get("action").and_then(Value::as_array) {
+        collect_action_ids(actions, &mut emitted_action_ids);
+    }
+    if let Some(actions) = request_group
+        .get_mut("action")
+        .and_then(Value::as_array_mut)
+    {
+        prune_related_actions(actions, &emitted_action_ids);
+    }
+}
+
+fn collect_action_ids(
+    actions: &[Value],
+    emitted_action_ids: &mut std::collections::HashSet<String>,
+) {
+    for action in actions {
+        if let Some(id) = action.get("id").and_then(Value::as_str) {
+            emitted_action_ids.insert(id.to_string());
+        }
+        if let Some(children) = action.get("action").and_then(Value::as_array) {
+            collect_action_ids(children, emitted_action_ids);
+        }
+    }
+}
+
+fn prune_related_actions(
+    actions: &mut [Value],
+    emitted_action_ids: &std::collections::HashSet<String>,
+) {
+    for action in actions {
+        if let Some(related_actions) = action
+            .get_mut("relatedAction")
+            .and_then(Value::as_array_mut)
+        {
+            related_actions.retain(|related_action| {
+                related_action
+                    .get("actionId")
+                    .and_then(Value::as_str)
+                    .is_some_and(|action_id| emitted_action_ids.contains(action_id))
+            });
+            if related_actions.is_empty() {
+                action
+                    .as_object_mut()
+                    .expect("RequestGroup action must be an object")
+                    .remove("relatedAction");
+            }
+        }
+        if let Some(children) = action.get_mut("action").and_then(Value::as_array_mut) {
+            prune_related_actions(children, emitted_action_ids);
+        }
+    }
 }
 
 pub(crate) fn canonicalize(resource: &Value) -> Option<String> {
@@ -417,5 +477,34 @@ mod tests {
                 "text": "Source action: interpret-phase\n\nInterpret the screen\n\nDo not coerce unknown to false.\n\nSource (screening-evidence): Evidence source"
             }])
         );
+    }
+
+    #[test]
+    fn prunes_related_actions_for_filtered_targets_recursively() {
+        let mut request_group = json!({
+            "resourceType": "RequestGroup",
+            "action": [{
+                "id": "screen",
+                "relatedAction": [
+                    {"actionId": "interpret", "relationship": "before-start"},
+                    {"actionId": "positive-guidance", "relationship": "before-start"}
+                ],
+                "action": [{
+                    "id": "interpret",
+                    "relatedAction": [{"actionId": "missing", "relationship": "before-start"}],
+                    "resource": {"reference": "Task/interpret"}
+                }]
+            }]
+        });
+
+        prune_filtered_related_actions(&mut request_group);
+
+        assert_eq!(
+            request_group["action"][0]["relatedAction"],
+            json!([{"actionId": "interpret", "relationship": "before-start"}])
+        );
+        assert!(request_group["action"][0]["action"][0]
+            .get("relatedAction")
+            .is_none());
     }
 }
