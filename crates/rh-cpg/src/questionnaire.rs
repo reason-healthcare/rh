@@ -43,8 +43,8 @@ pub fn populate_questionnaire(questionnaire: &Value, ctx: &ApplyContext) -> CpgR
         "status": "in-progress",
         "item": [],
     });
-    if let Some(url) = questionnaire.get("url").and_then(Value::as_str) {
-        response["questionnaire"] = Value::String(url.to_string());
+    if let Some(canonical) = authored_questionnaire_canonical(questionnaire) {
+        response["questionnaire"] = Value::String(canonical);
     }
     response["subject"] = json!({ "reference": ctx.subject });
 
@@ -82,6 +82,10 @@ fn assemble_with_visited(
     visited: &mut HashSet<String>,
     ctx: &ApplyContext,
 ) -> CpgResult<Value> {
+    // An assembled Questionnaire is a transient rendering representation.
+    // QuestionnaireResponse.questionnaire must keep the authored root's
+    // versioned canonical identity so downstream CQL retrieves match it.
+    let authored_canonical = canonical_identity(questionnaire);
     let mut assembled = questionnaire.clone();
     let contained_resources = contained_questionnaires(&assembled);
     if let Some(version) = assembled.get("version").and_then(Value::as_str) {
@@ -99,11 +103,11 @@ fn assemble_with_visited(
             .filter_map(adjust_assemble_expectation)
             .collect(),
     );
-    if let Some(url) = canonical_url(&assembled) {
+    if let Some(canonical) = authored_canonical {
         assembled["extension"]
             .as_array_mut()
             .expect("extensions are always an array here")
-            .push(json!({ "url": ASSEMBLED_FROM, "valueCanonical": url }));
+            .push(json!({ "url": ASSEMBLED_FROM, "valueCanonical": canonical }));
     }
     if assembled["extension"]
         .as_array()
@@ -554,6 +558,16 @@ fn canonical_identity(resource: &Value) -> Option<String> {
     })
 }
 
+/// Return the authored Questionnaire identity for a response. SDC assembly
+/// records that identity in `assembledFrom`; an ordinary Questionnaire uses
+/// its own versioned canonical identity.
+fn authored_questionnaire_canonical(questionnaire: &Value) -> Option<String> {
+    find_extension(questionnaire, ASSEMBLED_FROM)
+        .and_then(extension_value_canonical)
+        .map(str::to_string)
+        .or_else(|| canonical_identity(questionnaire))
+}
+
 fn find_extension<'value>(value: &'value Value, url: &str) -> Option<&'value Value> {
     value
         .get("extension")
@@ -643,8 +657,32 @@ mod tests {
             .iter()
             .any(|extension| {
                 extension["url"] == json!(ASSEMBLED_FROM)
-                    && extension["valueCanonical"] == json!("http://example.org/root")
+                    && extension["valueCanonical"] == json!("http://example.org/root|1.0")
             }));
+    }
+
+    #[test]
+    fn populated_response_preserves_authored_canonical_after_assembly() {
+        let questionnaire = json!({
+            "resourceType": "Questionnaire",
+            "url": "http://example.org/Questionnaire/root",
+            "version": "0.2.0",
+            "item": [{ "linkId": "screen", "type": "boolean" }]
+        });
+        let ctx = context(json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": []
+        }));
+
+        let assembled =
+            assemble_questionnaire(&questionnaire, &ctx).expect("assembly should succeed");
+        assert_eq!(assembled["version"], json!("0.2.0-assembled"));
+        let response = populate_questionnaire(&assembled, &ctx).expect("population should succeed");
+        assert_eq!(
+            response["questionnaire"],
+            json!("http://example.org/Questionnaire/root|0.2.0")
+        );
     }
 
     #[test]
@@ -762,7 +800,7 @@ mod tests {
         assert_eq!(items[2]["text"], json!("Empty"));
         assert_eq!(
             response["questionnaire"],
-            json!("http://example.org/populate")
+            json!("http://example.org/populate|1.0")
         );
         assert_eq!(response["subject"], json!({ "reference": "Patient/123" }));
     }
