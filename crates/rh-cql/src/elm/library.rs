@@ -399,11 +399,13 @@ pub struct ExpressionDefs {
 
 /// A statement definition (expression or function).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum StatementDef {
     /// An expression definition.
+    #[serde(rename = "ExpressionDef")]
     Expression(ExpressionDef),
     /// A function definition.
+    #[serde(rename = "FunctionDef")]
     Function(FunctionDef),
 }
 

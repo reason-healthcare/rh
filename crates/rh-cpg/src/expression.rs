@@ -394,6 +394,7 @@ define "Marker Is True": "Marker"
                 {"resource": {"resourceType": "Patient", "id": "fixture"}},
                 {"resource": {
                     "resourceType": "QuestionnaireResponse",
+                    "subject": {"reference": "Patient/fixture"},
                     "status": "completed",
                     "item": [
                         {"linkId": "unsteady", "answer": [{"valueBoolean": true}]},

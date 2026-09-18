@@ -4,8 +4,10 @@
 //! `compile_with_model(..., None)`) and then evaluates a named expression
 //! against an `EvalContext`, asserting on the resulting `Value`.
 
+use std::collections::BTreeMap;
+
 use rh_cql::{
-    compile_with_model, evaluate_elm, CqlDate, CqlDateTime, CqlTime, EvalContextBuilder,
+    compile_with_model, evaluate_elm, CqlCode, CqlDate, CqlDateTime, CqlTime, EvalContextBuilder,
     FixedClock, Value,
 };
 
@@ -771,6 +773,531 @@ define X: [Observation]";
     }
 }
 
+fn patient_context(id: &str) -> Value {
+    Value::Tuple(BTreeMap::from([(
+        String::from("id"),
+        Value::String(id.to_string()),
+    )]))
+}
+
+fn reference(reference: &str) -> Value {
+    Value::Tuple(BTreeMap::from([(
+        String::from("reference"),
+        Value::String(reference.to_string()),
+    )]))
+}
+
+fn observation(id: &str, subject: &str, code: Option<CqlCode>) -> Value {
+    let mut fields = BTreeMap::from([
+        (String::from("id"), Value::String(id.to_string())),
+        (String::from("subject"), reference(subject)),
+    ]);
+    if let Some(code) = code {
+        fields.insert(String::from("code"), Value::Code(code));
+    }
+    Value::Tuple(fields)
+}
+
+#[test]
+fn patient_context_scopes_bare_retrieve_and_unfiltered_preserves_all_rows() {
+    use rh_cql::{compile, InMemoryDataProvider};
+
+    let patient_cql = "library T
+using FHIR version '4.0.1'
+context Patient
+define X: [Observation]";
+    let unfiltered_cql = "library T
+using FHIR version '4.0.1'
+context Unfiltered
+define X: [Observation]";
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource("Observation", observation("a", "Patient/a", None));
+    provider.add_resource("Observation", observation("b", "Patient/b", None));
+
+    let patient_library = compile(patient_cql, None).expect("patient compile");
+    assert!(
+        patient_library.errors.is_empty(),
+        "{:?}",
+        patient_library.errors
+    );
+    let patient_value = evaluate_elm(
+        &patient_library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider.clone())
+            .context_value(patient_context("a"))
+            .build(),
+    )
+    .expect("patient retrieve");
+    assert!(matches!(patient_value, Value::List(items) if items.len() == 1));
+
+    let unfiltered_library = compile(unfiltered_cql, None).expect("unfiltered compile");
+    assert!(
+        unfiltered_library.errors.is_empty(),
+        "{:?}",
+        unfiltered_library.errors
+    );
+    let unfiltered_value = evaluate_elm(
+        &unfiltered_library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider)
+            .build(),
+    )
+    .expect("unfiltered retrieve");
+    assert!(matches!(unfiltered_value, Value::List(items) if items.len() == 2));
+}
+
+#[test]
+fn patient_context_scopes_valueset_retrieve_and_missing_patient_fails_closed() {
+    use rh_cql::{compile, CqlCode, InMemoryDataProvider, InMemoryTerminologyProvider};
+
+    let cql = r#"library T
+using FHIR version '4.0.1'
+valueset "Required": 'http://example.org/ValueSet/required' version '1.0.0'
+context Patient
+define X: [Observation: "Required"]"#;
+    let library = compile(cql, None).expect("compile");
+    assert!(library.errors.is_empty(), "{:?}", library.errors);
+    let allowed = CqlCode {
+        code: "allowed".into(),
+        system: "http://example.org/system".into(),
+        display: None,
+        version: None,
+    };
+    let other = CqlCode {
+        code: "other".into(),
+        system: "http://example.org/system".into(),
+        display: None,
+        version: None,
+    };
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource(
+        "Observation",
+        observation("a", "Patient/a", Some(allowed.clone())),
+    );
+    provider.add_resource(
+        "Observation",
+        observation("b", "Patient/b", Some(allowed.clone())),
+    );
+    provider.add_resource("Observation", observation("c", "Patient/a", Some(other)));
+    let mut terminology = InMemoryTerminologyProvider::new();
+    terminology.add_code("http://example.org/ValueSet/required|1.0.0", allowed);
+    let scoped = evaluate_elm(
+        &library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider.clone())
+            .terminology_provider(terminology)
+            .context_value(patient_context("a"))
+            .build(),
+    )
+    .expect("scoped valueset retrieve");
+    assert!(matches!(scoped, Value::List(items) if items.len() == 1));
+
+    let missing_patient = evaluate_elm(
+        &library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider)
+            .build(),
+    );
+    assert!(matches!(
+        missing_patient,
+        Err(rh_cql::EvalError::RetrieveError(_))
+    ));
+}
+
+#[test]
+fn patient_context_and_explicit_encounter_class_retrieve_are_both_enforced() {
+    use rh_cql::{compile, InMemoryDataProvider};
+
+    let cql = r#"library T
+using FHIR version '4.0.1'
+codesystem "ActCode": 'http://terminology.hl7.org/CodeSystem/v3-ActCode'
+code "Ambulatory": 'AMB' from "ActCode"
+context Patient
+define X: [Encounter: class ~ "Ambulatory"]"#;
+    let library = compile(cql, None).expect("compile");
+    assert!(library.errors.is_empty(), "{:?}", library.errors);
+    let code = |code: &str, system: &str| CqlCode {
+        code: code.into(),
+        system: system.into(),
+        display: None,
+        version: None,
+    };
+    let encounter = |id: &str, subject: &str, class: CqlCode, type_code: CqlCode| {
+        Value::Tuple(BTreeMap::from([
+            (String::from("id"), Value::String(id.to_string())),
+            (String::from("subject"), reference(subject)),
+            (String::from("class"), Value::Code(class)),
+            (String::from("type"), Value::Code(type_code)),
+        ]))
+    };
+    let act = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource(
+        "Encounter",
+        encounter("correct", "Patient/a", code("AMB", act), code("OTHER", act)),
+    );
+    provider.add_resource(
+        "Encounter",
+        encounter(
+            "wrong-system",
+            "Patient/a",
+            code("AMB", "http://example.org/system"),
+            code("OTHER", act),
+        ),
+    );
+    provider.add_resource(
+        "Encounter",
+        encounter(
+            "wrong-path",
+            "Patient/a",
+            code("OTHER", act),
+            code("AMB", act),
+        ),
+    );
+    provider.add_resource(
+        "Encounter",
+        encounter(
+            "other-patient",
+            "Patient/b",
+            code("AMB", act),
+            code("OTHER", act),
+        ),
+    );
+    let value = evaluate_elm(
+        &library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider)
+            .context_value(patient_context("a"))
+            .build(),
+    )
+    .expect("class retrieve");
+    assert!(matches!(value, Value::List(items) if items.len() == 1));
+}
+
+#[test]
+fn patient_context_rejects_nonrelative_patient_references() {
+    use rh_cql::{compile, InMemoryDataProvider};
+
+    let library = compile(
+        "library T\nusing FHIR version '4.0.1'\ncontext Patient\ndefine X: [Observation]",
+        None,
+    )
+    .expect("compile");
+    assert!(library.errors.is_empty(), "{:?}", library.errors);
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource(
+        "Observation",
+        observation("versioned", "Patient/a/_history/3", None),
+    );
+    let result = evaluate_elm(
+        &library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider)
+            .context_value(patient_context("a"))
+            .build(),
+    );
+    assert!(
+        matches!(result, Err(rh_cql::EvalError::RetrieveError(message)) if message.contains("unsupported Patient reference form"))
+    );
+}
+
+#[test]
+fn unfiltered_expression_cannot_promote_a_patient_expression() {
+    use rh_cql::elm::{
+        Expression, ExpressionDef, ExpressionDefs, ExpressionRef, Library, Retrieve, StatementDef,
+    };
+    use rh_cql::InMemoryDataProvider;
+
+    let library = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![
+                StatementDef::Expression(ExpressionDef {
+                    name: Some("Patient Rows".into()),
+                    context: Some("Patient".into()),
+                    expression: Some(Box::new(Expression::Retrieve(Retrieve {
+                        data_type: Some("{http://hl7.org/fhir}Observation".into()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                }),
+                StatementDef::Expression(ExpressionDef {
+                    name: Some("X".into()),
+                    context: Some("Unfiltered".into()),
+                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                        name: Some("Patient Rows".into()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                }),
+            ],
+        }),
+        ..Default::default()
+    };
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource("Observation", observation("a", "Patient/a", None));
+    let result = evaluate_elm(
+        &library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider)
+            .context_value(patient_context("a"))
+            .build(),
+    );
+    assert!(
+        matches!(result, Err(rh_cql::EvalError::RetrieveError(message)) if message.contains("without population iteration"))
+    );
+}
+
+#[test]
+fn patient_context_requires_patient_resource_and_simple_id() {
+    use rh_cql::{compile, InMemoryDataProvider};
+
+    let library = compile(
+        "library T\nusing FHIR version '4.0.1'\ncontext Patient\ndefine X: [Observation]",
+        None,
+    )
+    .expect("compile");
+    assert!(library.errors.is_empty(), "{:?}", library.errors);
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource("Observation", observation("a", "Patient/a", None));
+    let invalid_context = Value::Tuple(BTreeMap::from([
+        (
+            String::from("resourceType"),
+            Value::String("Encounter".into()),
+        ),
+        (String::from("id"), Value::String("a/b".into())),
+    ]));
+    let result = evaluate_elm(
+        &library.library,
+        "X",
+        &EvalContextBuilder::new(test_clock())
+            .data_provider(provider)
+            .context_value(invalid_context)
+            .build(),
+    );
+    assert!(
+        matches!(result, Err(rh_cql::EvalError::RetrieveError(message)) if message.contains("requires a Patient resource"))
+    );
+}
+
+#[test]
+fn explicit_retrieve_context_fails_visibly() {
+    use rh_cql::elm::{Expression, ExpressionDef, ExpressionDefs, Library, Retrieve, StatementDef};
+
+    let library = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![StatementDef::Expression(ExpressionDef {
+                name: Some("X".into()),
+                context: Some("Unfiltered".into()),
+                expression: Some(Box::new(Expression::Retrieve(Retrieve {
+                    data_type: Some("{http://hl7.org/fhir}Observation".into()),
+                    context: Some(Box::new(Expression::Null(Default::default()))),
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            })],
+        }),
+        ..Default::default()
+    };
+    let result = evaluate_elm(&library, "X", &default_ctx());
+    assert!(
+        matches!(result, Err(rh_cql::EvalError::RetrieveError(message)) if message.contains("explicit Retrieve.context is not supported"))
+    );
+}
+
+#[test]
+fn included_user_function_body_executes_without_losing_runtime_errors() {
+    use rh_cql::elm::{
+        Expression, ExpressionDef, ExpressionDefs, FunctionDef, FunctionRef, Library, OperandDef,
+        OperandRef, StatementDef,
+    };
+    use std::collections::HashMap;
+
+    let main = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![StatementDef::Expression(ExpressionDef {
+                name: Some("X".into()),
+                context: Some("Unfiltered".into()),
+                expression: Some(Box::new(Expression::FunctionRef(FunctionRef {
+                    name: Some("identity".into()),
+                    library_name: Some("Common".into()),
+                    operand: vec![Expression::Literal(rh_cql::elm::Literal {
+                        value_type: Some("{urn:hl7-org:elm-types:r1}Integer".into()),
+                        value: Some("7".into()),
+                        ..Default::default()
+                    })],
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            })],
+        }),
+        ..Default::default()
+    };
+    let common = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![StatementDef::Function(FunctionDef {
+                name: Some("identity".into()),
+                operand: vec![OperandDef {
+                    name: Some("value".into()),
+                    ..Default::default()
+                }],
+                expression: Some(Box::new(Expression::OperandRef(OperandRef {
+                    name: Some("value".into()),
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            })],
+        }),
+        ..Default::default()
+    };
+    let included = HashMap::from([(String::from("Common"), common)]);
+    let result = rh_cql::evaluate_elm_with_libraries(&main, &included, "X", &default_ctx())
+        .expect("included function evaluation");
+    assert_eq!(result, Value::Integer(7));
+}
+
+#[test]
+fn included_expression_preserves_patient_context_transitions() {
+    use rh_cql::elm::{
+        Expression, ExpressionDef, ExpressionDefs, ExpressionRef, Library, StatementDef,
+    };
+    use std::collections::HashMap;
+
+    let main = |context: &str, target: &str| Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![StatementDef::Expression(ExpressionDef {
+                name: Some("X".into()),
+                context: Some(context.into()),
+                expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                    library_name: Some("Common".into()),
+                    name: Some(target.into()),
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            })],
+        }),
+        ..Default::default()
+    };
+    let common = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![
+                StatementDef::Expression(ExpressionDef {
+                    name: Some("Patient Expression".into()),
+                    context: Some("Patient".into()),
+                    expression: Some(Box::new(Expression::Literal(rh_cql::elm::Literal {
+                        value_type: Some("{urn:hl7-org:elm-types:r1}Boolean".into()),
+                        value: Some("true".into()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                }),
+                StatementDef::Expression(ExpressionDef {
+                    name: Some("Unfiltered Expression".into()),
+                    context: Some("Unfiltered".into()),
+                    expression: Some(Box::new(Expression::Literal(rh_cql::elm::Literal {
+                        value_type: Some("{urn:hl7-org:elm-types:r1}Boolean".into()),
+                        value: Some("true".into()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                }),
+            ],
+        }),
+        ..Default::default()
+    };
+    let included = HashMap::from([(String::from("Common"), common)]);
+    let context = EvalContextBuilder::new(test_clock())
+        .context_value(patient_context("a"))
+        .build();
+
+    let unfiltered_to_patient = rh_cql::evaluate_elm_with_libraries(
+        &main("Unfiltered", "Patient Expression"),
+        &included,
+        "X",
+        &context,
+    );
+    assert!(
+        matches!(unfiltered_to_patient, Err(rh_cql::EvalError::RetrieveError(message)) if message.contains("without population iteration"))
+    );
+    assert_eq!(
+        rh_cql::evaluate_elm_with_libraries(
+            &main("Patient", "Patient Expression"),
+            &included,
+            "X",
+            &context
+        )
+        .expect("Patient to included Patient"),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        rh_cql::evaluate_elm_with_libraries(
+            &main("Patient", "Unfiltered Expression"),
+            &included,
+            "X",
+            &context
+        )
+        .expect("Patient to included Unfiltered"),
+        Value::Boolean(true)
+    );
+}
+
+#[test]
+fn included_patient_context_function_cannot_be_called_from_unfiltered_expression() {
+    use rh_cql::elm::{
+        Expression, ExpressionDef, ExpressionDefs, FunctionDef, FunctionRef, Library, StatementDef,
+    };
+    use std::collections::HashMap;
+
+    let main = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![StatementDef::Expression(ExpressionDef {
+                name: Some("X".into()),
+                context: Some("Unfiltered".into()),
+                expression: Some(Box::new(Expression::FunctionRef(FunctionRef {
+                    name: Some("Patient Function".into()),
+                    library_name: Some("Common".into()),
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            })],
+        }),
+        ..Default::default()
+    };
+    let common = Library {
+        statements: Some(ExpressionDefs {
+            defs: vec![StatementDef::Function(FunctionDef {
+                name: Some("Patient Function".into()),
+                context: Some("Patient".into()),
+                expression: Some(Box::new(Expression::Literal(rh_cql::elm::Literal {
+                    value_type: Some("{urn:hl7-org:elm-types:r1}Boolean".into()),
+                    value: Some("true".into()),
+                    ..Default::default()
+                }))),
+                ..Default::default()
+            })],
+        }),
+        ..Default::default()
+    };
+    let context = EvalContextBuilder::new(test_clock())
+        .context_value(patient_context("a"))
+        .build();
+    let result = rh_cql::evaluate_elm_with_libraries(
+        &main,
+        &HashMap::from([(String::from("Common"), common)]),
+        "X",
+        &context,
+    );
+    assert!(
+        matches!(result, Err(rh_cql::EvalError::RetrieveError(message)) if message.contains("Patient-context function"))
+    );
+}
+
 #[test]
 fn retrieve_with_an_unexpanded_valueset_fails_closed() {
     use rh_cql::{CqlCode, DataProvider, EvalError, TerminologyProvider};
@@ -831,9 +1358,11 @@ define X: [Observation: "Required"]"#;
             version: None,
         }),
     );
+    observation.insert("subject".to_string(), reference("Patient/patient-1"));
     let ctx = EvalContextBuilder::new(test_clock())
         .data_provider(SingleObservationProvider(Value::Tuple(observation)))
         .terminology_provider(MissingTerminology)
+        .context_value(patient_context("patient-1"))
         .build();
 
     let outcome = evaluate_elm(&result.library, "X", &ctx);
@@ -908,6 +1437,7 @@ define X: [Observation: "Required"]"#;
     );
     let mut observation = BTreeMap::new();
     observation.insert("code".to_string(), Value::Tuple(concept));
+    observation.insert("subject".to_string(), reference("Patient/patient-1"));
 
     let mut data = InMemoryDataProvider::new();
     data.add_resource("Observation", Value::Tuple(observation));
@@ -924,6 +1454,7 @@ define X: [Observation: "Required"]"#;
     let ctx = EvalContextBuilder::new(test_clock())
         .data_provider(data)
         .terminology_provider(terminology)
+        .context_value(patient_context("patient-1"))
         .build();
 
     let value = evaluate_elm(&result.library, "X", &ctx).expect("retrieve should evaluate");

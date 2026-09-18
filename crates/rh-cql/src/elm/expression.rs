@@ -292,7 +292,10 @@ pub struct NullaryExpression {
 pub struct UnaryExpression {
     #[serde(flatten)]
     pub element: ElementFields,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    // ELM list aggregators (First, Last, Exists, …) encode their input as
+    // `source`, while most unary operators use `operand`. Accept both on
+    // input and retain the established `operand` serialization shape.
+    #[serde(alias = "source", skip_serializing_if = "Option::is_none")]
     pub operand: Option<Box<Expression>>,
     /// Optional temporal precision used by clinical unary operators such as
     /// `CalculateAge` in reference ELM.

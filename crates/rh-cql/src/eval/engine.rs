@@ -7,13 +7,13 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use super::context::{EvalContext, EvalError};
+use super::context::{filter_resources_for_context, EvalContext, EvalError};
 use super::operators::*;
 use super::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 use super::value::Value;
 use crate::elm::{
-    BinaryExpression, Expression, Library, NaryExpression, StatementDef, TimeBinaryExpression,
-    TypeSpecifier, UnaryExpression,
+    BinaryExpression, Expression, FunctionDef, Library, NaryExpression, StatementDef,
+    TimeBinaryExpression, TypeSpecifier, UnaryExpression,
 };
 
 type TemporalRelationEvaluator = fn(&Value, &Value, Option<&str>) -> Result<Value, EvalError>;
@@ -58,8 +58,7 @@ pub struct TraceEvent {
 /// `Ok(Value)` on success, `Err(EvalError)` on type mismatch or runtime error.
 pub fn evaluate_elm(library: &Library, name: &str, ctx: &EvalContext) -> Result<Value, EvalError> {
     let mut engine = Engine::new(library, ctx);
-    let expr = engine.find_expression(name)?;
-    engine.eval_expr(expr)
+    engine.eval_named_expression(name)
 }
 
 /// Evaluate a named expression in `library`, with access to a map of
@@ -74,8 +73,7 @@ pub fn evaluate_elm_with_libraries(
     ctx: &EvalContext,
 ) -> Result<Value, EvalError> {
     let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
-    let expr = engine.find_expression(name)?;
-    engine.eval_expr(expr)
+    engine.eval_named_expression(name)
 }
 
 /// Evaluate a named expression and return the result plus a flat trace of
@@ -89,8 +87,7 @@ pub fn evaluate_elm_with_trace(
     ctx: &EvalContext,
 ) -> Result<(Value, Vec<TraceEvent>), EvalError> {
     let mut engine = Engine::new(library, ctx);
-    let expr = engine.find_expression(name)?;
-    let value = engine.eval_expr(expr)?;
+    let value = engine.eval_named_expression(name)?;
     let trace = std::mem::take(&mut engine.trace);
     Ok((value, trace))
 }
@@ -106,8 +103,12 @@ struct Engine<'lib, 'ctx> {
     next_event_id: u64,
     /// Expression name → body, built at construction for O(1) lookup.
     expr_index: HashMap<String, &'lib Expression>,
-    /// Function name → overloads, built at construction for O(1) lookup.
-    func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>>,
+    /// Expression name → CQL evaluation context. A Retrieve with no explicit
+    /// context inherits this statement-level context.
+    expr_context_index: HashMap<String, Option<&'lib str>>,
+    /// Function name → overloads, evaluated when a FunctionRef is not a CQL
+    /// system builtin.
+    function_index: HashMap<String, Vec<&'lib FunctionDef>>,
     /// Set of parameter names declared in the library, for fast membership test.
     param_names: HashSet<String>,
     /// Binding scope stack — top frame is the innermost scope.
@@ -122,6 +123,14 @@ struct Engine<'lib, 'ctx> {
     /// `ExpressionRef` and `FunctionRef` nodes.  Empty for the standard
     /// single-library evaluation path.
     included: Option<&'lib HashMap<String, Library>>,
+    active_context: EvaluationContext,
+    named_expression_depth: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EvaluationContext {
+    Unfiltered,
+    Patient,
 }
 
 impl<'lib, 'ctx> Engine<'lib, 'ctx> {
@@ -136,22 +145,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     ) -> Self {
         // Pre-build expression and parameter indexes for O(1) lookup.
         let mut expr_index: HashMap<String, &'lib Expression> = HashMap::new();
+        let mut expr_context_index: HashMap<String, Option<&'lib str>> = HashMap::new();
+        let mut function_index: HashMap<String, Vec<&'lib FunctionDef>> = HashMap::new();
         let mut param_names: HashSet<String> = HashSet::new();
-
-        let mut func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>> = HashMap::new();
 
         if let Some(stmts) = &library.statements {
             for def in &stmts.defs {
-                match def {
-                    StatementDef::Expression(ed) => {
-                        if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
-                            expr_index.insert(name.clone(), expr.as_ref());
-                        }
+                if let StatementDef::Expression(ed) = def {
+                    if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
+                        expr_index.insert(name.clone(), expr.as_ref());
+                        expr_context_index.insert(name.clone(), ed.context.as_deref());
                     }
-                    StatementDef::Function(fd) => {
-                        if let Some(name) = &fd.name {
-                            func_index.entry(name.clone()).or_default().push(fd);
-                        }
+                } else if let StatementDef::Function(function) = def {
+                    if let Some(name) = &function.name {
+                        function_index
+                            .entry(name.clone())
+                            .or_default()
+                            .push(function);
                     }
                 }
             }
@@ -177,10 +187,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             trace: Vec::new(),
             next_event_id: 1,
             expr_index,
-            func_index,
+            expr_context_index,
+            function_index,
             param_names,
             scope_stack: vec![base_scope],
             included,
+            active_context: EvaluationContext::Unfiltered,
+            named_expression_depth: 0,
         }
     }
 
@@ -191,20 +204,53 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             .ok_or_else(|| EvalError::General(format!("Expression '{name}' not found in library")))
     }
 
-    /// Select one user-defined function overload by arity and ELM signature.
-    fn find_function(
-        &self,
+    fn eval_named_expression(&mut self, name: &str) -> Result<Value, EvalError> {
+        let expr = self.find_expression(name)?;
+        let context = self.expr_context_index.get(name).copied().flatten();
+        let previous = self.active_context;
+        let selected = Self::resolve_expression_context(context)?;
+        if self.named_expression_depth > 0
+            && previous == EvaluationContext::Unfiltered
+            && selected == EvaluationContext::Patient
+        {
+            return Err(EvalError::RetrieveError(format!(
+                "cannot evaluate Patient-context expression '{name}' from Unfiltered context without population iteration"
+            )));
+        }
+        self.named_expression_depth += 1;
+        self.active_context = selected;
+        let result = self.eval_expr(expr);
+        self.active_context = previous;
+        self.named_expression_depth -= 1;
+        result
+    }
+
+    fn resolve_expression_context(context: Option<&str>) -> Result<EvaluationContext, EvalError> {
+        match context {
+            None | Some("Unfiltered") => Ok(EvaluationContext::Unfiltered),
+            Some("Patient") => Ok(EvaluationContext::Patient),
+            Some(context) => Err(EvalError::RetrieveError(format!(
+                "unsupported CQL expression context '{context}'"
+            ))),
+        }
+    }
+
+    fn eval_user_function(
+        &mut self,
         name: &str,
-        argument_count: usize,
-        signature: &[crate::elm::TypeSpecifier],
-    ) -> Result<Option<&'lib crate::elm::FunctionDef>, EvalError> {
-        let Some(overloads) = self.func_index.get(name) else {
-            return Ok(None);
-        };
+        args: Vec<Value>,
+        signature: &[TypeSpecifier],
+    ) -> Result<Value, EvalError> {
+        let overloads = self.function_index.get(name).ok_or_else(|| {
+            EvalError::ExpressionNotFound(format!(
+                "Function '{name}' with {} argument(s) not found",
+                args.len()
+            ))
+        })?;
         let mut matches = overloads
             .iter()
             .copied()
-            .filter(|function| function.operand.len() == argument_count)
+            .filter(|function| function.operand.len() == args.len())
             .filter(|function| {
                 signature.is_empty()
                     || function
@@ -213,57 +259,95 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                         .map(|operand| operand.operand_type_specifier.as_ref())
                         .eq(signature.iter().map(Some))
             });
-        let selected = matches.next();
-        if selected.is_some() && matches.next().is_some() {
+        let function = matches.next().ok_or_else(|| {
+            EvalError::ExpressionNotFound(format!(
+                "Function '{name}' has no overload matching its ELM signature"
+            ))
+        })?;
+        if matches.next().is_some() {
             return Err(EvalError::General(format!(
                 "Function '{name}' overload is ambiguous without a unique ELM signature match"
             )));
         }
-        Ok(selected)
-    }
-
-    /// Evaluate a user-defined function by binding arguments to operand names,
-    /// pushing a scope, evaluating the body, and popping the scope.
-    fn eval_user_function(
-        &mut self,
-        fd: &crate::elm::FunctionDef,
-        args: Vec<Value>,
-    ) -> Result<Value, EvalError> {
-        if fd.external == Some(true) {
+        if function.external == Some(true) {
             return Err(EvalError::General(format!(
-                "External function '{}' is not supported",
-                fd.name.as_deref().unwrap_or("?")
+                "external FunctionDef '{name}' is not supported by this evaluator"
             )));
         }
-        if fd.operand.len() != args.len() {
-            return Err(EvalError::General(format!(
-                "Function '{}' expected {} arguments, got {}",
-                fd.name.as_deref().unwrap_or("?"),
-                fd.operand.len(),
-                args.len()
-            )));
-        }
-        let body = fd.expression.as_ref().ok_or_else(|| {
-            EvalError::General(format!(
-                "Function '{}' has no body",
-                fd.name.as_deref().unwrap_or("?")
-            ))
+        let body = function.expression.as_deref().ok_or_else(|| {
+            EvalError::General(format!("FunctionDef '{name}' has no expression body"))
         })?;
-
-        // Bind operand names to argument values.
-        let mut scope = BTreeMap::new();
-        for (i, operand) in fd.operand.iter().enumerate() {
-            let name = operand.name.clone().unwrap_or_else(|| format!("arg{i}"));
-            let val = args.get(i).cloned().unwrap_or(Value::Null);
-            scope.insert(name, val);
+        let mut bindings = BTreeMap::new();
+        for (operand, value) in function.operand.iter().zip(args) {
+            let operand_name = operand.name.as_deref().ok_or_else(|| {
+                EvalError::General(format!("FunctionDef '{name}' has an unnamed operand"))
+            })?;
+            bindings.insert(operand_name.to_string(), value);
         }
-
-        self.push_scope(scope);
+        let previous_context = self.active_context;
+        let selected_context = match function.context.as_deref() {
+            Some(context) => Self::resolve_expression_context(Some(context))?,
+            None => previous_context,
+        };
+        if self.named_expression_depth > 0
+            && previous_context == EvaluationContext::Unfiltered
+            && selected_context == EvaluationContext::Patient
+        {
+            return Err(EvalError::RetrieveError(format!(
+                "cannot evaluate Patient-context function '{name}' from Unfiltered context without population iteration"
+            )));
+        }
+        self.active_context = selected_context;
+        self.named_expression_depth += 1;
+        self.push_scope(bindings);
         let result = self.eval_expr(body);
         self.pop_scope();
+        self.named_expression_depth -= 1;
+        self.active_context = previous_context;
         result
     }
 
+    fn patient_context_reference(&self) -> Result<String, EvalError> {
+        let Some(Value::Tuple(fields)) = &self.ctx.context_value else {
+            return Err(EvalError::RetrieveError(
+                "Patient expression context requires a current Patient resource".to_string(),
+            ));
+        };
+        let id = match fields.get("id") {
+            Some(Value::String(id)) => Some(id.as_str()),
+            Some(Value::Tuple(primitive)) => match primitive.get("value") {
+                Some(Value::String(id)) => Some(id.as_str()),
+                _ => None,
+            },
+            _ => None,
+        };
+        let resource_type = match fields.get("resourceType") {
+            None => None,
+            Some(Value::String(resource_type)) => Some(resource_type.as_str()),
+            Some(Value::Tuple(primitive)) => match primitive.get("value") {
+                Some(Value::String(resource_type)) => Some(resource_type.as_str()),
+                _ => None,
+            },
+            _ => None,
+        };
+        if resource_type.is_some_and(|resource_type| resource_type != "Patient") {
+            return Err(EvalError::RetrieveError(
+                "Patient expression context requires a Patient resource".to_string(),
+            ));
+        }
+        let Some(id) = id.filter(|id| {
+            !id.is_empty()
+                && id.len() <= 64
+                && id.chars().all(|character| {
+                    character.is_ascii_alphanumeric() || character == '-' || character == '.'
+                })
+        }) else {
+            return Err(EvalError::RetrieveError(
+                "Patient expression context requires a simple FHIR Patient.id".to_string(),
+            ));
+        };
+        Ok(format!("Patient/{id}"))
+    }
     /// Return true if `name` is declared as a parameter in the library.
     fn is_library_parameter(&self, name: &str) -> bool {
         self.param_names.contains(name)
@@ -403,10 +487,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                             })?;
                     let mut sub_engine =
                         Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
-                    let expr = sub_engine
-                        .find_expression(name)
-                        .map_err(|_| EvalError::ExpressionNotFound(format!("{alias}.{name}")))?;
-                    return sub_engine.eval_expr(expr);
+                    // Included expressions are evaluated from the caller's
+                    // context. Do not reset to top-level Unfiltered here: an
+                    // Unfiltered expression must not silently promote itself
+                    // into a Patient expression through a library reference.
+                    sub_engine.active_context = self.active_context;
+                    sub_engine.named_expression_depth = self.named_expression_depth;
+                    if !sub_engine.expr_index.contains_key(name) {
+                        return Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")));
+                    }
+                    return sub_engine.eval_named_expression(name);
                 }
 
                 // Check scope stack first (for query aliases / let clauses).
@@ -434,8 +524,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                 }
                 // Otherwise evaluate from library.
-                let expr = self.find_expression(name)?;
-                let val = self.eval_expr(expr)?;
+                let val = self.eval_named_expression(name)?;
                 self.record_trace(
                     "ExpressionRef",
                     vec![],
@@ -1437,40 +1526,41 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if let Some(result) = self.eval_temporal_function(name, &args) {
                     return result;
                 }
-                // Try builtin first regardless of library qualification.
+                // Try builtins first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
-                // CQL system builtins so this works transparently.
-                eval_builtin_function(name, args.clone()).or_else(|e| {
-                    // Cross-library function call: look up in included library.
-                    if let Some(alias) = func_ref.library_name.as_deref() {
-                        let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
-                            alias: alias.to_string(),
-                        })?;
-                        let inc_lib =
-                            included
-                                .get(alias)
-                                .ok_or_else(|| EvalError::LibraryNotFound {
+                // CQL system builtins so this works transparently. If there is
+                // no matching builtin, execute a declared function body from
+                // the local or included library (for example FHIRCommon's
+                // fluent `references` helper).
+                match eval_builtin_function(name, args.clone()) {
+                    Ok(value) => Ok(value),
+                    Err(builtin_error) => {
+                        if let Some(alias) = func_ref.library_name.as_deref() {
+                            let included =
+                                self.included.ok_or_else(|| EvalError::LibraryNotFound {
                                     alias: alias.to_string(),
                                 })?;
-
-                        let mut sub_engine =
-                            Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
-                        if let Some(fd) =
-                            sub_engine.find_function(name, args.len(), &func_ref.signature)?
-                        {
-                            return sub_engine.eval_user_function(fd, args);
+                            let inc_lib =
+                                included
+                                    .get(alias)
+                                    .ok_or_else(|| EvalError::LibraryNotFound {
+                                        alias: alias.to_string(),
+                                    })?;
+                            let mut sub_engine =
+                                Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
+                            sub_engine.active_context = self.active_context;
+                            sub_engine.named_expression_depth = self.named_expression_depth;
+                            if !sub_engine.function_index.contains_key(name) {
+                                return Err(builtin_error);
+                            }
+                            sub_engine.eval_user_function(name, args, &func_ref.signature)
+                        } else if self.function_index.contains_key(name) {
+                            self.eval_user_function(name, args, &func_ref.signature)
+                        } else {
+                            Err(builtin_error)
                         }
-
-                        return Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")));
                     }
-
-                    // Same-library function call: look up in this library.
-                    if let Some(fd) = self.find_function(name, args.len(), &func_ref.signature)? {
-                        return self.eval_user_function(fd, args);
-                    }
-
-                    Err(e)
-                })
+                }
             }
 
             other => Err(EvalError::General(format!(
@@ -2460,7 +2550,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 })
             }
             Expression::Retrieve(r) => {
+                if r.context.is_some() {
+                    return Err(EvalError::RetrieveError(
+                        "explicit Retrieve.context is not supported by this evaluator".to_string(),
+                    ));
+                }
                 let raw_type = r.data_type.as_deref().unwrap_or("");
+                if self.active_context == EvaluationContext::Patient
+                    && raw_type.starts_with('{')
+                    && !raw_type.starts_with("{http://hl7.org/fhir}")
+                {
+                    return Err(EvalError::RetrieveError(format!(
+                        "Patient-context retrieve is unsupported for non-FHIR data type '{raw_type}'"
+                    )));
+                }
                 // Strip Clark-notation namespace prefix `{uri}LocalName` → `LocalName`
                 let data_type = if let Some(pos) = raw_type.find('}') {
                     &raw_type[pos + 1..]
@@ -2485,8 +2588,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     .transpose()?;
 
                 // Fetch candidate resources (provider may return unfiltered results).
+                let patient_context = match self.active_context {
+                    EvaluationContext::Unfiltered => None,
+                    EvaluationContext::Patient => Some(self.patient_context_reference()?),
+                };
                 let candidates = self.ctx.retrieve(
-                    None,
+                    patient_context.as_deref(),
                     data_type,
                     code_path,
                     codes_val.as_ref(),
@@ -2495,6 +2602,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 )?;
 
                 // Post-filter by code when both a code path and a filter are present.
+                let candidates = filter_resources_for_context(
+                    candidates,
+                    data_type,
+                    patient_context.as_deref(),
+                )?;
                 let results = match (code_path, &codes_val) {
                     (Some(path), Some(filter)) => {
                         self.filter_resources_by_code(candidates, path, filter)?
