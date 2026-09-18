@@ -56,6 +56,9 @@ pub struct FunctionSignature {
     pub is_fluent: bool,
     pub is_external: bool,
     pub library: Option<LibraryIdentifier>,
+    /// Exact ELM signature, retained for safe FunctionRef emission when an
+    /// imported precompiled library exposes overloads.
+    pub elm_signature: Vec<crate::elm::TypeSpecifier>,
 }
 
 impl FunctionSignature {
@@ -67,6 +70,7 @@ impl FunctionSignature {
             is_fluent: false,
             is_external: false,
             library: None,
+            elm_signature: Vec::new(),
         }
     }
 }

@@ -27,6 +27,22 @@ pub trait LibrarySourceProvider: Send + Sync {
     /// Returns `Some(source)` if the library is found, `None` otherwise.
     fn get_source(&self, identifier: &LibraryIdentifier) -> Option<LibrarySource>;
 
+    /// Load a version-pinned, precompiled ELM dependency when the provider
+    /// supports it. Implementations must return an error for a discovered
+    /// compiled artifact that cannot be trusted (for example, malformed JSON
+    /// or an identifier mismatch), rather than silently falling back to CQL
+    /// source.
+    ///
+    /// This is deliberately separate from [`Self::get_source`]: root CQL is
+    /// still parsed and compiled locally, while a pinned external dependency
+    /// can contribute its already-translated symbols and function bodies.
+    fn get_precompiled_elm(
+        &self,
+        _identifier: &LibraryIdentifier,
+    ) -> Result<Option<crate::elm::Library>, String> {
+        Ok(None)
+    }
+
     /// Check if a library is available.
     fn has_library(&self, identifier: &LibraryIdentifier) -> bool {
         self.get_source(identifier).is_some()

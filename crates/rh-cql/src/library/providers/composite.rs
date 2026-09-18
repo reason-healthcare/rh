@@ -37,6 +37,25 @@ impl LibrarySourceProvider for CompositeLibrarySourceProvider {
         None
     }
 
+    fn get_precompiled_elm(
+        &self,
+        identifier: &LibraryIdentifier,
+    ) -> Result<Option<crate::elm::Library>, String> {
+        let mut resolved = None;
+        for provider in &self.providers {
+            if let Some(library) = provider.get_precompiled_elm(identifier)? {
+                if resolved.is_some() {
+                    return Err(format!(
+                        "ambiguous precompiled ELM dependency for {}; exactly one versioned artifact is required",
+                        identifier
+                    ));
+                }
+                resolved = Some(library);
+            }
+        }
+        Ok(resolved)
+    }
+
     fn has_library(&self, identifier: &LibraryIdentifier) -> bool {
         self.providers.iter().any(|p| p.has_library(identifier))
     }

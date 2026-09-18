@@ -101,7 +101,7 @@ pub fn emit_function_invocation(
         name: Some(fi.function.clone()),
         library_name: fi.library.clone(),
         operand,
-        signature: Vec::new(),
+        signature: fi.signature.clone(),
     })
 }
 

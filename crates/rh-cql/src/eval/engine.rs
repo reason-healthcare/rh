@@ -2002,12 +2002,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let v = self.eval_expr_opt(agg.source.as_deref())?;
                 super::lists::avg(&v)
             }
-            Expression::First(unary) => {
-                let v = self.eval_unary_arg(unary)?;
+            Expression::First(list_access) => {
+                let v = self.eval_expr_opt(list_access.source.as_deref())?;
                 super::lists::first(&v)
             }
-            Expression::Last(unary) => {
-                let v = self.eval_unary_arg(unary)?;
+            Expression::Last(list_access) => {
+                let v = self.eval_expr_opt(list_access.source.as_deref())?;
                 super::lists::last(&v)
             }
             Expression::Flatten(unary) => {

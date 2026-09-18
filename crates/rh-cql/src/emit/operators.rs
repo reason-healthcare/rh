@@ -366,7 +366,11 @@ pub fn emit_system_function(
             "Exists" => Some(elm::Expression::Exists(unary)),
             "Flatten" => Some(elm::Expression::Flatten(unary)),
             "Distinct" => Some(elm::Expression::Distinct(unary)),
-            "First" => Some(elm::Expression::First(unary)),
+            "First" => Some(elm::Expression::First(elm::ListAccessExpression {
+                element: element.clone(),
+                source: operand,
+                signature: Vec::new(),
+            })),
 
             // ----- Aggregate functions -----
             "Count" => Some(elm::Expression::Count(aggregate())),

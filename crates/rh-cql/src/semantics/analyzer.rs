@@ -399,11 +399,21 @@ impl SemanticAnalyzer {
                         if let Some(name) = &f.name {
                             let sig = crate::semantics::scope::FunctionSignature {
                                 name: name.clone(),
-                                operand_types: vec![],
+                                operand_types: f
+                                    .operand
+                                    .iter()
+                                    .map(|_| DataType::Unknown)
+                                    .collect(),
                                 result_type: DataType::Unknown,
-                                is_fluent: false,
-                                is_external: false,
+                                is_fluent: f.fluent.unwrap_or(false),
+                                is_external: f.external.unwrap_or(false),
                                 library: Some(alias_id.clone()),
+                                elm_signature: f
+                                    .operand
+                                    .iter()
+                                    .map(|operand| operand.operand_type_specifier.clone())
+                                    .collect::<Option<Vec<_>>>()
+                                    .unwrap_or_default(),
                             };
                             self.scope_manager.register_function(sig);
                         }
@@ -551,6 +561,8 @@ impl SemanticAnalyzer {
 
         let mut dt = DataType::Unknown;
         let mut meta = SemanticMeta::default();
+        let mut library = e.library.clone();
+        let mut signature = Vec::new();
 
         if let Ok(res) = self
             .operator_resolver
@@ -563,26 +575,29 @@ impl SemanticAnalyzer {
                     meta.implicit_conversions.push(format!("{:?}", conv));
                 }
             }
-        } else if let Some(library) = &e.library {
+        } else if let Some(qualified_library) = &e.library {
             if let Some(funcs) = self
                 .scope_manager
-                .resolve_functions_qualified(library, &e.name)
+                .resolve_functions_qualified(qualified_library, &e.name)
             {
                 if let Some(f) = funcs
                     .iter()
                     .find(|f| f.operand_types.len() == arg_types.len())
                 {
                     dt = f.result_type.clone();
-                    meta.resolved_symbol = Some(format!("{library}.{}", e.name));
+                    meta.resolved_symbol = Some(format!("{qualified_library}.{}", e.name));
+                    signature = f.elm_signature.clone();
                 }
             }
         } else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
             if let Some(f) = funcs
                 .iter()
-                .find(|f| f.operand_types.len() == arg_types.len())
+                .find(|f| f.operand_types.len() == arg_types.len() && (!e.fluent || f.is_fluent))
             {
                 dt = f.result_type.clone();
                 meta.resolved_symbol = Some(e.name.clone());
+                library = f.library.as_ref().map(|identifier| identifier.name.clone());
+                signature = f.elm_signature.clone();
             } else {
                 // self.diagnostics.push(CqlCompilerException::new(format!("Could not find overload for function {}", e.name)));
             }
@@ -597,9 +612,10 @@ impl SemanticAnalyzer {
             meta,
             inner: TypedExpression::FunctionInvocation(
                 crate::semantics::typed_ast::TypedFunctionInvocation {
-                    library: e.library.clone(),
+                    library,
                     function: e.name.clone(),
                     arguments,
+                    signature,
                 },
             ),
         }

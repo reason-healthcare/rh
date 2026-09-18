@@ -1401,14 +1401,19 @@ fn parse_invocation_expression(input: Span<'_>) -> IResult<Span<'_>, Expression>
                                 library: Some(lib_name.clone()),
                                 name,
                                 arguments,
+                                fluent: false,
                                 location,
                             })
                         } else {
                             // Otherwise it's a fluent function call
+                            let mut fluent_arguments = Vec::with_capacity(arguments.len() + 1);
+                            fluent_arguments.push(acc);
+                            fluent_arguments.extend(arguments);
                             Expression::FunctionInvocation(FunctionInvocation {
                                 library: None,
                                 name,
-                                arguments,
+                                arguments: fluent_arguments,
+                                fluent: true,
                                 location,
                             })
                         }
@@ -1580,6 +1585,7 @@ pub(crate) fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>,
                 library: None,
                 name,
                 arguments,
+                fluent: false,
                 location: Some(start_loc),
             }),
         )),
