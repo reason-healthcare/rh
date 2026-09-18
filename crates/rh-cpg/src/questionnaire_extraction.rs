@@ -4,6 +4,7 @@
 //! extraction operation. It supports source-profiled Boolean question items and
 //! returns a standard FHIR transaction Bundle for callers that invoke it.
 
+use chrono::DateTime;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -234,10 +235,11 @@ fn has_sdc_extraction_profile(questionnaire: &Value) -> bool {
 }
 
 fn has_true_extension(questionnaire: &Value, url: &str) -> bool {
-    extensions(questionnaire).iter().any(|extension| {
-        extension.get("url").and_then(Value::as_str) == Some(url)
-            && extension.get("valueBoolean").and_then(Value::as_bool) == Some(true)
-    })
+    let matching = extensions(questionnaire)
+        .into_iter()
+        .filter(|extension| extension.get("url").and_then(Value::as_str) == Some(url))
+        .collect::<Vec<_>>();
+    matching.len() == 1 && matching[0].get("valueBoolean").and_then(Value::as_bool) == Some(true)
 }
 
 fn extraction_category(questionnaire: &Value) -> CpgResult<Option<Value>> {
@@ -274,44 +276,64 @@ fn extraction_category(questionnaire: &Value) -> CpgResult<Option<Value>> {
 }
 
 fn collect_boolean_items(questionnaire: &Value) -> CpgResult<Vec<BooleanItem>> {
-    let mut items = Vec::new();
-    collect_boolean_items_from(questionnaire.get("item"), &mut items)?;
+    let Some(items) = questionnaire.get("item").and_then(Value::as_array) else {
+        return Ok(Vec::new());
+    };
+    let mut output = Vec::new();
     let mut link_ids = HashSet::new();
-    for item in &items {
-        if !link_ids.insert(item.link_id.as_str()) {
+
+    for item in items {
+        reject_unsupported_item_metadata(item)?;
+        if item.get("type").and_then(Value::as_str) != Some("boolean") {
             return Err(invalid(format!(
-                "Questionnaire has duplicate Boolean item linkId '{}'",
-                item.link_id
+                "Questionnaire item '{}' has unsupported type '{}' for the SDC Boolean extraction subset",
+                item.get("linkId").and_then(Value::as_str).unwrap_or("unknown"),
+                item.get("type").and_then(Value::as_str).unwrap_or("unknown")
             )));
         }
+        let link_id = required_string(item, "linkId", "Questionnaire.item")?.to_string();
+        if !link_ids.insert(link_id.clone()) {
+            return Err(invalid(format!(
+                "Questionnaire has duplicate Boolean item linkId '{link_id}'"
+            )));
+        }
+        output.push(BooleanItem {
+            link_id,
+            required: item.get("required").and_then(Value::as_bool) == Some(true),
+            coding: exactly_one_coding(item, "Questionnaire Boolean item")?,
+        });
     }
-    Ok(items)
+    Ok(output)
 }
 
-fn collect_boolean_items_from(
-    items: Option<&Value>,
-    output: &mut Vec<BooleanItem>,
-) -> CpgResult<()> {
-    let Some(items) = items.and_then(Value::as_array) else {
-        return Ok(());
-    };
-    for item in items {
-        match item.get("type").and_then(Value::as_str) {
-            Some("boolean") => output.push(BooleanItem {
-                link_id: required_string(item, "linkId", "Questionnaire.item")?.to_string(),
-                required: item.get("required").and_then(Value::as_bool) == Some(true),
-                coding: exactly_one_coding(item, "Questionnaire Boolean item")?,
-            }),
-            Some("group") | Some("display") => {}
-            Some(item_type) => {
-                return Err(invalid(format!(
-                    "Questionnaire item '{}' has unsupported type '{item_type}' for the SDC Boolean extraction subset",
-                    item.get("linkId").and_then(Value::as_str).unwrap_or("unknown")
-                )));
-            }
-            None => return Err(invalid("Questionnaire item.type is required")),
-        }
-        collect_boolean_items_from(item.get("item"), output)?;
+fn reject_unsupported_item_metadata(item: &Value) -> CpgResult<()> {
+    let link_id = item
+        .get("linkId")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    if item.get("item").is_some() {
+        return Err(invalid(format!(
+            "Questionnaire item '{link_id}' has nested items, unsupported by the SDC Boolean extraction subset"
+        )));
+    }
+    if item.get("enableWhen").is_some() || item.get("enableBehavior").is_some() {
+        return Err(invalid(format!(
+            "Questionnaire item '{link_id}' has conditional enablement, unsupported by the SDC Boolean extraction subset"
+        )));
+    }
+    if item.get("repeats").and_then(Value::as_bool) == Some(true) {
+        return Err(invalid(format!(
+            "Questionnaire item '{link_id}' repeats, unsupported by the SDC Boolean extraction subset"
+        )));
+    }
+    if item
+        .get("extension")
+        .and_then(Value::as_array)
+        .is_some_and(|extensions| !extensions.is_empty())
+    {
+        return Err(invalid(format!(
+            "Questionnaire item '{link_id}' has extraction or relationship extensions, unsupported by the SDC Boolean extraction subset"
+        )));
     }
     Ok(())
 }
@@ -380,7 +402,10 @@ fn validate_response_provenance(
         )));
     }
     required_string(response, "id", "QuestionnaireResponse")?;
-    required_string(response, "authored", "QuestionnaireResponse")?;
+    let authored = required_string(response, "authored", "QuestionnaireResponse")?;
+    DateTime::parse_from_rfc3339(authored).map_err(|_| {
+        invalid("QuestionnaireResponse.authored must be an RFC 3339 date-time with timezone for SDC Observation extraction")
+    })?;
     required_reference(response, "author", "QuestionnaireResponse")?;
     Ok(())
 }
@@ -417,16 +442,8 @@ fn exactly_one_coding(item: &Value, owner: &str) -> CpgResult<Value> {
     let codings = item
         .get("code")
         .and_then(Value::as_array)
-        .ok_or_else(|| invalid(format!("{owner} requires code.coding")))?
-        .iter()
-        .flat_map(|code| {
-            code.get("coding")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-        })
-        .collect::<Vec<_>>();
-    if codings.len() != 1 || !is_complete_coding(codings[0]) {
+        .ok_or_else(|| invalid(format!("{owner} requires a Coding in code")))?;
+    if codings.len() != 1 || !is_complete_coding(&codings[0]) {
         return Err(invalid(format!(
             "{owner} requires exactly one coding with system, version, and code"
         )));
@@ -587,15 +604,15 @@ mod tests {
                 }]}}
             ],
             "item": [
-                {"linkId":"unsteady","type":"boolean","required":true,"code":[{"coding":[{
+                {"linkId":"unsteady","type":"boolean","required":true,"code":[{
                     "system":"http://loinc.org","version":"2.81","code":"100257-5","display":"Unsteady"
-                }]}]},
-                {"linkId":"worried","type":"boolean","required":true,"code":[{"coding":[{
+                }]},
+                {"linkId":"worried","type":"boolean","required":true,"code":[{
                     "system":"http://loinc.org","version":"2.81","code":"97878-3","display":"Worried"
-                }]}]},
-                {"linkId":"fallen","type":"boolean","required":true,"code":[{"coding":[{
+                }]},
+                {"linkId":"fallen","type":"boolean","required":true,"code":[{
                     "system":"http://loinc.org","version":"2.81","code":"52552-7","display":"Fallen"
-                }]}]}
+                }]}
             ]
         })
     }
@@ -739,6 +756,42 @@ mod tests {
         assert!(extract_completed_sdc_boolean_observations(
             &questionnaire(),
             &device_author,
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut duplicate_root_flag = questionnaire();
+        duplicate_root_flag["extension"]
+            .as_array_mut()
+            .expect("extensions")
+            .push(json!({
+                "url": OBSERVATION_EXTRACT,
+                "valueBoolean": false
+            }));
+        assert!(extract_completed_sdc_boolean_observations(
+            &duplicate_root_flag,
+            &response("completed"),
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut unsupported_relationship = questionnaire();
+        unsupported_relationship["item"][0]["enableWhen"] = json!([]);
+        assert!(extract_completed_sdc_boolean_observations(
+            &unsupported_relationship,
+            &response("completed"),
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut invalid_authored = response("completed");
+        invalid_authored["authored"] = Value::String("2026-06-15".to_string());
+        assert!(extract_completed_sdc_boolean_observations(
+            &questionnaire(),
+            &invalid_authored,
             SUBJECT,
             ENCOUNTER
         )
