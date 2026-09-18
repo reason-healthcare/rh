@@ -47,6 +47,12 @@ pub fn populate_questionnaire(questionnaire: &Value, ctx: &ApplyContext) -> CpgR
         response["questionnaire"] = Value::String(canonical);
     }
     response["subject"] = json!({ "reference": ctx.subject });
+    // A selected scenario may supply the encounter explicitly. Preserve that
+    // exact reference for downstream CQL that scopes QuestionnaireResponse
+    // retrievals to the encounter; never select an encounter from data.
+    if let Some(encounter) = &ctx.encounter {
+        response["encounter"] = json!({ "reference": encounter });
+    }
 
     let library_canonicals = library_canonicals(questionnaire);
     if let Some(items) = questionnaire_items(questionnaire) {
@@ -669,11 +675,12 @@ mod tests {
             "version": "0.2.0",
             "item": [{ "linkId": "screen", "type": "boolean" }]
         });
-        let ctx = context(json!({
+        let mut ctx = context(json!({
             "resourceType": "Bundle",
             "type": "collection",
             "entry": []
         }));
+        ctx.encounter = Some("Encounter/selected".to_string());
 
         let assembled =
             assemble_questionnaire(&questionnaire, &ctx).expect("assembly should succeed");
@@ -682,6 +689,10 @@ mod tests {
         assert_eq!(
             response["questionnaire"],
             json!("http://example.org/Questionnaire/root|0.2.0")
+        );
+        assert_eq!(
+            response["encounter"],
+            json!({ "reference": "Encounter/selected" })
         );
     }
 

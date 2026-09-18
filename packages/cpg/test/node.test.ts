@@ -148,9 +148,12 @@ describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
     expect(assembled.success).toBe(true);
     expect(assembled.value?.version).toBe("0.2.0-assembled");
 
-    const populated = populateQuestionnaire(assembled.value, "Patient/example", content);
+    const populated = populateQuestionnaire(assembled.value, "Patient/example", content, {
+      encounter: "Encounter/selected"
+    });
     expect(populated.success).toBe(true);
     expect(populated.value?.questionnaire).toBe("http://example.org/Questionnaire/root|0.2.0");
+    expect(populated.value?.encounter).toEqual({ reference: "Encounter/selected" });
   });
 
   it("reports missing required QuestionnaireResponse answers", () => {
