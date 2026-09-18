@@ -6,7 +6,9 @@ import {
   applyPlanDefinition,
   assembleQuestionnaire,
   evaluateMeasure,
+  extractQuestionnaireObservations,
   populateQuestionnaire,
+  reconcileExtractedObservations,
   validateQuestionnaireResponse
 } from "../dist/node.js";
 
@@ -33,6 +35,75 @@ describe("@reasonhealth/cpg node wrapper", () => {
 });
 
 describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
+  it("extracts constrained SDC Boolean Observations and replaces exact QR provenance", () => {
+    const questionnaire = {
+      resourceType: "Questionnaire",
+      url: "http://example.org/Questionnaire/fall-screen",
+      version: "1.0.0",
+      meta: {
+        profile: ["http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-extr-obsn"]
+      },
+      extension: [{
+        url: "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-observationExtract",
+        valueBoolean: true
+      }],
+      item: [
+        { linkId: "one", type: "boolean", required: true, code: [{ system: "http://loinc.org", version: "2.81", code: "one" }] },
+        { linkId: "two", type: "boolean", required: true, code: [{ system: "http://loinc.org", version: "2.81", code: "two" }] },
+        { linkId: "three", type: "boolean", required: true, code: [{ system: "http://loinc.org", version: "2.81", code: "three" }] }
+      ]
+    };
+    const response = {
+      resourceType: "QuestionnaireResponse",
+      id: "response-1",
+      status: "completed",
+      questionnaire: "http://example.org/Questionnaire/fall-screen|1.0.0",
+      subject: { reference: "Patient/1" },
+      encounter: { reference: "Encounter/1" },
+      author: { reference: "Patient/1" },
+      authored: "2026-06-15T09:20:00Z",
+      item: [
+        { linkId: "one", answer: [{ valueBoolean: true }] },
+        { linkId: "two", answer: [{ valueBoolean: false }] },
+        { linkId: "three", answer: [{ valueBoolean: false }] }
+      ]
+    };
+
+    const result = extractQuestionnaireObservations(questionnaire, response, "Patient/1", {
+      encounter: "Encounter/1"
+    });
+    expect(result.success).toBe(true);
+    expect(result.value).toMatchObject({ status: "extracted" });
+    expect(result.value?.observations).toHaveLength(3);
+
+    const data = {
+      resourceType: "Bundle",
+      type: "collection",
+      entry: [
+        { resource: { resourceType: "Observation", id: "old", derivedFrom: [{ reference: "QuestionnaireResponse/response-1" }] } },
+        { resource: { resourceType: "Observation", id: "aggregate", derivedFrom: [{ reference: "QuestionnaireResponse/response-1" }, { reference: "QuestionnaireResponse/other" }] } },
+        { resource: { resourceType: "Observation", id: "other", derivedFrom: [{ reference: "QuestionnaireResponse/other" }] } },
+        { resource: { resourceType: "Condition", id: "preserved" } }
+      ]
+    };
+    const reconciled = reconcileExtractedObservations(
+      data,
+      "QuestionnaireResponse/response-1",
+      result.value?.transaction
+    );
+    const resources = reconciled.entry as Array<{ resource: { resourceType: string; id?: string } }>;
+    expect(resources.some(({ resource }) => resource.id === "old")).toBe(false);
+    expect(resources.some(({ resource }) => resource.id === "aggregate")).toBe(true);
+    expect(resources.some(({ resource }) => resource.id === "other")).toBe(true);
+    expect(resources.filter(({ resource }) => resource.resourceType === "Observation")).toHaveLength(5);
+    expect(resources.filter(({ resource }) => resource.resourceType === "Observation").every((entry) =>
+      entry.resource.id !== undefined || typeof (entry as { fullUrl?: unknown }).fullUrl === "string"
+    )).toBe(true);
+
+    const cleared = reconcileExtractedObservations(data, "QuestionnaireResponse/response-1");
+    expect((cleared.entry as Array<{ resource: { id?: string } }>).some(({ resource }) => resource.id === "old")).toBe(false);
+  });
+
   it("evaluates a Measure with a FHIRPath population criteria", () => {
     const measure = {
       resourceType: "Measure",

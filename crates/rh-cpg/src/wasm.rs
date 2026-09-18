@@ -12,6 +12,10 @@ use crate::questionnaire::{
     populate_questionnaire as populate_questionnaire_native,
     validate_questionnaire_response as validate_questionnaire_response_native,
 };
+use crate::questionnaire_extraction::{
+    extract_completed_sdc_boolean_observations, extract_sdc_boolean_observations,
+    SdcObservationExtraction,
+};
 use crate::resolver::{as_content_bundle, BundleResolver};
 
 pub use rh_foundation::wasm::WasmResult;
@@ -170,6 +174,72 @@ pub fn validate_questionnaire_response(questionnaire: &str, response: &str) -> W
     match serde_json::to_string(&json!({ "issues": issues })) {
         Ok(json) => WasmResult::ok(json),
         Err(error) => WasmResult::err(format!("Failed to serialize result to JSON: {error}")),
+    }
+}
+
+/// Extract constrained SDC Boolean Observations from a QuestionnaireResponse.
+///
+/// When `workflow_gated` is true, an incomplete response returns a successful
+/// `{status: "not-invoked", reason}` result. Otherwise, supplied supported
+/// Boolean answers are extracted directly. Subject and encounter are explicit
+/// inputs so the binding is never inferred from bundle contents.
+#[wasm_bindgen]
+pub fn extract_questionnaire_observations(
+    questionnaire: &str,
+    response: &str,
+    subject: &str,
+    encounter: &str,
+    workflow_gated: bool,
+) -> WasmResult {
+    if subject.is_empty() || encounter.is_empty() {
+        return WasmResult::err(
+            "SDC extraction requires explicit subject and encounter".to_string(),
+        );
+    }
+    let questionnaire = match parse_json(questionnaire, "Questionnaire") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    let response = match parse_json(response, "QuestionnaireResponse") {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+
+    let output = if workflow_gated {
+        match extract_completed_sdc_boolean_observations(
+            &questionnaire,
+            &response,
+            subject,
+            encounter,
+        ) {
+            Ok(SdcObservationExtraction::NotInvoked { reason }) => {
+                serde_json::to_string(&json!({ "status": "not-invoked", "reason": reason }))
+            }
+            Ok(SdcObservationExtraction::Extracted {
+                transaction,
+                observations,
+            }) => serde_json::to_string(&json!({
+                "status": "extracted",
+                "transaction": transaction,
+                "observations": observations,
+            })),
+            Err(error) => return WasmResult::err(error.to_string()),
+        }
+    } else {
+        match extract_sdc_boolean_observations(&questionnaire, &response, subject, encounter) {
+            Ok(observations) => serde_json::to_string(&json!({
+                "status": "extracted",
+                "observations": observations,
+            })),
+            Err(error) => return WasmResult::err(error.to_string()),
+        }
+    };
+
+    match output {
+        Ok(json) => WasmResult::ok(json),
+        Err(error) => WasmResult::err(format!(
+            "Failed to serialize SDC extraction result: {error}"
+        )),
     }
 }
 

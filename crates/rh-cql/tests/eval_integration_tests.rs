@@ -876,6 +876,61 @@ define X: "Allowed" in "Required""#;
 }
 
 #[test]
+fn retrieve_filters_fhir_codeable_concept_against_versioned_valueset() {
+    use rh_cql::{CqlCode, InMemoryDataProvider, InMemoryTerminologyProvider};
+    use std::collections::BTreeMap;
+
+    let cql = r#"library T
+using FHIR version '4.0.1'
+valueset "Required": 'http://example.org/ValueSet/required' version '2.0.0'
+context Patient
+define X: [Observation: "Required"]"#;
+    let result = rh_cql::compile(cql, None).expect("compile failed");
+    assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
+
+    let mut non_member = BTreeMap::new();
+    non_member.insert("code".to_string(), Value::String("not-allowed".to_string()));
+    non_member.insert(
+        "system".to_string(),
+        Value::String("http://example.org/system".to_string()),
+    );
+    let mut member = BTreeMap::new();
+    member.insert("code".to_string(), Value::String("allowed".to_string()));
+    member.insert(
+        "system".to_string(),
+        Value::String("http://example.org/system".to_string()),
+    );
+    member.insert("version".to_string(), Value::String("2026".to_string()));
+    let mut concept = BTreeMap::new();
+    concept.insert(
+        "coding".to_string(),
+        Value::List(vec![Value::Tuple(non_member), Value::Tuple(member)]),
+    );
+    let mut observation = BTreeMap::new();
+    observation.insert("code".to_string(), Value::Tuple(concept));
+
+    let mut data = InMemoryDataProvider::new();
+    data.add_resource("Observation", Value::Tuple(observation));
+    let mut terminology = InMemoryTerminologyProvider::new();
+    terminology.register_valueset(
+        "http://example.org/ValueSet/required|2.0.0",
+        vec![CqlCode {
+            code: "allowed".to_string(),
+            system: "http://example.org/system".to_string(),
+            display: None,
+            version: Some("2.0.0".to_string()),
+        }],
+    );
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(data)
+        .terminology_provider(terminology)
+        .build();
+
+    let value = evaluate_elm(&result.library, "X", &ctx).expect("retrieve should evaluate");
+    assert!(matches!(value, Value::List(items) if items.len() == 1));
+}
+
+#[test]
 fn eval_substring_function() {
     let cql = "library T define X: Substring('abc', 1, 1)";
     assert_eq!(eval_expr(cql, "X"), Value::String("b".into()));

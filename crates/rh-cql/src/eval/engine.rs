@@ -1577,35 +1577,45 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                     Ok(false)
                 }
-                // FHIR CodeableConcept: a Tuple with a "coding" field
-                // containing a list of coding Tuples, each with "system" and "code" string fields.
+                // FHIR resources enter the evaluator as JSON-shaped tuples.
+                // A retrieve's code path commonly resolves to a
+                // CodeableConcept (`{ coding: [{ system, code, ... }] }`) or
+                // a Coding. Normalize just those structural forms for
+                // terminology membership. `in_valueset` deliberately retains
+                // its existing system+code matching semantics; a Coding's
+                // optional version is preserved but does not become an
+                // invented extra predicate here.
                 Value::Tuple(fields) => {
-                    if let Some(Value::List(codings)) = fields.get("coding") {
-                        for coding in codings {
-                            if let Value::Tuple(cf) = coding {
-                                let system = match cf.get("system") {
-                                    Some(Value::String(s)) => s.as_str(),
-                                    _ => "",
-                                };
-                                let code = match cf.get("code") {
-                                    Some(Value::String(s)) => s.as_str(),
-                                    _ => "",
-                                };
-                                if !system.is_empty() && !code.is_empty() {
-                                    let c = CqlCode {
-                                        code: code.to_string(),
-                                        system: system.to_string(),
-                                        display: None,
-                                        version: None,
-                                    };
-                                    if code_in_filter(ctx, &c, filter)? {
-                                        return Ok(true);
-                                    }
-                                }
-                            }
-                        }
+                    if let Some(coding) = fields.get("coding") {
+                        return val_matches(ctx, coding, filter);
                     }
-                    Ok(false)
+                    let code = fields.get("code").and_then(|value| match value {
+                        Value::String(value) => Some(value.clone()),
+                        _ => None,
+                    });
+                    let system = fields.get("system").and_then(|value| match value {
+                        Value::String(value) => Some(value.clone()),
+                        _ => None,
+                    });
+                    match (code, system) {
+                        (Some(code), Some(system)) => code_in_filter(
+                            ctx,
+                            &CqlCode {
+                                code,
+                                system,
+                                display: fields.get("display").and_then(|value| match value {
+                                    Value::String(value) => Some(value.clone()),
+                                    _ => None,
+                                }),
+                                version: fields.get("version").and_then(|value| match value {
+                                    Value::String(value) => Some(value.clone()),
+                                    _ => None,
+                                }),
+                            },
+                            filter,
+                        ),
+                        _ => Ok(false),
+                    }
                 }
                 _ => Ok(false),
             }

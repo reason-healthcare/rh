@@ -3,6 +3,8 @@ import {
   type CpgApplyOptions,
   type CpgContextOptions,
   type MeasurementPeriod,
+  type QuestionnaireObservationExtraction,
+  type SdcExtractionOptions,
   type WasmCallResult,
   type QuestionnaireValidationResult,
   resourceToJson,
@@ -13,7 +15,9 @@ export type {
   CpgApplyOptions,
   CpgContextOptions,
   MeasurementPeriod,
+  QuestionnaireObservationExtraction,
   QuestionnaireValidationResult,
+  SdcExtractionOptions,
   WasmCallResult
 } from "./common.js";
 
@@ -116,3 +120,22 @@ export function validateQuestionnaireResponse(
     wasm.validate_questionnaire_response(resourceToJson(questionnaire), resourceToJson(response))
   );
 }
+
+export function extractQuestionnaireObservations(
+  questionnaire: unknown,
+  response: unknown,
+  subject: string,
+  options: SdcExtractionOptions
+): WasmCallResult<QuestionnaireObservationExtraction> {
+  return toPlainResult<QuestionnaireObservationExtraction>(
+    wasm.extract_questionnaire_observations(
+      resourceToJson(questionnaire),
+      resourceToJson(response),
+      subject,
+      options.encounter,
+      options.workflowGated ?? true
+    )
+  );
+}
+
+export { reconcileExtractedObservations } from "./common.js";
