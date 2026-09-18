@@ -708,6 +708,7 @@ mod tests {
             .expect("MedicationRequest should be supported");
 
         assert_eq!(applied["resourceType"], "MedicationRequest");
+        assert_eq!(applied["intent"], "proposal");
         assert_eq!(
             applied["medicationCodeableConcept"],
             json!({"text": "aspirin"})

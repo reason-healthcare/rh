@@ -155,6 +155,24 @@ fn evaluate_group(
         .map(|(population, _)| population)
         .collect::<Vec<_>>();
     if !report_populations.is_empty() {
+        if is_proportion_measure(measure) {
+            if has_unsupported_proportion_adjustments(&report_populations) {
+                issues.push(
+                    "proportion Measure score is not calculated for groups with denominator or numerator adjustments"
+                        .to_string(),
+                );
+            } else {
+                match proportion_measure_score(&report_populations)? {
+                    Some(measure_score) => {
+                        report_group.insert("measureScore".to_string(), measure_score);
+                    }
+                    None => issues.push(
+                        "proportion Measure score is not applicable because the denominator is zero"
+                            .to_string(),
+                    ),
+                }
+            }
+        }
         report_group.insert("population".to_string(), Value::Array(report_populations));
     }
     let report_stratifiers = stratifiers
@@ -166,6 +184,71 @@ fn evaluate_group(
     }
 
     Ok((Value::Object(report_group), issues))
+}
+
+fn is_proportion_measure(measure: &Value) -> bool {
+    measure
+        .get("scoring")
+        .and_then(|scoring| scoring.get("coding"))
+        .and_then(Value::as_array)
+        .is_some_and(|codings| {
+            codings.iter().any(|coding| {
+                coding.get("system").and_then(Value::as_str)
+                    == Some("http://terminology.hl7.org/CodeSystem/measure-scoring")
+                    && coding.get("code").and_then(Value::as_str) == Some("proportion")
+            })
+        })
+}
+
+/// Return the score for an individual proportion group. A zero denominator has
+/// no defined mathematical score, so the report keeps its zero-count
+/// populations and omits `measureScore` rather than fabricating a zero.
+fn proportion_measure_score(populations: &[Value]) -> CpgResult<Option<Value>> {
+    let denominator = report_population_count(populations, "denominator").ok_or_else(|| {
+        CpgError::InvalidResource(
+            "proportion Measure group has no denominator population count".to_string(),
+        )
+    })?;
+    let numerator = report_population_count(populations, "numerator").ok_or_else(|| {
+        CpgError::InvalidResource(
+            "proportion Measure group has no numerator population count".to_string(),
+        )
+    })?;
+    if denominator == 0 {
+        return Ok(None);
+    }
+
+    Ok(Some(
+        json!({"value": numerator as f64 / denominator as f64}),
+    ))
+}
+
+fn has_unsupported_proportion_adjustments(populations: &[Value]) -> bool {
+    [
+        "denominator-exclusion",
+        "denominator-exception",
+        "numerator-exclusion",
+    ]
+    .iter()
+    .any(|code| report_population_count(populations, code).is_some())
+}
+
+fn report_population_count(populations: &[Value], requested_code: &str) -> Option<u64> {
+    populations.iter().find_map(|population| {
+        population
+            .get("code")
+            .and_then(|concept| concept.get("coding"))
+            .and_then(Value::as_array)
+            .is_some_and(|codings| {
+                codings.iter().any(|coding| {
+                    coding.get("system").and_then(Value::as_str)
+                        == Some("http://terminology.hl7.org/CodeSystem/measure-population")
+                        && coding.get("code").and_then(Value::as_str) == Some(requested_code)
+                })
+            })
+            .then(|| population.get("count").and_then(Value::as_u64))
+            .flatten()
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -473,6 +556,99 @@ mod tests {
             report["measure"],
             json!("http://test/Measure/AdultPopulation|0.2.0")
         );
+    }
+
+    #[test]
+    fn proportion_measure_reports_the_calculated_score() {
+        let library = compiled_test_library();
+        let library_resource = json!({
+            "resourceType": "Library",
+            "url": "http://test/Library/TestLib",
+            "name": "TestLib",
+            "content": [{
+                "contentType": "application/elm+json",
+                "data": encode_elm(&library),
+            }],
+        });
+        let measure = json!({
+            "resourceType": "Measure",
+            "scoring": {"coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+                "code": "proportion"
+            }]},
+            "library": ["http://test/Library/TestLib"],
+            "group": [{"population": [
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "denominator"}]}, "criteria": criteria("InInitial")},
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "numerator"}]}, "criteria": criteria("InNumerator")}
+            ]}],
+        });
+        let ctx = test_context(Some(json!({
+            "resourceType": "Bundle",
+            "entry": [{"resource": library_resource}],
+        })));
+
+        let report = evaluate_measure(&measure, &ctx).expect("proportion measure should evaluate");
+
+        assert_eq!(report["group"][0]["measureScore"], json!({"value": 0.0}));
+    }
+
+    #[test]
+    fn proportion_measure_keeps_zero_populations_without_a_fabricated_score() {
+        let measure = json!({
+            "resourceType": "Measure",
+            "scoring": {"coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+                "code": "proportion"
+            }]},
+            "group": [{"population": [
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "denominator"}]}},
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "numerator"}]}}
+            ]}],
+        });
+
+        let report = evaluate_measure(&measure, &test_context(None))
+            .expect("zero denominator is a normal individual-report outcome");
+
+        assert_eq!(report["group"][0]["population"][0]["count"], json!(0));
+        assert_eq!(report["group"][0]["population"][1]["count"], json!(0));
+        assert!(report["group"][0].get("measureScore").is_none());
+        assert!(report["extension"].as_array().is_some_and(|extensions| {
+            extensions.iter().any(|extension| {
+                extension["url"] == MEASURE_EVAL_ISSUE_EXTENSION_URL
+                    && extension["valueString"]
+                        .as_str()
+                        .is_some_and(|message| message.contains("not applicable"))
+            })
+        }));
+    }
+
+    #[test]
+    fn proportion_measure_does_not_misstate_adjusted_population_scores() {
+        let measure = json!({
+            "resourceType": "Measure",
+            "scoring": {"coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/measure-scoring",
+                "code": "proportion"
+            }]},
+            "group": [{"population": [
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "denominator"}]}},
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "denominator-exclusion"}]}},
+                {"code": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/measure-population", "code": "numerator"}]}}
+            ]}],
+        });
+
+        let report = evaluate_measure(&measure, &test_context(None))
+            .expect("unsupported population adjustments still produce an inspectable report");
+
+        assert!(report["group"][0].get("measureScore").is_none());
+        assert!(report["extension"].as_array().is_some_and(|extensions| {
+            extensions.iter().any(|extension| {
+                extension["url"] == MEASURE_EVAL_ISSUE_EXTENSION_URL
+                    && extension["valueString"]
+                        .as_str()
+                        .is_some_and(|message| message.contains("adjustments"))
+            })
+        }));
     }
 
     #[test]

@@ -99,6 +99,7 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
     }
 
     let libraries = resolve_libraries(plan_definition, ctx)?;
+    let mut request_group_notes = Vec::new();
     if let Some(actions) = plan_definition.get("action").and_then(Value::as_array) {
         let mut request_group_actions = Vec::new();
         for action in actions {
@@ -108,6 +109,7 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
                 ctx,
                 &mut entries,
                 &libraries,
+                &mut request_group_notes,
             )? {
                 request_group_actions.push(request_group_action);
             }
@@ -120,6 +122,13 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
                 Value::Array(request_group_actions),
             );
         }
+    }
+    if !request_group_notes.is_empty() {
+        set_field(
+            &mut request_group,
+            "note",
+            Value::Array(request_group_notes),
+        );
     }
 
     let mut bundle = Map::new();
@@ -374,10 +383,39 @@ mod tests {
             })
             .unwrap();
 
-        assert_eq!(sub_entry["resource"]["intent"], "proposal");
+        assert_eq!(sub_entry["resource"]["intent"], "option");
         assert_eq!(
             sub_entry["resource"]["instantiatesCanonical"],
             json!(["http://test/PlanDefinition/Sub"])
+        );
+    }
+
+    #[test]
+    fn preserves_an_applicable_descriptive_leaf_as_a_request_group_note() {
+        let plan_definition = json!({
+            "resourceType": "PlanDefinition",
+            "id": "interpret",
+            "action": [{
+                "id": "interpret-phase",
+                "title": "Interpret the screen",
+                "description": "Do not coerce unknown to false.",
+                "documentation": [{
+                    "label": "screening-evidence",
+                    "citation": "Evidence source"
+                }]
+            }]
+        });
+        let ctx = context(&json!({"resourceType": "Bundle"}));
+
+        let result = apply_plan_definition(&plan_definition, &ctx).expect("plan should apply");
+        let request_group = &result["entry"][0]["resource"];
+
+        assert!(request_group.get("action").is_none());
+        assert_eq!(
+            request_group["note"],
+            json!([{
+                "text": "Source action: interpret-phase\n\nInterpret the screen\n\nDo not coerce unknown to false.\n\nSource (screening-evidence): Evidence source"
+            }])
         );
     }
 }
