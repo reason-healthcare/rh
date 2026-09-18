@@ -26,6 +26,21 @@ struct ModelPropertyResolver<'a> {
     model_provider: &'a dyn ModelInfoProvider,
 }
 
+/// Parse an ELM qualified model type into the ModelInfo namespace used by the
+/// semantic layer. ELM carries FHIR as `{http://hl7.org/fhir}Type`, while the
+/// model provider is registered as `FHIR`.
+fn qualified_elm_type_name(name: &str) -> Option<(String, String)> {
+    let (namespace, type_name) = name
+        .strip_prefix('{')
+        .and_then(|qualified| qualified.split_once('}'))
+        .or_else(|| name.rsplit_once('.'))?;
+    let namespace = match namespace {
+        "http://hl7.org/fhir" => "FHIR",
+        other => other,
+    };
+    (!type_name.is_empty()).then(|| (namespace.to_owned(), type_name.to_owned()))
+}
+
 impl<'a> ModelPropertyResolver<'a> {
     fn new(model_provider: &'a dyn ModelInfoProvider) -> Self {
         Self { model_provider }
@@ -151,6 +166,7 @@ impl<'a> ModelPropertyResolver<'a> {
                 let namespace = named.namespace.as_deref().or(named.model_name.as_deref());
                 match namespace {
                     Some("System") => self.resolve_qualified_name(name).ok(),
+                    Some("http://hl7.org/fhir") => Some(DataType::model("FHIR", name)),
                     Some(namespace) => Some(DataType::model(namespace, name)),
                     None => self.resolve_qualified_name(name).ok(),
                 }
@@ -397,23 +413,30 @@ impl SemanticAnalyzer {
                     }
                     crate::elm::StatementDef::Function(f) => {
                         if let Some(name) = &f.name {
+                            let elm_signature: Vec<_> = f
+                                .operand
+                                .iter()
+                                .map(|operand| operand.operand_type_specifier.clone())
+                                .collect::<Option<Vec<_>>>()
+                                .unwrap_or_default();
                             let sig = crate::semantics::scope::FunctionSignature {
                                 name: name.clone(),
                                 operand_types: f
                                     .operand
                                     .iter()
-                                    .map(|_| DataType::Unknown)
+                                    .map(|operand| {
+                                        operand
+                                            .operand_type_specifier
+                                            .as_ref()
+                                            .and_then(|spec| self.elm_type_to_data_type(spec))
+                                            .unwrap_or(DataType::Unknown)
+                                    })
                                     .collect(),
                                 result_type: DataType::Unknown,
                                 is_fluent: f.fluent.unwrap_or(false),
                                 is_external: f.external.unwrap_or(false),
                                 library: Some(alias_id.clone()),
-                                elm_signature: f
-                                    .operand
-                                    .iter()
-                                    .map(|operand| operand.operand_type_specifier.clone())
-                                    .collect::<Option<Vec<_>>>()
-                                    .unwrap_or_default(),
+                                elm_signature,
                             };
                             self.scope_manager.register_function(sig);
                         }
@@ -433,6 +456,158 @@ impl SemanticAnalyzer {
         let mut sym = Symbol::new(name.to_string(), kind).with_type(data_type);
         sym.library = Some(alias_id.clone());
         self.scope_manager.register_symbol(sym);
+    }
+
+    /// Convert the subset of ELM type specifiers used by imported function
+    /// declarations into semantic types. Imported function overloads must be
+    /// selected by these declared types; choosing the first equal-arity
+    /// overload emits a misleading FunctionRef.
+    fn elm_type_to_data_type(&self, specifier: &crate::elm::TypeSpecifier) -> Option<DataType> {
+        match specifier {
+            crate::elm::TypeSpecifier::Named(named) => {
+                let name = named.name.as_str();
+                if let Some(system) = crate::datatype::SystemType::from_name(name)
+                    .filter(|_| name.contains("elm-types"))
+                {
+                    return Some(DataType::system(system));
+                }
+                let (namespace, type_name) = qualified_elm_type_name(name)?;
+                Some(DataType::model(namespace, type_name))
+            }
+            crate::elm::TypeSpecifier::List(list) => list
+                .element_type
+                .as_deref()
+                .and_then(|element| self.elm_type_to_data_type(element))
+                .map(DataType::list),
+            crate::elm::TypeSpecifier::Interval(interval) => interval
+                .point_type
+                .as_deref()
+                .and_then(|point| self.elm_type_to_data_type(point))
+                .map(DataType::interval),
+            crate::elm::TypeSpecifier::Choice(choice) => {
+                let choices: Vec<_> = choice
+                    .choice
+                    .iter()
+                    .filter_map(|choice| self.elm_type_to_data_type(choice))
+                    .collect();
+                (!choices.is_empty()).then(|| DataType::choice(choices))
+            }
+            crate::elm::TypeSpecifier::Tuple(_) | crate::elm::TypeSpecifier::Parameter(_) => None,
+        }
+    }
+
+    fn imported_type_matches(&self, actual: &DataType, expected: &DataType) -> bool {
+        match (actual, expected) {
+            (DataType::Unknown, _) | (_, DataType::Unknown) => false,
+            (DataType::Choice(choices), _) => choices
+                .iter()
+                .all(|choice| self.imported_type_matches(choice, expected)),
+            (_, DataType::Choice(choices)) => choices
+                .iter()
+                .any(|choice| self.imported_type_matches(actual, choice)),
+            (DataType::List(actual), DataType::List(expected))
+            | (DataType::Interval(actual), DataType::Interval(expected)) => {
+                self.imported_type_matches(actual, expected)
+            }
+            (
+                DataType::Model {
+                    namespace: actual_namespace,
+                    name: actual_name,
+                },
+                DataType::Model {
+                    namespace: expected_namespace,
+                    name: expected_name,
+                },
+            ) => self.model_type_is_subtype(
+                actual_namespace,
+                actual_name,
+                expected_namespace,
+                expected_name,
+            ),
+            _ => actual.is_subtype_of(expected),
+        }
+    }
+
+    fn model_type_is_subtype(
+        &self,
+        actual_namespace: &str,
+        actual_name: &str,
+        expected_namespace: &str,
+        expected_name: &str,
+    ) -> bool {
+        if actual_namespace != expected_namespace {
+            return false;
+        }
+        let mut current = actual_name.to_owned();
+        loop {
+            if current == expected_name {
+                return true;
+            }
+            let Some(class_info) =
+                self._model_provider
+                    .resolve_class(actual_namespace, None, &current)
+            else {
+                return false;
+            };
+            let base = class_info
+                .base_type
+                .as_deref()
+                .and_then(qualified_elm_type_name)
+                .or_else(|| {
+                    class_info.base_type_specifier.as_ref().and_then(|spec| {
+                        ModelPropertyResolver::new(self._model_provider.as_ref())
+                            .resolve_modelinfo_type_specifier(spec)
+                            .and_then(|data_type| match data_type {
+                                DataType::Model { namespace, name }
+                                    if namespace == actual_namespace =>
+                                {
+                                    Some((namespace, name))
+                                }
+                                _ => None,
+                            })
+                    })
+                });
+            let Some((base_namespace, base_name)) = base else {
+                return false;
+            };
+            if base_namespace != actual_namespace || base_name == current {
+                return false;
+            }
+            current = base_name;
+        }
+    }
+
+    fn select_imported_overload<'a>(
+        &self,
+        functions: &[&'a crate::semantics::scope::FunctionSignature],
+        name: &str,
+        argument_types: &[DataType],
+        fluent: bool,
+    ) -> Result<&'a crate::semantics::scope::FunctionSignature, String> {
+        let candidates: Vec<_> = functions
+            .iter()
+            .copied()
+            .filter(|function| {
+                function.operand_types.len() == argument_types.len()
+                    && (!fluent || function.is_fluent)
+                    && function
+                        .operand_types
+                        .iter()
+                        .zip(argument_types)
+                        .all(|(expected, actual)| self.imported_type_matches(actual, expected))
+            })
+            .collect();
+        match candidates.as_slice() {
+            [function] => Ok(*function),
+            [] => Err(format!(
+                "Could not resolve a declared imported overload for function {name} with argument types {:?}",
+                argument_types
+            )),
+            _ => Err(format!(
+                "Ambiguous imported overload for function {name} with argument types {:?}",
+                argument_types
+            )),
+        }
     }
 
     fn analyze_literal(&mut self, e: &ast::Literal) -> TypedNode<TypedExpression> {
@@ -580,9 +755,21 @@ impl SemanticAnalyzer {
                 .scope_manager
                 .resolve_functions_qualified(qualified_library, &e.name)
             {
-                if let Some(f) = funcs
+                // A qualified call to a fluent imported API is still an
+                // overload call. Select from its declared signatures rather
+                // than accepting the first equal-arity function.
+                if funcs.iter().any(|function| function.is_fluent) {
+                    match self.select_imported_overload(&funcs, &e.name, &arg_types, false) {
+                        Ok(f) => {
+                            dt = f.result_type.clone();
+                            meta.resolved_symbol = Some(format!("{qualified_library}.{}", e.name));
+                            signature = f.elm_signature.clone();
+                        }
+                        Err(message) => self.diagnostics.push(CqlCompilerException::new(message)),
+                    }
+                } else if let Some(f) = funcs
                     .iter()
-                    .find(|f| f.operand_types.len() == arg_types.len())
+                    .find(|function| function.operand_types.len() == arg_types.len())
                 {
                     dt = f.result_type.clone();
                     meta.resolved_symbol = Some(format!("{qualified_library}.{}", e.name));
@@ -590,7 +777,23 @@ impl SemanticAnalyzer {
                 }
             }
         } else if let Some(funcs) = self.scope_manager.resolve_functions_unqualified(&e.name) {
-            if let Some(f) = funcs
+            if e.fluent && funcs.iter().any(|function| function.library.is_some()) {
+                let imported_functions: Vec<_> = funcs.iter().collect();
+                match self.select_imported_overload(
+                    &imported_functions,
+                    &e.name,
+                    &arg_types,
+                    e.fluent,
+                ) {
+                    Ok(f) => {
+                        dt = f.result_type.clone();
+                        meta.resolved_symbol = Some(e.name.clone());
+                        library = f.library.as_ref().map(|identifier| identifier.name.clone());
+                        signature = f.elm_signature.clone();
+                    }
+                    Err(message) => self.diagnostics.push(CqlCompilerException::new(message)),
+                }
+            } else if let Some(f) = funcs
                 .iter()
                 .find(|f| f.operand_types.len() == arg_types.len() && (!e.fluent || f.is_fluent))
             {
@@ -598,11 +801,18 @@ impl SemanticAnalyzer {
                 meta.resolved_symbol = Some(e.name.clone());
                 library = f.library.as_ref().map(|identifier| identifier.name.clone());
                 signature = f.elm_signature.clone();
-            } else {
-                // self.diagnostics.push(CqlCompilerException::new(format!("Could not find overload for function {}", e.name)));
+            } else if e.fluent {
+                self.diagnostics.push(CqlCompilerException::new(format!(
+                    "Could not resolve function {} with {} argument(s)",
+                    e.name,
+                    arg_types.len()
+                )));
             }
-        } else {
-            // self.diagnostics.push(CqlCompilerException::new(format!("Could not resolve function {}", e.name)));
+        } else if e.fluent {
+            self.diagnostics.push(CqlCompilerException::new(format!(
+                "Could not resolve function {}",
+                e.name
+            )));
         }
 
         TypedNode {
@@ -916,9 +1126,10 @@ impl SemanticAnalyzer {
                 ast::Statement::ExpressionDef(ed) => {
                     let id = self.generate_node_id();
                     let body = self.analyze_expression(&ed.expression);
+                    let body_type = body.data_type.clone();
                     let typed_stmt = TypedNode {
                         node_id: id,
-                        data_type: DataType::any(),
+                        data_type: body_type.clone(),
                         span: SourceSpan::default(),
                         meta: SemanticMeta::default(),
                         inner: TypedStatement::ExpressionDef {
@@ -928,8 +1139,7 @@ impl SemanticAnalyzer {
                     };
 
                     self.scope_manager.register_symbol(
-                        Symbol::new(ed.name.clone(), SymbolKind::Expression)
-                            .with_type(DataType::any()),
+                        Symbol::new(ed.name.clone(), SymbolKind::Expression).with_type(body_type),
                     );
 
                     typed_stmt
@@ -1048,8 +1258,6 @@ impl SemanticAnalyzer {
         let meta = SemanticMeta::default();
         let span = SourceSpan::default();
 
-        let dt = DataType::any(); // TODO: determine query type
-
         // Analyze source expressions first (outside the query scope so aliases
         // are not yet in scope for the source expressions themselves).
         let mut sources = Vec::new();
@@ -1063,6 +1271,10 @@ impl SemanticAnalyzer {
             };
             sources.push((s.alias.clone(), typed_source_expr, alias_type));
         }
+        let primary_source_type = sources
+            .first()
+            .map(|(_, _, alias_type)| alias_type.clone())
+            .unwrap_or_else(DataType::any);
 
         // Push a new query scope and register all source aliases so that the
         // where, return, let, aggregate, and sort clauses can resolve them.
@@ -1140,6 +1352,13 @@ impl SemanticAnalyzer {
                     expression: Box::new(self.analyze_expression(&rc.expression)),
                 });
 
+        let dt = DataType::list(
+            return_clause
+                .as_ref()
+                .map(|return_clause| return_clause.expression.data_type.clone())
+                .unwrap_or(primary_source_type),
+        );
+
         let aggregate_clause = e.aggregate_clause.as_ref().map(|ac| {
             crate::semantics::typed_ast::TypedAggregateClause {
                 distinct: ac.distinct,
@@ -1197,7 +1416,23 @@ impl SemanticAnalyzer {
 
         let base_dt = self
             .resolve_type_specifier(&e.data_type)
-            .unwrap_or(DataType::any());
+            .unwrap_or_else(|_| {
+                // A CQL `using FHIR` library may write `[Encounter]` without an
+                // explicit namespace. The active native provider is FHIR R4, so
+                // preserve that model type for property and overload resolution.
+                match &e.data_type {
+                    ast::TypeSpecifier::Named(named)
+                        if named.namespace.is_none()
+                            && self
+                                ._model_provider
+                                .resolve_class("FHIR", None, &named.name)
+                                .is_some() =>
+                    {
+                        DataType::model("FHIR", named.name.clone())
+                    }
+                    _ => DataType::any(),
+                }
+            });
         let dt = DataType::List(Box::new(base_dt));
 
         let named_type = match &e.data_type {

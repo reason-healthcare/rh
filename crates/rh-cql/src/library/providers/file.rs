@@ -377,29 +377,50 @@ mod tests {
                 ..Default::default()
             }),
             statements: Some(crate::elm::ExpressionDefs {
-                defs: vec![crate::elm::StatementDef::Function(
-                    crate::elm::FunctionDef {
+                defs: vec![
+                    crate::elm::StatementDef::Function(crate::elm::FunctionDef {
                         name: Some("references".into()),
                         fluent: Some(true),
                         operand: vec![
                             crate::elm::OperandDef {
                                 name: Some("reference".into()),
                                 operand_type_specifier: Some(named_type(
-                                    "{http://hl7.org/fhir}Reference",
+                                    "{urn:hl7-org:elm-types:r1}String",
                                 )),
                                 ..Default::default()
                             },
                             crate::elm::OperandDef {
                                 name: Some("resource".into()),
                                 operand_type_specifier: Some(named_type(
-                                    "{http://hl7.org/fhir}Resource",
+                                    "{urn:hl7-org:elm-types:r1}String",
                                 )),
                                 ..Default::default()
                             },
                         ],
                         ..Default::default()
-                    },
-                )],
+                    }),
+                    crate::elm::StatementDef::Function(crate::elm::FunctionDef {
+                        name: Some("references".into()),
+                        fluent: Some(true),
+                        operand: vec![
+                            crate::elm::OperandDef {
+                                name: Some("reference".into()),
+                                operand_type_specifier: Some(named_type(
+                                    "{urn:hl7-org:elm-types:r1}String",
+                                )),
+                                ..Default::default()
+                            },
+                            crate::elm::OperandDef {
+                                name: Some("resource".into()),
+                                operand_type_specifier: Some(named_type(
+                                    "{urn:hl7-org:elm-types:r1}Integer",
+                                )),
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    }),
+                ],
             }),
             ..Default::default()
         };
@@ -409,7 +430,7 @@ mod tests {
         )
         .expect("write helper ELM");
         let provider = FileLibrarySourceProvider::new().with_path(&root);
-        let main = "library Main version '1.0.0' include Helper version '1.0.0' define X: ref.value.references(resource)";
+        let main = "library Main version '1.0.0' include Helper version '1.0.0' define X: 'ref'.references('resource')";
         let output = crate::compile_with_libraries(main, None, &provider)
             .expect("compile with precompiled helper");
         let defs = &output.result.library.statements.expect("statements").defs;
@@ -427,7 +448,43 @@ mod tests {
         assert_eq!(call.signature.len(), 2);
         assert_eq!(
             call.signature[0],
-            named_type("{http://hl7.org/fhir}Reference")
+            named_type("{urn:hl7-org:elm-types:r1}String")
+        );
+        assert_eq!(
+            call.signature[1],
+            named_type("{urn:hl7-org:elm-types:r1}String")
+        );
+
+        let qualified = "library Main version '1.0.0' include Helper version '1.0.0' define X: Helper.references('ref', 'resource')";
+        let output = crate::compile_with_libraries(qualified, None, &provider)
+            .expect("compile qualified imported helper");
+        let defs = &output.result.library.statements.expect("statements").defs;
+        let crate::elm::StatementDef::Expression(definition) = &defs[0] else {
+            panic!("expected expression definition");
+        };
+        let Some(expression) = &definition.expression else {
+            panic!("expected expression body");
+        };
+        let crate::elm::Expression::FunctionRef(call) = expression.as_ref() else {
+            panic!("expected emitted FunctionRef");
+        };
+        assert_eq!(call.library_name.as_deref(), Some("Helper"));
+        assert_eq!(
+            call.signature[1],
+            named_type("{urn:hl7-org:elm-types:r1}String")
+        );
+
+        let unresolved = "library Main version '1.0.0' include Helper version '1.0.0' define X: missing.value.references('resource')";
+        let unresolved = crate::compile_with_libraries(unresolved, None, &provider)
+            .expect("analysis reports unresolved fluent function as a diagnostic");
+        assert!(
+            !unresolved.result.is_success()
+                && unresolved
+                    .result
+                    .errors
+                    .iter()
+                    .any(|error| error.message.contains("declared imported overload")),
+            "unresolved fluent calls must fail rather than emit an unqualified FunctionRef"
         );
         std::fs::remove_dir_all(root).expect("remove temp directory");
     }
