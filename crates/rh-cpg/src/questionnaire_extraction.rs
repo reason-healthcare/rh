@@ -5,6 +5,7 @@
 //! returns a standard FHIR transaction Bundle for callers that invoke it.
 
 use chrono::DateTime;
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -56,7 +57,9 @@ pub enum SdcObservationExtraction {
     },
 }
 
-/// Extract usable Boolean answers without imposing clinical completion gating.
+/// Extract usable Boolean answers and, only when every required Boolean answer
+/// is present, calculated integer score Observations without imposing workflow
+/// status gating.
 ///
 /// This function allows direct SDC-focused partial-response checks. Consumers
 /// evaluating clinical logic should call extract_completed_sdc_boolean_observations.
@@ -74,6 +77,7 @@ pub fn extract_sdc_boolean_observations(
         encounter,
     )?;
     let answers = response_answers(response, &specification.boolean_items)?;
+    let submitted_scores = response_scores(response, &specification.calculated_score_items)?;
 
     let response_reference = format!(
         "QuestionnaireResponse/{}",
@@ -100,7 +104,7 @@ pub fn extract_sdc_boolean_observations(
     )?;
     let security = optional_security_labels(response)?;
 
-    specification
+    let mut observations = specification
         .boolean_items
         .iter()
         .filter_map(|item| answers.get(&item.link_id).map(|answer| (item, *answer)))
@@ -131,7 +135,45 @@ pub fn extract_sdc_boolean_observations(
             }
             Ok(observation)
         })
-        .collect()
+        .collect::<CpgResult<Vec<_>>>()?;
+
+    // A direct caller may inspect a partial response, but a final calculated
+    // score is never inferred from partial input. This does not substitute a
+    // false/default value for an unanswered Boolean.
+    let required_answers_complete = specification
+        .boolean_items
+        .iter()
+        .all(|item| !item.required || answers.contains_key(&item.link_id));
+    if required_answers_complete {
+        let response_without_scores =
+            response_without_score_answers(response.clone(), &specification.calculated_score_items);
+        for item in &specification.calculated_score_items {
+            let calculated = evaluate_score(item, questionnaire, &response_without_scores)?;
+            if let Some(supplied) = submitted_scores.get(&item.link_id) {
+                if *supplied != calculated {
+                    return Err(invalid(format!(
+                        "QuestionnaireResponse calculated score '{}' is {supplied}, but its FHIRPath expression recomputes {calculated}",
+                        item.link_id
+                    )));
+                }
+            }
+            observations.push(numeric_observation(
+                item,
+                calculated,
+                subject,
+                encounter,
+                authored,
+                &author,
+                &response_reference,
+                specification.category.as_ref(),
+                security.as_ref(),
+                based_on.as_ref(),
+                part_of.as_ref(),
+            ));
+        }
+    }
+
+    Ok(observations)
 }
 
 /// Apply the preview workflow's completed/all-required-answer gate before
@@ -186,6 +228,7 @@ struct ExtractionSpecification {
     questionnaire_canonical: String,
     category: Option<Value>,
     boolean_items: Vec<BooleanItem>,
+    calculated_score_items: Vec<CalculatedScoreItem>,
 }
 
 #[derive(Debug)]
@@ -193,6 +236,14 @@ struct BooleanItem {
     link_id: String,
     required: bool,
     coding: Value,
+}
+
+#[derive(Debug)]
+struct CalculatedScoreItem {
+    link_id: String,
+    coding: Value,
+    expression: String,
+    questionnaire_item: Value,
 }
 
 fn extraction_specification(questionnaire: &Value) -> CpgResult<ExtractionSpecification> {
@@ -209,7 +260,7 @@ fn extraction_specification(questionnaire: &Value) -> CpgResult<ExtractionSpecif
         )));
     }
 
-    let boolean_items = collect_boolean_items(questionnaire)?;
+    let (boolean_items, calculated_score_items) = collect_extractable_items(questionnaire)?;
     if boolean_items.is_empty() {
         return Err(invalid(
             "Questionnaire has no Boolean items supported by the SDC extraction subset",
@@ -219,6 +270,7 @@ fn extraction_specification(questionnaire: &Value) -> CpgResult<ExtractionSpecif
         questionnaire_canonical: canonical_identity(questionnaire, "Questionnaire")?,
         category: extraction_category(questionnaire)?,
         boolean_items,
+        calculated_score_items,
     })
 }
 
@@ -276,38 +328,63 @@ fn extraction_category(questionnaire: &Value) -> CpgResult<Option<Value>> {
     Ok(Some(value.clone()))
 }
 
-fn collect_boolean_items(questionnaire: &Value) -> CpgResult<Vec<BooleanItem>> {
+fn collect_extractable_items(
+    questionnaire: &Value,
+) -> CpgResult<(Vec<BooleanItem>, Vec<CalculatedScoreItem>)> {
     let Some(items) = questionnaire.get("item").and_then(Value::as_array) else {
-        return Ok(Vec::new());
+        return Ok((Vec::new(), Vec::new()));
     };
-    let mut output = Vec::new();
+    let mut boolean_items = Vec::new();
+    let mut calculated_score_items = Vec::new();
     let mut link_ids = HashSet::new();
 
     for item in items {
-        reject_unsupported_item_metadata(item)?;
-        if item.get("type").and_then(Value::as_str) != Some("boolean") {
-            return Err(invalid(format!(
-                "Questionnaire item '{}' has unsupported type '{}' for the SDC Boolean extraction subset",
-                item.get("linkId").and_then(Value::as_str).unwrap_or("unknown"),
-                item.get("type").and_then(Value::as_str).unwrap_or("unknown")
-            )));
-        }
+        reject_unsupported_item_structure(item)?;
         let link_id = required_string(item, "linkId", "Questionnaire.item")?.to_string();
         if !link_ids.insert(link_id.clone()) {
             return Err(invalid(format!(
-                "Questionnaire has duplicate Boolean item linkId '{link_id}'"
+                "Questionnaire has duplicate extractable item linkId '{link_id}'"
             )));
         }
-        output.push(BooleanItem {
-            link_id,
-            required: item.get("required").and_then(Value::as_bool) == Some(true),
-            coding: exactly_one_coding(item, "Questionnaire Boolean item")?,
-        });
+        match item.get("type").and_then(Value::as_str) {
+            Some("boolean") => {
+                reject_item_extensions(item, &link_id)?;
+                boolean_items.push(BooleanItem {
+                    link_id,
+                    required: item.get("required").and_then(Value::as_bool) == Some(true),
+                    coding: exactly_one_coding(item, "Questionnaire Boolean item")?,
+                });
+            }
+            Some("integer") => {
+                let expression = calculated_expression(item, &link_id)?;
+                require_item_observation_extract(item, &link_id)?;
+                if item.get("readOnly").and_then(Value::as_bool) != Some(true) {
+                    return Err(invalid(format!(
+                        "calculated integer score item '{link_id}' must declare readOnly=true"
+                    )));
+                }
+                if item.get("initial").is_some() {
+                    return Err(invalid(format!(
+                        "calculated integer score item '{link_id}' must not declare initial"
+                    )));
+                }
+                calculated_score_items.push(CalculatedScoreItem {
+                    link_id,
+                    coding: exactly_one_coding(item, "Questionnaire calculated integer score item")?,
+                    expression,
+                    questionnaire_item: item.clone(),
+                });
+            }
+            other => return Err(invalid(format!(
+                "Questionnaire item '{link_id}' has unsupported type '{}' for the constrained SDC extraction subset",
+                other.unwrap_or("unknown")
+            ))),
+        }
     }
-    Ok(output)
+    Ok((boolean_items, calculated_score_items))
 }
 
-fn reject_unsupported_item_metadata(item: &Value) -> CpgResult<()> {
+fn reject_unsupported_item_structure(item: &Value) -> CpgResult<()> {
     let link_id = item
         .get("linkId")
         .and_then(Value::as_str)
@@ -328,13 +405,17 @@ fn reject_unsupported_item_metadata(item: &Value) -> CpgResult<()> {
             "Questionnaire item '{link_id}' repeats, unsupported by the SDC Boolean extraction subset"
         )));
     }
+    Ok(())
+}
+
+fn reject_item_extensions(item: &Value, link_id: &str) -> CpgResult<()> {
     if item
         .get("extension")
         .and_then(Value::as_array)
         .is_some_and(|extensions| !extensions.is_empty())
     {
         return Err(invalid(format!(
-            "Questionnaire item '{link_id}' has extraction or relationship extensions, unsupported by the SDC Boolean extraction subset"
+            "Questionnaire Boolean item '{link_id}' has extensions, unsupported by the constrained SDC extraction subset"
         )));
     }
     Ok(())
@@ -399,6 +480,266 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
         }
     }
     Ok(answers)
+}
+
+/// Validate optional materialized calculated answers without using them as the
+/// calculation input. SDC renderers may keep calculated answers in a
+/// QuestionnaireResponse; a stale, wrong-choice, or duplicate value is an
+/// invalid response rather than a reason to trust it.
+fn response_scores(
+    response: &Value,
+    items: &[CalculatedScoreItem],
+) -> CpgResult<HashMap<String, i32>> {
+    let supported = items
+        .iter()
+        .map(|item| item.link_id.as_str())
+        .collect::<HashSet<_>>();
+    let mut scores = HashMap::new();
+    let mut seen_items = HashSet::new();
+
+    for item in flatten_response_items(response.get("item")) {
+        let Some(link_id) = item.get("linkId").and_then(Value::as_str) else {
+            continue;
+        };
+        if !supported.contains(link_id) {
+            continue;
+        }
+        if !seen_items.insert(link_id) {
+            return Err(invalid(format!(
+                "QuestionnaireResponse has duplicate calculated score item '{link_id}'"
+            )));
+        }
+        let Some(answer_array) = item.get("answer").and_then(Value::as_array) else {
+            continue;
+        };
+        if answer_array.len() != 1 {
+            return Err(invalid(format!(
+                "QuestionnaireResponse calculated score item '{link_id}' must contain exactly one valueInteger answer when materialized"
+            )));
+        }
+        let answer = &answer_array[0];
+        reject_modifier_extensions(answer, "QuestionnaireResponse.item.answer")?;
+        let value_fields = answer
+            .as_object()
+            .map(|fields| {
+                fields
+                    .keys()
+                    .filter(|field| field.starts_with("value"))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if value_fields.len() != 1 || value_fields[0] != "valueInteger" {
+            return Err(invalid(format!(
+                "QuestionnaireResponse calculated score item '{link_id}' must contain exactly one value[x], valueInteger"
+            )));
+        }
+        let value = answer
+            .get("valueInteger")
+            .and_then(Value::as_i64)
+            .and_then(|value| i32::try_from(value).ok())
+            .ok_or_else(|| {
+                invalid(format!(
+                    "QuestionnaireResponse calculated score item '{link_id}' must contain a 32-bit valueInteger"
+                ))
+            })?;
+        scores.insert(link_id.to_string(), value);
+    }
+    Ok(scores)
+}
+
+fn calculated_expression(item: &Value, link_id: &str) -> CpgResult<String> {
+    let matching = extensions(item)
+        .into_iter()
+        .filter(|extension| {
+            extension.get("url").and_then(Value::as_str)
+                == Some("http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-calculatedExpression")
+        })
+        .collect::<Vec<_>>();
+    if matching.len() != 1 {
+        return Err(invalid(format!(
+            "calculated integer score item '{link_id}' requires exactly one sdc-questionnaire-calculatedExpression extension"
+        )));
+    }
+    let expression = matching[0].get("valueExpression").ok_or_else(|| {
+        invalid(format!(
+            "calculated integer score item '{link_id}' requires valueExpression"
+        ))
+    })?;
+    if expression.get("language").and_then(Value::as_str) != Some("text/fhirpath") {
+        return Err(invalid(format!(
+            "calculated integer score item '{link_id}' requires valueExpression.language text/fhirpath"
+        )));
+    }
+    required_string(
+        expression,
+        "expression",
+        "calculated integer score valueExpression",
+    )
+    .map(str::to_string)
+}
+
+fn require_item_observation_extract(item: &Value, link_id: &str) -> CpgResult<()> {
+    if !has_true_extension(item, OBSERVATION_EXTRACT) {
+        return Err(invalid(format!(
+            "calculated integer score item '{link_id}' must enable {OBSERVATION_EXTRACT} with valueBoolean=true"
+        )));
+    }
+    // Apart from the two explicitly supported SDC extensions, accepting an
+    // item extension would claim semantics this small extractor does not have.
+    if extensions(item).into_iter().any(|extension| {
+        !matches!(
+            extension.get("url").and_then(Value::as_str),
+            Some("http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-calculatedExpression")
+                | Some(OBSERVATION_EXTRACT)
+        )
+    }) {
+        return Err(invalid(format!(
+            "calculated integer score item '{link_id}' has unsupported extensions"
+        )));
+    }
+    Ok(())
+}
+
+fn response_without_score_answers(
+    mut response: Value,
+    score_items: &[CalculatedScoreItem],
+) -> Value {
+    let score_link_ids = score_items
+        .iter()
+        .map(|item| item.link_id.as_str())
+        .collect::<HashSet<_>>();
+    strip_score_answers(response.get_mut("item"), &score_link_ids);
+    response
+}
+
+fn strip_score_answers(items: Option<&mut Value>, score_link_ids: &HashSet<&str>) {
+    let Some(items) = items.and_then(Value::as_array_mut) else {
+        return;
+    };
+    for item in items {
+        if item
+            .get("linkId")
+            .and_then(Value::as_str)
+            .is_some_and(|link_id| score_link_ids.contains(link_id))
+        {
+            item.as_object_mut()
+                .expect("FHIR JSON item object")
+                .remove("answer");
+        }
+        strip_score_answers(item.get_mut("item"), score_link_ids);
+        if let Some(answers) = item.get_mut("answer").and_then(Value::as_array_mut) {
+            for answer in answers {
+                strip_score_answers(answer.get_mut("item"), score_link_ids);
+            }
+        }
+    }
+}
+
+fn evaluate_score(
+    item: &CalculatedScoreItem,
+    questionnaire: &Value,
+    response_without_scores: &Value,
+) -> CpgResult<i32> {
+    let parsed = FhirPathParser::new()
+        .parse(&item.expression)
+        .map_err(|error| {
+            invalid(format!(
+                "calculated integer score item '{}' has invalid FHIRPath expression: {error}",
+                item.link_id
+            ))
+        })?;
+    let current_item = response_without_scores
+        .get("item")
+        .and_then(Value::as_array)
+        .and_then(|items| {
+            items.iter().find(|response_item| {
+                response_item.get("linkId").and_then(Value::as_str) == Some(&item.link_id)
+            })
+        })
+        .cloned()
+        .unwrap_or_else(|| json!({ "linkId": item.link_id }));
+    let mut context =
+        EvaluationContext::new(response_without_scores.clone()).with_current(current_item);
+    context.add_constant(
+        "questionnaire".to_string(),
+        FhirPathValue::Object(questionnaire.clone()),
+    );
+    context.add_constant(
+        "qitem".to_string(),
+        FhirPathValue::Object(item.questionnaire_item.clone()),
+    );
+    let value = FhirPathEvaluator::new()
+        .evaluate(&parsed, &context)
+        .map_err(|error| {
+            invalid(format!(
+                "calculated integer score item '{}' FHIRPath evaluation failed: {error}",
+                item.link_id
+            ))
+        })?;
+    single_integral_score(value, &item.link_id)
+}
+
+fn single_integral_score(value: FhirPathValue, link_id: &str) -> CpgResult<i32> {
+    let single = match value {
+        FhirPathValue::Collection(mut values) | FhirPathValue::UnorderedCollection(mut values)
+            if values.len() == 1 => values.remove(0),
+        FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) | FhirPathValue::Empty => {
+            return Err(invalid(format!(
+                "calculated integer score item '{link_id}' FHIRPath expression must return exactly one integral numeric result"
+            )))
+        }
+        value => value,
+    };
+    let integral = match single {
+        FhirPathValue::Integer(value) | FhirPathValue::Long(value) => value,
+        FhirPathValue::Number(value) if value.fract().is_zero() => value.to_string().parse::<i64>().map_err(|_| invalid(format!(
+            "calculated integer score item '{link_id}' result is outside integer range"
+        )))?,
+        _ => return Err(invalid(format!(
+            "calculated integer score item '{link_id}' FHIRPath expression must return exactly one integral numeric result"
+        ))),
+    };
+    i32::try_from(integral).map_err(|_| {
+        invalid(format!(
+            "calculated integer score item '{link_id}' result is outside 32-bit valueInteger range"
+        ))
+    })
+}
+
+fn numeric_observation(
+    item: &CalculatedScoreItem,
+    score: i32,
+    subject: &str,
+    encounter: &str,
+    authored: &str,
+    author: &str,
+    response_reference: &str,
+    category: Option<&Value>,
+    security: Option<&Value>,
+    based_on: Option<&Vec<Value>>,
+    part_of: Option<&Vec<Value>>,
+) -> Value {
+    let mut observation = json!({
+        "resourceType": "Observation", "status": "final",
+        "code": { "coding": [item.coding.clone()] },
+        "subject": { "reference": subject }, "encounter": { "reference": encounter },
+        "effectiveDateTime": authored, "issued": authored,
+        "performer": [{ "reference": author }], "valueInteger": score,
+        "derivedFrom": [{ "reference": response_reference }],
+    });
+    if let Some(category) = category {
+        observation["category"] = Value::Array(vec![category.clone()]);
+    }
+    if let Some(security) = security {
+        observation["meta"] = json!({ "security": security });
+    }
+    if let Some(based_on) = based_on {
+        observation["basedOn"] = Value::Array(based_on.clone());
+    }
+    if let Some(part_of) = part_of {
+        observation["partOf"] = Value::Array(part_of.clone());
+    }
+    observation
 }
 
 fn validate_response_provenance(
@@ -671,6 +1012,30 @@ mod tests {
         })
     }
 
+    fn scored_questionnaire() -> Value {
+        let mut value = questionnaire();
+        value["item"].as_array_mut().expect("items").push(json!({
+            "linkId":"arbitrary-final-score", "type":"integer", "readOnly":true,
+            "code":[{"system":"https://example.org/codes","version":"2026","code":"screen-score"}],
+            "extension":[
+                {"url":OBSERVATION_EXTRACT,"valueBoolean":true},
+                {"url":"http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-calculatedExpression",
+                 "valueExpression":{"language":"text/fhirpath","expression":"iif(%resource.item.where(linkId = 'unsteady').answer.valueBoolean, 1, 0) + iif(%resource.item.where(linkId = 'worried').answer.valueBoolean, 1, 0) + iif(%resource.item.where(linkId = 'fallen').answer.valueBoolean, 1, 0)"}}
+            ]
+        }));
+        value
+    }
+
+    fn scored_response(status: &str, supplied_score: Option<i32>) -> Value {
+        let mut value = response(status);
+        if let Some(score) = supplied_score {
+            value["item"].as_array_mut().expect("items").push(json!({
+                "linkId":"arbitrary-final-score", "answer":[{"valueInteger":score}]
+            }));
+        }
+        value
+    }
+
     #[test]
     fn emits_transaction_with_complete_source_provenance() {
         let output = extract_completed_sdc_boolean_observations(
@@ -753,6 +1118,186 @@ mod tests {
             output,
             SdcObservationExtraction::NotInvoked { .. }
         ));
+    }
+
+    #[test]
+    fn extracts_metadata_driven_recomputed_integer_score_and_preserves_zero() {
+        let extracted = extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &scored_response("completed", Some(1)),
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect("matching calculated score may be materialized by an SDC renderer");
+        let SdcObservationExtraction::Extracted { observations, .. } = extracted else {
+            panic!("complete response must extract");
+        };
+        assert_eq!(observations.len(), 4);
+        let score = observations.last().expect("score observation");
+        assert_eq!(score["valueInteger"], 1);
+        assert_eq!(score["code"]["coding"][0]["code"], "screen-score");
+
+        let mut no_yes = scored_response("completed", Some(0));
+        for item in no_yes["item"]
+            .as_array_mut()
+            .expect("items")
+            .iter_mut()
+            .take(3)
+        {
+            item["answer"][0]["valueBoolean"] = Value::Bool(false);
+        }
+        let zero = extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &no_yes,
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect("zero is a valid complete score");
+        let SdcObservationExtraction::Extracted { observations, .. } = zero else {
+            panic!("complete response must extract");
+        };
+        assert_eq!(observations.last().expect("score")["valueInteger"], 0);
+
+        let mut two_yes = scored_response("completed", Some(2));
+        two_yes["item"][1]["answer"][0]["valueBoolean"] = Value::Bool(true);
+        let two = extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &two_yes,
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect("two affirmative answers are calculated from metadata");
+        let SdcObservationExtraction::Extracted { observations, .. } = two else {
+            panic!("complete response must extract");
+        };
+        assert_eq!(observations.last().expect("score")["valueInteger"], 2);
+
+        let mut three_yes = scored_response("completed", Some(3));
+        three_yes["item"][1]["answer"][0]["valueBoolean"] = Value::Bool(true);
+        three_yes["item"][2]["answer"][0]["valueBoolean"] = Value::Bool(true);
+        let three = extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &three_yes,
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect("three affirmative answers are calculated from metadata");
+        let SdcObservationExtraction::Extracted { observations, .. } = three else {
+            panic!("complete response must extract");
+        };
+        assert_eq!(observations.last().expect("score")["valueInteger"], 3);
+    }
+
+    #[test]
+    fn score_is_recomputed_not_trusted_and_partial_never_defaults() {
+        let error = extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &scored_response("completed", Some(3)),
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect_err("stale calculated value must be visible");
+        assert!(error.to_string().contains("recomputes 1"));
+
+        let mut partial = scored_response("in-progress", None);
+        partial["item"].as_array_mut().expect("items").truncate(1);
+        let direct =
+            extract_sdc_boolean_observations(&scored_questionnaire(), &partial, SUBJECT, ENCOUNTER)
+                .expect("direct partial extraction remains available");
+        assert_eq!(
+            direct.len(),
+            1,
+            "partial inputs do not receive a default score"
+        );
+
+        let mut wrong_choice = scored_response("completed", None);
+        wrong_choice["item"]
+            .as_array_mut()
+            .expect("items")
+            .push(json!({
+                "linkId":"arbitrary-final-score", "answer":[{"valueQuantity":{"value":1}}]
+            }));
+        assert!(extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &wrong_choice,
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn evaluates_sdc_count_of_type_boolean_expression() {
+        let mut questionnaire = scored_questionnaire();
+        questionnaire["item"][3]["extension"][1]["valueExpression"]["expression"] = json!(
+            "iif(%resource.item.answer.value.ofType(boolean).where($this = true).count() >= 1, 1, 0)"
+        );
+        let output = extract_completed_sdc_boolean_observations(
+            &questionnaire,
+            &scored_response("completed", Some(1)),
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect("standard FHIRPath Boolean count expression is supported");
+        let SdcObservationExtraction::Extracted { observations, .. } = output else {
+            panic!("complete response must extract");
+        };
+        assert_eq!(observations.last().expect("score")["valueInteger"], 1);
+    }
+
+    #[test]
+    fn rejects_ambiguous_or_unsupported_calculated_score_metadata() {
+        let mut missing_item_flag = scored_questionnaire();
+        missing_item_flag["item"][3]["extension"] = json!([{
+            "url":"http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-calculatedExpression",
+            "valueExpression":{"language":"text/fhirpath","expression":"1"}
+        }]);
+        assert!(extract_completed_sdc_boolean_observations(
+            &missing_item_flag,
+            &scored_response("completed", None),
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut duplicate_score = scored_response("completed", Some(1));
+        duplicate_score["item"]
+            .as_array_mut()
+            .expect("items")
+            .push(json!({
+                "linkId":"arbitrary-final-score", "answer":[{"valueInteger":1}]
+            }));
+        assert!(extract_completed_sdc_boolean_observations(
+            &scored_questionnaire(),
+            &duplicate_score,
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut non_integral = scored_questionnaire();
+        non_integral["item"][3]["extension"][1]["valueExpression"]["expression"] = json!("1.5");
+        assert!(extract_completed_sdc_boolean_observations(
+            &non_integral,
+            &scored_response("completed", None),
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+
+        let mut self_referential = scored_questionnaire();
+        self_referential["item"][3]["extension"][1]["valueExpression"]["expression"] =
+            json!("%resource.item.where(linkId = 'arbitrary-final-score').answer.valueInteger + 1");
+        let error = extract_completed_sdc_boolean_observations(
+            &self_referential,
+            &scored_response("completed", Some(1)),
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect_err("a supplied calculated answer cannot become calculation input");
+        assert!(error
+            .to_string()
+            .contains("exactly one integral numeric result"));
     }
 
     #[test]

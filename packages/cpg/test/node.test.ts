@@ -76,6 +76,38 @@ describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
     expect(result.value).toMatchObject({ status: "extracted" });
     expect(result.value?.observations).toHaveLength(3);
 
+    const scoredQuestionnaire = structuredClone(questionnaire);
+    scoredQuestionnaire.item.push({
+      linkId: "custom-score",
+      type: "integer",
+      readOnly: true,
+      code: [{ system: "https://example.org/codes", version: "2026", code: "custom-score" }],
+      extension: [
+        {
+          url: "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-observationExtract",
+          valueBoolean: true
+        },
+        {
+          url: "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-calculatedExpression",
+          valueExpression: {
+            language: "text/fhirpath",
+            expression: "iif(%resource.item.where(linkId = 'one').answer.valueBoolean, 1, 0) + iif(%resource.item.where(linkId = 'two').answer.valueBoolean, 1, 0) + iif(%resource.item.where(linkId = 'three').answer.valueBoolean, 1, 0)"
+          }
+        }
+      ]
+    });
+    const scoredResponse = structuredClone(response);
+    scoredResponse.item.push({ linkId: "custom-score", answer: [{ valueInteger: 1 }] });
+    const scored = extractQuestionnaireObservations(scoredQuestionnaire, scoredResponse, "Patient/1", {
+      encounter: "Encounter/1"
+    });
+    expect(scored.success).toBe(true);
+    expect(scored.value?.observations).toHaveLength(4);
+    expect(scored.value?.observations?.[3]).toMatchObject({
+      valueInteger: 1,
+      code: { coding: [{ system: "https://example.org/codes", version: "2026", code: "custom-score" }] }
+    });
+
     const data = {
       resourceType: "Bundle",
       type: "collection",

@@ -177,11 +177,13 @@ pub fn validate_questionnaire_response(questionnaire: &str, response: &str) -> W
     }
 }
 
-/// Extract constrained SDC Boolean Observations from a QuestionnaireResponse.
+/// Extract constrained SDC Boolean source Observations and any metadata-defined
+/// calculated integer score Observations from a QuestionnaireResponse.
 ///
 /// When `workflow_gated` is true, an incomplete response returns a successful
 /// `{status: "not-invoked", reason}` result. Otherwise, supplied supported
-/// Boolean answers are extracted directly. Subject and encounter are explicit
+/// Boolean answers are extracted directly. A calculated score is emitted only
+/// after all required Boolean inputs are present. Subject and encounter are explicit
 /// inputs so the binding is never inferred from bundle contents.
 #[wasm_bindgen]
 pub fn extract_questionnaire_observations(
