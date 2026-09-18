@@ -92,6 +92,22 @@ pub fn evaluate_elm_with_trace(
     Ok((value, trace))
 }
 
+/// Evaluate a named expression with pre-compiled included libraries and return
+/// the main-library trace. Included expressions are resolved exactly as in
+/// [`evaluate_elm_with_libraries`]; their nested events are not merged into
+/// this flat trace.
+pub fn evaluate_elm_with_libraries_and_trace(
+    library: &Library,
+    included: &HashMap<String, Library>,
+    name: &str,
+    ctx: &EvalContext,
+) -> Result<(Value, Vec<TraceEvent>), EvalError> {
+    let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
+    let value = engine.eval_named_expression(name)?;
+    let trace = std::mem::take(&mut engine.trace);
+    Ok((value, trace))
+}
+
 // ---------------------------------------------------------------------------
 // Engine internals
 // ---------------------------------------------------------------------------
@@ -3057,17 +3073,40 @@ fn resolve_direct_property(source: Value, path: &str) -> Result<Value, EvalError
 }
 
 fn fhir_choice_value(fields: &BTreeMap<String, Value>, path: &str) -> Option<Value> {
-    if path != "value" {
+    // ELM uses the logical FHIR choice-element name (for example,
+    // `Observation.effective`) while JSON carries the selected wire property
+    // (`effectiveDateTime`). Restrict this fallback to the FHIR choice paths
+    // currently supported by the evaluator so an unrelated `fooBar` field is
+    // never inferred as a `foo` property. Exact serialized properties still
+    // win in `resolve_direct_property` above.
+    if !matches!(path, "value" | "effective") {
         return None;
     }
 
+    // Count wire alternatives before converting their primitive values. A
+    // malformed `effectiveDate` must not be discarded while a valid
+    // `effectiveDateTime` is accepted: FHIR choice elements permit exactly
+    // one selected wire representation.
     let mut values = fields.iter().filter_map(|(name, value)| {
-        name.strip_prefix("value")
-            .filter(|suffix| suffix.chars().next().is_some_and(char::is_uppercase))
-            .map(|_| value)
+        let suffix = name
+            .strip_prefix(path)
+            .filter(|suffix| suffix.chars().next().is_some_and(char::is_uppercase))?;
+        Some((suffix, value))
     });
-    let value = values.next()?.clone();
-    values.next().is_none().then_some(value)
+    let (suffix, value) = values.next()?;
+    if values.next().is_some() {
+        return None;
+    }
+
+    // JSON primitive values arrive as untyped strings. A logical FHIR
+    // dateTime choice must retain its declared type so the standard ELM
+    // `(O.effective as FHIR.dateTime)` succeeds, while a valueString is
+    // never accepted as a temporal value.
+    match suffix {
+        "DateTime" => to_datetime(value).ok(),
+        "Date" => to_date(value).ok(),
+        _ => Some(value.clone()),
+    }
 }
 
 fn is_fhir_primitive_value(value: &Value) -> bool {
@@ -3140,8 +3179,9 @@ fn eval_time_function_args(args: &[Value]) -> Result<Value, EvalError> {
 mod tests {
     use super::*;
     use crate::elm::{
-        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, FunctionDef,
-        FunctionRef, Library, Literal, NamedTypeSpecifier, OperandDef, StatementDef, TypeSpecifier,
+        AsExpr, BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef,
+        FunctionDef, FunctionRef, Library, Literal, NamedTypeSpecifier, OperandDef, Property,
+        StatementDef, TupleElement, TupleExpr, TypeSpecifier, UnaryExpression,
     };
     use crate::eval::context::{EvalContextBuilder, FixedClock};
     use crate::eval::value::CqlDateTime;
@@ -3229,6 +3269,129 @@ mod tests {
         assert_eq!(
             resolve_property(Value::Tuple(ambiguous), "value").unwrap(),
             Value::Null
+        );
+
+        let mut effective = BTreeMap::new();
+        effective.insert(
+            "effectiveDateTime".to_string(),
+            Value::String("2026-06-15T09:20:00Z".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(effective), "effective").unwrap(),
+            Value::DateTime(crate::eval::value::CqlDateTime {
+                year: 2026,
+                month: Some(6),
+                day: Some(15),
+                hour: Some(9),
+                minute: Some(20),
+                second: Some(0),
+                millisecond: None,
+                offset_seconds: Some(0),
+            })
+        );
+
+        let effective_value = resolve_property(
+            Value::Tuple(BTreeMap::from([(
+                "effectiveDateTime".to_string(),
+                Value::String("2026-06-15T09:20:00Z".to_string()),
+            )])),
+            "effective",
+        )
+        .unwrap();
+        // Mirrors the translated source-CQL shape:
+        // FHIRHelpers.ToDateTime(O.effective as FHIR.dateTime).
+        assert_eq!(
+            crate::eval::as_type(&effective_value, "dateTime"),
+            effective_value
+        );
+        assert_eq!(
+            crate::eval::to_datetime(&effective_value).unwrap(),
+            effective_value
+        );
+
+        let mut value_only = BTreeMap::new();
+        value_only.insert("valueInteger".to_string(), Value::Integer(1));
+        assert_eq!(
+            resolve_property(Value::Tuple(value_only), "effective").unwrap(),
+            Value::Null
+        );
+
+        let mut ambiguous_effective = BTreeMap::new();
+        ambiguous_effective.insert(
+            "effectiveDateTime".to_string(),
+            Value::String("2026-06-15T09:20:00Z".to_string()),
+        );
+        ambiguous_effective.insert("effectivePeriod".to_string(), Value::Tuple(BTreeMap::new()));
+        assert_eq!(
+            resolve_property(Value::Tuple(ambiguous_effective), "effective").unwrap(),
+            Value::Null
+        );
+
+        // Count matching wire fields before conversion: a malformed second
+        // temporal field must make the logical choice ambiguous rather than
+        // disappearing during conversion.
+        let mut malformed_second_effective = BTreeMap::new();
+        malformed_second_effective.insert(
+            "effectiveDateTime".to_string(),
+            Value::String("2026-06-15T09:20:00Z".to_string()),
+        );
+        malformed_second_effective.insert(
+            "effectiveDate".to_string(),
+            Value::String("not-a-fhir-date".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(malformed_second_effective), "effective").unwrap(),
+            Value::Null
+        );
+
+        let mut unrelated = BTreeMap::new();
+        unrelated.insert("fooBar".to_string(), Value::Integer(1));
+        assert_eq!(
+            resolve_property(Value::Tuple(unrelated), "foo").unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn cqframework_elm_effective_datetime_as_fhir_datetime_reaches_to_datetime() {
+        // This is the translated ELM shape for
+        // `FHIRHelpers.ToDateTime(O.effective as FHIR.dateTime)`: logical
+        // choice access, followed by an FHIR type cast and conversion.
+        let expr = Expression::ToDateTime(UnaryExpression {
+            operand: Some(Box::new(Expression::As(AsExpr {
+                operand: Some(Box::new(Expression::Property(Property {
+                    source: Some(Box::new(Expression::Tuple(TupleExpr {
+                        elements: vec![TupleElement {
+                            name: Some("effectiveDateTime".to_string()),
+                            value: Some(Box::new(Expression::Literal(Literal {
+                                value: Some("2026-06-15T09:20:00Z".to_string()),
+                                value_type: Some("String".to_string()),
+                                ..Default::default()
+                            }))),
+                        }],
+                        ..Default::default()
+                    }))),
+                    path: Some("effective".to_string()),
+                    ..Default::default()
+                }))),
+                as_type: Some("{http://hl7.org/fhir}dateTime".to_string()),
+                ..Default::default()
+            }))),
+            ..Default::default()
+        });
+        let lib = make_library("Effective", expr);
+        assert_eq!(
+            evaluate_elm(&lib, "Effective", &fixed_ctx()).unwrap(),
+            Value::DateTime(crate::eval::value::CqlDateTime {
+                year: 2026,
+                month: Some(6),
+                day: Some(15),
+                hour: Some(9),
+                minute: Some(20),
+                second: Some(0),
+                millisecond: None,
+                offset_seconds: Some(0),
+            })
         );
     }
 
@@ -3530,6 +3693,41 @@ mod tests {
             [("Helpers".to_string(), helpers_lib)].into_iter().collect();
         let val = evaluate_elm_with_libraries(&main_lib, &included, "Main", &fixed_ctx()).unwrap();
         assert_eq!(val, Value::Integer(42));
+    }
+
+    #[test]
+    fn evaluate_elm_with_libraries_and_trace_resolves_cross_library_expression_ref() {
+        let helpers_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Answer".to_string()),
+                    expression: Some(Box::new(int_literal(42))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let main_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Main".to_string()),
+                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                        name: Some("Answer".to_string()),
+                        library_name: Some("FHIRCommon".to_string()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let included: HashMap<String, Library> = [("FHIRCommon".to_string(), helpers_lib)]
+            .into_iter()
+            .collect();
+        let (value, _trace) =
+            evaluate_elm_with_libraries_and_trace(&main_lib, &included, "Main", &fixed_ctx())
+                .unwrap();
+        assert_eq!(value, Value::Integer(42));
     }
 
     #[test]

@@ -24,11 +24,11 @@ use rh_cql::analytics::{
 use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
-    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, get_default_packages_dir, CompilationError, CompilationResult, CompilerOptions,
-    CqlCode, CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider,
-    FixedClock, InMemoryDataProvider, InMemoryTerminologyProvider, PackageLibrarySourceProvider,
-    SignatureLevel, SourceMapCompilationResult, Value,
+    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_libraries_and_trace,
+    explain_compile, explain_parse, get_default_packages_dir, CompilationError, CompilationResult,
+    CompilerOptions, CqlCode, CqlDateTime, Diagnostic, EvalContextBuilder, EvalError,
+    FileLibrarySourceProvider, FixedClock, InMemoryDataProvider, InMemoryTerminologyProvider,
+    PackageLibrarySourceProvider, SignatureLevel, SourceMapCompilationResult, Value,
 };
 
 #[derive(Serialize)]
@@ -1775,10 +1775,11 @@ fn eval_cql(
     let included = &output.included;
 
     if show_trace {
-        // Trace is only available for the main library; use evaluate_elm_with_trace
-        // for the trace view (cross-library refs will still be resolved for result).
-        let (value, trace) = evaluate_elm_with_trace(library, expression, &ctx)
-            .map_err(|e| enrich_eval_error(e, expression, library))?;
+        // Trace events remain scoped to the main library, but evaluation must use
+        // the same included-library closure as the non-trace path.
+        let (value, trace) =
+            evaluate_elm_with_libraries_and_trace(library, included, expression, &ctx)
+                .map_err(|e| enrich_eval_error(e, expression, library))?;
         println!("Result: {value}");
         println!();
         println!("Trace ({} events):", trace.len());
@@ -1856,13 +1857,66 @@ fn load_terminology(paths: &[PathBuf]) -> Result<InMemoryTerminologyProvider> {
                     path.display()
                 )
             })?;
-            if expansion.get("offset").is_some() || expansion.get("parameter").is_some() {
+            if expansion.get("offset").is_some() {
                 bail!(
-                    "ValueSet '{}' in {} is a paged or filtered expansion; --terminology accepts only complete unfiltered expansions",
+                    "ValueSet '{}' in {} is a paged expansion; --terminology accepts only complete unfiltered expansions",
                     url,
                     path.display()
                 );
             }
+            // `used-codesystem` records provenance for a complete expansion;
+            // it is not an expansion filter. Permit exactly one well-formed
+            // canonical|version declaration and reject all other parameters.
+            let used_codesystem = match expansion.get("parameter") {
+                None => None,
+                Some(parameters) => {
+                    let parameters = parameters.as_array().with_context(|| {
+                        format!(
+                            "ValueSet '{}' in {} has non-array expansion.parameter",
+                            url,
+                            path.display()
+                        )
+                    })?;
+                    let parameter = parameters.first().and_then(serde_json::Value::as_object);
+                    if parameters.len() != 1
+                        || parameter.is_none_or(|object| {
+                            object.len() != 2
+                                || object.get("name").and_then(serde_json::Value::as_str)
+                                    != Some("used-codesystem")
+                                || !object.contains_key("valueUri")
+                        })
+                    {
+                        bail!(
+                            "ValueSet '{}' in {} has filtered or unsupported expansion.parameter; --terminology accepts only a single used-codesystem provenance parameter with name and valueUri",
+                            url,
+                            path.display()
+                        );
+                    }
+                    let value = parameters[0]
+                        .get("valueUri")
+                        .and_then(serde_json::Value::as_str)
+                        .with_context(|| {
+                            format!(
+                                "ValueSet '{}' in {} has used-codesystem without valueUri",
+                                url,
+                                path.display()
+                            )
+                        })?;
+                    let (system, version) = value
+                        .split_once('|')
+                        .filter(|(system, version)| {
+                            !system.is_empty() && !version.is_empty() && !version.contains('|')
+                        })
+                        .with_context(|| {
+                            format!(
+                                "ValueSet '{}' in {} has used-codesystem without canonical|version",
+                                url,
+                                path.display()
+                            )
+                        })?;
+                    Some((system.to_string(), version.to_string()))
+                }
+            };
             let contains = value_set
                 .pointer("/expansion/contains")
                 .and_then(serde_json::Value::as_array)
@@ -1925,6 +1979,17 @@ fn load_terminology(paths: &[PathBuf]) -> Result<InMemoryTerminologyProvider> {
                         .and_then(serde_json::Value::as_str)
                         .map(str::to_string),
                 });
+            }
+            if let Some((used_system, used_version)) = &used_codesystem {
+                if codes.iter().any(|code| {
+                    code.system != *used_system || code.version.as_deref() != Some(used_version)
+                }) {
+                    bail!(
+                        "ValueSet '{}' in {} has used-codesystem provenance that does not match every expansion concept system/version",
+                        url,
+                        path.display()
+                    );
+                }
             }
             valuesets.entry(url.to_string()).or_default().push((
                 value_set
@@ -2434,6 +2499,96 @@ mod tests {
         let error = load_terminology(&[file.path().to_path_buf()])
             .expect_err("terminology input without ValueSets must fail");
         assert!(error.to_string().contains("did not contain any ValueSet"));
+    }
+
+    #[test]
+    fn terminology_loader_accepts_complete_used_codesystem_provenance() {
+        let file = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "version": "2.0.0",
+            "expansion": {
+                "total": 1,
+                "parameter": [{
+                    "name": "used-codesystem",
+                    "valueUri": "http://example.org/system|1.0.0"
+                }],
+                "contains": [{
+                    "system": "http://example.org/system",
+                    "version": "1.0.0",
+                    "code": "one"
+                }]
+            }
+        }));
+        let provider =
+            load_terminology(&[file.path().to_path_buf()]).expect("provenance expansion must load");
+        assert!(provider
+            .in_valueset(
+                &CqlCode {
+                    system: "http://example.org/system".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    code: "one".to_string(),
+                    display: None,
+                },
+                "http://example.org/ValueSet/test|2.0.0"
+            )
+            .expect("exact version is registered"));
+    }
+
+    #[test]
+    fn terminology_loader_rejects_filtered_and_wrong_used_codesystem_provenance() {
+        let filtered = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "parameter": [{ "name": "filter", "valueString": "active" }],
+                "contains": [{ "system": "http://example.org/system", "code": "one" }]
+            }
+        }));
+        let error = load_terminology(&[filtered.path().to_path_buf()])
+            .expect_err("filter parameter must be rejected");
+        assert!(error.to_string().contains("filtered or unsupported"));
+
+        let wrong_version = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "parameter": [{
+                    "name": "used-codesystem",
+                    "valueUri": "http://example.org/system|2.0.0"
+                }],
+                "contains": [{
+                    "system": "http://example.org/system",
+                    "version": "1.0.0",
+                    "code": "one"
+                }]
+            }
+        }));
+        let error = load_terminology(&[wrong_version.path().to_path_buf()])
+            .expect_err("mismatched used-codesystem version must be rejected");
+        assert!(error
+            .to_string()
+            .contains("does not match every expansion concept"));
+
+        let malformed_shape = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "parameter": [{
+                    "name": "used-codesystem",
+                    "valueUri": "http://example.org/system|1.0.0",
+                    "valueString": "must-not-be-ignored"
+                }],
+                "contains": [{
+                    "system": "http://example.org/system",
+                    "version": "1.0.0",
+                    "code": "one"
+                }]
+            }
+        }));
+        let error = load_terminology(&[malformed_shape.path().to_path_buf()])
+            .expect_err("used-codesystem must not contain a second value[x]");
+        assert!(error.to_string().contains("filtered or unsupported"));
     }
 
     #[test]
