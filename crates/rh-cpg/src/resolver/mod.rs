@@ -67,11 +67,12 @@ pub trait ContentResolver: Send + Sync {
 
 #[derive(Debug, Default)]
 pub struct BundleResolver {
-    /// Resources keyed by their exact canonical identity. Versioned resources
-    /// are only present as `url|version` so an unavailable requested version
-    /// cannot silently resolve to a different artifact.
+    /// Resources indexed by an exact canonical. Versioned resources are keyed
+    /// only by `url|version` so a request for an unavailable version cannot
+    /// silently resolve to another version.
     canonical: HashMap<String, Value>,
-    /// Unversioned lookup is available only when a URL identifies one resource.
+    /// A canonical URL can be used without a version only while it identifies
+    /// exactly one resource in the content Bundle.
     unversioned_canonical: HashMap<String, Value>,
     ambiguous_unversioned_canonical: HashSet<String>,
     references: HashMap<String, Value>,

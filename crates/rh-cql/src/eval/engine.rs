@@ -1566,12 +1566,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         ) -> Result<bool, EvalError> {
             match filter {
                 // ValueSetRef resolved to a URL string
-                Value::String(url) => match ctx.in_valueset(c, url) {
-                    Ok(b) => Ok(b),
-                    // No terminology provider or valueset not found → skip filter
-                    Err(EvalError::TerminologyError(_)) => Ok(false),
-                    Err(e) => Err(e),
-                },
+                Value::String(url) => ctx.in_valueset(c, url),
                 Value::Code(fc) => Ok(c.code == fc.code && c.system == fc.system),
                 Value::List(codes) => {
                     for fc in codes {
@@ -2110,6 +2105,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &a {
                     Value::Interval { .. } => super::intervals::contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
+                    Value::String(valueset_url) => match &b {
+                        Value::Code(code) => {
+                            self.ctx.in_valueset(code, valueset_url).map(Value::Boolean)
+                        }
+                        Value::Null => Ok(Value::Null),
+                        _ => Err(EvalError::General(
+                            "Contains: expected Code when checking a ValueSet".to_string(),
+                        )),
+                    },
                     // Null interval/list = empty, doesn't contain anything
                     Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
@@ -2125,6 +2129,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &b {
                     Value::Interval { .. } => super::intervals::in_interval(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
+                    Value::String(valueset_url) => match &a {
+                        Value::Code(code) => {
+                            self.ctx.in_valueset(code, valueset_url).map(Value::Boolean)
+                        }
+                        Value::Null => Ok(Value::Null),
+                        _ => Err(EvalError::General(
+                            "In: expected Code when checking a ValueSet".to_string(),
+                        )),
+                    },
                     // Null interval/list = empty, element can't be in it
                     Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
@@ -2466,15 +2479,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ------ Value set / code system reference resolution ------
             Expression::ValueSetRef(vs_ref) => {
                 let name = vs_ref.name.as_deref().unwrap_or("");
-                let url = self
+                let canonical = self
                     .library
                     .value_sets
                     .as_ref()
                     .and_then(|vs| vs.defs.iter().find(|d| d.name.as_deref() == Some(name)))
-                    .and_then(|d| d.id.as_deref())
-                    .unwrap_or(name) // fall back to name as-is if not found
-                    .to_string();
-                Ok(Value::String(url))
+                    .map(|definition| match (&definition.id, &definition.version) {
+                        (Some(id), Some(version)) => format!("{id}|{version}"),
+                        (Some(id), None) => id.clone(),
+                        _ => name.to_string(),
+                    })
+                    .unwrap_or_else(|| name.to_string());
+                Ok(Value::String(canonical))
             }
             Expression::CodeSystemRef(cs_ref) => {
                 let name = cs_ref.name.as_deref().unwrap_or("");

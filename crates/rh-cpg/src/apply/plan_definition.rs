@@ -10,6 +10,7 @@ const GOAL_EXTENSION_URL: &str = "http://hl7.org/fhir/StructureDefinition/resour
 /// Apply a PlanDefinition ($apply) to a subject, producing a FHIR collection
 /// Bundle whose first entry is the primary RequestGroup.
 pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> CpgResult<Value> {
+    ctx.validate_execution_context()?;
     if plan_definition.get("resourceType").and_then(Value::as_str) != Some("PlanDefinition") {
         return Err(CpgError::InvalidResource(
             "expected a FHIR PlanDefinition object".to_string(),

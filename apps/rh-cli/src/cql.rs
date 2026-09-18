@@ -12,6 +12,8 @@ use crate::output::{
     error_envelope, Envelope, EnvelopeError, ExitCode, OutputContext, OutputFormat,
 };
 
+use rh_cpg::context::{parse_cql_datetime, MeasurementPeriod};
+use rh_cpg::fhir_to_cql::fhir_to_cql_value;
 use rh_cql::analytics::{
     data_requirements, emit_measure_runtime_manifest, emit_sql_query_library, emit_sql_text,
     emit_view_definitions, format_data_requirements, format_dependencies, format_elm_inspection,
@@ -370,6 +372,26 @@ pub enum CqlCommands {
         #[clap(long, value_name = "FILE")]
         data: Option<String>,
 
+        /// Subject reference used to select the CQL context resource from --data.
+        #[clap(long)]
+        subject: Option<String>,
+
+        /// RFC 3339 date-time or FHIR date used for deterministic CQL evaluation.
+        #[clap(long)]
+        evaluation_date: Option<String>,
+
+        /// Inclusive Measurement Period start as an RFC 3339 date-time or FHIR date.
+        #[clap(long, requires = "measurement_period_end")]
+        measurement_period_start: Option<String>,
+
+        /// Inclusive Measurement Period end as an RFC 3339 date-time or FHIR date.
+        #[clap(long, requires = "measurement_period_start")]
+        measurement_period_end: Option<String>,
+
+        /// Additional CQL parameter as NAME=JSON. May be specified multiple times.
+        #[clap(long, value_name = "NAME=JSON")]
+        parameter: Vec<String>,
+
         /// Additional directory to search for included CQL libraries.
         /// May be specified multiple times.  The input file's directory is
         /// always searched automatically.
@@ -522,6 +544,11 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             file,
             expression,
             data,
+            subject,
+            evaluation_date,
+            measurement_period_start,
+            measurement_period_end,
+            parameter,
             lib_path,
             valuesets,
             trace,
@@ -530,6 +557,10 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
                 &file,
                 &expression,
                 data.as_deref(),
+                subject.as_deref(),
+                evaluation_date.as_deref(),
+                measurement_period_start.zip(measurement_period_end),
+                &parameter,
                 &lib_path,
                 valuesets.as_deref(),
                 trace,
@@ -1615,6 +1646,10 @@ fn eval_cql(
     input: &str,
     expression: &str,
     data: Option<&str>,
+    subject: Option<&str>,
+    evaluation_date: Option<&str>,
+    measurement_period: Option<(String, String)>,
+    parameters: &[String],
     lib_paths: &[PathBuf],
     valuesets_path: Option<&str>,
     show_trace: bool,
@@ -1630,23 +1665,49 @@ fn eval_cql(
         ));
     }
 
-    // Build a minimal EvalContext pinned to the current system time
-    let now = {
-        use chrono::{Datelike, Local, Timelike};
-        let t = Local::now();
-        CqlDateTime {
-            year: t.year(),
-            month: Some(t.month() as u8),
-            day: Some(t.day() as u8),
-            hour: Some(t.hour() as u8),
-            minute: Some(t.minute() as u8),
-            second: Some(t.second() as u8),
-            millisecond: Some(t.timestamp_subsec_millis()),
-            offset_seconds: Some(t.offset().local_minus_utc()),
-        }
-    };
+    // Keep the historical current-time default while allowing a reproducible
+    // clock to be supplied by fixture and automated execution callers.
+    let now = evaluation_date
+        .map(parse_cql_datetime)
+        .transpose()?
+        .unwrap_or_else(|| {
+            use chrono::{Datelike, Local, Timelike};
+            let t = Local::now();
+            CqlDateTime {
+                year: t.year(),
+                month: Some(t.month() as u8),
+                day: Some(t.day() as u8),
+                hour: Some(t.hour() as u8),
+                minute: Some(t.minute() as u8),
+                second: Some(t.second() as u8),
+                millisecond: Some(t.timestamp_subsec_millis()),
+                offset_seconds: Some(t.offset().local_minus_utc()),
+            }
+        });
 
     let mut builder = EvalContextBuilder::new(FixedClock::new(now));
+
+    for parameter in parameters {
+        let (name, json) = parameter
+            .split_once('=')
+            .with_context(|| format!("invalid --parameter '{parameter}': expected NAME=JSON"))?;
+        if name.is_empty() {
+            bail!("invalid --parameter '{parameter}': parameter name is required");
+        }
+        let value = serde_json::from_str(json).with_context(|| {
+            format!("invalid --parameter '{parameter}': value must be valid JSON")
+        })?;
+        builder = builder.parameter(name, fhir_to_cql_value(&value));
+    }
+    if let Some((start, end)) = measurement_period {
+        let period = MeasurementPeriod {
+            start,
+            end,
+            start_inclusive: true,
+            end_inclusive: true,
+        };
+        builder = builder.parameter("Measurement Period", period.as_cql_interval()?);
+    }
 
     if let Some(data_path) = data {
         // Determine the declared context type (e.g. "Patient") so that
@@ -1659,7 +1720,7 @@ fn eval_cql(
             .as_ref()
             .and_then(|c| c.defs.first())
             .and_then(|d| d.name.as_deref());
-        let (provider, context_value) = load_fhir_data(data_path, context_type)?;
+        let (provider, context_value) = load_fhir_data(data_path, context_type, subject)?;
         builder = builder.data_provider(provider);
         if let Some(cv) = context_value {
             builder = builder.context_value(cv);
@@ -1808,10 +1869,12 @@ fn enrich_eval_error(
 fn load_fhir_data(
     path: &str,
     context_type: Option<&str>,
+    subject: Option<&str>,
 ) -> Result<(InMemoryDataProvider, Option<Value>)> {
     let content = read_source(path)?;
     let mut provider = InMemoryDataProvider::new();
     let mut single_context: Option<Value> = None;
+    let mut subject_found = subject.is_none();
 
     // Try NDJSON: multiple non-empty lines each being a JSON object.
     let trimmed = content.trim();
@@ -1825,9 +1888,20 @@ fn load_fhir_data(
             .unwrap_or_default();
         if parsed.len() == lines.len() {
             for resource in parsed {
+                if subject.is_some_and(|reference| resource_matches_reference(&resource, reference))
+                {
+                    single_context = Some(json_to_cql_value(resource.clone()));
+                    subject_found = true;
+                }
                 add_fhir_resource(&mut provider, resource);
             }
-            return Ok((provider, None));
+            if !subject_found {
+                bail!(
+                    "--subject '{}' was not found in --data",
+                    subject.unwrap_or_default()
+                );
+            }
+            return Ok((provider, single_context));
         }
     }
 
@@ -1842,7 +1916,12 @@ fn load_fhir_data(
                 if let Some(resource) = entry.get("resource") {
                     // Set context_value to the first resource whose resourceType
                     // matches the library's declared context (e.g. "Patient").
-                    if single_context.is_none() {
+                    if subject
+                        .is_some_and(|reference| resource_matches_reference(resource, reference))
+                    {
+                        single_context = Some(json_to_cql_value(resource.clone()));
+                        subject_found = true;
+                    } else if single_context.is_none() {
                         if let Some(ct) = context_type {
                             if resource.get("resourceType").and_then(|v| v.as_str()) == Some(ct) {
                                 single_context = Some(json_to_cql_value(resource.clone()));
@@ -1853,14 +1932,37 @@ fn load_fhir_data(
                 }
             }
         }
+        if !subject_found {
+            bail!(
+                "--subject '{}' was not found in --data",
+                subject.unwrap_or_default()
+            );
+        }
     } else {
         // Single resource — also set it as context value.
+        if subject.is_some_and(|reference| !resource_matches_reference(&json, reference)) {
+            bail!(
+                "--subject '{}' was not found in --data",
+                subject.unwrap_or_default()
+            );
+        }
         let value = json_to_cql_value(json.clone());
         add_fhir_resource(&mut provider, json);
         single_context = Some(value);
     }
 
     Ok((provider, single_context))
+}
+
+fn resource_matches_reference(resource: &serde_json::Value, reference: &str) -> bool {
+    let Some((resource_type, id)) = reference.split_once('/') else {
+        return false;
+    };
+    resource
+        .get("resourceType")
+        .and_then(serde_json::Value::as_str)
+        == Some(resource_type)
+        && resource.get("id").and_then(serde_json::Value::as_str) == Some(id)
 }
 
 /// Recursively convert a `serde_json::Value` to a CQL `Value`.

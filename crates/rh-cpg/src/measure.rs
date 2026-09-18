@@ -15,6 +15,7 @@ pub fn evaluate_measure(
     measure: &serde_json::Value,
     ctx: &ApplyContext,
 ) -> CpgResult<serde_json::Value> {
+    ctx.validate_execution_context()?;
     if measure.get("resourceType").and_then(Value::as_str) != Some("Measure") {
         return Err(CpgError::InvalidResource(
             "expected a FHIR Measure object".to_string(),
@@ -37,10 +38,7 @@ pub fn evaluate_measure(
         "id": Uuid::new_v4().to_string(),
         "status": "complete",
         "type": "individual",
-        // The evaluation clock is fixed to the same date as CQL expression
-        // evaluation. This deterministic required period represents the
-        // single-day point-in-time evaluation.
-        "period": {"start": "2026-01-01", "end": "2026-01-01"},
+        "period": report_period(ctx),
         "subject": {"reference": ctx.subject},
     });
 
@@ -56,6 +54,13 @@ pub fn evaluate_measure(
     add_evaluation_issues(&mut report, &group_issues);
 
     Ok(report)
+}
+
+fn report_period(ctx: &ApplyContext) -> Value {
+    ctx.measurement_period.as_ref().map_or_else(
+        || json!({"start": "2026-01-01", "end": "2026-01-01"}),
+        |period| json!({"start": period.start, "end": period.end}),
+    )
 }
 
 /// Measure population and stratifier criteria (FHIRPath) are evaluated
@@ -319,7 +324,6 @@ mod tests {
     use base64::Engine;
     use rh_cql::compile;
     use rh_cql::elm::Library;
-    use serde::{Deserialize, Serialize};
 
     use super::*;
 
@@ -426,6 +430,42 @@ mod tests {
             report["group"][0]["stratifier"][0]["stratum"][0]["valueCodeableConcept"],
             json!({"coding": [{"code": "female"}]})
         );
+    }
+
+    #[test]
+    fn uses_the_provided_measurement_period_in_the_individual_report() {
+        let measure = json!({"resourceType": "Measure"});
+        let mut ctx = test_context(None);
+        ctx.measurement_period = Some(crate::context::MeasurementPeriod {
+            start: "2026-01-01T00:00:00Z".to_string(),
+            end: "2026-12-31T23:59:59Z".to_string(),
+            start_inclusive: true,
+            end_inclusive: true,
+        });
+
+        let report = evaluate_measure(&measure, &ctx).expect("measure should evaluate");
+
+        assert_eq!(
+            report["period"],
+            json!({"start": "2026-01-01T00:00:00Z", "end": "2026-12-31T23:59:59Z"})
+        );
+    }
+
+    #[test]
+    fn rejects_an_invalid_measurement_period_before_emitting_a_report() {
+        let measure = json!({"resourceType": "Measure"});
+        let mut ctx = test_context(None);
+        ctx.measurement_period = Some(crate::context::MeasurementPeriod {
+            start: "2027-01-02T00:00:00Z".to_string(),
+            end: "2027-01-01T00:00:00Z".to_string(),
+            start_inclusive: true,
+            end_inclusive: true,
+        });
+
+        assert!(matches!(
+            evaluate_measure(&measure, &ctx),
+            Err(CpgError::EvaluationError(message)) if message.contains("is after end")
+        ));
     }
 
     #[test]

@@ -364,9 +364,10 @@ mod tests {
     }
 
     #[test]
-    fn missing_action_definition_is_an_error() {
+    fn declared_missing_definition_canonical_fails_closed() {
         let plan_definition = json!({"resourceType": "PlanDefinition"});
         let action = json!({
+            "title": "Action",
             "definitionCanonical": "http://example.org/ActivityDefinition/missing"
         });
         let ctx = ApplyContext::new(Arc::new(BundleResolver::default()), "Patient/123");

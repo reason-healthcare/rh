@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -9,7 +10,7 @@ use serde_json::Value;
 
 use crate::output::{Envelope, OutputContext, OutputFormat};
 use rh_cpg::apply::plan_definition::apply_plan_definition;
-use rh_cpg::context::ApplyContext;
+use rh_cpg::context::{ApplyContext, MeasurementPeriod};
 use rh_cpg::resolver::{as_content_bundle, BundleResolver};
 
 #[derive(Subcommand)]
@@ -48,9 +49,21 @@ pub struct ApplyArgs {
     #[clap(long)]
     organization: Option<String>,
 
-    /// Deterministic RFC 3339 evaluation date for generated resources
+    /// RFC 3339 date-time or FHIR date used for deterministic CQL evaluation.
     #[clap(long)]
     evaluation_date: Option<String>,
+
+    /// Inclusive Measurement Period start as an RFC 3339 date-time or FHIR date.
+    #[clap(long, requires = "measurement_period_end")]
+    measurement_period_start: Option<String>,
+
+    /// Inclusive Measurement Period end as an RFC 3339 date-time or FHIR date.
+    #[clap(long, requires = "measurement_period_start")]
+    measurement_period_end: Option<String>,
+
+    /// Additional CQL parameter as NAME=JSON. May be specified multiple times.
+    #[clap(long, value_name = "NAME=JSON")]
+    parameter: Vec<String>,
 }
 
 pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()> {
@@ -69,6 +82,16 @@ pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()>
     context.practitioner = args.practitioner;
     context.organization = args.organization;
     context.evaluation_date = args.evaluation_date;
+    context.measurement_period = args
+        .measurement_period_start
+        .zip(args.measurement_period_end)
+        .map(|(start, end)| MeasurementPeriod {
+            start,
+            end,
+            start_inclusive: true,
+            end_inclusive: true,
+        });
+    context.parameters = parse_parameters(&args.parameter)?;
 
     let result = apply_plan_definition(&plan_definition, &context)?;
 
@@ -85,6 +108,24 @@ pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()>
     }
 
     Ok(())
+}
+
+fn parse_parameters(values: &[String]) -> Result<HashMap<String, Value>> {
+    values
+        .iter()
+        .map(|value| {
+            let (name, json) = value
+                .split_once('=')
+                .with_context(|| format!("invalid --parameter '{value}': expected NAME=JSON"))?;
+            if name.is_empty() {
+                anyhow::bail!("invalid --parameter '{value}': parameter name is required");
+            }
+            let parsed = serde_json::from_str(json).with_context(|| {
+                format!("invalid --parameter '{value}': value must be valid JSON")
+            })?;
+            Ok((name.to_string(), parsed))
+        })
+        .collect()
 }
 
 fn read_json(path: &PathBuf) -> Result<Value> {

@@ -41,6 +41,9 @@ pub fn evaluate_measure(
     encounter: Option<String>,
     practitioner: Option<String>,
     organization: Option<String>,
+    evaluation_date: Option<String>,
+    measurement_period: Option<String>,
+    parameters: Option<String>,
 ) -> WasmResult {
     let measure = match parse_json(measure, "Measure") {
         Ok(value) => value,
@@ -57,6 +60,9 @@ pub fn evaluate_measure(
         encounter,
         practitioner,
         organization,
+        evaluation_date,
+        measurement_period,
+        parameters,
     ) {
         Ok(value) => value,
         Err(error) => return error,
@@ -111,6 +117,9 @@ pub fn populate_questionnaire(
     encounter: Option<String>,
     practitioner: Option<String>,
     organization: Option<String>,
+    evaluation_date: Option<String>,
+    measurement_period: Option<String>,
+    parameters: Option<String>,
 ) -> WasmResult {
     let questionnaire = match parse_json(questionnaire, "Questionnaire") {
         Ok(value) => value,
@@ -127,6 +136,9 @@ pub fn populate_questionnaire(
         encounter,
         practitioner,
         organization,
+        evaluation_date,
+        measurement_period,
+        parameters,
     ) {
         Ok(value) => value,
         Err(error) => return error,
@@ -168,6 +180,9 @@ fn apply_context(
     encounter: Option<String>,
     practitioner: Option<String>,
     organization: Option<String>,
+    evaluation_date: Option<String>,
+    measurement_period: Option<String>,
+    parameters: Option<String>,
 ) -> Result<ApplyContext, WasmResult> {
     let resolver =
         BundleResolver::new(&content_bundle).map_err(|error| WasmResult::err(error.to_string()))?;
@@ -179,6 +194,27 @@ fn apply_context(
     context.encounter = encounter;
     context.practitioner = practitioner;
     context.organization = organization;
+    context.evaluation_date = evaluation_date;
+    context.measurement_period = measurement_period.map_or_else(
+        || Ok(None),
+        |json| {
+            parse_json(&json, "measurement period").and_then(|value| {
+                serde_json::from_value(value).map(Some).map_err(|error| {
+                    WasmResult::err(format!("Failed to parse measurement period: {error}"))
+                })
+            })
+        },
+    )?;
+    context.parameters = parameters.map_or_else(
+        || Ok(Default::default()),
+        |json| {
+            parse_json(&json, "CQL parameters").and_then(|value| {
+                serde_json::from_value(value).map_err(|error| {
+                    WasmResult::err(format!("Failed to parse CQL parameters: {error}"))
+                })
+            })
+        },
+    )?;
     Ok(context)
 }
 
@@ -197,6 +233,9 @@ pub fn apply_plan_definition(
     encounter: Option<String>,
     practitioner: Option<String>,
     organization: Option<String>,
+    evaluation_date: Option<String>,
+    measurement_period: Option<String>,
+    parameters: Option<String>,
 ) -> WasmResult {
     let plan_definition = match parse_json(plan_definition, "PlanDefinition") {
         Ok(value) => value,
@@ -216,6 +255,9 @@ pub fn apply_plan_definition(
         encounter,
         practitioner,
         organization,
+        evaluation_date,
+        measurement_period,
+        parameters,
     ) {
         Ok(value) => value,
         Err(error) => return error,
@@ -240,6 +282,9 @@ pub fn apply_activity_definition(
     encounter: Option<String>,
     practitioner: Option<String>,
     organization: Option<String>,
+    evaluation_date: Option<String>,
+    measurement_period: Option<String>,
+    parameters: Option<String>,
 ) -> WasmResult {
     let activity_definition = match parse_json(activity_definition, "ActivityDefinition") {
         Ok(value) => value,
@@ -259,6 +304,9 @@ pub fn apply_activity_definition(
         encounter,
         practitioner,
         organization,
+        evaluation_date,
+        measurement_period,
+        parameters,
     ) {
         Ok(value) => value,
         Err(error) => return error,

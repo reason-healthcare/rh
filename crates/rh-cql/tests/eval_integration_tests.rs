@@ -772,6 +772,110 @@ define X: [Observation]";
 }
 
 #[test]
+fn retrieve_with_an_unexpanded_valueset_fails_closed() {
+    use rh_cql::{CqlCode, DataProvider, EvalError, TerminologyProvider};
+    use std::collections::BTreeMap;
+
+    struct SingleObservationProvider(Value);
+
+    impl DataProvider for SingleObservationProvider {
+        fn retrieve(
+            &self,
+            _context: Option<&str>,
+            data_type: &str,
+            _code_path: Option<&str>,
+            _codes: Option<&Value>,
+            _date_path: Option<&str>,
+            _date_range: Option<&Value>,
+        ) -> Result<Vec<Value>, EvalError> {
+            assert_eq!(data_type, "Observation");
+            Ok(vec![self.0.clone()])
+        }
+    }
+
+    struct MissingTerminology;
+
+    impl TerminologyProvider for MissingTerminology {
+        fn in_valueset(&self, _code: &CqlCode, valueset_url: &str) -> Result<bool, EvalError> {
+            Err(EvalError::TerminologyError(format!(
+                "missing expansion for {valueset_url}"
+            )))
+        }
+
+        fn expand_valueset(&self, valueset_url: &str) -> Result<Vec<CqlCode>, EvalError> {
+            Err(EvalError::TerminologyError(format!(
+                "missing expansion for {valueset_url}"
+            )))
+        }
+
+        fn lookup(&self, _code: &CqlCode, _property: &str) -> Result<Option<Value>, EvalError> {
+            Ok(None)
+        }
+    }
+
+    let cql = r#"library T
+using FHIR version '4.0.1'
+valueset "Required": 'http://example.org/ValueSet/required'
+context Patient
+define X: [Observation: "Required"]"#;
+    let result = rh_cql::compile(cql, None).expect("compile failed");
+    assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
+
+    let mut observation = BTreeMap::new();
+    observation.insert(
+        "code".to_string(),
+        Value::Code(CqlCode {
+            code: "allowed".to_string(),
+            system: "http://example.org/system".to_string(),
+            display: None,
+            version: None,
+        }),
+    );
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(SingleObservationProvider(Value::Tuple(observation)))
+        .terminology_provider(MissingTerminology)
+        .build();
+
+    let outcome = evaluate_elm(&result.library, "X", &ctx);
+    assert!(
+        matches!(outcome, Err(EvalError::TerminologyError(_))),
+        "missing expansion must be visible, got {outcome:?}"
+    );
+}
+
+#[test]
+fn valueset_reference_uses_its_declared_version() {
+    use rh_cql::{CqlCode, InMemoryTerminologyProvider};
+
+    let cql = r#"library T
+codesystem "Test": 'http://example.org/system'
+code "Allowed": 'allowed' from "Test"
+valueset "Required": 'http://example.org/ValueSet/required' version '2.0.0'
+define X: "Allowed" in "Required""#;
+    let result = rh_cql::compile(cql, None).expect("compile failed");
+    assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
+
+    let mut terminology = InMemoryTerminologyProvider::new();
+    terminology.register_valueset(
+        "http://example.org/ValueSet/required|2.0.0",
+        vec![CqlCode {
+            code: "allowed".to_string(),
+            system: "http://example.org/system".to_string(),
+            display: None,
+            version: None,
+        }],
+    );
+    let ctx = EvalContextBuilder::new(test_clock())
+        .terminology_provider(terminology)
+        .build();
+
+    assert_eq!(
+        evaluate_elm(&result.library, "X", &ctx).expect("versioned valueset should resolve"),
+        Value::Boolean(true)
+    );
+}
+
+#[test]
 fn eval_substring_function() {
     let cql = "library T define X: Substring('abc', 1, 1)";
     assert_eq!(eval_expr(cql, "X"), Value::String("b".into()));

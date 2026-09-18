@@ -12,6 +12,7 @@ pub fn apply_activity_definition(
     library_canonicals: &[String],
     ctx: &ApplyContext,
 ) -> CpgResult<Option<Value>> {
+    ctx.validate_execution_context()?;
     let Some(kind) = non_null_field(activity_definition, "kind").and_then(Value::as_str) else {
         return Ok(None);
     };

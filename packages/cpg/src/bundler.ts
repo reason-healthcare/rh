@@ -2,6 +2,7 @@ import * as wasm from "../wasm-bundler/rh_cpg.js";
 import {
   type CpgApplyOptions,
   type CpgContextOptions,
+  type MeasurementPeriod,
   type WasmCallResult,
   type QuestionnaireValidationResult,
   resourceToJson,
@@ -11,6 +12,7 @@ import {
 export type {
   CpgApplyOptions,
   CpgContextOptions,
+  MeasurementPeriod,
   QuestionnaireValidationResult,
   WasmCallResult
 } from "./common.js";
@@ -20,7 +22,7 @@ function applyArguments(
   subject: string,
   contentBundle: unknown,
   options?: CpgApplyOptions
-): [string, string, string, string | undefined, string | undefined, string | undefined, string | undefined] {
+): [string, string, string, string | undefined, string | undefined, string | undefined, string | undefined, string | undefined, string | undefined, string | undefined] {
   return [
     resourceToJson(definition),
     subject,
@@ -28,7 +30,10 @@ function applyArguments(
     options?.data === undefined ? undefined : resourceToJson(options.data),
     options?.encounter,
     options?.practitioner,
-    options?.organization
+    options?.organization,
+    options?.evaluationDate,
+    options?.measurementPeriod === undefined ? undefined : resourceToJson(options.measurementPeriod),
+    options?.parameters === undefined ? undefined : resourceToJson(options.parameters)
   ];
 }
 
@@ -64,7 +69,10 @@ export function evaluateMeasure<T = unknown>(
       options?.data === undefined ? undefined : resourceToJson(options.data),
       options?.encounter,
       options?.practitioner,
-      options?.organization
+      options?.organization,
+      options?.evaluationDate,
+      options?.measurementPeriod === undefined ? undefined : resourceToJson(options.measurementPeriod),
+      options?.parameters === undefined ? undefined : resourceToJson(options.parameters)
     )
   );
 }
@@ -92,7 +100,10 @@ export function populateQuestionnaire<T = unknown>(
       options?.data === undefined ? undefined : resourceToJson(options.data),
       options?.encounter,
       options?.practitioner,
-      options?.organization
+      options?.organization,
+      options?.evaluationDate,
+      options?.measurementPeriod === undefined ? undefined : resourceToJson(options.measurementPeriod),
+      options?.parameters === undefined ? undefined : resourceToJson(options.parameters)
     )
   );
 }

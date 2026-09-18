@@ -1,8 +1,8 @@
-export interface CpgApplyOptions {
-  data?: unknown;
-  encounter?: string;
-  practitioner?: string;
-  organization?: string;
+export interface MeasurementPeriod {
+  start: string;
+  end: string;
+  startInclusive?: boolean;
+  endInclusive?: boolean;
 }
 
 export interface CpgContextOptions {
@@ -10,7 +10,15 @@ export interface CpgContextOptions {
   encounter?: string;
   practitioner?: string;
   organization?: string;
+  /** RFC 3339 date-time or FHIR date used for deterministic CQL clock evaluation. */
+  evaluationDate?: string;
+  /** FHIR period passed to CQL as `Measurement Period` and emitted in MeasureReports. */
+  measurementPeriod?: MeasurementPeriod;
+  /** Additional CQL parameter values keyed by their declared CQL names. */
+  parameters?: Record<string, unknown>;
 }
+
+export type CpgApplyOptions = CpgContextOptions;
 
 export interface QuestionnaireValidationResult {
   issues: string[];

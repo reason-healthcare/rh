@@ -27,9 +27,28 @@ const report = evaluateMeasure(
   measure,
   "Patient/123",
   contentBundle,
-  { data: dataBundle }
+  {
+    data: dataBundle,
+    evaluationDate: "2026-06-15T09:20:00Z",
+    measurementPeriod: {
+      start: "2026-01-01T00:00:00Z",
+      end: "2026-12-31T23:59:59Z"
+    },
+    parameters: { "Example Flag": true }
+  }
 );
 ```
+
+`CpgContextOptions` accepts `data`, `encounter`, `practitioner`,
+`organization`, `evaluationDate`, `measurementPeriod`, and `parameters`.
+`evaluationDate` accepts RFC 3339 date-times or FHIR dates. A supplied
+`measurementPeriod` is passed to CQL as `Measurement Period` and is emitted in
+the individual MeasureReport. It must have valid, non-reversed bounds.
+
+For backwards compatibility, an omitted CPG context uses the historical
+2026-01-01 clock and a single-day MeasureReport period. Connectathon fixture
+adapters must always supply the fixture's explicit patient, evaluation clock,
+and measurement period; the compatibility fallback is not demo evidence.
 
 ### Questionnaire assembly
 
