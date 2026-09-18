@@ -1901,7 +1901,12 @@ fn date_difference_between(a: &Value, b: &Value, unit: &str) -> Result<Value, Ev
     let difference = match (&a, &b) {
         (Value::Date(a), Value::Date(b)) => date_difference_diff(a, b, unit)?,
         (Value::DateTime(a), Value::DateTime(b)) => datetime_difference_diff(a, b, unit)?,
-        _ => return Err(err("DifferenceBetween", "arguments must be same temporal type")),
+        _ => {
+            return Err(err(
+                "DifferenceBetween",
+                "arguments must be same temporal type",
+            ))
+        }
     };
     Ok(Value::Integer(difference))
 }
@@ -1912,18 +1917,28 @@ fn date_difference_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, Eva
     match unit {
         "year" => Ok((b.year - a.year) as i64),
         "month" => Ok((b.year as i64 - a.year as i64) * 12
-            + (b.month.ok_or_else(|| err("DifferenceBetween", "no month"))? as i64
-                - a.month.ok_or_else(|| err("DifferenceBetween", "no month"))? as i64)),
+            + (b.month
+                .ok_or_else(|| err("DifferenceBetween", "no month"))? as i64
+                - a.month
+                    .ok_or_else(|| err("DifferenceBetween", "no month"))?
+                    as i64)),
         _ => date_duration_diff(a, b, unit),
     }
 }
 
-fn datetime_difference_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Result<i64, EvalError> {
+fn datetime_difference_diff(
+    a: &CqlDateTime,
+    b: &CqlDateTime,
+    unit: &str,
+) -> Result<i64, EvalError> {
     match unit {
         "year" => Ok((b.year - a.year) as i64),
         "month" => Ok((b.year as i64 - a.year as i64) * 12
-            + (b.month.ok_or_else(|| err("DifferenceBetween", "no month"))? as i64
-                - a.month.ok_or_else(|| err("DifferenceBetween", "no month"))? as i64)),
+            + (b.month
+                .ok_or_else(|| err("DifferenceBetween", "no month"))? as i64
+                - a.month
+                    .ok_or_else(|| err("DifferenceBetween", "no month"))?
+                    as i64)),
         _ => datetime_duration_diff(a, b, unit),
     }
 }
@@ -1952,8 +1967,11 @@ fn date_duration_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, EvalE
                 .ok_or_else(|| err("DurationBetween", "year-precision Date has no month"))?;
             let mut months = (b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64);
             if let (Some(a_day), Some(b_day)) = (a.day, b.day) {
-                if months > 0 && b_day < a_day { months -= 1; }
-                else if months < 0 && b_day > a_day { months += 1; }
+                if months > 0 && b_day < a_day {
+                    months -= 1;
+                } else if months < 0 && b_day > a_day {
+                    months += 1;
+                }
             }
             Ok(months)
         }
@@ -1983,8 +2001,11 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
             if let (Some(a_month), Some(a_day), Some(b_month), Some(b_day)) =
                 (a.month, a.day, b.month, b.day)
             {
-                if years > 0 && (b_month, b_day) < (a_month, a_day) { years -= 1; }
-                else if years < 0 && (b_month, b_day) > (a_month, a_day) { years += 1; }
+                if years > 0 && (b_month, b_day) < (a_month, a_day) {
+                    years -= 1;
+                } else if years < 0 && (b_month, b_day) > (a_month, a_day) {
+                    years += 1;
+                }
             }
             Ok(years)
         }
@@ -1993,8 +2014,11 @@ fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Resul
             let b_m = b.month.ok_or_else(|| err("DurationBetween", "no month"))?;
             let mut months = (b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64);
             if let (Some(a_day), Some(b_day)) = (a.day, b.day) {
-                if months > 0 && b_day < a_day { months -= 1; }
-                else if months < 0 && b_day > a_day { months += 1; }
+                if months > 0 && b_day < a_day {
+                    months -= 1;
+                } else if months < 0 && b_day > a_day {
+                    months += 1;
+                }
             }
             Ok(months)
         }

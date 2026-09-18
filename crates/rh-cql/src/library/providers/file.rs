@@ -24,7 +24,7 @@ use crate::library::sources::LibrarySource;
 ///     .with_path("./cql")
 ///     .with_path("./libs");
 ///
-/// // Will search for Common.cql or Common-1.0.0.cql in ./cql and ./libs
+/// // Will search for Common-1.0.0.cql in ./cql and ./libs
 /// let id = LibraryIdentifier::new("Common", Some("1.0.0"));
 /// let source = provider.get_source(&id);
 /// ```
@@ -93,8 +93,9 @@ impl FileLibrarySourceProvider {
             ));
         }
 
-        // Then try unversioned: LibraryName.cql
-        names.push(format!("{}.{}", identifier.name, self.extension));
+        if identifier.version.is_none() {
+            names.push(format!("{}.{}", identifier.name, self.extension));
+        }
 
         names
     }

@@ -50,6 +50,22 @@ For backwards compatibility, an omitted CPG context uses the historical
 adapters must always supply the fixture's explicit patient, evaluation clock,
 and measurement period; the compatibility fallback is not demo evidence.
 
+### Portable FHIR CQL libraries
+
+FHIR R4 CQL should include the official helper library explicitly:
+
+```cql
+include FHIRHelpers version '4.0.1' called FHIRHelpers
+```
+
+For native CQL compilation, place the pinned helper source at the exact
+versioned filename `FHIRHelpers-4.0.1.cql` in `--lib-path`. Versioned imports
+never fall back to an unversioned helper file. For a packaged ELM bundle, add a
+FHIR `Library` named `FHIRHelpers`, version `4.0.1`, containing its translated
+ELM as `application/elm+json`; the consuming package must use the same explicit
+canonical/version. Use logical FHIR choice access such as
+`(A.value as FHIR.boolean).value`, not the JSON wire member `A.valueBoolean`.
+
 ### Questionnaire assembly
 
 ```ts

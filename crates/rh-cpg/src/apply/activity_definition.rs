@@ -812,8 +812,14 @@ mod tests {
         let applied = apply_activity_definition(&activity_definition, &[], &ctx)
             .expect("apply should succeed")
             .expect("Task should be supported");
-        assert_eq!(applied["input"][0]["type"], json!({"text": "collect-information"}));
-        assert_eq!(applied["input"][0]["valueCanonical"], "http://example.org/Questionnaire/screen|1.0.0");
+        assert_eq!(
+            applied["input"][0]["type"],
+            json!({"text": "collect-information"})
+        );
+        assert_eq!(
+            applied["input"][0]["valueCanonical"],
+            "http://example.org/Questionnaire/screen|1.0.0"
+        );
     }
 
     #[test]

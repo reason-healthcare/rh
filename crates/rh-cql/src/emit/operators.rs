@@ -35,6 +35,7 @@ pub fn emit_unary_operator(
         return elm::Expression::Expand(elm::BinaryExpression {
             element,
             operand: vec![emit_expr(operand, ctx)],
+            precision: None,
             signature: Vec::new(),
         });
     }
@@ -96,6 +97,7 @@ pub fn emit_binary_operator(
     let binary = || elm::BinaryExpression {
         element: element.clone(),
         operand: vec![left_expr.clone(), right_expr.clone()],
+        precision: None,
         signature: Vec::new(),
     };
 
@@ -147,6 +149,7 @@ pub fn emit_binary_operator(
             elm::Expression::Divide(elm::BinaryExpression {
                 element: element.clone(),
                 operand: vec![l_expr, r_expr],
+                precision: None,
                 signature: Vec::new(),
             })
         }
@@ -245,12 +248,14 @@ pub fn emit_ternary_operator(
             let ge = elm::Expression::GreaterOrEqual(elm::BinaryExpression {
                 element: ctx.element_fields(node),
                 operand: vec![first_expr.clone(), second_expr],
+                precision: None,
                 signature: Vec::new(),
             });
 
             let le = elm::Expression::LessOrEqual(elm::BinaryExpression {
                 element: ctx.element_fields(node),
                 operand: vec![first_expr, third_expr],
+                precision: None,
                 signature: Vec::new(),
             });
 
@@ -394,11 +399,13 @@ pub fn emit_system_function(
             "Log" => Some(elm::Expression::Log(elm::BinaryExpression {
                 element: element.clone(),
                 operand: vec![left, right],
+                precision: None,
                 signature: Vec::new(),
             })),
             "Power" => Some(elm::Expression::Power(elm::BinaryExpression {
                 element: element.clone(),
                 operand: vec![left, right],
+                precision: None,
                 signature: Vec::new(),
             })),
             "Combine" => Some(elm::Expression::Combine(elm::Combine {

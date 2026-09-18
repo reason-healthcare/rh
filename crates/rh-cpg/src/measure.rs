@@ -42,8 +42,8 @@ pub fn evaluate_measure(
         "subject": {"reference": ctx.subject},
     });
 
-    if let Some(url) = measure.get("url").and_then(Value::as_str) {
-        report["measure"] = json!(url);
+    if let Some(canonical) = measure_canonical(measure) {
+        report["measure"] = json!(canonical);
     }
 
     let (report_groups, group_issues) = unzip_groups(groups);
@@ -54,6 +54,14 @@ pub fn evaluate_measure(
     add_evaluation_issues(&mut report, &group_issues);
 
     Ok(report)
+}
+
+fn measure_canonical(measure: &Value) -> Option<String> {
+    let url = measure.get("url").and_then(Value::as_str)?;
+    match measure.get("version").and_then(Value::as_str) {
+        Some(version) if !version.is_empty() => Some(format!("{url}|{version}")),
+        _ => Some(url.to_string()),
+    }
 }
 
 fn report_period(ctx: &ApplyContext) -> Value {
@@ -448,6 +456,22 @@ mod tests {
         assert_eq!(
             report["period"],
             json!({"start": "2026-01-01T00:00:00Z", "end": "2026-12-31T23:59:59Z"})
+        );
+    }
+
+    #[test]
+    fn preserves_the_measure_version_in_the_individual_report_canonical() {
+        let measure = json!({
+            "resourceType": "Measure",
+            "url": "http://test/Measure/AdultPopulation",
+            "version": "0.2.0",
+        });
+
+        let report = evaluate_measure(&measure, &test_context(None)).expect("measure report");
+
+        assert_eq!(
+            report["measure"],
+            json!("http://test/Measure/AdultPopulation|0.2.0")
         );
     }
 

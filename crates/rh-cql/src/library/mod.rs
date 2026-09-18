@@ -403,7 +403,7 @@ mod tests {
 
         let versioned = LibraryIdentifier::new("FHIRHelpers", Some("4.0.1"));
         let filenames = provider.possible_filenames(&versioned);
-        assert_eq!(filenames, vec!["FHIRHelpers-4.0.1.cql", "FHIRHelpers.cql"]);
+        assert_eq!(filenames, vec!["FHIRHelpers-4.0.1.cql"]);
 
         let unversioned = LibraryIdentifier::unversioned("Common");
         let filenames = provider.possible_filenames(&unversioned);
@@ -416,7 +416,7 @@ mod tests {
 
         let id = LibraryIdentifier::new("TestLib", Some("1.0"));
         let filenames = provider.possible_filenames(&id);
-        assert_eq!(filenames, vec!["TestLib-1.0.txt", "TestLib.txt"]);
+        assert_eq!(filenames, vec!["TestLib-1.0.txt"]);
     }
 
     #[test]

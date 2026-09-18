@@ -132,6 +132,7 @@ pub fn emit_index_invocation(
     elm::Expression::Indexer(elm::BinaryExpression {
         element,
         operand,
+        precision: None,
         signature: Vec::new(),
     })
 }

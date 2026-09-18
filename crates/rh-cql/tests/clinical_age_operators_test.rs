@@ -88,28 +88,32 @@ fn age_duration_handles_leap_days_and_completed_months() {
     assert_eq!(
         eval(
             "library T define X: CalculateAgeInYearsAt(@2000-02-29, @2021-02-28)",
-            "X", &ctx,
+            "X",
+            &ctx,
         ),
         Value::Integer(20)
     );
     assert_eq!(
         eval(
             "library T define X: CalculateAgeInYearsAt(@2000-02-29, @2021-03-01)",
-            "X", &ctx,
+            "X",
+            &ctx,
         ),
         Value::Integer(21)
     );
     assert_eq!(
         eval(
             "library T define X: CalculateAgeInMonthsAt(@2026-01-31, @2026-02-28)",
-            "X", &ctx,
+            "X",
+            &ctx,
         ),
         Value::Integer(0)
     );
     assert_eq!(
         eval(
             "library T define X: CalculateAgeInMonthsAt(@2026-01-31, @2026-03-01)",
-            "X", &ctx,
+            "X",
+            &ctx,
         ),
         Value::Integer(1)
     );

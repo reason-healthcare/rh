@@ -13,7 +13,7 @@ use super::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 use super::value::Value;
 use crate::elm::{
     BinaryExpression, Expression, Library, NaryExpression, StatementDef, TimeBinaryExpression,
-    UnaryExpression,
+    TypeSpecifier, UnaryExpression,
 };
 
 type TemporalRelationEvaluator = fn(&Value, &Value, Option<&str>) -> Result<Value, EvalError>;
@@ -1105,7 +1105,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::Is(is_expr) => {
                 let v = self.eval_expr_opt(is_expr.operand.as_deref())?;
-                let raw = is_expr.is_type.as_deref().unwrap_or("");
+                let raw = is_expr
+                    .is_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(is_expr.is_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 // "{urn:hl7-org:elm-types:r1}null" → is null check
                 if type_name.eq_ignore_ascii_case("null") {
@@ -1115,13 +1119,21 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::As(as_expr) => {
                 let v = self.eval_expr_opt(as_expr.operand.as_deref())?;
-                let raw = as_expr.as_type.as_deref().unwrap_or("");
+                let raw = as_expr
+                    .as_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(as_expr.as_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 Ok(super::operators::as_type(&v, type_name))
             }
             Expression::Convert(conv_expr) => {
                 let v = self.eval_expr_opt(conv_expr.operand.as_deref())?;
-                let raw = conv_expr.to_type.as_deref().unwrap_or("");
+                let raw = conv_expr
+                    .to_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(conv_expr.to_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 super::operators::convert(&v, type_name)
             }
@@ -1130,7 +1142,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if matches!(v, Value::Null) {
                     return Ok(Value::Null);
                 }
-                let raw = can_conv.to_type.as_deref().unwrap_or("");
+                let raw = can_conv
+                    .to_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(can_conv.to_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 match super::operators::convert(&v, type_name) {
                     Ok(_) => Ok(Value::Boolean(true)),
@@ -1214,67 +1230,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                 };
                 let path = prop.path.as_deref().unwrap_or("");
-                match source {
-                    Value::Tuple(ref fields) => {
-                        // Direct field lookup
-                        if let Some(v) = fields.get(path) {
-                            return Ok(v.clone());
-                        }
-                        // FHIR choice-type field name resolution:
-                        // When a CQL property like "onset" doesn't match directly,
-                        // try suffixed FHIR variants (onsetDateTime, onsetPeriod,
-                        // onsetAge, onsetRange, onsetString, abatementDateTime, etc.)
-                        for suffix in &[
-                            "DateTime", "Period", "Age", "Range", "String", "Instant", "Timing",
-                            "Boolean", "Code",
-                        ] {
-                            let candidate = format!("{path}{suffix}");
-                            if let Some(v) = fields.get(&candidate) {
-                                return Ok(v.clone());
-                            }
-                        }
-                        Ok(Value::Null)
-                    }
-                    Value::Null => Ok(Value::Null),
-                    // FHIR primitive .value on a String: coerce to typed CQL values.
-                    // FHIR.dateTime / FHIR.date / FHIR.instant primitives are stored
-                    // as raw strings in JSON resources, so `period."start".value`
-                    // should return a CQL DateTime/Date rather than a bare String.
-                    Value::String(ref s) if path == "value" => {
-                        let str_val = Value::String(s.clone());
-                        if s.contains('T') {
-                            // datetime or instant: parse as DateTime
-                            if let Ok(v) = super::operators::conversion::to_datetime(&str_val) {
-                                if !matches!(v, Value::Null) {
-                                    return Ok(v);
-                                }
-                            }
-                        }
-                        // date-only string: parse as Date
-                        if let Ok(v) = super::operators::conversion::to_date(&str_val) {
-                            if !matches!(v, Value::Null) {
-                                return Ok(v);
-                            }
-                        }
-                        // Fall back to string (e.g., FHIR.string, FHIR.code, FHIR.uri)
-                        Ok(str_val)
-                    }
-                    other => {
-                        // FHIR primitive value accessor: in the FHIR CQL model,
-                        // primitive types like FHIR.string, FHIR.dateTime have a
-                        // .value property that unwraps the underlying CQL value.
-                        // When raw JSON resources are used (no FHIR modelinfo),
-                        // the primitive IS already the unwrapped value, so
-                        // accessing .value should return the value itself.
-                        if path == "value" {
-                            Ok(other.clone())
-                        } else {
-                            Err(EvalError::General(format!(
-                                "Property '{path}': cannot access property on non-tuple"
-                            )))
-                        }
-                    }
-                }
+                resolve_property(source, path)
             }
 
             // ----- Date/Time -----
@@ -1359,6 +1315,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
                 super::operators::duration_between(&a, &b, tb.precision.as_deref().unwrap_or("day"))
+            }
+            // CQFramework emits these clinical operators directly, with the
+            // requested unit in the ELM `precision` field. They count whole
+            // elapsed periods (DurationBetween), which is the age semantics
+            // distinct from DifferenceBetween's boundary counting.
+            Expression::CalculateAge(unary) => {
+                let birth = self.eval_unary_arg(unary)?;
+                self.eval_calculate_age(birth, Value::Date(self.ctx.today()), None)
+            }
+            Expression::CalculateAgeAt(binary) => {
+                let (birth, as_of) = self.eval_binary_args(binary)?;
+                self.eval_calculate_age(birth, as_of, binary.precision.as_deref())
             }
             Expression::DifferenceBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
@@ -1720,6 +1688,22 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         };
 
         Some(duration_between(&birth_val, &ref_val, unit))
+    }
+
+    /// Evaluate ELM's clinical `CalculateAge[At]` operators. CQFramework's
+    /// FHIR model emits these instead of the source-level `CalculateAgeInYearsAt`
+    /// function, carrying the requested unit in `precision`.
+    fn eval_calculate_age(
+        &self,
+        birth: Value,
+        as_of: Value,
+        precision: Option<&str>,
+    ) -> Result<Value, EvalError> {
+        if matches!(birth, Value::Null) || matches!(as_of, Value::Null) {
+            return Ok(Value::Null);
+        }
+        let unit = precision.unwrap_or("Year");
+        duration_between(&birth, &as_of, unit)
     }
 
     /// Evaluate logical and null-propagation expressions:
@@ -2856,6 +2840,77 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     }
 }
 
+/// Return the runtime type-name represented by an ELM type specifier. Official
+/// translators prefer `*TypeSpecifier` fields while this compiler also emits
+/// legacy QName fields, so evaluation accepts both encodings.
+fn type_specifier_name(specifier: Option<&TypeSpecifier>) -> Option<&str> {
+    match specifier? {
+        TypeSpecifier::Named(named) => Some(named.name.as_str()),
+        TypeSpecifier::List(_) => Some("List"),
+        TypeSpecifier::Interval(_) => Some("Interval"),
+        TypeSpecifier::Tuple(_) => Some("Tuple"),
+        TypeSpecifier::Choice(_) | TypeSpecifier::Parameter(_) => None,
+    }
+}
+
+fn resolve_property(source: Value, path: &str) -> Result<Value, EvalError> {
+    // Preserve an exact serialized property name before interpreting a dotted
+    // FHIR-model path. This keeps existing tuple access and wire properties
+    // deterministic while accepting CQFramework ELM paths such as
+    // `birthDate.value`.
+    if let Value::Tuple(fields) = &source {
+        if let Some(value) = fields.get(path) {
+            return Ok(value.clone());
+        }
+    }
+
+    path.split('.').try_fold(source, resolve_direct_property)
+}
+
+fn resolve_direct_property(source: Value, path: &str) -> Result<Value, EvalError> {
+    match source {
+        Value::Tuple(fields) => {
+            if let Some(value) = fields.get(path) {
+                return Ok(value.clone());
+            }
+            Ok(fhir_choice_value(&fields, path).unwrap_or(Value::Null))
+        }
+        Value::Null => Ok(Value::Null),
+        value if path == "value" && is_fhir_primitive_value(&value) => Ok(value),
+        _ => Err(EvalError::General(format!(
+            "Property '{path}': cannot access property on non-tuple"
+        ))),
+    }
+}
+
+fn fhir_choice_value(fields: &BTreeMap<String, Value>, path: &str) -> Option<Value> {
+    if path != "value" {
+        return None;
+    }
+
+    let mut values = fields.iter().filter_map(|(name, value)| {
+        name.strip_prefix("value")
+            .filter(|suffix| suffix.chars().next().is_some_and(char::is_uppercase))
+            .map(|_| value)
+    });
+    let value = values.next()?.clone();
+    values.next().is_none().then_some(value)
+}
+
+fn is_fhir_primitive_value(value: &Value) -> bool {
+    matches!(
+        value,
+        Value::Boolean(_)
+            | Value::Integer(_)
+            | Value::Long(_)
+            | Value::Decimal(_)
+            | Value::String(_)
+            | Value::Date(_)
+            | Value::DateTime(_)
+            | Value::Time(_)
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Helpers (free-standing utilities used by the dispatch)
 // ---------------------------------------------------------------------------
@@ -2973,6 +3028,81 @@ mod tests {
         let lib = make_library("X", bool_literal(true));
         let result = evaluate_elm(&lib, "X", &fixed_ctx()).unwrap();
         assert_eq!(result, Value::Boolean(true));
+    }
+
+    #[test]
+    fn fhir_choice_value_access_requires_one_wire_value_and_preserves_exact_property() {
+        let mut exact = BTreeMap::new();
+        exact.insert("value".to_string(), Value::String("exact".to_string()));
+        exact.insert("valueBoolean".to_string(), Value::Boolean(true));
+        assert_eq!(
+            resolve_property(Value::Tuple(exact), "value").unwrap(),
+            Value::String("exact".to_string())
+        );
+
+        let mut boolean = BTreeMap::new();
+        boolean.insert("valueBoolean".to_string(), Value::Boolean(false));
+        assert_eq!(
+            resolve_property(Value::Tuple(boolean), "value").unwrap(),
+            Value::Boolean(false)
+        );
+
+        let mut ambiguous = BTreeMap::new();
+        ambiguous.insert("valueBoolean".to_string(), Value::Boolean(false));
+        ambiguous.insert(
+            "valueString".to_string(),
+            Value::String("false".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(ambiguous), "value").unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn fhir_primitive_value_access_preserves_false_and_zero() {
+        assert_eq!(
+            resolve_property(Value::Boolean(false), "value").unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            resolve_property(Value::Integer(0), "value").unwrap(),
+            Value::Integer(0)
+        );
+    }
+
+    #[test]
+    fn fhir_model_paths_traverse_primitive_value_without_changing_exact_precedence() {
+        let mut patient = BTreeMap::new();
+        patient.insert(
+            "birthDate".to_string(),
+            Value::String("1961-06-16".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(patient), "birthDate.value").unwrap(),
+            Value::String("1961-06-16".to_string())
+        );
+    }
+
+    #[test]
+    fn calculate_age_at_uses_elapsed_years_from_reference_elm_shape() {
+        let date = |value: &str| {
+            Expression::Literal(Literal {
+                value: Some(value.to_string()),
+                value_type: Some("Date".to_string()),
+                ..Default::default()
+            })
+        };
+        let expr = Expression::CalculateAgeAt(BinaryExpression {
+            operand: vec![date("1961-06-16"), date("2026-06-15")],
+            precision: Some("Year".to_string()),
+            ..Default::default()
+        });
+        let lib = make_library("Age", expr);
+        assert_eq!(
+            evaluate_elm(&lib, "Age", &fixed_ctx()).unwrap(),
+            Value::Integer(64)
+        );
     }
 
     #[test]

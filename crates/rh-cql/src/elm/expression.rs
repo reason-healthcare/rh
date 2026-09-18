@@ -323,6 +323,11 @@ pub struct BinaryExpression {
     pub element: ElementFields,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub operand: Vec<Expression>,
+    /// Optional temporal precision used by clinical binary operators such as
+    /// `CalculateAgeAt`. Kept on the generic node because ELM encodes this
+    /// operator as a `BinaryExpression`, rather than `TimeBinaryExpression`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signature: Vec<TypeSpecifier>,
 }
