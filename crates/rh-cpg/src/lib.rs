@@ -3,6 +3,7 @@
 pub mod error;
 pub mod measure;
 pub mod questionnaire;
+pub mod questionnaire_extraction;
 pub mod resolver;
 
 pub mod apply;
