@@ -348,6 +348,7 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
         .map(|item| item.link_id.as_str())
         .collect::<HashSet<_>>();
     let mut answers = HashMap::new();
+    let mut seen_items = HashSet::new();
 
     for item in flatten_response_items(response.get("item")) {
         reject_modifier_extensions(item, "QuestionnaireResponse.item")?;
@@ -356,6 +357,11 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
         };
         if !supported.contains(link_id) {
             continue;
+        }
+        if !seen_items.insert(link_id) {
+            return Err(invalid(format!(
+                "QuestionnaireResponse has duplicate item '{link_id}' for the non-repeating SDC Boolean extraction subset"
+            )));
         }
         let Some(answer_array) = item.get("answer").and_then(Value::as_array) else {
             continue;
@@ -765,7 +771,7 @@ mod tests {
         duplicate["item"]
             .as_array_mut()
             .expect("items")
-            .push(json!({"linkId":"unsteady","answer":[{"valueBoolean":true}]}));
+            .push(json!({"linkId":"unsteady"}));
         assert!(extract_completed_sdc_boolean_observations(
             &questionnaire(),
             &duplicate,
