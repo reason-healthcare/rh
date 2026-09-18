@@ -788,6 +788,35 @@ mod tests {
     }
 
     #[test]
+    fn applies_collect_information_task_dynamic_inputs_with_fhirpath() {
+        let activity_definition = json!({
+            "resourceType": "ActivityDefinition",
+            "url": "http://example.org/ActivityDefinition/collect",
+            "version": "1.0.0",
+            "kind": "Task",
+            "intent": "proposal",
+            "code": {"text": "collect-information"},
+            "extension": [{
+                "url": "http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-collectWith",
+                "valueCanonical": "http://example.org/Questionnaire/screen|1.0.0"
+            }],
+            "dynamicValue": [{
+                "path": "input[0].type",
+                "expression": {"language": "text/fhirpath", "expression": "code"}
+            }, {
+                "path": "input[0].valueCanonical",
+                "expression": {"language": "text/fhirpath", "expression": "extension.where(url = 'http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-collectWith').value"}
+            }]
+        });
+        let ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+        let applied = apply_activity_definition(&activity_definition, &[], &ctx)
+            .expect("apply should succeed")
+            .expect("Task should be supported");
+        assert_eq!(applied["input"][0]["type"], json!({"text": "collect-information"}));
+        assert_eq!(applied["input"][0]["valueCanonical"], "http://example.org/Questionnaire/screen|1.0.0");
+    }
+
+    #[test]
     fn returns_none_for_unknown_kind() {
         let activity_definition = json!({"kind": "NotAResource"});
         let ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
