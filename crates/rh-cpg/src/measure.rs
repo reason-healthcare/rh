@@ -7,10 +7,6 @@ use crate::expression::evaluate_expression;
 
 const MEASURE_EVAL_ISSUE_EXTENSION_URL: &str =
     "http://reasonhealth.org/fhir/StructureDefinition/measure-eval-issue";
-const DATA_ABSENT_REASON_EXTENSION_URL: &str =
-    "http://hl7.org/fhir/StructureDefinition/data-absent-reason";
-const ZERO_DENOMINATOR_SCORE_ISSUE: &str =
-    "proportion Measure score is not applicable because the denominator is zero";
 
 /// Evaluate a FHIR R4 Measure for the subject in `ctx`, producing an
 /// individual-type MeasureReport with population membership counts and
@@ -170,7 +166,11 @@ fn evaluate_group(
                     Some(measure_score) => {
                         report_group.insert("measureScore".to_string(), measure_score);
                     }
-                    None => issues.push(ZERO_DENOMINATOR_SCORE_ISSUE.to_string()),
+                    // A zero denominator has no defined proportion. Keep the
+                    // group and its population counts, but omit the score;
+                    // this is a normal individual-report result, not report-
+                    // level missing data.
+                    None => {}
                 }
             }
         }
@@ -395,17 +395,10 @@ fn add_evaluation_issues(report: &mut Value, issues: &[String]) {
     let extensions = issues
         .iter()
         .map(|issue| {
-            if issue == ZERO_DENOMINATOR_SCORE_ISSUE {
-                json!({
-                    "url": DATA_ABSENT_REASON_EXTENSION_URL,
-                    "valueCode": "not-applicable",
-                })
-            } else {
-                json!({
-                    "url": MEASURE_EVAL_ISSUE_EXTENSION_URL,
-                    "valueString": issue,
-                })
-            }
+            json!({
+                "url": MEASURE_EVAL_ISSUE_EXTENSION_URL,
+                "valueString": issue,
+            })
         })
         .collect::<Vec<_>>();
 
@@ -620,12 +613,7 @@ mod tests {
         assert_eq!(report["group"][0]["population"][0]["count"], json!(0));
         assert_eq!(report["group"][0]["population"][1]["count"], json!(0));
         assert!(report["group"][0].get("measureScore").is_none());
-        assert!(report["extension"].as_array().is_some_and(|extensions| {
-            extensions.iter().any(|extension| {
-                extension["url"] == DATA_ABSENT_REASON_EXTENSION_URL
-                    && extension["valueCode"] == "not-applicable"
-            })
-        }));
+        assert!(report.get("extension").is_none());
     }
 
     #[test]
