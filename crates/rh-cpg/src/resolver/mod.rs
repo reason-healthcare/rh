@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
@@ -18,7 +18,13 @@ pub trait ContentResolver: Send + Sync {
 
 #[derive(Debug, Default)]
 pub struct BundleResolver {
+    /// Resources keyed by their exact canonical identity. Versioned resources
+    /// are only present as `url|version` so an unavailable requested version
+    /// cannot silently resolve to a different artifact.
     canonical: HashMap<String, Value>,
+    /// Unversioned lookup is available only when a URL identifies one resource.
+    unversioned_canonical: HashMap<String, Value>,
+    ambiguous_unversioned_canonical: HashSet<String>,
     references: HashMap<String, Value>,
     by_type: HashMap<String, Vec<Value>>,
 }
@@ -53,16 +59,33 @@ impl BundleResolver {
                 continue;
             };
 
-            if let (Some(url), Some(version)) = (
-                resource.get("url").and_then(Value::as_str),
-                resource.get("version").and_then(Value::as_str),
-            ) {
-                resolver
-                    .canonical
-                    .insert(format!("{url}|{version}"), resource.clone());
-            }
             if let Some(url) = resource.get("url").and_then(Value::as_str) {
-                resolver.canonical.insert(url.to_string(), resource.clone());
+                let exact_canonical = resource
+                    .get("version")
+                    .and_then(Value::as_str)
+                    .map(|version| format!("{url}|{version}"))
+                    .unwrap_or_else(|| url.to_string());
+                if resolver
+                    .canonical
+                    .insert(exact_canonical.clone(), resource.clone())
+                    .is_some()
+                {
+                    return Err(CpgError::InvalidResource(format!(
+                        "duplicate canonical '{exact_canonical}' in content Bundle"
+                    )));
+                }
+
+                if !resolver.ambiguous_unversioned_canonical.contains(url)
+                    && resolver
+                        .unversioned_canonical
+                        .insert(url.to_string(), resource.clone())
+                        .is_some()
+                {
+                    resolver.unversioned_canonical.remove(url);
+                    resolver
+                        .ambiguous_unversioned_canonical
+                        .insert(url.to_string());
+                }
             }
 
             if let Some(id) = resource.get("id").and_then(Value::as_str) {
@@ -84,15 +107,17 @@ impl BundleResolver {
 
 impl ContentResolver for BundleResolver {
     fn resolve_canonical(&self, canonical: &str) -> CpgResult<Option<Value>> {
-        if let Some(resource) = self.canonical.get(canonical) {
-            return Ok(Some(resource.clone()));
+        if canonical.contains('|') {
+            return Ok(self.canonical.get(canonical).cloned());
         }
 
-        if let Some((url, _version)) = canonical.split_once('|') {
-            return Ok(self.canonical.get(url).cloned());
+        if self.ambiguous_unversioned_canonical.contains(canonical) {
+            return Err(CpgError::InvalidResource(format!(
+                "ambiguous unversioned canonical '{canonical}' in content Bundle; request an explicit version"
+            )));
         }
 
-        Ok(None)
+        Ok(self.unversioned_canonical.get(canonical).cloned())
     }
 
     fn resolve_reference(&self, reference: &str) -> CpgResult<Option<Value>> {
@@ -174,12 +199,50 @@ mod tests {
     }
 
     #[test]
-    fn resolves_canonical_fallback_without_resource_version() {
+    fn explicit_missing_version_does_not_fallback_to_unversioned_resource() {
         let resolver = resolver();
         let resource = resolver
             .resolve_canonical("http://example.org/ValueSet/valueset-1|1.0")
             .unwrap();
-        assert_eq!(resource.unwrap().get("id").unwrap(), "valueset-1");
+        assert!(resource.is_none());
+    }
+
+    #[test]
+    fn constructor_rejects_duplicate_canonical_and_version() {
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {"resourceType": "Library", "url": "http://example.org/Library/x", "version": "1.0"}},
+                {"resource": {"resourceType": "Library", "url": "http://example.org/Library/x", "version": "1.0"}}
+            ]
+        });
+
+        let error = BundleResolver::new(&bundle).unwrap_err();
+        assert!(
+            matches!(error, CpgError::InvalidResource(message) if message.contains("duplicate canonical"))
+        );
+    }
+
+    #[test]
+    fn multiple_versions_require_an_explicit_version() {
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {"resourceType": "Library", "id": "one", "url": "http://example.org/Library/x", "version": "1.0"}},
+                {"resource": {"resourceType": "Library", "id": "two", "url": "http://example.org/Library/x", "version": "2.0"}}
+            ]
+        });
+        let resolver = BundleResolver::new(&bundle).expect("valid versioned resources");
+
+        assert!(matches!(
+            resolver.resolve_canonical("http://example.org/Library/x"),
+            Err(CpgError::InvalidResource(message)) if message.contains("ambiguous unversioned canonical")
+        ));
+        let resource = resolver
+            .resolve_canonical("http://example.org/Library/x|2.0")
+            .unwrap()
+            .expect("exact version");
+        assert_eq!(resource.get("id").unwrap(), "two");
     }
 
     #[test]

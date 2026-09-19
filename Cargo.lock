@@ -2095,9 +2095,11 @@ name = "rh-cpg"
 version = "0.2.8"
 dependencies = [
  "base64",
+ "chrono",
  "rh-cql",
  "rh-fhirpath",
  "rh-hl7-fhir-r4-core",
+ "rh-validator",
  "serde",
  "serde_json",
  "thiserror",

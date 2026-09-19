@@ -118,6 +118,7 @@ fn evaluate_cql_identifier(
     let mut builder = EvalContextBuilder::new(FixedClock::new(fixed_now()))
         .data_provider(FhirDataProvider::from_bundle(
             ctx.data.as_ref().unwrap_or(&Value::Null),
+            &ctx.subject,
         ))
         .terminology_provider(InMemoryTerminologyProvider::new());
     if let Some(patient) = patient {

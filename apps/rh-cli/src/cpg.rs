@@ -47,6 +47,10 @@ pub struct ApplyArgs {
     /// Organization reference, optional
     #[clap(long)]
     organization: Option<String>,
+
+    /// Deterministic RFC 3339 evaluation date for generated resources
+    #[clap(long)]
+    evaluation_date: Option<String>,
 }
 
 pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()> {
@@ -64,6 +68,7 @@ pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()>
     context.encounter = args.encounter;
     context.practitioner = args.practitioner;
     context.organization = args.organization;
+    context.evaluation_date = args.evaluation_date;
 
     let result = apply_plan_definition(&plan_definition, &context)?;
 

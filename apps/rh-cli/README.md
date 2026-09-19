@@ -154,6 +154,7 @@ dependency-cache, inspection, and JSON automation workflows.
 | Command | Description | Docs |
 |---------|-------------|------|
 | `rh codegen` | Generate organized Rust crates from FHIR Packages | [CODEGEN.md](docs/CODEGEN.md) |
+| `rh cpg` | Apply clinical practice guideline definitions (CPG) | — |
 | `rh cql` | Compile CQL (Clinical Quality Language) to ELM | [CQL.md](docs/CQL.md) |
 | `rh download` | Download and install FHIR packages from npm-style registries | [DOWNLOAD.md](docs/DOWNLOAD.md) |
 | `rh fhirpath` | Parse and evaluate FHIRPath expressions | [FHIRPATH.md](docs/FHIRPATH.md) |

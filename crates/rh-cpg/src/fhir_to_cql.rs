@@ -33,10 +33,9 @@ pub fn cql_value_to_json(value: &CqlValue) -> Value {
         CqlValue::Null => Value::Null,
         CqlValue::Boolean(boolean) => Value::Bool(*boolean),
         CqlValue::Integer(integer) => Value::from(*integer),
-        CqlValue::Long(integer) => i64::try_from(*integer).map_or_else(
-            |_| Value::String(integer.to_string()),
-            |integer| Value::from(integer),
-        ),
+        CqlValue::Long(integer) => {
+            i64::try_from(*integer).map_or_else(|_| Value::String(integer.to_string()), Value::from)
+        }
         CqlValue::Decimal(decimal) => {
             serde_json::Number::from_f64(*decimal).map_or(Value::Null, Value::Number)
         }
@@ -102,10 +101,11 @@ fn cql_scalar_to_json(value: f64) -> Value {
 
 pub struct FhirDataProvider {
     resources: HashMap<String, Vec<CqlValue>>,
+    subject: String,
 }
 
 impl FhirDataProvider {
-    pub fn from_bundle(bundle: &Value) -> Self {
+    pub fn from_bundle(bundle: &Value, subject: impl Into<String>) -> Self {
         Self {
             resources: bundle
                 .get("entry")
@@ -129,6 +129,7 @@ impl FhirDataProvider {
                     resources
                 })
                 .unwrap_or_default(),
+            subject: subject.into(),
         }
     }
 }
@@ -143,12 +144,102 @@ impl rh_cql::eval::DataProvider for FhirDataProvider {
         _date_path: Option<&str>,
         _date_range: Option<&CqlValue>,
     ) -> Result<Vec<CqlValue>, EvalError> {
-        Ok(self
+        let resource_type = normalize_data_type(data_type);
+        let candidates = self
             .resources
-            .get(&normalize_data_type(data_type))
+            .get(&resource_type)
             .cloned()
-            .unwrap_or_default())
+            .unwrap_or_default();
+        filter_resources_for_subject(candidates, &resource_type, &self.subject)
     }
+}
+
+/// Apply the supported FHIR Patient-compartment relationships to CQL retrieves.
+///
+/// CPG expression evaluation is always invoked for one subject. Returning an
+/// unscoped list would allow another patient's resource to make an applicability
+/// condition true, so unsupported relationships fail closed.
+fn filter_resources_for_subject(
+    candidates: Vec<CqlValue>,
+    resource_type: &str,
+    subject: &str,
+) -> Result<Vec<CqlValue>, EvalError> {
+    let patient_id = subject
+        .strip_prefix("Patient/")
+        .filter(|id| !id.is_empty() && !id.contains('/'))
+        .ok_or_else(|| {
+            EvalError::RetrieveError(format!(
+                "CPG CQL subject must be a relative Patient/<id> reference, got '{subject}'"
+            ))
+        })?;
+
+    match resource_type {
+        "Patient" => Ok(candidates
+            .into_iter()
+            .filter(|candidate| {
+                tuple_scalar(candidate, "id")
+                    .and_then(reference_value)
+                    .is_some_and(|id| id == patient_id)
+            })
+            .collect()),
+        "Encounter" | "Observation" | "QuestionnaireResponse" => candidates
+            .into_iter()
+            .map(|candidate| {
+                let matches = tuple_scalar(&candidate, "subject")
+                    .and_then(reference_value)
+                    .map(|reference| matches_patient_reference(reference, subject))
+                    .transpose()?
+                    .unwrap_or(false);
+                Ok((candidate, matches))
+            })
+            .filter_map(|candidate| match candidate {
+                Ok((candidate, true)) => Some(Ok(candidate)),
+                Ok((_, false)) => None,
+                Err(error) => Some(Err(error)),
+            })
+            .collect(),
+        _ => Err(EvalError::RetrieveError(format!(
+            "Patient-context retrieve is unsupported for FHIR {resource_type}; a Patient-compartment relationship is required"
+        ))),
+    }
+}
+
+fn tuple_scalar<'a>(value: &'a CqlValue, field: &str) -> Option<&'a CqlValue> {
+    match value {
+        CqlValue::Tuple(fields) => fields.get(field),
+        _ => None,
+    }
+}
+
+fn reference_value(value: &CqlValue) -> Option<&str> {
+    match value {
+        CqlValue::String(value) => Some(value),
+        CqlValue::Tuple(fields) => match fields.get("reference").or_else(|| fields.get("value")) {
+            Some(CqlValue::String(value)) => Some(value),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn matches_patient_reference(reference: &str, subject: &str) -> Result<bool, EvalError> {
+    if reference == subject {
+        return Ok(true);
+    }
+    if let Some(id) = reference.strip_prefix("Patient/") {
+        if !id.is_empty() && !id.contains('/') {
+            return Ok(false);
+        }
+        return Err(EvalError::RetrieveError(format!(
+            "unsupported Patient reference form '{reference}'; use relative Patient/<id>"
+        )));
+    }
+    if reference.contains("/Patient/") {
+        return Err(EvalError::RetrieveError(format!(
+            "unsupported Patient reference form '{reference}'; use relative Patient/<id>"
+        )));
+    }
+    Ok(false)
 }
 
 fn normalize_data_type(data_type: &str) -> String {
@@ -213,11 +304,12 @@ mod tests {
                 "resource": {
                     "resourceType": "Observation",
                     "id": "observation-1",
+                    "subject": {"reference": "Patient/123"},
                     "status": "final"
                 }
             }]
         });
-        let provider = FhirDataProvider::from_bundle(&bundle);
+        let provider = FhirDataProvider::from_bundle(&bundle, "Patient/123");
 
         for data_type in ["{http://hl7.org/fhir}Observation", "Observation"] {
             let resources = provider
@@ -225,5 +317,56 @@ mod tests {
                 .expect("retrieve should succeed");
             assert_eq!(resources.len(), 1);
         }
+    }
+
+    #[test]
+    fn retrieves_only_resources_for_the_requested_patient() {
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {
+                    "resourceType": "Observation",
+                    "id": "matching",
+                    "subject": {"reference": "Patient/123"}
+                }},
+                {"resource": {
+                    "resourceType": "Observation",
+                    "id": "other",
+                    "subject": {"reference": "Patient/999"}
+                }}
+            ]
+        });
+        let provider = FhirDataProvider::from_bundle(&bundle, "Patient/123");
+
+        let resources = provider
+            .retrieve(None, "Observation", None, None, None, None)
+            .expect("patient-scoped retrieve should succeed");
+
+        assert_eq!(resources.len(), 1);
+        assert_eq!(
+            tuple_scalar(&resources[0], "id").and_then(reference_value),
+            Some("matching")
+        );
+    }
+
+    #[test]
+    fn unsupported_patient_relationship_fails_closed() {
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "entry": [{"resource": {
+                "resourceType": "Condition",
+                "id": "condition-1",
+                "subject": {"reference": "Patient/123"}
+            }}]
+        });
+        let provider = FhirDataProvider::from_bundle(&bundle, "Patient/123");
+
+        let error = provider
+            .retrieve(None, "Condition", None, None, None, None)
+            .unwrap_err();
+
+        assert!(
+            matches!(error, EvalError::RetrieveError(message) if message.contains("unsupported for FHIR Condition"))
+        );
     }
 }

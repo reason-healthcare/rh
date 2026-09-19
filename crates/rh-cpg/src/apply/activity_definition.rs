@@ -1,11 +1,9 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use serde_json::{json, Map, Value};
 use uuid::Uuid;
 
 use crate::apply::dynamic_value::process_dynamic_value;
 use crate::context::ApplyContext;
-use crate::error::CpgResult;
+use crate::error::{CpgError, CpgResult};
 
 /// Apply an ActivityDefinition to a subject, producing the target request
 /// resource. Returns `None` when the definition has no supported request kind.
@@ -21,35 +19,35 @@ pub fn apply_activity_definition(
     if !matches!(
         kind,
         "Appointment"
-            | "AppointmentResponse"
             | "CarePlan"
-            | "Claim"
             | "CommunicationRequest"
-            | "Contract"
             | "DeviceRequest"
-            | "EnrollmentRequest"
             | "ImmunizationRecommendation"
             | "MedicationRequest"
             | "NutritionOrder"
             | "ServiceRequest"
             | "SupplyRequest"
             | "Task"
-            | "VisionPrescription"
     ) {
         return Ok(None);
     }
 
     let mut target = json!({
         "id": Uuid::new_v4().to_string(),
-        "resourceType": kind,
-        "status": "draft"
+        "resourceType": kind
     });
     let canonical = canonicalize(activity_definition);
 
+    if let Some(status) = default_status(kind) {
+        set_field(&mut target, "status", json!(status));
+    }
+
     if supports_intent(kind) {
-        if let Some(intent) = non_null_field(activity_definition, "intent") {
-            set_field(&mut target, "intent", intent.clone());
-        }
+        set_field(
+            &mut target,
+            "intent",
+            validated_intent(kind, activity_definition)?,
+        );
     }
 
     let subject = &ctx.subject;
@@ -66,17 +64,6 @@ pub fn apply_activity_definition(
                     "status": "needs-action"
                 }]),
             );
-        }
-        "AppointmentResponse" => {
-            set_field(&mut target, "participantStatus", json!("needs-action"));
-            if let Some(timing_period) = field(activity_definition, "timingPeriod") {
-                if let Some(start) = timing_period.get("start") {
-                    set_field(&mut target, "start", start.clone());
-                }
-                if let Some(end) = timing_period.get("end") {
-                    set_field(&mut target, "end", end.clone());
-                }
-            }
         }
         "CarePlan" => {
             push_canonical(&mut target, canonical.as_deref());
@@ -103,15 +90,6 @@ pub fn apply_activity_definition(
                 );
             }
             set_reference(&mut target, "subject", subject, "Patient");
-        }
-        "Claim" => {
-            if let Some(practitioner) = &ctx.practitioner {
-                set_field(
-                    &mut target,
-                    "provider",
-                    reference_from_string(practitioner, "Practitioner"),
-                );
-            }
         }
         "CommunicationRequest" => {
             copy_field(
@@ -148,22 +126,6 @@ pub fn apply_activity_definition(
                 "doNotPerform",
             );
         }
-        "Contract" => {
-            if let Some(practitioner) = &ctx.practitioner {
-                set_field(
-                    &mut target,
-                    "author",
-                    reference_from_string(practitioner, "Practitioner"),
-                );
-            }
-            if let Some(organization) = &ctx.organization {
-                push_or_create_array(
-                    &mut target,
-                    "authority",
-                    reference_from_string(organization, "Organization"),
-                );
-            }
-        }
         "DeviceRequest" => {
             push_canonical(&mut target, canonical.as_deref());
             copy_field(
@@ -188,10 +150,6 @@ pub fn apply_activity_definition(
             set_context_reference(&mut target, &ctx.practitioner, "requester", "Practitioner");
             set_reference(&mut target, "subject", subject, "Patient");
         }
-        "EnrollmentRequest" => {
-            set_reference(&mut target, "candidate", subject, "Patient");
-            set_context_reference(&mut target, &ctx.practitioner, "provider", "Practitioner");
-        }
         "ImmunizationRecommendation" => {
             set_reference(&mut target, "patient", subject, "Patient");
             if let Some(product) = field(activity_definition, "productCodeableConcept") {
@@ -210,7 +168,9 @@ pub fn apply_activity_definition(
                     }]),
                 );
             }
-            set_field(&mut target, "date", json!(now_iso8601()));
+            if let Some(evaluation_date) = deterministic_datetime(ctx)? {
+                set_field(&mut target, "date", json!(evaluation_date));
+            }
         }
         "MedicationRequest" => {
             push_canonical(&mut target, canonical.as_deref());
@@ -280,13 +240,18 @@ pub fn apply_activity_definition(
                     json!([{"doseQuantity": quantity}]),
                 );
             }
-            push_or_create_array(&mut target, "dosageInstruction", Value::Object(new_dosage));
+            if !new_dosage.is_empty() {
+                push_or_create_array(&mut target, "dosageInstruction", Value::Object(new_dosage));
+            }
         }
         "NutritionOrder" => {
             push_canonical(&mut target, canonical.as_deref());
             set_reference(&mut target, "patient", subject, "Patient");
             set_context_reference(&mut target, &ctx.encounter, "encounter", "Encounter");
             set_context_reference(&mut target, &ctx.practitioner, "orderer", "Practitioner");
+            if let Some(evaluation_date) = deterministic_datetime(ctx)? {
+                set_field(&mut target, "dateTime", json!(evaluation_date));
+            }
         }
         "ServiceRequest" => {
             push_canonical(&mut target, canonical.as_deref());
@@ -403,12 +368,6 @@ pub fn apply_activity_definition(
                 );
             }
         }
-        "VisionPrescription" => {
-            set_reference(&mut target, "patient", subject, "Patient");
-            set_context_reference(&mut target, &ctx.encounter, "encounter", "Encounter");
-            set_context_reference(&mut target, &ctx.practitioner, "prescriber", "Practitioner");
-            set_field(&mut target, "created", json!(now_iso8601()));
-        }
         _ => {}
     }
 
@@ -427,6 +386,8 @@ pub fn apply_activity_definition(
         )?;
     }
 
+    ensure_required_fields(&target)?;
+
     // ActivityDefinition.transform is intentionally unsupported.
     Ok(Some(target))
 }
@@ -438,6 +399,18 @@ fn canonicalize(activity_definition: &Value) -> Option<String> {
         None => url.to_string(),
     };
     Some(canonical)
+}
+
+fn deterministic_datetime(ctx: &ApplyContext) -> CpgResult<Option<&str>> {
+    let Some(value) = ctx.evaluation_date.as_deref() else {
+        return Ok(None);
+    };
+    chrono::DateTime::parse_from_rfc3339(value).map_err(|error| {
+        CpgError::InvalidResource(format!(
+            "evaluation date must be an RFC 3339 date-time, got '{value}': {error}"
+        ))
+    })?;
+    Ok(Some(value))
 }
 
 fn non_null_field<'a>(resource: &'a Value, field: &str) -> Option<&'a Value> {
@@ -511,43 +484,152 @@ fn reference_from_string(reference: &str, resource_type: &str) -> Value {
     }
 }
 
+fn default_status(kind: &str) -> Option<&'static str> {
+    match kind {
+        "Appointment" => Some("proposed"),
+        "CarePlan"
+        | "CommunicationRequest"
+        | "DeviceRequest"
+        | "MedicationRequest"
+        | "NutritionOrder"
+        | "ServiceRequest"
+        | "SupplyRequest"
+        | "Task" => Some("draft"),
+        "ImmunizationRecommendation" => None,
+        _ => None,
+    }
+}
+
 fn supports_intent(kind: &str) -> bool {
     matches!(
         kind,
-        "CarePlan" | "DeviceRequest" | "MedicationRequest" | "ServiceRequest" | "Task"
+        "CarePlan"
+            | "DeviceRequest"
+            | "MedicationRequest"
+            | "NutritionOrder"
+            | "ServiceRequest"
+            | "Task"
     )
 }
 
-fn now_iso8601() -> String {
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system time is after the Unix epoch");
-    let seconds = duration.as_secs();
-    let milliseconds = duration.subsec_millis();
-    let days = (seconds / 86_400) as i64;
-    let time_seconds = seconds % 86_400;
-    let (year, month, day) = civil_from_days(days);
-    format!(
-        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{milliseconds:03}Z",
-        time_seconds / 3_600,
-        (time_seconds % 3_600) / 60,
-        time_seconds % 60
-    )
+fn validated_intent(kind: &str, activity_definition: &Value) -> CpgResult<Value> {
+    let intent = non_null_field(activity_definition, "intent")
+        .and_then(Value::as_str)
+        .unwrap_or("proposal");
+    if kind == "Task" && intent == "directive" {
+        return Ok(json!("unknown"));
+    }
+    if intent_is_valid(kind, intent) {
+        Ok(json!(intent))
+    } else {
+        Err(CpgError::InvalidResource(format!(
+            "ActivityDefinition intent '{intent}' is invalid for {kind}"
+        )))
+    }
 }
 
-fn civil_from_days(days: i64) -> (i64, u32, u32) {
-    let z = days + 719_468;
-    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-    let day_of_era = (z - era * 146_097) as u64;
-    let year_of_era =
-        (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
-    let year = year_of_era as i64 + era * 400;
-    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    let mp = (5 * day_of_year + 2) / 153;
-    let day = day_of_year - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = if month <= 2 { year + 1 } else { year };
-    (year, month as u32, day as u32)
+fn intent_is_valid(kind: &str, intent: &str) -> bool {
+    match kind {
+        "CarePlan" => matches!(intent, "proposal" | "plan" | "order" | "option"),
+        "MedicationRequest" => matches!(
+            intent,
+            "proposal"
+                | "plan"
+                | "order"
+                | "original-order"
+                | "reflex-order"
+                | "filler-order"
+                | "instance-order"
+                | "option"
+        ),
+        "Task" => matches!(
+            intent,
+            "unknown"
+                | "proposal"
+                | "plan"
+                | "order"
+                | "original-order"
+                | "reflex-order"
+                | "filler-order"
+                | "instance-order"
+                | "option"
+        ),
+        "DeviceRequest" | "NutritionOrder" | "ServiceRequest" => matches!(
+            intent,
+            "proposal"
+                | "plan"
+                | "directive"
+                | "order"
+                | "original-order"
+                | "reflex-order"
+                | "filler-order"
+                | "instance-order"
+                | "option"
+        ),
+        _ => true,
+    }
+}
+
+fn ensure_required_fields(resource: &Value) -> CpgResult<()> {
+    let kind = resource
+        .get("resourceType")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let required: &[&[&str]] = match kind {
+        "Appointment" => &[&["status"], &["participant"]],
+        "CarePlan" => &[&["status"], &["intent"], &["subject"]],
+        "CommunicationRequest" => &[&["status"]],
+        "DeviceRequest" => &[
+            &["intent"],
+            &["codeCodeableConcept", "codeReference"],
+            &["subject"],
+        ],
+        "ImmunizationRecommendation" => &[&["patient"], &["date"], &["recommendation"]],
+        "MedicationRequest" => &[
+            &["status"],
+            &["intent"],
+            &["medicationCodeableConcept", "medicationReference"],
+            &["subject"],
+        ],
+        "NutritionOrder" => &[&["status"], &["intent"], &["patient"], &["dateTime"]],
+        "ServiceRequest" => &[&["status"], &["intent"], &["subject"]],
+        "SupplyRequest" => &[&["itemCodeableConcept", "itemReference"], &["quantity"]],
+        "Task" => &[&["status"], &["intent"]],
+        _ => &[],
+    };
+
+    let missing = required
+        .iter()
+        .filter(|alternatives| {
+            !alternatives.iter().any(|field| {
+                resource.get(*field).is_some_and(|value| match value {
+                    Value::Null => false,
+                    Value::Array(values) => !values.is_empty(),
+                    Value::Object(values) => !values.is_empty(),
+                    Value::String(value) => !value.is_empty(),
+                    _ => true,
+                })
+            })
+        })
+        .map(|alternatives| alternatives.join(" or "))
+        .collect::<Vec<_>>();
+
+    if !missing.is_empty() {
+        return Err(CpgError::InvalidResource(format!(
+            "applied {kind} is missing required field(s): {}",
+            missing.join(", ")
+        )));
+    }
+
+    if let Some(intent) = resource.get("intent").and_then(Value::as_str) {
+        if !intent_is_valid(kind, intent) {
+            return Err(CpgError::InvalidResource(format!(
+                "applied {kind} has invalid intent '{intent}'"
+            )));
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -556,6 +638,7 @@ mod tests {
 
     use crate::context::ApplyContext;
     use crate::resolver::BundleResolver;
+    use rh_validator::{FhirValidator, FhirVersion};
     use serde_json::json;
 
     use super::*;
@@ -646,6 +729,33 @@ mod tests {
     }
 
     #[test]
+    fn accepts_dynamic_medication_without_emitting_empty_dosage() {
+        let activity_definition = json!({
+            "resourceType": "ActivityDefinition",
+            "kind": "MedicationRequest",
+            "code": {"text": "dynamically selected medication"},
+            "dynamicValue": [{
+                "path": "medicationCodeableConcept",
+                "expression": {
+                    "language": "text/fhirpath",
+                    "expression": "code"
+                }
+            }]
+        });
+        let ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+
+        let applied = apply_activity_definition(&activity_definition, &[], &ctx)
+            .expect("dynamic medication should satisfy required fields")
+            .expect("MedicationRequest should be supported");
+
+        assert_eq!(
+            applied["medicationCodeableConcept"],
+            json!({"text": "dynamically selected medication"})
+        );
+        assert!(applied.get("dosageInstruction").is_none());
+    }
+
+    #[test]
     fn applies_task_with_reference_and_intent_mapping() {
         let activity_definition = json!({
             "resourceType": "ActivityDefinition",
@@ -712,6 +822,159 @@ mod tests {
             apply_activity_definition(&json!({}), &[], &ctx)
                 .expect("empty definition should not fail"),
             None
+        );
+    }
+
+    #[test]
+    fn every_supported_kind_produces_core_r4_valid_output() {
+        let validator =
+            FhirValidator::new(FhirVersion::R4, None).expect("R4 validator should initialize");
+        let definitions = [
+            json!({"resourceType": "ActivityDefinition", "kind": "Appointment"}),
+            json!({"resourceType": "ActivityDefinition", "kind": "CarePlan"}),
+            json!({"resourceType": "ActivityDefinition", "kind": "CommunicationRequest"}),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "DeviceRequest",
+                "productCodeableConcept": {"text": "Mobility aid"}
+            }),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "ImmunizationRecommendation",
+                "productCodeableConcept": {"text": "Seasonal vaccine"}
+            }),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "MedicationRequest",
+                "productCodeableConcept": {"text": "Aspirin"}
+            }),
+            json!({"resourceType": "ActivityDefinition", "kind": "NutritionOrder"}),
+            json!({"resourceType": "ActivityDefinition", "kind": "ServiceRequest"}),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "SupplyRequest",
+                "productCodeableConcept": {"text": "Wound dressing"},
+                "quantity": {"value": 1}
+            }),
+            json!({"resourceType": "ActivityDefinition", "kind": "Task"}),
+        ];
+        let mut ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+        ctx.evaluation_date = Some("2026-09-19T12:00:00Z".to_string());
+
+        for definition in definitions {
+            let kind = definition["kind"].as_str().expect("kind");
+            let applied = apply_activity_definition(&definition, &[], &ctx)
+                .unwrap_or_else(|error| panic!("{kind} application failed: {error}"))
+                .unwrap_or_else(|| panic!("{kind} should be supported"));
+            let result = validator
+                .validate(&applied)
+                .unwrap_or_else(|error| panic!("{kind} validation failed to run: {error}"));
+            let errors = result
+                .issues
+                .iter()
+                .filter(|issue| issue.severity == rh_validator::Severity::Error)
+                .map(|issue| {
+                    format!(
+                        "{}: {}",
+                        issue.path.as_deref().unwrap_or("?"),
+                        issue.message
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert!(
+                errors.is_empty(),
+                "{kind} is not valid R4: {errors:#?}\n{applied:#}"
+            );
+        }
+    }
+
+    #[test]
+    fn missing_required_fields_fail_instead_of_emitting_invalid_resources() {
+        let ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+        for definition in [
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "MedicationRequest"
+            }),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "NutritionOrder"
+            }),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "DeviceRequest"
+            }),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "SupplyRequest"
+            }),
+            json!({
+                "resourceType": "ActivityDefinition",
+                "kind": "ImmunizationRecommendation"
+            }),
+        ] {
+            let error = apply_activity_definition(&definition, &[], &ctx).unwrap_err();
+            assert!(
+                matches!(error, CpgError::InvalidResource(message) if message.contains("missing required field"))
+            );
+        }
+    }
+
+    #[test]
+    fn unsupported_skeleton_kinds_return_none() {
+        let ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+        for kind in [
+            "AppointmentResponse",
+            "Claim",
+            "Contract",
+            "EnrollmentRequest",
+            "VisionPrescription",
+        ] {
+            let result = apply_activity_definition(
+                &json!({"resourceType": "ActivityDefinition", "kind": kind}),
+                &[],
+                &ctx,
+            )
+            .expect("unsupported kind should not fail");
+            assert!(result.is_none(), "{kind} must not emit an invalid skeleton");
+        }
+    }
+
+    #[test]
+    fn rejects_target_incompatible_intent() {
+        let ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+        for kind in ["CarePlan", "MedicationRequest"] {
+            let error = apply_activity_definition(
+                &json!({
+                    "resourceType": "ActivityDefinition",
+                    "kind": kind,
+                    "intent": "directive",
+                    "productCodeableConcept": {"text": "Example"}
+                }),
+                &[],
+                &ctx,
+            )
+            .unwrap_err();
+            assert!(
+                matches!(error, CpgError::InvalidResource(message) if message.contains("intent 'directive'"))
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_evaluation_date() {
+        let mut ctx = test_context(json!({"resourceType": "Bundle", "entry": []}));
+        ctx.evaluation_date = Some("not-a-date-time".to_string());
+
+        let error = apply_activity_definition(
+            &json!({"resourceType": "ActivityDefinition", "kind": "NutritionOrder"}),
+            &[],
+            &ctx,
+        )
+        .unwrap_err();
+
+        assert!(
+            matches!(error, CpgError::InvalidResource(message) if message.contains("RFC 3339"))
         );
     }
 

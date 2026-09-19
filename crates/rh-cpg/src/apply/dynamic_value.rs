@@ -150,9 +150,7 @@ fn navigate_field<'a>(target: &'a mut Value, field_name: &str) -> Option<&'a mut
         );
     }
 
-    let Some(field) = object.get_mut(field_name) else {
-        return None;
-    };
+    let field = object.get_mut(field_name)?;
 
     match field {
         Value::Object(_) | Value::Array(_) => Some(field),

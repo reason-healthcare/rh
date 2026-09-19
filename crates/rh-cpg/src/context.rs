@@ -13,6 +13,9 @@ pub struct ApplyContext {
     pub organization: Option<String>,
     /// FHIR Bundle of patient data (may be a collection bundle).
     pub data: Option<Value>,
+    /// Deterministic RFC 3339 date-time used when generated resources require
+    /// an authored or occurrence time.
+    pub evaluation_date: Option<String>,
 }
 
 impl ApplyContext {
@@ -24,6 +27,7 @@ impl ApplyContext {
             practitioner: None,
             organization: None,
             data: None,
+            evaluation_date: None,
         }
     }
 

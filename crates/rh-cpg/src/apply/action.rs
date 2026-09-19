@@ -104,12 +104,10 @@ fn apply_definition(
         return Ok(());
     };
 
-    let Some(definition_resource) = ctx
+    let definition_resource = ctx
         .content_resolver
         .resolve_canonical(definition_canonical)?
-    else {
-        return Ok(());
-    };
+        .ok_or_else(|| CpgError::CanonicalNotFound(definition_canonical.to_string()))?;
 
     let definition_type = definition_resource
         .get("resourceType")
@@ -362,6 +360,25 @@ mod tests {
                 .unwrap();
 
         assert!(result.is_none());
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn missing_action_definition_is_an_error() {
+        let plan_definition = json!({"resourceType": "PlanDefinition"});
+        let action = json!({
+            "definitionCanonical": "http://example.org/ActivityDefinition/missing"
+        });
+        let ctx = ApplyContext::new(Arc::new(BundleResolver::default()), "Patient/123");
+        let mut entries = Vec::new();
+
+        let error =
+            apply_plan_definition_action(&action, &plan_definition, &ctx, &mut entries, &[])
+                .unwrap_err();
+
+        assert!(
+            matches!(error, CpgError::CanonicalNotFound(canonical) if canonical.ends_with("/missing"))
+        );
         assert!(entries.is_empty());
     }
 }
