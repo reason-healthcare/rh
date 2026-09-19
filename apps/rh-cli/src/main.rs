@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod codegen;
+mod cpg;
 mod cql;
 mod download;
 mod fhirpath;
@@ -48,6 +49,10 @@ struct Cli {
 enum Commands {
     /// Generate organized Rust crates from FHIR Packages
     Codegen(codegen::CodegenArgs),
+
+    /// Apply clinical practice guideline definitions (CPG)
+    #[clap(subcommand)]
+    Cpg(cpg::CpgCommands),
 
     /// Compile CQL (Clinical Quality Language) to ELM
     #[clap(subcommand)]
@@ -110,6 +115,7 @@ async fn main() -> Result<()> {
 
     let result = match cli.command {
         Commands::Codegen(cmd) => codegen::handle_command(cmd, &output_ctx).await,
+        Commands::Cpg(cmd) => cpg::handle_command(cmd, &output_ctx).await,
         Commands::Cql(cmd) => cql::handle_command(cmd, &output_ctx).await,
         Commands::Download(cmd) => download::handle_command(cmd, &output_ctx).await,
         Commands::Fhirpath(cmd) => fhirpath::handle_command(cmd, &output_ctx).await,

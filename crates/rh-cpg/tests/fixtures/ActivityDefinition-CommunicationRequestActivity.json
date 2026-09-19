@@ -1,0 +1,25 @@
+{
+  "resourceType" : "ActivityDefinition",
+  "id" : "CommunicationRequestActivity",
+  "url" : "http://example.org/ActivityDefinition/CommunicationRequestActivity",
+  "version" : "0.1.0",
+  "status" : "draft",
+  "date" : "2023-01-23T15:45:25-05:00",
+  "publisher" : "Example Publisher",
+  "contact" : [{
+    "name" : "Example Publisher",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://example.org/example-publisher"
+    }]
+  }],
+  "library" : ["http://example.org/Library/ExampleLibrary"],
+  "kind" : "CommunicationRequest",
+  "dynamicValue" : [{
+    "path" : "payload[0].contentString",
+    "expression" : {
+      "language" : "text/cql-identifier",
+      "expression" : "example message"
+    }
+  }]
+}

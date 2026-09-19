@@ -1,0 +1,24 @@
+{
+  "resourceType" : "ActivityDefinition",
+  "id" : "SimpleActivityDefinition",
+  "url" : "http://example.org/ActivityDefinition/SimpleActivityDefinition",
+  "version" : "0.1.0",
+  "status" : "draft",
+  "date" : "2023-01-23T15:45:25-05:00",
+  "publisher" : "Example Publisher",
+  "contact" : [{
+    "name" : "Example Publisher",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://example.org/example-publisher"
+    }]
+  }],
+  "kind" : "MedicationRequest",
+  "productCodeableConcept" : {
+    "coding" : [{
+      "system" : "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "code" : "1946772",
+      "display" : "methotrexate 25 MG/ML Injectable Solution"
+    }]
+  }
+}

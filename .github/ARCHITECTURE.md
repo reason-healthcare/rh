@@ -39,8 +39,9 @@ against `cargo metadata`.
 
 <!-- docs-sync:crate-deps:start -->
 ```text
-rh-cli: rh-codegen, rh-cql, rh-fhirpath, rh-foundation, rh-fsh, rh-hl7-fhir-r4-core, rh-packager, rh-validator, rh-vcl
+rh-cli: rh-codegen, rh-cpg, rh-cql, rh-fhirpath, rh-foundation, rh-fsh, rh-hl7-fhir-r4-core, rh-packager, rh-validator, rh-vcl
 rh-codegen: rh-foundation
+rh-cpg: rh-cql, rh-fhirpath, rh-hl7-fhir-r4-core, rh-validator
 rh-cql: rh-foundation
 rh-fhirpath: rh-foundation, rh-hl7-fhir-r4-core
 rh-foundation: -
