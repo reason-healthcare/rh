@@ -182,7 +182,7 @@ fn filter_resources_for_subject(
                     .is_some_and(|id| id == patient_id)
             })
             .collect()),
-        "Encounter" | "Observation" | "QuestionnaireResponse" => candidates
+        "Condition" | "Encounter" | "Observation" | "QuestionnaireResponse" => candidates
             .into_iter()
             .map(|candidate| {
                 let matches = tuple_scalar(&candidate, "subject")
@@ -350,23 +350,32 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_patient_relationship_fails_closed() {
+    fn retrieves_only_conditions_for_the_requested_patient() {
         let bundle = json!({
             "resourceType": "Bundle",
-            "entry": [{"resource": {
-                "resourceType": "Condition",
-                "id": "condition-1",
-                "subject": {"reference": "Patient/123"}
-            }}]
+            "entry": [
+                {"resource": {
+                    "resourceType": "Condition",
+                    "id": "matching",
+                    "subject": {"reference": "Patient/123"}
+                }},
+                {"resource": {
+                    "resourceType": "Condition",
+                    "id": "other",
+                    "subject": {"reference": "Patient/999"}
+                }}
+            ]
         });
         let provider = FhirDataProvider::from_bundle(&bundle, "Patient/123");
 
-        let error = provider
+        let resources = provider
             .retrieve(None, "Condition", None, None, None, None)
-            .unwrap_err();
+            .expect("patient-scoped Condition retrieve should succeed");
 
-        assert!(
-            matches!(error, EvalError::RetrieveError(message) if message.contains("unsupported for FHIR Condition"))
+        assert_eq!(resources.len(), 1);
+        assert_eq!(
+            tuple_scalar(&resources[0], "id").and_then(reference_value),
+            Some("matching")
         );
     }
 }
