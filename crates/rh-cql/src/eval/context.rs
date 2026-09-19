@@ -448,8 +448,8 @@ impl DataProvider for InMemoryDataProvider {
 /// as a defense-in-depth post-filter. An explicit context is a resolved FHIR
 /// reference (`Patient/<id>`), never merely the context name. This evaluator
 /// deliberately supports the FHIR resources used by the clinical runtime:
-/// Patient (by `id`), and Encounter, Observation, and QuestionnaireResponse
-/// (by `subject`). Other Patient-context relationships need their ModelInfo
+/// Patient (by `id`), and Condition, Encounter, Observation, and
+/// QuestionnaireResponse (by `subject`). Other Patient-context relationships need their ModelInfo
 /// relationship expressed by the evaluator before they can be used; they fail
 /// visibly instead of silently returning an unscoped or empty retrieve.
 ///
@@ -479,6 +479,11 @@ pub(crate) fn filter_resources_for_context(
         .rsplit('.')
         .next()
         .unwrap_or(data_type);
+    // An empty candidate set cannot leak cross-patient data and is the correct
+    // result regardless of which relationship would scope populated rows.
+    if candidates.is_empty() {
+        return Ok(candidates);
+    }
     match resource_type {
         "Patient" => Ok(candidates
             .into_iter()
@@ -488,7 +493,7 @@ pub(crate) fn filter_resources_for_context(
                     .is_some_and(|id| id == patient_id)
             })
             .collect()),
-        "Encounter" | "Observation" | "QuestionnaireResponse" => candidates
+        "Condition" | "Encounter" | "Observation" | "QuestionnaireResponse" => candidates
             .into_iter()
             .map(|candidate| {
                 let matches = tuple_scalar(&candidate, "subject")
@@ -771,6 +776,38 @@ mod tests {
         let results = provider
             .retrieve(None, "Condition", None, None, None, None)
             .unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn patient_context_filters_conditions_by_subject() {
+        let condition = |patient: &str| {
+            Value::Tuple(BTreeMap::from([(
+                "subject".to_string(),
+                Value::Tuple(BTreeMap::from([(
+                    "reference".to_string(),
+                    Value::String(format!("Patient/{patient}")),
+                )])),
+            )]))
+        };
+        let mut provider = InMemoryDataProvider::new();
+        provider.add_resource("Condition", condition("one"));
+        provider.add_resource("Condition", condition("two"));
+
+        let results = provider
+            .retrieve(Some("Patient/one"), "Condition", None, None, None, None)
+            .unwrap();
+
+        assert_eq!(results, vec![condition("one")]);
+    }
+
+    #[test]
+    fn empty_patient_context_retrieve_is_safe_for_unmodeled_relationship() {
+        let provider = InMemoryDataProvider::new();
+        let results = provider
+            .retrieve(Some("Patient/one"), "DeviceRequest", None, None, None, None)
+            .unwrap();
+
         assert!(results.is_empty());
     }
 

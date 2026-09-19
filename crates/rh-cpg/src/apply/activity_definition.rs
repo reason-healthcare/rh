@@ -1011,7 +1011,7 @@ mod tests {
         .unwrap_err();
 
         assert!(
-            matches!(error, CpgError::InvalidResource(message) if message.contains("RFC 3339"))
+            matches!(error, CpgError::EvaluationError(message) if message.contains("RFC 3339"))
         );
     }
 

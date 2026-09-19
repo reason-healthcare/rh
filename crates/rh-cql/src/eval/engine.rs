@@ -268,12 +268,37 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             .copied()
             .filter(|function| function.operand.len() == args.len())
             .filter(|function| {
-                signature.is_empty()
-                    || function
-                        .operand
-                        .iter()
-                        .map(|operand| operand.operand_type_specifier.as_ref())
-                        .eq(signature.iter().map(Some))
+                if signature.is_empty() {
+                    function.operand.iter().zip(&args).all(|(operand, value)| {
+                        match (
+                            operand.operand_type_specifier.as_ref(),
+                            operand.operand_type_name.as_deref(),
+                        ) {
+                            (Some(specifier), _) => runtime_value_matches(value, specifier),
+                            (None, Some(type_name)) => {
+                                runtime_named_value_matches(value, type_name)
+                            }
+                            (None, None) => true,
+                        }
+                    })
+                } else {
+                    signature.len() == function.operand.len()
+                        && function
+                            .operand
+                            .iter()
+                            .zip(signature)
+                            .all(|(operand, signature)| {
+                                operand
+                                    .operand_type_specifier
+                                    .as_ref()
+                                    .is_some_and(|specifier| specifier == signature)
+                                    || matches!(
+                                        (operand.operand_type_name.as_deref(), signature),
+                                        (Some(type_name), TypeSpecifier::Named(named))
+                                            if type_name == named.name
+                                    )
+                            })
+                }
             });
         let function = matches.next().ok_or_else(|| {
             EvalError::ExpressionNotFound(format!(
@@ -3042,6 +3067,46 @@ fn type_specifier_name(specifier: Option<&TypeSpecifier>) -> Option<&str> {
     }
 }
 
+fn runtime_value_matches(value: &Value, specifier: &TypeSpecifier) -> bool {
+    if matches!(value, Value::Null) {
+        // Null is compatible with every CQL type. Keeping every candidate here
+        // intentionally leaves indistinguishable overloads ambiguous.
+        return true;
+    }
+    match specifier {
+        TypeSpecifier::Named(named) => runtime_named_value_matches(value, &named.name),
+        TypeSpecifier::List(_) => matches!(value, Value::List(_)),
+        TypeSpecifier::Interval(_) => matches!(value, Value::Interval { .. }),
+        TypeSpecifier::Tuple(_) => matches!(value, Value::Tuple(_)),
+        TypeSpecifier::Choice(choice) => choice
+            .choice
+            .iter()
+            .any(|choice| runtime_value_matches(value, choice)),
+        TypeSpecifier::Parameter(_) => true,
+    }
+}
+
+fn runtime_named_value_matches(value: &Value, raw_type_name: &str) -> bool {
+    if matches!(value, Value::Null) {
+        return true;
+    }
+    let type_name = strip_elm_namespace(raw_type_name);
+    if type_name == "Any" || is_type(value, type_name) == Value::Boolean(true) {
+        return true;
+    }
+    matches!(
+        value,
+        Value::Tuple(fields)
+            if fields
+                .get("resourceType")
+                .and_then(|resource_type| match resource_type {
+                    Value::String(resource_type) => Some(resource_type.as_str()),
+                    _ => None,
+                })
+                == Some(type_name)
+    )
+}
+
 fn resolve_property(source: Value, path: &str) -> Result<Value, EvalError> {
     // Preserve an exact serialized property name before interpreting a dotted
     // FHIR-model path. This keeps existing tuple access and wire properties
@@ -3049,7 +3114,7 @@ fn resolve_property(source: Value, path: &str) -> Result<Value, EvalError> {
     // `birthDate.value`.
     if let Value::Tuple(fields) = &source {
         if let Some(value) = fields.get(path) {
-            return Ok(value.clone());
+            return Ok(coerce_fhir_primitive_field(path, value));
         }
     }
 
@@ -3060,7 +3125,7 @@ fn resolve_direct_property(source: Value, path: &str) -> Result<Value, EvalError
     match source {
         Value::Tuple(fields) => {
             if let Some(value) = fields.get(path) {
-                return Ok(value.clone());
+                return Ok(coerce_fhir_primitive_field(path, value));
             }
             Ok(fhir_choice_value(&fields, path).unwrap_or(Value::Null))
         }
@@ -3072,6 +3137,14 @@ fn resolve_direct_property(source: Value, path: &str) -> Result<Value, EvalError
     }
 }
 
+fn coerce_fhir_primitive_field(path: &str, value: &Value) -> Value {
+    match path {
+        "birthDate" => to_date(value).unwrap_or_else(|_| value.clone()),
+        "start" | "end" => to_datetime(value).unwrap_or_else(|_| value.clone()),
+        _ => value.clone(),
+    }
+}
+
 fn fhir_choice_value(fields: &BTreeMap<String, Value>, path: &str) -> Option<Value> {
     // ELM uses the logical FHIR choice-element name (for example,
     // `Observation.effective`) while JSON carries the selected wire property
@@ -3079,7 +3152,7 @@ fn fhir_choice_value(fields: &BTreeMap<String, Value>, path: &str) -> Option<Val
     // currently supported by the evaluator so an unrelated `fooBar` field is
     // never inferred as a `foo` property. Exact serialized properties still
     // win in `resolve_direct_property` above.
-    if !matches!(path, "value" | "effective") {
+    if !matches!(path, "value" | "effective" | "onset" | "abatement") {
         return None;
     }
 
@@ -3344,6 +3417,22 @@ mod tests {
             Value::Null
         );
 
+        let onset_period = Value::Tuple(BTreeMap::from([(
+            "start".to_string(),
+            Value::String("2009-01-16T08:30:00Z".to_string()),
+        )]));
+        assert_eq!(
+            resolve_property(
+                Value::Tuple(BTreeMap::from([(
+                    "onsetPeriod".to_string(),
+                    onset_period.clone(),
+                )])),
+                "onset",
+            )
+            .unwrap(),
+            onset_period
+        );
+
         let mut unrelated = BTreeMap::new();
         unrelated.insert("fooBar".to_string(), Value::Integer(1));
         assert_eq!(
@@ -3416,7 +3505,11 @@ mod tests {
         );
         assert_eq!(
             resolve_property(Value::Tuple(patient), "birthDate.value").unwrap(),
-            Value::String("1961-06-16".to_string())
+            Value::Date(crate::eval::value::CqlDate {
+                year: 1961,
+                month: Some(6),
+                day: Some(16),
+            })
         );
     }
 
@@ -3804,5 +3897,52 @@ mod tests {
 
         let value = evaluate_elm_with_libraries(&main, &included, "Main", &fixed_ctx()).unwrap();
         assert_eq!(value, Value::Integer(2));
+    }
+
+    #[test]
+    fn cross_library_function_ref_uses_runtime_type_when_signature_is_absent() {
+        let overload = |operand_type: &str, result: i64| {
+            StatementDef::Function(FunctionDef {
+                name: Some("ToInterval".to_string()),
+                operand: vec![OperandDef {
+                    name: Some("value".to_string()),
+                    operand_type_name: Some(format!("{{http://hl7.org/fhir}}{operand_type}")),
+                    ..Default::default()
+                }],
+                expression: Some(Box::new(int_literal(result))),
+                ..Default::default()
+            })
+        };
+        let helpers = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![overload("Period", 1), overload("Range", 2)],
+            }),
+            ..Default::default()
+        };
+        let period = Expression::Tuple(TupleExpr {
+            elements: vec![TupleElement {
+                name: Some("start".to_string()),
+                value: Some(Box::new(Expression::Literal(Literal {
+                    value: Some("2026-01-01T00:00:00Z".to_string()),
+                    value_type: Some("String".to_string()),
+                    ..Default::default()
+                }))),
+            }],
+            ..Default::default()
+        });
+        let main = make_library(
+            "Main",
+            Expression::FunctionRef(FunctionRef {
+                name: Some("ToInterval".to_string()),
+                library_name: Some("Helpers".to_string()),
+                operand: vec![period],
+                ..Default::default()
+            }),
+        );
+        let included = [("Helpers".to_string(), helpers)].into_iter().collect();
+
+        let value = evaluate_elm_with_libraries(&main, &included, "Main", &fixed_ctx()).unwrap();
+
+        assert_eq!(value, Value::Integer(1));
     }
 }

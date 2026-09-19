@@ -94,9 +94,10 @@ impl FileLibrarySourceProvider {
             ));
         }
 
-        if identifier.version.is_none() {
-            names.push(format!("{}.{}", identifier.name, self.extension));
-        }
+        // CQL publishers commonly use an unversioned filename even when the
+        // library declaration is versioned. The loader validates the declared
+        // identity before accepting this fallback for a version-pinned include.
+        names.push(format!("{}.{}", identifier.name, self.extension));
 
         names
     }
@@ -111,6 +112,19 @@ impl FileLibrarySourceProvider {
                 if file_path.exists() {
                     match std::fs::read_to_string(&file_path) {
                         Ok(content) => {
+                            if let Some(expected_version) = identifier.version.as_deref() {
+                                let declared = crate::parser::statement::parse_library_identifier(
+                                    crate::parser::span::Span::new(&content),
+                                )
+                                .ok()
+                                .map(|(_, declared)| declared);
+                                if !declared.is_some_and(|declared| {
+                                    declared.name == identifier.name
+                                        && declared.version.as_deref() == Some(expected_version)
+                                }) {
+                                    continue;
+                                }
+                            }
                             let location = file_path.to_string_lossy().to_string();
                             return Some(LibrarySource::new(
                                 identifier.clone(),
@@ -220,17 +234,7 @@ impl LibrarySourceProvider for FileLibrarySourceProvider {
             return true;
         }
 
-        // Check filesystem
-        let filenames = self.possible_filenames(identifier);
-        for search_path in &self.paths {
-            for filename in &filenames {
-                if search_path.join(filename).exists() {
-                    return true;
-                }
-            }
-        }
-
-        false
+        self.load_from_disk(identifier).is_some()
     }
 
     fn list_libraries(&self) -> Vec<LibraryIdentifier> {
@@ -301,6 +305,43 @@ mod tests {
             serde_json::json!({ "library": library }).to_string(),
         )
         .expect("write elm");
+    }
+
+    #[test]
+    fn versioned_source_lookup_accepts_unversioned_filename_with_exact_identity() {
+        let root = temp_dir("source-unversioned-filename");
+        std::fs::create_dir_all(&root).expect("create temp directory");
+        std::fs::write(
+            root.join("Helper.cql"),
+            "library Helper version '1.0.0' define Answer: 42",
+        )
+        .expect("write source");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let identifier = LibraryIdentifier::new("Helper", Some("1.0.0"));
+
+        let source = provider
+            .get_source(&identifier)
+            .expect("exact declared identity should load");
+
+        assert!(source.location.unwrap().ends_with("Helper.cql"));
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn versioned_source_lookup_rejects_unversioned_filename_with_wrong_identity() {
+        let root = temp_dir("source-wrong-identity");
+        std::fs::create_dir_all(&root).expect("create temp directory");
+        std::fs::write(
+            root.join("Helper.cql"),
+            "library Helper version '2.0.0' define Answer: 42",
+        )
+        .expect("write source");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let identifier = LibraryIdentifier::new("Helper", Some("1.0.0"));
+
+        assert!(provider.get_source(&identifier).is_none());
+        assert!(!provider.has_library(&identifier));
+        std::fs::remove_dir_all(root).expect("remove temp directory");
     }
 
     #[test]

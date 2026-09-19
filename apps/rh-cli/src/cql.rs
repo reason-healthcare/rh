@@ -563,15 +563,17 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             eval_cql(
                 &file,
                 &expression,
-                data.as_deref(),
-                &terminology,
-                subject.as_deref(),
-                evaluation_date.as_deref(),
-                measurement_period_start.zip(measurement_period_end),
-                &parameter,
-                &lib_path,
-                valuesets.as_deref(),
-                trace,
+                EvalCqlOptions {
+                    data: data.as_deref(),
+                    terminology_paths: &terminology,
+                    subject: subject.as_deref(),
+                    evaluation_date: evaluation_date.as_deref(),
+                    measurement_period: measurement_period_start.zip(measurement_period_end),
+                    parameters: &parameter,
+                    lib_paths: &lib_path,
+                    valuesets_path: valuesets.as_deref(),
+                    show_trace: trace,
+                },
             )?;
         }
     }
@@ -1649,20 +1651,31 @@ fn compile_with_search_dirs_and_sourcemap(
 // Eval service
 // ---------------------------------------------------------------------------
 
-/// Evaluate a named expression in a CQL library
-fn eval_cql(
-    input: &str,
-    expression: &str,
-    data: Option<&str>,
-    terminology_paths: &[PathBuf],
-    subject: Option<&str>,
-    evaluation_date: Option<&str>,
+struct EvalCqlOptions<'a> {
+    data: Option<&'a str>,
+    terminology_paths: &'a [PathBuf],
+    subject: Option<&'a str>,
+    evaluation_date: Option<&'a str>,
     measurement_period: Option<(String, String)>,
-    parameters: &[String],
-    lib_paths: &[PathBuf],
-    valuesets_path: Option<&str>,
+    parameters: &'a [String],
+    lib_paths: &'a [PathBuf],
+    valuesets_path: Option<&'a str>,
     show_trace: bool,
-) -> Result<()> {
+}
+
+/// Evaluate a named expression in a CQL library.
+fn eval_cql(input: &str, expression: &str, options: EvalCqlOptions<'_>) -> Result<()> {
+    let EvalCqlOptions {
+        data,
+        terminology_paths,
+        subject,
+        evaluation_date,
+        measurement_period,
+        parameters,
+        lib_paths,
+        valuesets_path,
+        show_trace,
+    } = options;
     let source = read_source(input)?;
 
     // Compile to ELM, resolving any included libraries.
@@ -1811,7 +1824,9 @@ fn eval_cql(
 /// (`--terminology`). Versioned aliases are always registered. An unversioned
 /// alias is available only if exactly one version of the canonical was loaded.
 fn load_terminology(paths: &[PathBuf]) -> Result<InMemoryTerminologyProvider> {
-    let mut valuesets: BTreeMap<String, Vec<(Option<String>, Vec<CqlCode>)>> = BTreeMap::new();
+    type ValueSetVersions = Vec<(Option<String>, Vec<CqlCode>)>;
+
+    let mut valuesets: BTreeMap<String, ValueSetVersions> = BTreeMap::new();
     let mut loaded_valuesets = 0usize;
 
     for path in paths {

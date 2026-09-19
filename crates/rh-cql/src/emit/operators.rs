@@ -546,11 +546,13 @@ pub fn emit_timing_expression(
                 element: element.clone(),
                 operand: Some(Box::new(expr)),
                 signature: Vec::new(),
+                precision: None,
             }),
             UnaryOperator::End => elm::Expression::End(elm::UnaryExpression {
                 element: element.clone(),
                 operand: Some(Box::new(expr)),
                 signature: Vec::new(),
+                precision: None,
             }),
             _ => expr,
         }
