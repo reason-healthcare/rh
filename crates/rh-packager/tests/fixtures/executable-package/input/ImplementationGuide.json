@@ -1,0 +1,9 @@
+{
+  "resourceType": "ImplementationGuide",
+  "id": "test-ig",
+  "packageId": "test.executable",
+  "version": "1.0.0",
+  "url": "http://test.org/fhir",
+  "fhirVersion": ["4.0.1"],
+  "status": "draft"
+}

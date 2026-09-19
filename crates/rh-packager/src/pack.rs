@@ -2,7 +2,7 @@
 
 use crate::{context::PublishContext, index::build_index, Result};
 use flate2::{write::GzEncoder, Compression};
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::{
     fs,
     io::Write,
@@ -133,6 +133,76 @@ fn write_json(path: &Path, value: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Write the resource map as a self-contained FHIR Bundle JSON.
+///
+/// The bundle includes metadata about the link operation (timestamp,
+/// resource count, validation status) as `meta.tag` and extension.
+pub fn write_executable_bundle(ctx: &PublishContext, output_dir: &Path) -> Result<PathBuf> {
+    fs::create_dir_all(output_dir)?;
+
+    let format = &ctx.config.link.format;
+    match format.as_str() {
+        "directory" => write_executable_directory(ctx, output_dir),
+        _ => write_executable_bundle_json(ctx, output_dir),
+    }
+}
+
+fn write_executable_bundle_json(ctx: &PublishContext, output_dir: &Path) -> Result<PathBuf> {
+    let entries: Vec<Value> = ctx
+        .resources
+        .values()
+        .map(|resource| {
+            json!({
+                "fullUrl": format!("urn:uuid:{}", uuid::Uuid::new_v4()),
+                "resource": resource,
+            })
+        })
+        .collect();
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": "collection",
+        "meta": {
+            "tag": [{
+                "system": "https://reasonhealth.com/fhir/CodeSystem/bundle-type",
+                "code": "executable",
+                "display": "Executable Bundle"
+            }]
+        },
+        "extension": [{
+            "url": "https://reasonhealth.com/fhir/StructureDefinition/executable-bundle-metadata",
+            "extension": [
+                { "url": "linkedAt", "valueDateTime": chrono::Utc::now().to_rfc3339() },
+                { "url": "resourceCount", "valueInteger": ctx.resources.len() }
+            ]
+        }],
+        "entry": entries
+    });
+
+    let out_path = output_dir.join("executable-bundle.json");
+    write_json(&out_path, &bundle)?;
+    Ok(out_path)
+}
+
+fn write_executable_directory(ctx: &PublishContext, output_dir: &Path) -> Result<PathBuf> {
+    fs::create_dir_all(output_dir)?;
+
+    // Write each resource as a separate file
+    for (stem, value) in &ctx.resources {
+        let out_path = output_dir.join(format!("{stem}.json"));
+        write_json(&out_path, value)?;
+    }
+
+    // Write a manifest
+    let manifest = json!({
+        "linkedAt": chrono::Utc::now().to_rfc3339(),
+        "resourceCount": ctx.resources.len(),
+        "resources": ctx.resources.keys().collect::<Vec<_>>(),
+    });
+    write_json(&output_dir.join("_manifest.json"), &manifest)?;
+
+    Ok(output_dir.to_path_buf())
+}
 #[cfg(test)]
 mod tests {
     use super::*;

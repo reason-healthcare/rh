@@ -5,6 +5,26 @@ All notable user-facing changes to Reason Health are recorded here.
 This project follows semantic versioning while the public API is still in the
 0.x series. Release dates use `YYYY-MM-DD`.
 
+## [Unreleased]
+
+### Added
+
+- `rh package link` — new command to build self-contained executable bundles
+  for WASM evaluation. Pre-expands ValueSets, resolves transitive dependencies,
+  validates completeness. Three new hook processors: `resolve-dependencies`,
+  `expand-valuesets`, `link-validate`. New `[link]` configuration section in
+  `packager.toml`. See [Executable Bundle Plan](docs/executable-bundle-plan.md).
+
+### Fixed
+
+- Wired `rh package link` format, local terminology-directory, and validation
+  overrides into the link pipeline; unsupported remote terminology and
+  automatic FHIRHelpers options are no longer advertised.
+- Made executable-bundle validation resolve version-pinned canonicals, reject
+  mismatched terminology snapshots, and require parseable inline ELM.
+- Preserved CQL function overloads and selected user-defined functions by their
+  ELM signature instead of definition order.
+
 ## [0.2.8] - 2026-07-29
 
 ### Changed

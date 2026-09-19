@@ -256,7 +256,7 @@ fn pin_canonical_value(val: &mut Value, pin_map: &HashMap<String, String>) {
 }
 
 /// Collect unversioned canonical URL strings from canonical-typed fields in a resource.
-fn collect_canonicals(value: &Value) -> Vec<String> {
+pub(crate) fn collect_canonicals(value: &Value) -> Vec<String> {
     let mut urls = Vec::new();
     walk_canonical_fields(value, "", &mut |_path, url| {
         if !url.contains('|') {
@@ -266,13 +266,49 @@ fn collect_canonicals(value: &Value) -> Vec<String> {
     urls
 }
 
+/// Collect every canonical reference, preserving any `|version` suffix.
+///
+/// Link-time dependency resolution and validation use this variant because a
+/// pinned canonical is still a dependency and must resolve to the exact
+/// requested resource version.
+pub(crate) fn collect_canonical_references(value: &Value) -> Vec<String> {
+    let mut urls = Vec::new();
+    walk_canonical_fields(value, "", &mut |_path, url| {
+        urls.push(url.to_string());
+    });
+    urls
+}
+
+/// Split a FHIR canonical into its base URL and optional version.
+///
+/// Canonical fragments identify content within the target resource and do not
+/// participate in resource identity, so they are removed before matching.
+pub(crate) fn canonical_url_and_version(reference: &str) -> (&str, Option<&str>) {
+    let without_fragment = reference.split('#').next().unwrap_or(reference);
+    match without_fragment.split_once('|') {
+        Some((url, version)) => (url, Some(version)),
+        None => (without_fragment, None),
+    }
+}
+
+/// Return whether a FHIR resource satisfies a canonical reference.
+pub(crate) fn resource_matches_canonical(resource: &Value, reference: &str) -> bool {
+    let (url, requested_version) = canonical_url_and_version(reference);
+    if resource.get("url").and_then(Value::as_str) != Some(url) {
+        return false;
+    }
+
+    requested_version
+        .is_none_or(|version| resource.get("version").and_then(Value::as_str) == Some(version))
+}
+
 /// Walk a JSON value, invoking `visitor(field_path, url)` for each string value found in a
 /// canonical-typed field (see [`CANONICAL_FIELDS`]).
 ///
 /// `path` is the dot-notation path to the current position (empty at root, bracket-indexed for
 /// arrays). Only object keys listed in [`CANONICAL_FIELDS`] trigger visitor calls; other keys
 /// are recursed into to discover nested canonical fields.
-fn walk_canonical_fields<F>(value: &Value, path: &str, visitor: &mut F)
+pub(crate) fn walk_canonical_fields<F>(value: &Value, path: &str, visitor: &mut F)
 where
     F: FnMut(&str, &str),
 {
@@ -280,7 +316,7 @@ where
         Value::Object(map) => {
             for (key, val) in map {
                 let child = join_path(path, key);
-                if is_canonical_field(key) {
+                if is_canonical_field(key) || is_related_artifact_resource(path, key) {
                     visit_canonical_value(val, &child, visitor);
                 } else {
                     walk_canonical_fields(val, &child, visitor);
@@ -331,11 +367,19 @@ fn looks_like_canonical_any(s: &str) -> bool {
     looks_like_canonical(base)
 }
 
-fn is_canonical_field(key: &str) -> bool {
+pub(crate) fn is_canonical_field(key: &str) -> bool {
     CANONICAL_FIELDS.contains(&key)
 }
 
-fn is_excluded(url: &str) -> bool {
+fn is_related_artifact_resource(parent_path: &str, key: &str) -> bool {
+    key == "resource"
+        && parent_path
+            .rsplit('.')
+            .next()
+            .is_some_and(|segment| segment.starts_with("relatedArtifact["))
+}
+
+pub(crate) fn is_excluded(url: &str) -> bool {
     EXCLUDED_PREFIXES
         .iter()
         .any(|prefix| url.starts_with(prefix))
@@ -516,6 +560,41 @@ mod tests {
             urls.is_empty(),
             "already-versioned canonicals should not be collected"
         );
+    }
+
+    #[test]
+    fn link_collection_preserves_versioned_canonicals() {
+        let value = json!({
+            "library": [
+                "http://example.org/fhir/Library/one|1.0.0",
+                "http://example.org/fhir/Library/two"
+            ],
+            "relatedArtifact": [{
+                "type": "depends-on",
+                "resource": "http://example.org/fhir/Library/three|3.0.0"
+            }]
+        });
+        let references = collect_canonical_references(&value);
+        assert!(references.contains(&"http://example.org/fhir/Library/one|1.0.0".to_string()));
+        assert!(references.contains(&"http://example.org/fhir/Library/two".to_string()));
+        assert!(references.contains(&"http://example.org/fhir/Library/three|3.0.0".to_string()));
+    }
+
+    #[test]
+    fn resource_canonical_matching_honors_requested_version() {
+        let resource = json!({
+            "resourceType": "Library",
+            "url": "http://example.org/fhir/Library/test",
+            "version": "1.0.0"
+        });
+        assert!(resource_matches_canonical(
+            &resource,
+            "http://example.org/fhir/Library/test|1.0.0"
+        ));
+        assert!(!resource_matches_canonical(
+            &resource,
+            "http://example.org/fhir/Library/test|2.0.0"
+        ));
     }
 
     #[test]

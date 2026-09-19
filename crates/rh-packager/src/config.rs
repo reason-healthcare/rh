@@ -106,6 +106,10 @@ pub struct PublisherConfig {
     #[serde(default)]
     pub fsh: FshConfig,
 
+    /// Configuration for the `link` pipeline (executable bundle production).
+    #[serde(default)]
+    pub link: LinkConfig,
+
     /// Named shell processors available to all hook stages.
     ///
     /// Each key is a processor name referenced in `[hooks]` stage lists.
@@ -305,6 +309,57 @@ impl Default for CqlConfig {
 pub struct FshConfig {}
 
 /// Configuration for a named shell processor declared under `[processors.<name>]`.
+/// Configuration for the `link` pipeline (executable bundle production).
+///
+/// Used by `rh package link` and the `resolve-dependencies`, `expand-valuesets`,
+/// and `link-validate` hook processors.
+///
+/// ```toml
+/// [link]
+/// terminology_dir = "/path/to/terminology-snapshots"
+/// format = "bundle"
+/// packages_dir = "/custom/.fhir/packages"
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LinkConfig {
+    /// Local directory of pre-expanded ValueSets and CodeSystems.
+    ///
+    /// The directory should contain ValueSet JSON files with complete
+    /// `expansion.contains` arrays and the same canonical URL and version as
+    /// the source ValueSet.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terminology_dir: Option<String>,
+
+    /// Output format for `rh package link`.
+    ///
+    /// `"bundle"` (default) produces a single FHIR Bundle JSON file.
+    /// `"directory"` produces one `.json` file per resource plus a
+    /// `_manifest.json` index.
+    #[serde(default = "default_link_format")]
+    pub format: String,
+
+    /// Override path to the local FHIR packages cache for dependency resolution.
+    ///
+    /// Falls back to the top-level `packages_dir` or `~/.fhir/packages`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub packages_dir: Option<String>,
+}
+
+fn default_link_format() -> String {
+    "bundle".to_string()
+}
+
+impl Default for LinkConfig {
+    fn default() -> Self {
+        Self {
+            terminology_dir: None,
+            format: default_link_format(),
+            packages_dir: None,
+        }
+    }
+}
+
 ///
 /// Shell processors run an external command (bash, Python, Node.js, etc.) as a
 /// pipeline stage. Resources are exchanged via a temporary working directory.
@@ -504,5 +559,48 @@ license     = "Apache-2.0"
         assert_eq!(cfg.description.as_deref(), Some("A test package"));
         assert_eq!(cfg.author.as_deref(), Some("Test Org"));
         assert_eq!(cfg.license.as_deref(), Some("Apache-2.0"));
+    }
+}
+
+#[test]
+fn parses_link_section() {
+    let toml = r#"
+[link]
+terminology_dir = "/path/to/terminology"
+format = "directory"
+packages_dir = "/custom/.fhir/packages"
+"#;
+    let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+    assert_eq!(
+        cfg.link.terminology_dir.as_deref(),
+        Some("/path/to/terminology")
+    );
+    assert_eq!(cfg.link.format, "directory");
+    assert_eq!(
+        cfg.link.packages_dir.as_deref(),
+        Some("/custom/.fhir/packages")
+    );
+}
+
+#[test]
+fn link_section_defaults_to_bundle_format() {
+    let toml = "[link]\nterminology_dir = \"/tmp/terminology\"";
+    let cfg = PublisherConfig::from_toml_str(toml).unwrap();
+    assert_eq!(cfg.link.format, "bundle");
+}
+
+#[test]
+fn absent_link_section_uses_defaults() {
+    let cfg = PublisherConfig::from_toml_str("").unwrap();
+    assert!(cfg.link.terminology_dir.is_none());
+    assert_eq!(cfg.link.format, "bundle");
+    assert!(cfg.link.packages_dir.is_none());
+}
+
+#[test]
+fn link_section_rejects_unimplemented_options() {
+    for field in ["terminology_server", "fhir_helpers"] {
+        let toml = format!("[link]\n{field} = \"unsupported\"");
+        assert!(PublisherConfig::from_toml_str(&toml).is_err());
     }
 }

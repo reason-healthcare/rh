@@ -40,7 +40,7 @@ rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.8" }  # FHIRPath invaria
 rust_decimal = { workspace = true }
 
 # Caching
-lru = "0.16"
+lru = "0.18"
 
 # Parallelism (for future batch validation)
 rayon = "1.10"

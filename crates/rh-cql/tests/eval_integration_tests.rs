@@ -1522,3 +1522,177 @@ define Result: B.BaseValue + 1
         .expect("evaluation failed");
     assert_eq!(val, Value::Integer(101));
 }
+
+// ---------------------------------------------------------------------------
+// FHIR primitive .value accessor — Phase 2j tests
+// ---------------------------------------------------------------------------
+
+/// Property `.value` on a String field returns Value::DateTime when the string
+/// is a datetime literal.  Prerequisite for FHIRHelpers.ToInterval.
+#[test]
+fn eval_fhir_primitive_value_accessor_coerces_datetime_string() {
+    use rh_cql::{compile, InMemoryDataProvider};
+    use std::collections::BTreeMap;
+
+    // CQL that reads a `start` field from a Period tuple nested inside a
+    // Condition and accesses its `.value` FHIR primitive property.
+    let cql = "library T
+using FHIR version '4.0.1'
+define PeriodStart: First([Condition]).onsetPeriod.start.value
+";
+
+    let result = compile(cql, None).expect("compile failed");
+
+    let mut onset_period = BTreeMap::new();
+    onset_period.insert(
+        "start".to_string(),
+        Value::String("2009-01-16T08:30:00".to_string()),
+    );
+
+    let mut condition = BTreeMap::new();
+    condition.insert(
+        "resourceType".to_string(),
+        Value::String("Condition".to_string()),
+    );
+    condition.insert("onsetPeriod".to_string(), Value::Tuple(onset_period));
+
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource("Condition", Value::Tuple(condition));
+
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+
+    let value = evaluate_elm(&result.library, "PeriodStart", &ctx).expect("evaluation failed");
+
+    assert!(
+        matches!(value, Value::DateTime(_)),
+        "expected DateTime from .value on a datetime string, got {:?}",
+        value
+    );
+}
+
+/// Property `.value` on a date-only string returns Value::Date.
+#[test]
+fn eval_fhir_primitive_value_accessor_coerces_date_string() {
+    use rh_cql::{compile, InMemoryDataProvider};
+    use std::collections::BTreeMap;
+
+    let cql = "library T
+using FHIR version '4.0.1'
+define BirthDate: First([Patient]).birthDate.value
+";
+
+    let result = compile(cql, None).expect("compile failed");
+
+    let mut patient = BTreeMap::new();
+    patient.insert(
+        "resourceType".to_string(),
+        Value::String("Patient".to_string()),
+    );
+    patient.insert(
+        "birthDate".to_string(),
+        Value::String("1966-08-14".to_string()),
+    );
+
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource("Patient", Value::Tuple(patient));
+
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+
+    let value = evaluate_elm(&result.library, "BirthDate", &ctx).expect("evaluation failed");
+
+    assert!(
+        matches!(value, Value::Date(_)),
+        "expected Date from .value on a date-only string, got {:?}",
+        value
+    );
+}
+
+/// FHIRHelpers.ToInterval on a Period with only a start produces a valid
+/// half-open interval (low=DateTime, high=None), not null.
+#[test]
+fn eval_fhirhelpers_to_interval_period_with_start_only() {
+    use rh_cql::{
+        compile_with_libraries, evaluate_elm_with_libraries, InMemoryDataProvider,
+        MemoryLibrarySourceProvider,
+    };
+    use std::collections::BTreeMap;
+
+    let fhir_helpers_cql = r#"
+library FHIRHelpers version '4.0.1'
+using FHIR version '4.0.1'
+
+define function ToInterval(period FHIR.Period):
+    if period is null then
+        null
+    else
+        if period."start" is null then
+            Interval(period."start".value, period."end".value]
+        else
+            Interval[period."start".value, period."end".value]
+"#;
+
+    let main_cql = r#"
+library Main version '1.0.0'
+using FHIR version '4.0.1'
+include FHIRHelpers version '4.0.1' called FHIRHelpers
+
+define TestInterval:
+    FHIRHelpers.ToInterval(First([Condition]).onsetPeriod)
+"#;
+
+    let source_provider = MemoryLibrarySourceProvider::new();
+    source_provider.register_source(
+        rh_cql::LibraryIdentifier::new("FHIRHelpers", Some("4.0.1")),
+        fhir_helpers_cql.to_string(),
+    );
+
+    let out = compile_with_libraries(main_cql, None, &source_provider)
+        .expect("compile_with_libraries failed");
+    if !out.result.is_success() {
+        panic!("compilation errors: {:?}", out.result.errors);
+    }
+
+    let mut onset_period = BTreeMap::new();
+    onset_period.insert(
+        "start".to_string(),
+        Value::String("2009-01-16T08:30:00".to_string()),
+    );
+
+    let mut condition = BTreeMap::new();
+    condition.insert("onsetPeriod".to_string(), Value::Tuple(onset_period));
+
+    let mut provider = InMemoryDataProvider::new();
+    provider.add_resource("Condition", Value::Tuple(condition));
+
+    let ctx = EvalContextBuilder::new(test_clock())
+        .data_provider(provider)
+        .build();
+
+    let value =
+        evaluate_elm_with_libraries(&out.result.library, &out.included, "TestInterval", &ctx)
+            .expect("evaluation failed");
+
+    assert!(
+        matches!(value, Value::Interval { .. }),
+        "expected an Interval from ToInterval with start-only Period, got {:?}",
+        value
+    );
+
+    // Low bound must be a DateTime
+    if let Value::Interval { low, high, .. } = &value {
+        assert!(
+            matches!(low.as_deref(), Some(Value::DateTime(_))),
+            "expected DateTime low bound, got {:?}",
+            low
+        );
+        assert!(
+            high.is_none(),
+            "expected None high bound (open-ended), got {:?}",
+            high
+        );
+    }
+}

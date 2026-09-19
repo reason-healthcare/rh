@@ -29,6 +29,18 @@ fn test_package_init_help() {
 }
 
 #[test]
+fn test_package_link_help_lists_supported_overrides() {
+    rh_cmd()
+        .args(["package", "link", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--format"))
+        .stdout(predicate::str::contains("--terminology-dir"))
+        .stdout(predicate::str::contains("--no-validate"))
+        .stdout(predicate::str::contains("--terminology <").not());
+}
+
+#[test]
 fn test_package_init_creates_packager_toml() {
     let dir = TempDir::new().unwrap();
     let target = dir.path().join("pkg");

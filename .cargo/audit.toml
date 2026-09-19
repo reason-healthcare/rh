@@ -1,0 +1,6 @@
+# rust_decimal 1.42.1 records an optional rkyv 0.7 dependency in Cargo.lock
+# even when the `rkyv` feature is not enabled. This workspace enables only
+# `std`, `serde`, and `maths`, so the vulnerable optional dependency is not
+# selected by any target. No compatible 0.7 patch release exists.
+[advisories]
+ignore = ["RUSTSEC-2026-0235"]

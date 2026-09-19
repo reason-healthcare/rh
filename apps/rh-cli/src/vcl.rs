@@ -116,11 +116,11 @@ pub async fn handle_command(cmd: VclCommands, ctx: &OutputContext) -> Result<()>
             )?;
         }
         VclCommands::Repl {
-            translate,
-            explain,
-            default_system,
+            translate: _,
+            explain: _,
+            default_system: _,
         } => {
-            rh_vcl::repl::run_repl(translate, explain, default_system)?;
+            return Err(anyhow!("VCL REPL support is unavailable in this build"));
         }
     }
     Ok(())

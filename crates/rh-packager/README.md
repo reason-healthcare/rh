@@ -6,6 +6,27 @@ from a flat source directory of resources, markdown narrative, and CQL files.
 Used by `rh package` subcommands in the `rh` CLI. For the end-user guide and CLI reference,
 see [`apps/rh-cli/docs/PACKAGER.md`](../../apps/rh-cli/docs/PACKAGER.md).
 
+## Dual Purpose: FHIR Packages and Executable Bundles
+
+`rh-packager` serves two purposes:
+
+| Command | Output | Purpose |
+|---------|--------|---------|
+| `rh package build` | FHIR package `.tgz` + `package/` directory | Registry distribution, IG publishing |
+| `rh package link` | Executable bundle JSON | WASM evaluation, CPG preview, client-side CQL |
+
+Both commands share the same source directory and `packager.toml` configuration.
+`build` produces a FHIR Package Spec-conformant tarball. `link` produces a
+self-contained FHIR Bundle where every ValueSet is pre-expanded, every
+StructureDefinition is snapshotted, every CQL library is compiled to ELM, and
+every transitive dependency is resolved and included — suitable for passing
+to a WASM evaluation engine with zero external I/O.
+
+See the [link configuration](#link) section below for local terminology
+expansions, dependency resolution, and output format settings.
+
+---
+
 ## Source Directory Layout
 
 The recommended layout uses an `input/` subdirectory to separate source files from project
@@ -217,6 +238,37 @@ The processor fails the pipeline on any CQL syntax or compilation error.
 
 ---
 
+### `[link]`
+
+Configuration for the executable bundle pipeline, used by `rh package link`.
+Controls local terminology expansion, dependency resolution, and output format.
+
+```toml
+[link]
+# Local directory of pre-expanded ValueSets.
+# terminology_dir = "/path/to/terminology-snapshots"
+
+# Output format: "bundle" (single FHIR Bundle JSON, default) or "directory".
+format = "bundle"
+
+# Override packages_dir for dependency resolution.
+# packages_dir = "/custom/.fhir/packages"
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `terminology_dir` | string | — | Local directory of pre-expanded ValueSets. Each resource must match the source canonical URL and version. |
+| `format` | string | `"bundle"` | Output format: `"bundle"` or `"directory"`. |
+| `packages_dir` | string | top-level | Packages cache for dependency resolution. |
+
+Remote terminology-server expansion is not implemented. ValueSets must already
+be expanded, use explicit `compose.include.concept` entries, or have a matching
+resource in `terminology_dir`. FHIRHelpers is not embedded by the packager;
+packages whose CQL imports it must supply a FHIRHelpers `Library` with inline,
+parseable ELM.
+
+---
+
 ### `[fsh]`
 
 Configuration for the built-in `fsh` processor, which compiles FHIR Shorthand (`*.fsh`) files
@@ -256,6 +308,9 @@ For any processor that loads packages, the directory is chosen in this order:
 | `validate` | `before_build` or `after_build` | Validates all FHIR resources using `rh-validator`. Fails on any ERROR-severity issue. |
 | `cql` | `before_build` | Compiles `.cql` files to ELM JSON, embeds source + ELM into `Library.content[]`. Auto-creates a minimal Library resource if none exists. |
 | `fsh` | `before_build` | Compiles FHIR Shorthand (`*.fsh`) files into FHIR resources and injects them into the build context. All metadata config comes from root-level `packager.toml` fields. |
+| `resolve-dependencies` | `after_build` | Pulls in transitive dependencies from installed FHIR packages so the resource set is self-contained for executable bundles. |
+| `expand-valuesets` | `after_build` | Pre-expands ValueSets that have `compose` but no `expansion`. Uses terminology directory or server. |
+| `link-validate` | `after_build` | Verifies the resource set is self-contained: no dangling canonicals, all ValueSets expanded, all SDs snapshotted, all Libraries have ELM. |
 
 ---
 

@@ -34,6 +34,24 @@ pub enum PublisherError {
     #[error("CQL error: {0}")]
     Cql(String),
 
+    /// A canonical reference could not be resolved during executable bundle linking.
+    #[error("Unresolved canonical reference: {0}")]
+    MissingCanonical(String),
+
+    /// A terminology snapshot does not identify the ValueSet it would replace.
+    #[error(
+        "Terminology ValueSet identity mismatch for {path}: expected {expected}, found {actual}"
+    )]
+    TerminologyIdentityMismatch {
+        path: String,
+        expected: String,
+        actual: String,
+    },
+
+    /// Executable bundle validation failed — the bundle is not self-contained.
+    #[error("Link validation failed:\n{}", .0.iter().map(|e| format!("  \u{2717} {e}")).collect::<Vec<_>>().join("\n"))]
+    LinkValidation(Vec<String>),
+
     /// Tarball creation or extraction error.
     #[error("Archive error: {0}")]
     Archive(String),

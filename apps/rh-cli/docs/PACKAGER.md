@@ -2,6 +2,11 @@
 
 ## Overview
 
+The `rh package` commands serve two purposes: (1) building conformant FHIR
+Packages for registry distribution via `rh package build`, and (2) building
+self-contained executable bundles for WASM evaluation via `rh package link`.
+Both commands share the same source directory and `packager.toml` configuration.
+
 The `rh package` commands let you scaffold, build, and distribute conformant FHIR Packages.
 Given a source directory of FHIR JSON resources, optional FHIR Shorthand (FSH), CQL libraries,
 and markdown narrative, `rh package build` produces a spec-conformant `.tgz` tarball and
@@ -236,6 +241,95 @@ rh package pack [OPTIONS] <DIR>
 ```bash
 rh package pack my-package/output/
 ```
+
+---
+
+### `rh package link`
+
+Build a self-contained executable bundle from a source directory. All ValueSets
+are pre-expanded, all StructureDefinitions are snapshotted, all CQL libraries are
+compiled to ELM, and all transitive dependencies are resolved and included —
+suitable for passing to a WASM evaluation engine with zero external I/O.
+
+**Usage:**
+```bash
+rh package link [OPTIONS] <DIR>
+```
+
+**Arguments:**
+- `<DIR>` — Path to the source directory containing `packager.toml` and FHIR resources
+
+**Options:**
+- `-o, --out <PATH>` — Output directory (default: `<DIR>/executable`)
+- `--format <FORMAT>` — Output format: `"bundle"` (single FHIR Bundle JSON) or `"directory"` (one file per resource)
+- `--terminology-dir <PATH>` — Override terminology directory from `packager.toml`
+- `--no-validate` — Skip `link-validate` completeness check
+
+**Examples:**
+```bash
+# Build an executable bundle with default output location
+rh package link my-package/
+
+# Build with a custom output directory
+rh package link my-package/ --out /tmp/executable
+
+# Build in directory format (one file per resource)
+rh package link my-package/ --format directory
+
+# Build offline using pre-expanded ValueSets
+rh package link my-package/ --terminology-dir /path/to/terminology-snapshots
+```
+
+The link pipeline:
+1. Runs `before_build` hook processors (same as `build`)
+2. Processes narrative, syncs IG, applies canonical pinning (same as `build`)
+3. Runs `after_build` hooks + `resolve-dependencies` + `expand-valuesets`
+4. Runs `link-validate` (completeness check)
+5. Writes executable bundle output
+
+CLI flags override `packager.toml` `[link]` section values when present.
+
+#### Executable Bundle Output Layout
+
+**Bundle format** (default) — a single FHIR Bundle JSON file:
+
+```
+executable/
+  executable-bundle.json    # Self-contained FHIR Bundle with all resources
+```
+
+**Directory format** — one file per resource plus a manifest:
+
+```
+executable/
+  _manifest.json
+  PlanDefinition-crs-surgical-management.json
+  Library-crs-logic.json
+  Library-FHIRHelpers.json
+  ValueSet-hypertension-codes.json
+  CodeSystem-snomed-ct.json
+```
+
+#### `[link]` Configuration
+
+Configure the link pipeline in `packager.toml`:
+
+```toml
+[link]
+# Local pre-expanded ValueSets; canonical URL and version must match.
+terminology_dir = "/path/to/terminology-snapshots"
+format = "bundle"                          # or "directory"
+# packages_dir = "/custom/.fhir/packages" # override for dep resolution
+```
+
+Remote terminology-server expansion is not implemented. ValueSets must already
+contain an expansion, list explicit `compose.include.concept` entries, or have a
+matching pre-expanded resource in `terminology_dir`. FHIRHelpers is not bundled
+automatically; include its `Library` resource with inline ELM in the source or a
+declared dependency package when CQL imports it.
+
+See [rh-packager README](../../../crates/rh-packager/README.md#link) for the
+full `[link]` configuration reference.
 
 ---
 

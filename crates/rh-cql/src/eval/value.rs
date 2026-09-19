@@ -478,8 +478,40 @@ pub fn cql_equivalent(a: &Value, b: &Value) -> bool {
         // Decimal: treat NaN as not equivalent; use total-order bitwise compare
         // to avoid surprises from IEEE 754 NaN behavior.
         (Value::Decimal(x), Value::Decimal(y)) => x.to_bits() == y.to_bits(),
+        (Value::Tuple(fields), Value::Code(code)) => {
+            codeable_concept_has_code(fields, &code.system, &code.code)
+        }
+        (Value::Code(code), Value::Tuple(fields)) => {
+            codeable_concept_has_code(fields, &code.system, &code.code)
+        }
         _ => a == b,
     }
+}
+
+fn codeable_concept_has_code(
+    codeable_concept: &BTreeMap<String, Value>,
+    expected_system: &str,
+    expected_code: &str,
+) -> bool {
+    let codings = match codeable_concept.get("coding") {
+        Some(Value::List(codings)) => codings,
+        _ => return false,
+    };
+
+    codings.iter().any(|coding| match coding {
+        Value::Tuple(coding) => {
+            let system = match coding.get("system") {
+                Some(Value::String(system)) => Some(system.as_str()),
+                _ => None,
+            };
+            let code = match coding.get("code") {
+                Some(Value::String(code)) => Some(code.as_str()),
+                _ => None,
+            };
+            system == Some(expected_system) && code == Some(expected_code)
+        }
+        _ => false,
+    })
 }
 
 // ---------------------------------------------------------------------------

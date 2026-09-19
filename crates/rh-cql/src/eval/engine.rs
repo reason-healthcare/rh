@@ -106,6 +106,8 @@ struct Engine<'lib, 'ctx> {
     next_event_id: u64,
     /// Expression name → body, built at construction for O(1) lookup.
     expr_index: HashMap<String, &'lib Expression>,
+    /// Function name → overloads, built at construction for O(1) lookup.
+    func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>>,
     /// Set of parameter names declared in the library, for fast membership test.
     param_names: HashSet<String>,
     /// Binding scope stack — top frame is the innermost scope.
@@ -136,11 +138,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         let mut expr_index: HashMap<String, &'lib Expression> = HashMap::new();
         let mut param_names: HashSet<String> = HashSet::new();
 
+        let mut func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>> = HashMap::new();
+
         if let Some(stmts) = &library.statements {
             for def in &stmts.defs {
-                if let StatementDef::Expression(ed) = def {
-                    if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
-                        expr_index.insert(name.clone(), expr.as_ref());
+                match def {
+                    StatementDef::Expression(ed) => {
+                        if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
+                            expr_index.insert(name.clone(), expr.as_ref());
+                        }
+                    }
+                    StatementDef::Function(fd) => {
+                        if let Some(name) = &fd.name {
+                            func_index.entry(name.clone()).or_default().push(fd);
+                        }
                     }
                 }
             }
@@ -166,6 +177,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             trace: Vec::new(),
             next_event_id: 1,
             expr_index,
+            func_index,
             param_names,
             scope_stack: vec![base_scope],
             included,
@@ -177,6 +189,79 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             .get(name)
             .copied()
             .ok_or_else(|| EvalError::General(format!("Expression '{name}' not found in library")))
+    }
+
+    /// Select one user-defined function overload by arity and ELM signature.
+    fn find_function(
+        &self,
+        name: &str,
+        argument_count: usize,
+        signature: &[crate::elm::TypeSpecifier],
+    ) -> Result<Option<&'lib crate::elm::FunctionDef>, EvalError> {
+        let Some(overloads) = self.func_index.get(name) else {
+            return Ok(None);
+        };
+        let mut matches = overloads
+            .iter()
+            .copied()
+            .filter(|function| function.operand.len() == argument_count)
+            .filter(|function| {
+                signature.is_empty()
+                    || function
+                        .operand
+                        .iter()
+                        .map(|operand| operand.operand_type_specifier.as_ref())
+                        .eq(signature.iter().map(Some))
+            });
+        let selected = matches.next();
+        if selected.is_some() && matches.next().is_some() {
+            return Err(EvalError::General(format!(
+                "Function '{name}' overload is ambiguous without a unique ELM signature match"
+            )));
+        }
+        Ok(selected)
+    }
+
+    /// Evaluate a user-defined function by binding arguments to operand names,
+    /// pushing a scope, evaluating the body, and popping the scope.
+    fn eval_user_function(
+        &mut self,
+        fd: &crate::elm::FunctionDef,
+        args: Vec<Value>,
+    ) -> Result<Value, EvalError> {
+        if fd.external == Some(true) {
+            return Err(EvalError::General(format!(
+                "External function '{}' is not supported",
+                fd.name.as_deref().unwrap_or("?")
+            )));
+        }
+        if fd.operand.len() != args.len() {
+            return Err(EvalError::General(format!(
+                "Function '{}' expected {} arguments, got {}",
+                fd.name.as_deref().unwrap_or("?"),
+                fd.operand.len(),
+                args.len()
+            )));
+        }
+        let body = fd.expression.as_ref().ok_or_else(|| {
+            EvalError::General(format!(
+                "Function '{}' has no body",
+                fd.name.as_deref().unwrap_or("?")
+            ))
+        })?;
+
+        // Bind operand names to argument values.
+        let mut scope = BTreeMap::new();
+        for (i, operand) in fd.operand.iter().enumerate() {
+            let name = operand.name.clone().unwrap_or_else(|| format!("arg{i}"));
+            let val = args.get(i).cloned().unwrap_or(Value::Null);
+            scope.insert(name, val);
+        }
+
+        self.push_scope(scope);
+        let result = self.eval_expr(body);
+        self.pop_scope();
+        result
     }
 
     /// Return true if `name` is declared as a parameter in the library.
@@ -374,6 +459,10 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::ParameterRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
+                // Check scope stack first (for function operand bindings).
+                if let Some(v) = self.lookup_binding(name) {
+                    return Ok(v.clone());
+                }
                 if let Some(v) = self.ctx.parameters.get(name) {
                     Ok(v.clone())
                 } else if self.is_library_parameter(name) {
@@ -1127,12 +1216,64 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let path = prop.path.as_deref().unwrap_or("");
                 match source {
                     Value::Tuple(ref fields) => {
-                        Ok(fields.get(path).cloned().unwrap_or(Value::Null))
+                        // Direct field lookup
+                        if let Some(v) = fields.get(path) {
+                            return Ok(v.clone());
+                        }
+                        // FHIR choice-type field name resolution:
+                        // When a CQL property like "onset" doesn't match directly,
+                        // try suffixed FHIR variants (onsetDateTime, onsetPeriod,
+                        // onsetAge, onsetRange, onsetString, abatementDateTime, etc.)
+                        for suffix in &[
+                            "DateTime", "Period", "Age", "Range", "String", "Instant", "Timing",
+                            "Boolean", "Code",
+                        ] {
+                            let candidate = format!("{path}{suffix}");
+                            if let Some(v) = fields.get(&candidate) {
+                                return Ok(v.clone());
+                            }
+                        }
+                        Ok(Value::Null)
                     }
                     Value::Null => Ok(Value::Null),
-                    _ => Err(EvalError::General(format!(
-                        "Property '{path}': cannot access property on non-tuple"
-                    ))),
+                    // FHIR primitive .value on a String: coerce to typed CQL values.
+                    // FHIR.dateTime / FHIR.date / FHIR.instant primitives are stored
+                    // as raw strings in JSON resources, so `period."start".value`
+                    // should return a CQL DateTime/Date rather than a bare String.
+                    Value::String(ref s) if path == "value" => {
+                        let str_val = Value::String(s.clone());
+                        if s.contains('T') {
+                            // datetime or instant: parse as DateTime
+                            if let Ok(v) = super::operators::conversion::to_datetime(&str_val) {
+                                if !matches!(v, Value::Null) {
+                                    return Ok(v);
+                                }
+                            }
+                        }
+                        // date-only string: parse as Date
+                        if let Ok(v) = super::operators::conversion::to_date(&str_val) {
+                            if !matches!(v, Value::Null) {
+                                return Ok(v);
+                            }
+                        }
+                        // Fall back to string (e.g., FHIR.string, FHIR.code, FHIR.uri)
+                        Ok(str_val)
+                    }
+                    other => {
+                        // FHIR primitive value accessor: in the FHIR CQL model,
+                        // primitive types like FHIR.string, FHIR.dateTime have a
+                        // .value property that unwraps the underlying CQL value.
+                        // When raw JSON resources are used (no FHIR modelinfo),
+                        // the primitive IS already the unwrapped value, so
+                        // accessing .value should return the value itself.
+                        if path == "value" {
+                            Ok(other.clone())
+                        } else {
+                            Err(EvalError::General(format!(
+                                "Property '{path}': cannot access property on non-tuple"
+                            )))
+                        }
+                    }
                 }
             }
 
@@ -1327,25 +1468,36 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 // Try builtin first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
                 // CQL system builtins so this works transparently.
-                eval_builtin_function(name, args).or_else(|e| {
+                eval_builtin_function(name, args.clone()).or_else(|e| {
+                    // Cross-library function call: look up in included library.
                     if let Some(alias) = func_ref.library_name.as_deref() {
                         let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
                             alias: alias.to_string(),
                         })?;
-                        included
-                            .get(alias)
-                            .ok_or_else(|| EvalError::LibraryNotFound {
-                                alias: alias.to_string(),
-                            })?;
-                        // Library found but function is not a known builtin.
-                        // TODO: support evaluating user-defined functions from
-                        // included libraries once the engine supports user-defined
-                        // function bodies in general (same-library functions are
-                        // also not yet evaluated by body).
-                        Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")))
-                    } else {
-                        Err(e)
+                        let inc_lib =
+                            included
+                                .get(alias)
+                                .ok_or_else(|| EvalError::LibraryNotFound {
+                                    alias: alias.to_string(),
+                                })?;
+
+                        let mut sub_engine =
+                            Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
+                        if let Some(fd) =
+                            sub_engine.find_function(name, args.len(), &func_ref.signature)?
+                        {
+                            return sub_engine.eval_user_function(fd, args);
+                        }
+
+                        return Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")));
                     }
+
+                    // Same-library function call: look up in this library.
+                    if let Some(fd) = self.find_function(name, args.len(), &func_ref.signature)? {
+                        return self.eval_user_function(fd, args);
+                    }
+
+                    Err(e)
                 })
             }
 
@@ -1454,6 +1606,36 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     for item in items {
                         if val_matches(ctx, item, filter)? {
                             return Ok(true);
+                        }
+                    }
+                    Ok(false)
+                }
+                // FHIR CodeableConcept: a Tuple with a "coding" field
+                // containing a list of coding Tuples, each with "system" and "code" string fields.
+                Value::Tuple(fields) => {
+                    if let Some(Value::List(codings)) = fields.get("coding") {
+                        for coding in codings {
+                            if let Value::Tuple(cf) = coding {
+                                let system = match cf.get("system") {
+                                    Some(Value::String(s)) => s.as_str(),
+                                    _ => "",
+                                };
+                                let code = match cf.get("code") {
+                                    Some(Value::String(s)) => s.as_str(),
+                                    _ => "",
+                                };
+                                if !system.is_empty() && !code.is_empty() {
+                                    let c = CqlCode {
+                                        code: code.to_string(),
+                                        system: system.to_string(),
+                                        display: None,
+                                        version: None,
+                                    };
+                                    if code_in_filter(ctx, &c, filter)? {
+                                        return Ok(true);
+                                    }
+                                }
+                            }
                         }
                     }
                     Ok(false)
@@ -1924,6 +2106,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::Contains(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
+                let a = super::intervals::coerce_fhir_period(a);
                 match &a {
                     Value::Interval { .. } => super::intervals::contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
@@ -1936,7 +2119,9 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::In(timed_bin) => {
                 let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 match &b {
                     Value::Interval { .. } => super::intervals::in_interval(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
@@ -1948,35 +2133,63 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 }
             }
             Expression::Overlaps(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 super::intervals::overlaps(&a, &b)
             }
             Expression::OverlapsBefore(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 super::intervals::overlaps_before(&a, &b)
             }
             Expression::OverlapsAfter(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 super::intervals::overlaps_after(&a, &b)
             }
             Expression::Meets(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
+                let (a, b) = (
+                    super::intervals::coerce_fhir_period(a),
+                    super::intervals::coerce_fhir_period(b),
+                );
                 super::intervals::meets(&a, &b)
             }
             Expression::MeetsBefore(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
+                let (a, b) = (
+                    super::intervals::coerce_fhir_period(a),
+                    super::intervals::coerce_fhir_period(b),
+                );
                 super::intervals::meets_before(&a, &b)
             }
             Expression::MeetsAfter(bin) => {
                 let (a, b) = self.eval_binary_args(bin)?;
+                let (a, b) = (
+                    super::intervals::coerce_fhir_period(a),
+                    super::intervals::coerce_fhir_period(b),
+                );
                 super::intervals::meets_after(&a, &b)
             }
             Expression::Includes(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 match (&a, &b) {
                     // Includes(list, null-element): null element propagation → Null
                     (Value::List(_), Value::Null) => Ok(Value::Null),
@@ -1995,8 +2208,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 }
             }
             Expression::IncludedIn(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 match (&a, &b) {
                     // IncludedIn(null-element, list): null element propagation → Null
                     (Value::Null, Value::List(_)) => Ok(Value::Null),
@@ -2015,13 +2232,21 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 }
             }
             Expression::Starts(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 super::intervals::starts(&a, &b)
             }
             Expression::Ends(timed_bin) => {
-                let a = self.eval_expr_opt(timed_bin.operand.first())?;
-                let b = self.eval_expr_opt(timed_bin.operand.get(1))?;
+                let a = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.first())?,
+                );
+                let b = super::intervals::coerce_fhir_period(
+                    self.eval_expr_opt(timed_bin.operand.get(1))?,
+                );
                 super::intervals::ends(&a, &b)
             }
             Expression::Collapse(unary) => {
@@ -2292,6 +2517,49 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ------ Named code / concept lookups ------
             Expression::CodeRef(r) => {
                 let name = r.name.as_deref().unwrap_or("");
+
+                // Cross-library reference: code is in an included library.
+                if let Some(alias) = r.library_name.as_deref() {
+                    let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
+                        alias: alias.to_string(),
+                    })?;
+                    let inc_lib =
+                        included
+                            .get(alias)
+                            .ok_or_else(|| EvalError::LibraryNotFound {
+                                alias: alias.to_string(),
+                            })?;
+                    let code_def = inc_lib
+                        .codes
+                        .as_ref()
+                        .and_then(|c| c.defs.iter().find(|d| d.name.as_deref() == Some(name)))
+                        .ok_or_else(|| {
+                            EvalError::General(format!(
+                                "CodeRef: code '{name}' not found in library {alias}"
+                            ))
+                        })?;
+                    let system_url = code_def
+                        .code_system
+                        .as_ref()
+                        .and_then(|cs_ref| {
+                            inc_lib
+                                .code_systems
+                                .as_ref()?
+                                .defs
+                                .iter()
+                                .find(|d| d.name.as_deref() == cs_ref.name.as_deref())
+                                .and_then(|d| d.id.as_deref())
+                                .map(str::to_string)
+                        })
+                        .unwrap_or_default();
+                    return Ok(Value::Code(CqlCode {
+                        code: code_def.id.clone().unwrap_or_default(),
+                        system: system_url,
+                        display: code_def.display.clone(),
+                        version: None,
+                    }));
+                }
+
                 let code_def = self
                     .library
                     .codes
@@ -2628,8 +2896,8 @@ fn eval_time_function_args(args: &[Value]) -> Result<Value, EvalError> {
 mod tests {
     use super::*;
     use crate::elm::{
-        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, Library,
-        Literal, StatementDef,
+        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, FunctionDef,
+        FunctionRef, Library, Literal, NamedTypeSpecifier, OperandDef, StatementDef, TypeSpecifier,
     };
     use crate::eval::context::{EvalContextBuilder, FixedClock};
     use crate::eval::value::CqlDateTime;
@@ -2911,5 +3179,54 @@ mod tests {
                 alias: "Unknown".to_string()
             }
         );
+    }
+
+    #[test]
+    fn cross_library_function_ref_selects_typed_overload() {
+        fn named_type(name: &str) -> TypeSpecifier {
+            TypeSpecifier::Named(NamedTypeSpecifier {
+                name: format!("{{urn:hl7-org:elm-types:r1}}{name}"),
+                ..Default::default()
+            })
+        }
+
+        let integer_type = named_type("Integer");
+        let string_type = named_type("String");
+        let overload = |operand_type: TypeSpecifier, result: i64| {
+            StatementDef::Function(FunctionDef {
+                name: Some("Convert".to_string()),
+                operand: vec![OperandDef {
+                    name: Some("value".to_string()),
+                    operand_type_specifier: Some(operand_type),
+                    ..Default::default()
+                }],
+                expression: Some(Box::new(int_literal(result))),
+                ..Default::default()
+            })
+        };
+        let helpers = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![overload(integer_type, 1), overload(string_type.clone(), 2)],
+            }),
+            ..Default::default()
+        };
+        let main = make_library(
+            "Main",
+            Expression::FunctionRef(FunctionRef {
+                name: Some("Convert".to_string()),
+                library_name: Some("Helpers".to_string()),
+                operand: vec![Expression::Literal(Literal {
+                    value: Some("text".to_string()),
+                    value_type: Some("String".to_string()),
+                    ..Default::default()
+                })],
+                signature: vec![string_type],
+                ..Default::default()
+            }),
+        );
+        let included = [("Helpers".to_string(), helpers)].into_iter().collect();
+
+        let value = evaluate_elm_with_libraries(&main, &included, "Main", &fixed_ctx()).unwrap();
+        assert_eq!(value, Value::Integer(2));
     }
 }
