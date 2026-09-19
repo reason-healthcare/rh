@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -5,17 +6,46 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use clap::Subcommand;
-use serde_json::{json, Map, Value};
+use serde_json::Value;
 
 use crate::output::{Envelope, OutputContext, OutputFormat};
 use rh_cpg::apply::plan_definition::apply_plan_definition;
-use rh_cpg::context::ApplyContext;
-use rh_cpg::resolver::BundleResolver;
+use rh_cpg::context::{ApplyContext, MeasurementPeriod};
+use rh_cpg::questionnaire_extraction::{
+    extract_completed_sdc_boolean_observations, extract_sdc_boolean_observations,
+    SdcObservationExtraction,
+};
+use rh_cpg::resolver::{as_content_bundle, BundleResolver};
 
 #[derive(Subcommand)]
 pub enum CpgCommands {
     /// Apply a PlanDefinition via the FHIR $apply operation
     Apply(ApplyArgs),
+    /// Extract constrained SDC Boolean Observations from a QuestionnaireResponse
+    ExtractQuestionnaireObservations(ExtractQuestionnaireObservationsArgs),
+}
+
+#[derive(Args)]
+pub struct ExtractQuestionnaireObservationsArgs {
+    /// Path to the source Questionnaire JSON
+    #[clap(long, value_name = "FILE")]
+    questionnaire: PathBuf,
+
+    /// Path to the QuestionnaireResponse JSON
+    #[clap(long, value_name = "FILE")]
+    response: PathBuf,
+
+    /// Explicit selected subject reference, e.g. Patient/123
+    #[clap(long)]
+    subject: String,
+
+    /// Explicit selected encounter reference, e.g. Encounter/456
+    #[clap(long)]
+    encounter: String,
+
+    /// Extract supplied Boolean answers without the completed-response workflow gate
+    #[clap(long)]
+    direct: bool,
 }
 
 #[derive(Args)]
@@ -48,14 +78,33 @@ pub struct ApplyArgs {
     #[clap(long)]
     organization: Option<String>,
 
-    /// Deterministic RFC 3339 evaluation date for generated resources
+    /// RFC 3339 date-time or FHIR date used for deterministic CQL evaluation.
     #[clap(long)]
     evaluation_date: Option<String>,
+
+    /// Inclusive Measurement Period start as an RFC 3339 date-time or FHIR date.
+    #[clap(long, requires = "measurement_period_end")]
+    measurement_period_start: Option<String>,
+
+    /// Inclusive Measurement Period end as an RFC 3339 date-time or FHIR date.
+    #[clap(long, requires = "measurement_period_start")]
+    measurement_period_end: Option<String>,
+
+    /// Additional CQL parameter as NAME=JSON. May be specified multiple times.
+    #[clap(long, value_name = "NAME=JSON")]
+    parameter: Vec<String>,
 }
 
 pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()> {
-    let CpgCommands::Apply(args) = cmd;
+    match cmd {
+        CpgCommands::Apply(args) => apply(args, ctx),
+        CpgCommands::ExtractQuestionnaireObservations(args) => {
+            extract_questionnaire_observations(args, ctx)
+        }
+    }
+}
 
+fn apply(args: ApplyArgs, ctx: &OutputContext) -> Result<()> {
     let plan_definition = read_json(&args.plan_definition)?;
     let content = read_json(&args.content)?;
     let content_bundle = as_content_bundle(content)?;
@@ -69,6 +118,16 @@ pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()>
     context.practitioner = args.practitioner;
     context.organization = args.organization;
     context.evaluation_date = args.evaluation_date;
+    context.measurement_period = args
+        .measurement_period_start
+        .zip(args.measurement_period_end)
+        .map(|(start, end)| MeasurementPeriod {
+            start,
+            end,
+            start_inclusive: true,
+            end_inclusive: true,
+        });
+    context.parameters = parse_parameters(&args.parameter)?;
 
     let result = apply_plan_definition(&plan_definition, &context)?;
 
@@ -87,53 +146,79 @@ pub async fn handle_command(cmd: CpgCommands, ctx: &OutputContext) -> Result<()>
     Ok(())
 }
 
+fn extract_questionnaire_observations(
+    args: ExtractQuestionnaireObservationsArgs,
+    ctx: &OutputContext,
+) -> Result<()> {
+    let questionnaire = read_json(&args.questionnaire)?;
+    let response = read_json(&args.response)?;
+    let result = if args.direct {
+        serde_json::json!({
+            "status": "extracted",
+            "observations": extract_sdc_boolean_observations(
+                &questionnaire,
+                &response,
+                &args.subject,
+                &args.encounter,
+            )?,
+        })
+    } else {
+        match extract_completed_sdc_boolean_observations(
+            &questionnaire,
+            &response,
+            &args.subject,
+            &args.encounter,
+        )? {
+            SdcObservationExtraction::NotInvoked { reason } => {
+                serde_json::json!({ "status": "not-invoked", "reason": reason })
+            }
+            SdcObservationExtraction::Extracted {
+                transaction,
+                observations,
+            } => serde_json::json!({
+                "status": "extracted",
+                "transaction": transaction,
+                "observations": observations,
+            }),
+        }
+    };
+
+    if ctx.is_json() {
+        let envelope = Envelope::ok(result, "cpg extract-questionnaire-observations");
+        let json = if matches!(ctx.format, OutputFormat::Json) {
+            serde_json::to_string_pretty(&envelope)?
+        } else {
+            serde_json::to_string(&envelope)?
+        };
+        println!("{json}");
+    } else {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    }
+
+    Ok(())
+}
+
+fn parse_parameters(values: &[String]) -> Result<HashMap<String, Value>> {
+    values
+        .iter()
+        .map(|value| {
+            let (name, json) = value
+                .split_once('=')
+                .with_context(|| format!("invalid --parameter '{value}': expected NAME=JSON"))?;
+            if name.is_empty() {
+                anyhow::bail!("invalid --parameter '{value}': parameter name is required");
+            }
+            let parsed = serde_json::from_str(json).with_context(|| {
+                format!("invalid --parameter '{value}': value must be valid JSON")
+            })?;
+            Ok((name.to_string(), parsed))
+        })
+        .collect()
+}
+
 fn read_json(path: &PathBuf) -> Result<Value> {
     let contents = fs::read_to_string(path)
         .with_context(|| format!("failed to read JSON file {}", path.display()))?;
     serde_json::from_str(&contents)
         .with_context(|| format!("failed to parse JSON file {}", path.display()))
-}
-
-fn as_content_bundle(value: Value) -> Result<Value> {
-    if value.get("resourceType").and_then(Value::as_str) == Some("Bundle") {
-        return Ok(value);
-    }
-
-    let resources = match value {
-        Value::Array(resources) => resources,
-        Value::Object(_) => vec![value],
-        Value::Null => return Err(anyhow::anyhow!("content JSON must contain resources")),
-        other => {
-            return Err(anyhow::anyhow!(
-                "content JSON must be a Bundle, resource object, or resource array; got {}",
-                json_type_name(&other)
-            ))
-        }
-    };
-
-    let entries: Vec<Value> = resources
-        .into_iter()
-        .map(|resource| {
-            let mut entry = Map::new();
-            entry.insert("resource".to_string(), resource);
-            Value::Object(entry)
-        })
-        .collect();
-
-    Ok(json!({
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": entries,
-    }))
-}
-
-fn json_type_name(value: &Value) -> &'static str {
-    match value {
-        Value::Null => "null",
-        Value::Bool(_) => "boolean",
-        Value::Number(_) => "number",
-        Value::String(_) => "string",
-        Value::Array(_) => "array",
-        Value::Object(_) => "object",
-    }
 }

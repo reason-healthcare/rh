@@ -417,22 +417,140 @@ impl InMemoryDataProvider {
 }
 
 impl DataProvider for InMemoryDataProvider {
-    /// Returns all resources of `data_type` without applying any filters.
+    /// Returns resources of `data_type`, enforcing an explicit Patient context
+    /// when one is supplied. Code and date filters remain the evaluator's
+    /// responsibility.
     ///
-    /// `context`, `code_path`, `codes`, `date_path`, and `date_range` are
-    /// accepted but intentionally ignored — the caller (evaluation engine) is
-    /// responsible for post-filtering based on code and date constraints.
+    /// `context` is enforced for the supported Patient relationships.
+    /// `code_path`, `codes`, `date_path`, and `date_range` remain the
+    /// evaluator's responsibility for post-filtering.
     fn retrieve(
         &self,
-        _context: Option<&str>,
+        context: Option<&str>,
         data_type: &str,
         _code_path: Option<&str>,
         _codes: Option<&Value>,
         _date_path: Option<&str>,
         _date_range: Option<&Value>,
     ) -> Result<Vec<Value>, EvalError> {
-        Ok(self.resources.get(data_type).cloned().unwrap_or_default())
+        filter_resources_for_context(
+            self.resources.get(data_type).cloned().unwrap_or_default(),
+            data_type,
+            context,
+        )
     }
+}
+
+/// Apply the supported FHIR Patient retrieve relationships after a provider
+/// returns candidates.
+///
+/// Providers may scope their own queries, but the evaluator calls this helper
+/// as a defense-in-depth post-filter. An explicit context is a resolved FHIR
+/// reference (`Patient/<id>`), never merely the context name. This evaluator
+/// deliberately supports the FHIR resources used by the clinical runtime:
+/// Patient (by `id`), and Condition, Encounter, Observation, and
+/// QuestionnaireResponse (by `subject`). Other Patient-context relationships need their ModelInfo
+/// relationship expressed by the evaluator before they can be used; they fail
+/// visibly instead of silently returning an unscoped or empty retrieve.
+///
+/// Only relative `Patient/<id>` references are supported. Absolute and
+/// versioned Patient references are rejected rather than treated as a false
+/// match. An unfiltered expression passes `None` and receives all rows.
+pub(crate) fn filter_resources_for_context(
+    candidates: Vec<Value>,
+    data_type: &str,
+    context: Option<&str>,
+) -> Result<Vec<Value>, EvalError> {
+    let Some(context) = context else {
+        return Ok(candidates);
+    };
+    let patient_id = context
+        .strip_prefix("Patient/")
+        .filter(|id| !id.is_empty())
+        .ok_or_else(|| {
+            EvalError::RetrieveError(format!(
+            "Patient retrieve context must be a resolved Patient/<id> reference, got '{context}'"
+        ))
+        })?;
+    let resource_type = data_type
+        .rsplit('}')
+        .next()
+        .unwrap_or(data_type)
+        .rsplit('.')
+        .next()
+        .unwrap_or(data_type);
+    // An empty candidate set cannot leak cross-patient data and is the correct
+    // result regardless of which relationship would scope populated rows.
+    if candidates.is_empty() {
+        return Ok(candidates);
+    }
+    match resource_type {
+        "Patient" => Ok(candidates
+            .into_iter()
+            .filter(|candidate| {
+                tuple_scalar(candidate, "id")
+                    .and_then(reference_value)
+                    .is_some_and(|id| id == patient_id)
+            })
+            .collect()),
+        "Condition" | "Encounter" | "Observation" | "QuestionnaireResponse" => candidates
+            .into_iter()
+            .map(|candidate| {
+                let matches = tuple_scalar(&candidate, "subject")
+                    .and_then(reference_value)
+                    .map(|reference| matches_patient_reference(reference, context))
+                    .transpose()?
+                    .unwrap_or(false);
+                Ok((candidate, matches))
+            })
+            .filter_map(|candidate| match candidate {
+                Ok((candidate, true)) => Some(Ok(candidate)),
+                Ok((_, false)) => None,
+                Err(error) => Some(Err(error)),
+            })
+            .collect(),
+        _ => Err(EvalError::RetrieveError(format!(
+            "Patient-context retrieve is unsupported for FHIR {resource_type}; ModelInfo relationship support is required"
+        ))),
+    }
+}
+
+fn tuple_scalar<'a>(value: &'a Value, field: &str) -> Option<&'a Value> {
+    match value {
+        Value::Tuple(fields) => fields.get(field),
+        _ => None,
+    }
+}
+
+fn reference_value(value: &Value) -> Option<&str> {
+    match value {
+        Value::String(value) => Some(value),
+        Value::Tuple(fields) => match fields.get("reference").or_else(|| fields.get("value")) {
+            Some(Value::String(value)) => Some(value),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn matches_patient_reference(reference: &str, context: &str) -> Result<bool, EvalError> {
+    if reference == context {
+        return Ok(true);
+    }
+    if let Some(id) = reference.strip_prefix("Patient/") {
+        if !id.is_empty() && !id.contains('/') {
+            return Ok(false);
+        }
+        return Err(EvalError::RetrieveError(format!(
+            "unsupported Patient reference form '{reference}'; use relative Patient/<id>"
+        )));
+    }
+    if reference.contains("/Patient/") {
+        return Err(EvalError::RetrieveError(format!(
+            "unsupported Patient reference form '{reference}'; use relative Patient/<id>"
+        )));
+    }
+    Ok(false)
 }
 
 // ---------------------------------------------------------------------------
@@ -662,6 +780,38 @@ mod tests {
     }
 
     #[test]
+    fn patient_context_filters_conditions_by_subject() {
+        let condition = |patient: &str| {
+            Value::Tuple(BTreeMap::from([(
+                "subject".to_string(),
+                Value::Tuple(BTreeMap::from([(
+                    "reference".to_string(),
+                    Value::String(format!("Patient/{patient}")),
+                )])),
+            )]))
+        };
+        let mut provider = InMemoryDataProvider::new();
+        provider.add_resource("Condition", condition("one"));
+        provider.add_resource("Condition", condition("two"));
+
+        let results = provider
+            .retrieve(Some("Patient/one"), "Condition", None, None, None, None)
+            .unwrap();
+
+        assert_eq!(results, vec![condition("one")]);
+    }
+
+    #[test]
+    fn empty_patient_context_retrieve_is_safe_for_unmodeled_relationship() {
+        let provider = InMemoryDataProvider::new();
+        let results = provider
+            .retrieve(Some("Patient/one"), "DeviceRequest", None, None, None, None)
+            .unwrap();
+
+        assert!(results.is_empty());
+    }
+
+    #[test]
     fn in_memory_data_provider_multiple_resources() {
         let mut provider = InMemoryDataProvider::new();
         for i in 0..3 {
@@ -691,7 +841,7 @@ mod tests {
         let code_filter = Value::String("8480-6".to_string());
         let results = provider
             .retrieve(
-                Some("Patient"),
+                None,
                 "Observation",
                 Some("code"),
                 Some(&code_filter),

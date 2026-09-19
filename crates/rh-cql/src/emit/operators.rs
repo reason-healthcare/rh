@@ -35,6 +35,7 @@ pub fn emit_unary_operator(
         return elm::Expression::Expand(elm::BinaryExpression {
             element,
             operand: vec![emit_expr(operand, ctx)],
+            precision: None,
             signature: Vec::new(),
         });
     }
@@ -42,6 +43,7 @@ pub fn emit_unary_operator(
     let unary = elm::UnaryExpression {
         element: element.clone(),
         operand: Some(Box::new(emit_expr(operand, ctx))),
+        precision: None,
         signature: Vec::new(),
     };
 
@@ -96,6 +98,7 @@ pub fn emit_binary_operator(
     let binary = || elm::BinaryExpression {
         element: element.clone(),
         operand: vec![left_expr.clone(), right_expr.clone()],
+        precision: None,
         signature: Vec::new(),
     };
 
@@ -131,6 +134,7 @@ pub fn emit_binary_operator(
                 l_expr = elm::Expression::ToDecimal(elm::UnaryExpression {
                     element: ctx.element_fields(left),
                     operand: Some(Box::new(l_expr)),
+                    precision: None,
                     signature: Vec::new(),
                 });
             }
@@ -141,12 +145,14 @@ pub fn emit_binary_operator(
                 r_expr = elm::Expression::ToDecimal(elm::UnaryExpression {
                     element: ctx.element_fields(right),
                     operand: Some(Box::new(r_expr)),
+                    precision: None,
                     signature: Vec::new(),
                 });
             }
             elm::Expression::Divide(elm::BinaryExpression {
                 element: element.clone(),
                 operand: vec![l_expr, r_expr],
+                precision: None,
                 signature: Vec::new(),
             })
         }
@@ -163,6 +169,7 @@ pub fn emit_binary_operator(
             elm::Expression::Not(elm::UnaryExpression {
                 element: element.clone(),
                 operand: Some(Box::new(equiv)),
+                precision: None,
                 signature: Vec::new(),
             })
         }
@@ -245,12 +252,14 @@ pub fn emit_ternary_operator(
             let ge = elm::Expression::GreaterOrEqual(elm::BinaryExpression {
                 element: ctx.element_fields(node),
                 operand: vec![first_expr.clone(), second_expr],
+                precision: None,
                 signature: Vec::new(),
             });
 
             let le = elm::Expression::LessOrEqual(elm::BinaryExpression {
                 element: ctx.element_fields(node),
                 operand: vec![first_expr, third_expr],
+                precision: None,
                 signature: Vec::new(),
             });
 
@@ -314,6 +323,7 @@ pub fn emit_system_function(
         let unary = elm::UnaryExpression {
             element: element.clone(),
             operand: operand.clone(),
+            precision: None,
             signature: Vec::new(),
         };
         // Build aggregate expression for aggregate functions (source is the list arg).
@@ -356,7 +366,11 @@ pub fn emit_system_function(
             "Exists" => Some(elm::Expression::Exists(unary)),
             "Flatten" => Some(elm::Expression::Flatten(unary)),
             "Distinct" => Some(elm::Expression::Distinct(unary)),
-            "First" => Some(elm::Expression::First(unary)),
+            "First" => Some(elm::Expression::First(elm::ListAccessExpression {
+                element: element.clone(),
+                source: operand,
+                signature: Vec::new(),
+            })),
 
             // ----- Aggregate functions -----
             "Count" => Some(elm::Expression::Count(aggregate())),
@@ -394,11 +408,13 @@ pub fn emit_system_function(
             "Log" => Some(elm::Expression::Log(elm::BinaryExpression {
                 element: element.clone(),
                 operand: vec![left, right],
+                precision: None,
                 signature: Vec::new(),
             })),
             "Power" => Some(elm::Expression::Power(elm::BinaryExpression {
                 element: element.clone(),
                 operand: vec![left, right],
+                precision: None,
                 signature: Vec::new(),
             })),
             "Combine" => Some(elm::Expression::Combine(elm::Combine {
@@ -530,11 +546,13 @@ pub fn emit_timing_expression(
                 element: element.clone(),
                 operand: Some(Box::new(expr)),
                 signature: Vec::new(),
+                precision: None,
             }),
             UnaryOperator::End => elm::Expression::End(elm::UnaryExpression {
                 element: element.clone(),
                 operand: Some(Box::new(expr)),
                 signature: Vec::new(),
+                precision: None,
             }),
             _ => expr,
         }

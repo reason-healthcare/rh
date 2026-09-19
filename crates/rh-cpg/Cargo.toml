@@ -11,16 +11,29 @@ rust-version.workspace = true
 keywords = ["cpg", "fhir", "clinical-guidelines", "healthcare"]
 categories = ["science", "api-bindings"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
+
 [dependencies]
 base64 = { workspace = true }
 chrono = { workspace = true }
-uuid = { version = "1", features = ["v4"] }
-rh-cql = { path = "../rh-cql", version = "0.2.0-beta.2" }
-rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.0-beta.2" }
-rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.2.0-beta.2" }
+uuid = { version = "1", features = ["v4", "js"] }
+# CPG only uses the in-memory CQL compile/evaluate APIs; the rh-cql
+# default "fs" feature (filesystem library providers) is unnecessary and
+# must not leak into the composed WASM build.
+rh-cql = { path = "../rh-cql", version = "0.2.8", default-features = false }
+rh-fhirpath = { path = "../rh-fhirpath", version = "0.2.8" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-rh-validator = { path = "../rh-validator", version = "0.2.0-beta.2" }
+rh-validator = { path = "../rh-validator", version = "0.2.8" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+rh-foundation = { path = "../rh-foundation", version = "0.2.8", features = ["wasm"] }
+wasm-bindgen = { version = "0.2", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }

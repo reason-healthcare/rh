@@ -54,6 +54,8 @@ pub struct TypedFunctionInvocation {
     pub library: Option<String>,
     pub function: String,
     pub arguments: Vec<TypedNode<TypedExpression>>,
+    /// The selected ELM overload signature for cross-library functions.
+    pub signature: Vec<crate::elm::TypeSpecifier>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

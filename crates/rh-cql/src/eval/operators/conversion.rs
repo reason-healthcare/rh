@@ -532,6 +532,18 @@ pub fn to_list(v: &Value) -> Result<Value, EvalError> {
 /// `type_name` should be the simple CQL type name (e.g. `"Integer"`, `"List"`).
 pub fn is_type(v: &Value, type_name: &str) -> Value {
     use Value::*;
+    let type_name = match type_name {
+        "boolean" => "Boolean",
+        "integer" => "Integer",
+        "positiveInt" | "unsignedInt" => "Integer",
+        "decimal" => "Decimal",
+        "string" | "code" | "id" | "uri" | "url" | "canonical" | "oid" | "uuid" | "markdown"
+        | "base64Binary" => "String",
+        "date" => "Date",
+        "dateTime" | "instant" => "DateTime",
+        "time" => "Time",
+        _ => type_name,
+    };
     let result = match (v, type_name) {
         (Null, _) => false,
         (Boolean(_), "Boolean") => true,
@@ -764,6 +776,19 @@ mod tests {
     #[test]
     fn as_type_non_matching_returns_null() {
         assert_eq!(as_type(&Value::Integer(42), "String"), Value::Null);
+    }
+
+    #[test]
+    fn fhir_primitive_type_names_match_runtime_scalars() {
+        assert_eq!(
+            as_type(&Value::Boolean(false), "boolean"),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            as_type(&Value::String("true".into()), "boolean"),
+            Value::Null
+        );
+        assert_eq!(as_type(&Value::Integer(1), "boolean"), Value::Null);
     }
 
     #[test]

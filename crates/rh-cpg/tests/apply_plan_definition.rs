@@ -133,45 +133,12 @@ fn plan_definition_with_action() {
     let result = apply_plan_definition(&plan, &ctx).expect("apply should succeed");
 
     let request_group = resource_of(&result, 0);
-    let action = request_group
-        .pointer("/action/0")
-        .expect("first request group action");
-    assert_eq!(action.get("id").and_then(Value::as_str), Some("action-1"));
+    assert!(request_group.get("action").is_none());
     assert_eq!(
-        action.get("prefix").and_then(Value::as_str),
-        Some("action-1 prefix")
-    );
-    assert_eq!(
-        action.get("title").and_then(Value::as_str),
-        Some("action-1 title")
-    );
-    assert_eq!(
-        action.get("description").and_then(Value::as_str),
-        Some("action-1 description")
-    );
-    assert_eq!(
-        action.get("textEquivalent").and_then(Value::as_str),
-        Some("action-1 textEquivalent")
-    );
-    assert_eq!(
-        action.get("priority").and_then(Value::as_str),
-        Some("routine")
-    );
-    assert_eq!(
-        action.pointer("/code/0/text").and_then(Value::as_str),
-        Some("action-1 code")
-    );
-    assert_eq!(
-        action
-            .pointer("/relatedAction/0/actionId")
+        request_group
+            .pointer("/note/0/text")
             .and_then(Value::as_str),
-        Some("action-1 relatedActionId")
-    );
-    assert_eq!(
-        action
-            .pointer("/relatedAction/0/relationship")
-            .and_then(Value::as_str),
-        Some("before")
+        Some("Source action: action-1\n\nPrefix: action-1 prefix\n\naction-1 title\n\nText equivalent: action-1 textEquivalent\n\naction-1 description")
     );
 }
 
@@ -207,6 +174,10 @@ fn activity_definition_application() {
     assert_eq!(
         medication_request.get("status").and_then(Value::as_str),
         Some("draft")
+    );
+    assert_eq!(
+        medication_request.get("intent").and_then(Value::as_str),
+        Some("option")
     );
     assert_eq!(
         medication_request

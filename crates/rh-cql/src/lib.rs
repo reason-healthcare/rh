@@ -88,7 +88,7 @@ pub mod reporting;
 pub mod semantics;
 pub mod sourcemap;
 pub mod types;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 pub mod wasm;
 
 // Primary public API - compile CQL to ELM
@@ -147,7 +147,8 @@ pub use eval::context::{
     InMemoryDataProvider, InMemoryTerminologyProvider, TerminologyProvider,
 };
 pub use eval::engine::{
-    evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_trace, TraceEvent,
+    evaluate_elm, evaluate_elm_with_libraries, evaluate_elm_with_libraries_and_trace,
+    evaluate_elm_with_trace, TraceEvent,
 };
 pub use eval::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 pub use eval::value::{

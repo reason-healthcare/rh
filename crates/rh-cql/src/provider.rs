@@ -601,6 +601,8 @@ pub fn fhir_r4_model_info() -> ModelInfo {
                     class_element("status", "System.String"),
                     class_element("code", "FHIR.CodeableConcept"),
                     class_element("subject", "FHIR.Reference"),
+                    class_element("encounter", "FHIR.Reference"),
+                    list_class_element("derivedFrom", "FHIR.Reference"),
                     choice_class_element(
                         "effective",
                         &["System.DateTime", "FHIR.Period", "FHIR.Timing"],

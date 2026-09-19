@@ -27,7 +27,16 @@ pub fn eval_query<F>(
 where
     F: FnMut(&crate::elm::Expression, &BTreeMap<String, Value>) -> Result<Value, EvalError>,
 {
-    // Evaluate sources — currently supports a single aliased source.
+    // This evaluator supports exactly one aliased source. Never silently
+    // ignore a second source because that changes CQL query semantics.
+    if query.source.len() != 1 {
+        return Err(EvalError::General(format!(
+            "Query requires exactly one source; {} supplied",
+            query.source.len()
+        )));
+    }
+
+    // Evaluate the single source.
     let source = query
         .source
         .first()
@@ -96,13 +105,18 @@ where
             }
 
             match rel_type {
-                "with" if !any_match => {
+                "with" | "With" if !any_match => {
                     continue 'row; // no match → skip this row
                 }
-                "without" if any_match => {
+                "without" | "Without" if any_match => {
                     continue 'row; // match found → skip this row
                 }
-                _ => {}
+                "with" | "With" | "without" | "Without" => {}
+                unsupported => {
+                    return Err(EvalError::General(format!(
+                        "unsupported Query relationship type '{unsupported}'"
+                    )));
+                }
             }
         }
 
@@ -208,7 +222,8 @@ fn extract_path<'a>(v: &'a Value, path: &str) -> Option<&'a Value> {
 mod tests {
     use super::*;
     use crate::elm::{
-        AliasedQuerySource, BinaryExpression, Expression, Literal, Property, Query, ReturnClause,
+        AliasedQuerySource, BinaryExpression, Expression, IdentifierRef, Literal, Property, Query,
+        RelationshipClause, ReturnClause,
     };
 
     fn int_list_expr(values: &[i64]) -> Expression {
@@ -365,5 +380,77 @@ mod tests {
                 Value::String("inactive".to_string()),
             ])
         );
+    }
+
+    #[test]
+    fn query_honors_official_elm_with_and_without_relationship_names() {
+        let relationship = |relationship_type: &str| RelationshipClause {
+            relationship_type: Some(relationship_type.to_string()),
+            alias: Some("R".to_string()),
+            expression: Some(Box::new(int_list_expr(&[2]))),
+            such_that: Some(Box::new(Expression::Equal(BinaryExpression {
+                operand: vec![
+                    Expression::IdentifierRef(IdentifierRef {
+                        name: Some("X".to_string()),
+                        ..Default::default()
+                    }),
+                    Expression::IdentifierRef(IdentifierRef {
+                        name: Some("R".to_string()),
+                        ..Default::default()
+                    }),
+                ],
+                ..Default::default()
+            }))),
+        };
+        let base = || Query {
+            source: vec![AliasedQuerySource {
+                alias: Some("X".to_string()),
+                expression: Some(Box::new(int_list_expr(&[1, 2]))),
+            }],
+            ..Default::default()
+        };
+
+        let mut with = base();
+        with.relationship.push(relationship("With"));
+        assert_eq!(
+            eval_query(&with, &BTreeMap::new(), &mut eval_expr).unwrap(),
+            Value::List(vec![Value::Integer(2)])
+        );
+
+        let mut without = base();
+        without.relationship.push(relationship("Without"));
+        assert_eq!(
+            eval_query(&without, &BTreeMap::new(), &mut eval_expr).unwrap(),
+            Value::List(vec![Value::Integer(1)])
+        );
+    }
+
+    #[test]
+    fn query_rejects_unknown_relationship_and_multiple_sources() {
+        let mut query = Query {
+            source: vec![AliasedQuerySource {
+                alias: Some("X".to_string()),
+                expression: Some(Box::new(int_list_expr(&[1]))),
+            }],
+            relationship: vec![RelationshipClause {
+                relationship_type: Some("Unexpected".to_string()),
+                expression: Some(Box::new(int_list_expr(&[1]))),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert!(matches!(
+            eval_query(&query, &BTreeMap::new(), &mut eval_expr),
+            Err(EvalError::General(message)) if message.contains("unsupported Query relationship")
+        ));
+        query.relationship.clear();
+        query.source.push(AliasedQuerySource {
+            alias: Some("Y".to_string()),
+            expression: Some(Box::new(int_list_expr(&[2]))),
+        });
+        assert!(matches!(
+            eval_query(&query, &BTreeMap::new(), &mut eval_expr),
+            Err(EvalError::General(message)) if message.contains("exactly one source")
+        ));
     }
 }

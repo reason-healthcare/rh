@@ -10,6 +10,7 @@ const GOAL_EXTENSION_URL: &str = "http://hl7.org/fhir/StructureDefinition/resour
 /// Apply a PlanDefinition ($apply) to a subject, producing a FHIR collection
 /// Bundle whose first entry is the primary RequestGroup.
 pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> CpgResult<Value> {
+    ctx.validate_execution_context()?;
     if plan_definition.get("resourceType").and_then(Value::as_str) != Some("PlanDefinition") {
         return Err(CpgError::InvalidResource(
             "expected a FHIR PlanDefinition object".to_string(),
@@ -42,10 +43,13 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
                 "organization": {"reference": organization},
             });
             push_bundle_entry(&mut entries, &practitioner_role);
+            let practitioner_role_id = practitioner_role["id"]
+                .as_str()
+                .expect("practitioner role id was just generated");
             set_field(
                 &mut request_group,
                 "author",
-                json!({"reference": format!("PractitionerRole/{}", practitioner_role["id"]) }),
+                json!({"reference": format!("PractitionerRole/{practitioner_role_id}") }),
             );
         } else {
             set_field(
@@ -98,6 +102,7 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
     }
 
     let libraries = resolve_libraries(plan_definition, ctx)?;
+    let mut request_group_notes = Vec::new();
     if let Some(actions) = plan_definition.get("action").and_then(Value::as_array) {
         let mut request_group_actions = Vec::new();
         for action in actions {
@@ -107,6 +112,7 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
                 ctx,
                 &mut entries,
                 &libraries,
+                &mut request_group_notes,
             )? {
                 request_group_actions.push(request_group_action);
             }
@@ -120,6 +126,14 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
             );
         }
     }
+    if !request_group_notes.is_empty() {
+        set_field(
+            &mut request_group,
+            "note",
+            Value::Array(request_group_notes),
+        );
+    }
+    prune_filtered_related_actions(&mut request_group);
 
     let mut bundle = Map::new();
     bundle.insert("resourceType".to_string(), json!("Bundle"));
@@ -138,6 +152,65 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
     }
 
     Ok(bundle)
+}
+
+/// PlanDefinition applicability can remove an action while leaving a sibling's
+/// authored relatedAction reference behind. RequestGroup only carries emitted
+/// actions, so remove those dangling generated references while preserving the
+/// source PlanDefinition's complete sequencing information.
+fn prune_filtered_related_actions(request_group: &mut Value) {
+    let mut emitted_action_ids = std::collections::HashSet::new();
+    if let Some(actions) = request_group.get("action").and_then(Value::as_array) {
+        collect_action_ids(actions, &mut emitted_action_ids);
+    }
+    if let Some(actions) = request_group
+        .get_mut("action")
+        .and_then(Value::as_array_mut)
+    {
+        prune_related_actions(actions, &emitted_action_ids);
+    }
+}
+
+fn collect_action_ids(
+    actions: &[Value],
+    emitted_action_ids: &mut std::collections::HashSet<String>,
+) {
+    for action in actions {
+        if let Some(id) = action.get("id").and_then(Value::as_str) {
+            emitted_action_ids.insert(id.to_string());
+        }
+        if let Some(children) = action.get("action").and_then(Value::as_array) {
+            collect_action_ids(children, emitted_action_ids);
+        }
+    }
+}
+
+fn prune_related_actions(
+    actions: &mut [Value],
+    emitted_action_ids: &std::collections::HashSet<String>,
+) {
+    for action in actions {
+        if let Some(related_actions) = action
+            .get_mut("relatedAction")
+            .and_then(Value::as_array_mut)
+        {
+            related_actions.retain(|related_action| {
+                related_action
+                    .get("actionId")
+                    .and_then(Value::as_str)
+                    .is_some_and(|action_id| emitted_action_ids.contains(action_id))
+            });
+            if related_actions.is_empty() {
+                action
+                    .as_object_mut()
+                    .expect("RequestGroup action must be an object")
+                    .remove("relatedAction");
+            }
+        }
+        if let Some(children) = action.get_mut("action").and_then(Value::as_array_mut) {
+            prune_related_actions(children, emitted_action_ids);
+        }
+    }
 }
 
 pub(crate) fn canonicalize(resource: &Value) -> Option<String> {
@@ -347,6 +420,28 @@ mod tests {
     }
 
     #[test]
+    fn references_generated_practitioner_role_without_json_quotes() {
+        let bundle = content_bundle(false);
+        let mut ctx = context(&bundle);
+        ctx.practitioner = Some("Practitioner/456".to_string());
+        ctx.organization = Some("Organization/789".to_string());
+
+        let result = apply_plan_definition(&main_plan(&bundle), &ctx).unwrap();
+        let entries = result["entry"].as_array().unwrap();
+        let request_group = &entries[0]["resource"];
+        let practitioner_role = entries
+            .iter()
+            .find(|entry| entry["resource"]["resourceType"] == "PractitionerRole")
+            .unwrap();
+        let practitioner_role_id = practitioner_role["resource"]["id"].as_str().unwrap();
+
+        assert_eq!(
+            request_group["author"]["reference"],
+            format!("PractitionerRole/{practitioner_role_id}")
+        );
+    }
+
+    #[test]
     fn applies_sub_plan_and_references_sub_request_group() {
         let bundle = content_bundle(true);
         let ctx = context(&bundle);
@@ -373,10 +468,68 @@ mod tests {
             })
             .unwrap();
 
-        assert_eq!(sub_entry["resource"]["intent"], "proposal");
+        assert_eq!(sub_entry["resource"]["intent"], "option");
         assert_eq!(
             sub_entry["resource"]["instantiatesCanonical"],
             json!(["http://test/PlanDefinition/Sub"])
         );
+    }
+
+    #[test]
+    fn preserves_an_applicable_descriptive_leaf_as_a_request_group_note() {
+        let plan_definition = json!({
+            "resourceType": "PlanDefinition",
+            "id": "interpret",
+            "action": [{
+                "id": "interpret-phase",
+                "title": "Interpret the screen",
+                "description": "Do not coerce unknown to false.",
+                "documentation": [{
+                    "label": "screening-evidence",
+                    "citation": "Evidence source"
+                }]
+            }]
+        });
+        let ctx = context(&json!({"resourceType": "Bundle"}));
+
+        let result = apply_plan_definition(&plan_definition, &ctx).expect("plan should apply");
+        let request_group = &result["entry"][0]["resource"];
+
+        assert!(request_group.get("action").is_none());
+        assert_eq!(
+            request_group["note"],
+            json!([{
+                "text": "Source action: interpret-phase\n\nInterpret the screen\n\nDo not coerce unknown to false.\n\nSource (screening-evidence): Evidence source"
+            }])
+        );
+    }
+
+    #[test]
+    fn prunes_related_actions_for_filtered_targets_recursively() {
+        let mut request_group = json!({
+            "resourceType": "RequestGroup",
+            "action": [{
+                "id": "screen",
+                "relatedAction": [
+                    {"actionId": "interpret", "relationship": "before-start"},
+                    {"actionId": "positive-guidance", "relationship": "before-start"}
+                ],
+                "action": [{
+                    "id": "interpret",
+                    "relatedAction": [{"actionId": "missing", "relationship": "before-start"}],
+                    "resource": {"reference": "Task/interpret"}
+                }]
+            }]
+        });
+
+        prune_filtered_related_actions(&mut request_group);
+
+        assert_eq!(
+            request_group["action"][0]["relatedAction"],
+            json!([{"actionId": "interpret", "relationship": "before-start"}])
+        );
+        assert!(request_group["action"][0]["action"][0]
+            .get("relatedAction")
+            .is_none());
     }
 }

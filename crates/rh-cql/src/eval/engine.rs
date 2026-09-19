@@ -7,13 +7,13 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use super::context::{EvalContext, EvalError};
+use super::context::{filter_resources_for_context, EvalContext, EvalError};
 use super::operators::*;
 use super::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
 use super::value::Value;
 use crate::elm::{
-    BinaryExpression, Expression, Library, NaryExpression, StatementDef, TimeBinaryExpression,
-    UnaryExpression,
+    BinaryExpression, Expression, FunctionDef, Library, NaryExpression, StatementDef,
+    TimeBinaryExpression, TypeSpecifier, UnaryExpression,
 };
 
 type TemporalRelationEvaluator = fn(&Value, &Value, Option<&str>) -> Result<Value, EvalError>;
@@ -58,8 +58,7 @@ pub struct TraceEvent {
 /// `Ok(Value)` on success, `Err(EvalError)` on type mismatch or runtime error.
 pub fn evaluate_elm(library: &Library, name: &str, ctx: &EvalContext) -> Result<Value, EvalError> {
     let mut engine = Engine::new(library, ctx);
-    let expr = engine.find_expression(name)?;
-    engine.eval_expr(expr)
+    engine.eval_named_expression(name)
 }
 
 /// Evaluate a named expression in `library`, with access to a map of
@@ -74,8 +73,7 @@ pub fn evaluate_elm_with_libraries(
     ctx: &EvalContext,
 ) -> Result<Value, EvalError> {
     let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
-    let expr = engine.find_expression(name)?;
-    engine.eval_expr(expr)
+    engine.eval_named_expression(name)
 }
 
 /// Evaluate a named expression and return the result plus a flat trace of
@@ -89,8 +87,23 @@ pub fn evaluate_elm_with_trace(
     ctx: &EvalContext,
 ) -> Result<(Value, Vec<TraceEvent>), EvalError> {
     let mut engine = Engine::new(library, ctx);
-    let expr = engine.find_expression(name)?;
-    let value = engine.eval_expr(expr)?;
+    let value = engine.eval_named_expression(name)?;
+    let trace = std::mem::take(&mut engine.trace);
+    Ok((value, trace))
+}
+
+/// Evaluate a named expression with pre-compiled included libraries and return
+/// the main-library trace. Included expressions are resolved exactly as in
+/// [`evaluate_elm_with_libraries`]; their nested events are not merged into
+/// this flat trace.
+pub fn evaluate_elm_with_libraries_and_trace(
+    library: &Library,
+    included: &HashMap<String, Library>,
+    name: &str,
+    ctx: &EvalContext,
+) -> Result<(Value, Vec<TraceEvent>), EvalError> {
+    let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
+    let value = engine.eval_named_expression(name)?;
     let trace = std::mem::take(&mut engine.trace);
     Ok((value, trace))
 }
@@ -106,8 +119,12 @@ struct Engine<'lib, 'ctx> {
     next_event_id: u64,
     /// Expression name → body, built at construction for O(1) lookup.
     expr_index: HashMap<String, &'lib Expression>,
-    /// Function name → overloads, built at construction for O(1) lookup.
-    func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>>,
+    /// Expression name → CQL evaluation context. A Retrieve with no explicit
+    /// context inherits this statement-level context.
+    expr_context_index: HashMap<String, Option<&'lib str>>,
+    /// Function name → overloads, evaluated when a FunctionRef is not a CQL
+    /// system builtin.
+    function_index: HashMap<String, Vec<&'lib FunctionDef>>,
     /// Set of parameter names declared in the library, for fast membership test.
     param_names: HashSet<String>,
     /// Binding scope stack — top frame is the innermost scope.
@@ -122,6 +139,14 @@ struct Engine<'lib, 'ctx> {
     /// `ExpressionRef` and `FunctionRef` nodes.  Empty for the standard
     /// single-library evaluation path.
     included: Option<&'lib HashMap<String, Library>>,
+    active_context: EvaluationContext,
+    named_expression_depth: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EvaluationContext {
+    Unfiltered,
+    Patient,
 }
 
 impl<'lib, 'ctx> Engine<'lib, 'ctx> {
@@ -136,22 +161,23 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     ) -> Self {
         // Pre-build expression and parameter indexes for O(1) lookup.
         let mut expr_index: HashMap<String, &'lib Expression> = HashMap::new();
+        let mut expr_context_index: HashMap<String, Option<&'lib str>> = HashMap::new();
+        let mut function_index: HashMap<String, Vec<&'lib FunctionDef>> = HashMap::new();
         let mut param_names: HashSet<String> = HashSet::new();
-
-        let mut func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>> = HashMap::new();
 
         if let Some(stmts) = &library.statements {
             for def in &stmts.defs {
-                match def {
-                    StatementDef::Expression(ed) => {
-                        if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
-                            expr_index.insert(name.clone(), expr.as_ref());
-                        }
+                if let StatementDef::Expression(ed) = def {
+                    if let (Some(name), Some(expr)) = (&ed.name, &ed.expression) {
+                        expr_index.insert(name.clone(), expr.as_ref());
+                        expr_context_index.insert(name.clone(), ed.context.as_deref());
                     }
-                    StatementDef::Function(fd) => {
-                        if let Some(name) = &fd.name {
-                            func_index.entry(name.clone()).or_default().push(fd);
-                        }
+                } else if let StatementDef::Function(function) = def {
+                    if let Some(name) = &function.name {
+                        function_index
+                            .entry(name.clone())
+                            .or_default()
+                            .push(function);
                     }
                 }
             }
@@ -177,10 +203,13 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             trace: Vec::new(),
             next_event_id: 1,
             expr_index,
-            func_index,
+            expr_context_index,
+            function_index,
             param_names,
             scope_stack: vec![base_scope],
             included,
+            active_context: EvaluationContext::Unfiltered,
+            named_expression_depth: 0,
         }
     }
 
@@ -191,79 +220,175 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             .ok_or_else(|| EvalError::General(format!("Expression '{name}' not found in library")))
     }
 
-    /// Select one user-defined function overload by arity and ELM signature.
-    fn find_function(
-        &self,
+    fn eval_named_expression(&mut self, name: &str) -> Result<Value, EvalError> {
+        let expr = self.find_expression(name)?;
+        let context = self.expr_context_index.get(name).copied().flatten();
+        let previous = self.active_context;
+        let selected = Self::resolve_expression_context(context)?;
+        if self.named_expression_depth > 0
+            && previous == EvaluationContext::Unfiltered
+            && selected == EvaluationContext::Patient
+        {
+            return Err(EvalError::RetrieveError(format!(
+                "cannot evaluate Patient-context expression '{name}' from Unfiltered context without population iteration"
+            )));
+        }
+        self.named_expression_depth += 1;
+        self.active_context = selected;
+        let result = self.eval_expr(expr);
+        self.active_context = previous;
+        self.named_expression_depth -= 1;
+        result
+    }
+
+    fn resolve_expression_context(context: Option<&str>) -> Result<EvaluationContext, EvalError> {
+        match context {
+            None | Some("Unfiltered") => Ok(EvaluationContext::Unfiltered),
+            Some("Patient") => Ok(EvaluationContext::Patient),
+            Some(context) => Err(EvalError::RetrieveError(format!(
+                "unsupported CQL expression context '{context}'"
+            ))),
+        }
+    }
+
+    fn eval_user_function(
+        &mut self,
         name: &str,
-        argument_count: usize,
-        signature: &[crate::elm::TypeSpecifier],
-    ) -> Result<Option<&'lib crate::elm::FunctionDef>, EvalError> {
-        let Some(overloads) = self.func_index.get(name) else {
-            return Ok(None);
-        };
+        args: Vec<Value>,
+        signature: &[TypeSpecifier],
+    ) -> Result<Value, EvalError> {
+        let overloads = self.function_index.get(name).ok_or_else(|| {
+            EvalError::ExpressionNotFound(format!(
+                "Function '{name}' with {} argument(s) not found",
+                args.len()
+            ))
+        })?;
         let mut matches = overloads
             .iter()
             .copied()
-            .filter(|function| function.operand.len() == argument_count)
+            .filter(|function| function.operand.len() == args.len())
             .filter(|function| {
-                signature.is_empty()
-                    || function
-                        .operand
-                        .iter()
-                        .map(|operand| operand.operand_type_specifier.as_ref())
-                        .eq(signature.iter().map(Some))
+                if signature.is_empty() {
+                    function.operand.iter().zip(&args).all(|(operand, value)| {
+                        match (
+                            operand.operand_type_specifier.as_ref(),
+                            operand.operand_type_name.as_deref(),
+                        ) {
+                            (Some(specifier), _) => runtime_value_matches(value, specifier),
+                            (None, Some(type_name)) => {
+                                runtime_named_value_matches(value, type_name)
+                            }
+                            (None, None) => true,
+                        }
+                    })
+                } else {
+                    signature.len() == function.operand.len()
+                        && function
+                            .operand
+                            .iter()
+                            .zip(signature)
+                            .all(|(operand, signature)| {
+                                operand
+                                    .operand_type_specifier
+                                    .as_ref()
+                                    .is_some_and(|specifier| specifier == signature)
+                                    || matches!(
+                                        (operand.operand_type_name.as_deref(), signature),
+                                        (Some(type_name), TypeSpecifier::Named(named))
+                                            if type_name == named.name
+                                    )
+                            })
+                }
             });
-        let selected = matches.next();
-        if selected.is_some() && matches.next().is_some() {
+        let function = matches.next().ok_or_else(|| {
+            EvalError::ExpressionNotFound(format!(
+                "Function '{name}' has no overload matching its ELM signature"
+            ))
+        })?;
+        if matches.next().is_some() {
             return Err(EvalError::General(format!(
                 "Function '{name}' overload is ambiguous without a unique ELM signature match"
             )));
         }
-        Ok(selected)
-    }
-
-    /// Evaluate a user-defined function by binding arguments to operand names,
-    /// pushing a scope, evaluating the body, and popping the scope.
-    fn eval_user_function(
-        &mut self,
-        fd: &crate::elm::FunctionDef,
-        args: Vec<Value>,
-    ) -> Result<Value, EvalError> {
-        if fd.external == Some(true) {
+        if function.external == Some(true) {
             return Err(EvalError::General(format!(
-                "External function '{}' is not supported",
-                fd.name.as_deref().unwrap_or("?")
+                "external FunctionDef '{name}' is not supported by this evaluator"
             )));
         }
-        if fd.operand.len() != args.len() {
-            return Err(EvalError::General(format!(
-                "Function '{}' expected {} arguments, got {}",
-                fd.name.as_deref().unwrap_or("?"),
-                fd.operand.len(),
-                args.len()
-            )));
-        }
-        let body = fd.expression.as_ref().ok_or_else(|| {
-            EvalError::General(format!(
-                "Function '{}' has no body",
-                fd.name.as_deref().unwrap_or("?")
-            ))
+        let body = function.expression.as_deref().ok_or_else(|| {
+            EvalError::General(format!("FunctionDef '{name}' has no expression body"))
         })?;
-
-        // Bind operand names to argument values.
-        let mut scope = BTreeMap::new();
-        for (i, operand) in fd.operand.iter().enumerate() {
-            let name = operand.name.clone().unwrap_or_else(|| format!("arg{i}"));
-            let val = args.get(i).cloned().unwrap_or(Value::Null);
-            scope.insert(name, val);
+        let mut bindings = BTreeMap::new();
+        for (operand, value) in function.operand.iter().zip(args) {
+            let operand_name = operand.name.as_deref().ok_or_else(|| {
+                EvalError::General(format!("FunctionDef '{name}' has an unnamed operand"))
+            })?;
+            bindings.insert(operand_name.to_string(), value);
         }
-
-        self.push_scope(scope);
+        let previous_context = self.active_context;
+        let selected_context = match function.context.as_deref() {
+            Some(context) => Self::resolve_expression_context(Some(context))?,
+            None => previous_context,
+        };
+        if self.named_expression_depth > 0
+            && previous_context == EvaluationContext::Unfiltered
+            && selected_context == EvaluationContext::Patient
+        {
+            return Err(EvalError::RetrieveError(format!(
+                "cannot evaluate Patient-context function '{name}' from Unfiltered context without population iteration"
+            )));
+        }
+        self.active_context = selected_context;
+        self.named_expression_depth += 1;
+        self.push_scope(bindings);
         let result = self.eval_expr(body);
         self.pop_scope();
+        self.named_expression_depth -= 1;
+        self.active_context = previous_context;
         result
     }
 
+    fn patient_context_reference(&self) -> Result<String, EvalError> {
+        let Some(Value::Tuple(fields)) = &self.ctx.context_value else {
+            return Err(EvalError::RetrieveError(
+                "Patient expression context requires a current Patient resource".to_string(),
+            ));
+        };
+        let id = match fields.get("id") {
+            Some(Value::String(id)) => Some(id.as_str()),
+            Some(Value::Tuple(primitive)) => match primitive.get("value") {
+                Some(Value::String(id)) => Some(id.as_str()),
+                _ => None,
+            },
+            _ => None,
+        };
+        let resource_type = match fields.get("resourceType") {
+            None => None,
+            Some(Value::String(resource_type)) => Some(resource_type.as_str()),
+            Some(Value::Tuple(primitive)) => match primitive.get("value") {
+                Some(Value::String(resource_type)) => Some(resource_type.as_str()),
+                _ => None,
+            },
+            _ => None,
+        };
+        if resource_type.is_some_and(|resource_type| resource_type != "Patient") {
+            return Err(EvalError::RetrieveError(
+                "Patient expression context requires a Patient resource".to_string(),
+            ));
+        }
+        let Some(id) = id.filter(|id| {
+            !id.is_empty()
+                && id.len() <= 64
+                && id.chars().all(|character| {
+                    character.is_ascii_alphanumeric() || character == '-' || character == '.'
+                })
+        }) else {
+            return Err(EvalError::RetrieveError(
+                "Patient expression context requires a simple FHIR Patient.id".to_string(),
+            ));
+        };
+        Ok(format!("Patient/{id}"))
+    }
     /// Return true if `name` is declared as a parameter in the library.
     fn is_library_parameter(&self, name: &str) -> bool {
         self.param_names.contains(name)
@@ -403,10 +528,16 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                             })?;
                     let mut sub_engine =
                         Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
-                    let expr = sub_engine
-                        .find_expression(name)
-                        .map_err(|_| EvalError::ExpressionNotFound(format!("{alias}.{name}")))?;
-                    return sub_engine.eval_expr(expr);
+                    // Included expressions are evaluated from the caller's
+                    // context. Do not reset to top-level Unfiltered here: an
+                    // Unfiltered expression must not silently promote itself
+                    // into a Patient expression through a library reference.
+                    sub_engine.active_context = self.active_context;
+                    sub_engine.named_expression_depth = self.named_expression_depth;
+                    if !sub_engine.expr_index.contains_key(name) {
+                        return Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")));
+                    }
+                    return sub_engine.eval_named_expression(name);
                 }
 
                 // Check scope stack first (for query aliases / let clauses).
@@ -434,8 +565,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                 }
                 // Otherwise evaluate from library.
-                let expr = self.find_expression(name)?;
-                let val = self.eval_expr(expr)?;
+                let val = self.eval_named_expression(name)?;
                 self.record_trace(
                     "ExpressionRef",
                     vec![],
@@ -1105,7 +1235,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::Is(is_expr) => {
                 let v = self.eval_expr_opt(is_expr.operand.as_deref())?;
-                let raw = is_expr.is_type.as_deref().unwrap_or("");
+                let raw = is_expr
+                    .is_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(is_expr.is_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 // "{urn:hl7-org:elm-types:r1}null" → is null check
                 if type_name.eq_ignore_ascii_case("null") {
@@ -1115,13 +1249,21 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::As(as_expr) => {
                 let v = self.eval_expr_opt(as_expr.operand.as_deref())?;
-                let raw = as_expr.as_type.as_deref().unwrap_or("");
+                let raw = as_expr
+                    .as_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(as_expr.as_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 Ok(super::operators::as_type(&v, type_name))
             }
             Expression::Convert(conv_expr) => {
                 let v = self.eval_expr_opt(conv_expr.operand.as_deref())?;
-                let raw = conv_expr.to_type.as_deref().unwrap_or("");
+                let raw = conv_expr
+                    .to_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(conv_expr.to_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 super::operators::convert(&v, type_name)
             }
@@ -1130,7 +1272,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if matches!(v, Value::Null) {
                     return Ok(Value::Null);
                 }
-                let raw = can_conv.to_type.as_deref().unwrap_or("");
+                let raw = can_conv
+                    .to_type
+                    .as_deref()
+                    .or_else(|| type_specifier_name(can_conv.to_type_specifier.as_ref()))
+                    .unwrap_or("");
                 let type_name = strip_elm_namespace(raw);
                 match super::operators::convert(&v, type_name) {
                     Ok(_) => Ok(Value::Boolean(true)),
@@ -1214,67 +1360,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                 };
                 let path = prop.path.as_deref().unwrap_or("");
-                match source {
-                    Value::Tuple(ref fields) => {
-                        // Direct field lookup
-                        if let Some(v) = fields.get(path) {
-                            return Ok(v.clone());
-                        }
-                        // FHIR choice-type field name resolution:
-                        // When a CQL property like "onset" doesn't match directly,
-                        // try suffixed FHIR variants (onsetDateTime, onsetPeriod,
-                        // onsetAge, onsetRange, onsetString, abatementDateTime, etc.)
-                        for suffix in &[
-                            "DateTime", "Period", "Age", "Range", "String", "Instant", "Timing",
-                            "Boolean", "Code",
-                        ] {
-                            let candidate = format!("{path}{suffix}");
-                            if let Some(v) = fields.get(&candidate) {
-                                return Ok(v.clone());
-                            }
-                        }
-                        Ok(Value::Null)
-                    }
-                    Value::Null => Ok(Value::Null),
-                    // FHIR primitive .value on a String: coerce to typed CQL values.
-                    // FHIR.dateTime / FHIR.date / FHIR.instant primitives are stored
-                    // as raw strings in JSON resources, so `period."start".value`
-                    // should return a CQL DateTime/Date rather than a bare String.
-                    Value::String(ref s) if path == "value" => {
-                        let str_val = Value::String(s.clone());
-                        if s.contains('T') {
-                            // datetime or instant: parse as DateTime
-                            if let Ok(v) = super::operators::conversion::to_datetime(&str_val) {
-                                if !matches!(v, Value::Null) {
-                                    return Ok(v);
-                                }
-                            }
-                        }
-                        // date-only string: parse as Date
-                        if let Ok(v) = super::operators::conversion::to_date(&str_val) {
-                            if !matches!(v, Value::Null) {
-                                return Ok(v);
-                            }
-                        }
-                        // Fall back to string (e.g., FHIR.string, FHIR.code, FHIR.uri)
-                        Ok(str_val)
-                    }
-                    other => {
-                        // FHIR primitive value accessor: in the FHIR CQL model,
-                        // primitive types like FHIR.string, FHIR.dateTime have a
-                        // .value property that unwraps the underlying CQL value.
-                        // When raw JSON resources are used (no FHIR modelinfo),
-                        // the primitive IS already the unwrapped value, so
-                        // accessing .value should return the value itself.
-                        if path == "value" {
-                            Ok(other.clone())
-                        } else {
-                            Err(EvalError::General(format!(
-                                "Property '{path}': cannot access property on non-tuple"
-                            )))
-                        }
-                    }
-                }
+                resolve_property(source, path)
             }
 
             // ----- Date/Time -----
@@ -1359,6 +1445,22 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let a = self.eval_expr_opt(tb.operand.first())?;
                 let b = self.eval_expr_opt(tb.operand.get(1))?;
                 super::operators::duration_between(&a, &b, tb.precision.as_deref().unwrap_or("day"))
+            }
+            // CQFramework emits these clinical operators directly, with the
+            // requested unit in the ELM `precision` field. They count whole
+            // elapsed periods (DurationBetween), which is the age semantics
+            // distinct from DifferenceBetween's boundary counting.
+            Expression::CalculateAge(unary) => {
+                let birth = self.eval_unary_arg(unary)?;
+                self.eval_calculate_age(
+                    birth,
+                    Value::Date(self.ctx.today()),
+                    unary.precision.as_deref(),
+                )
+            }
+            Expression::CalculateAgeAt(binary) => {
+                let (birth, as_of) = self.eval_binary_args(binary)?;
+                self.eval_calculate_age(birth, as_of, binary.precision.as_deref())
             }
             Expression::DifferenceBetween(tb) => {
                 let a = self.eval_expr_opt(tb.operand.first())?;
@@ -1465,40 +1567,41 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 if let Some(result) = self.eval_temporal_function(name, &args) {
                     return result;
                 }
-                // Try builtin first regardless of library qualification.
+                // Try builtins first regardless of library qualification.
                 // Many FHIRHelpers functions (ToConcept, ToCode, …) mirror
-                // CQL system builtins so this works transparently.
-                eval_builtin_function(name, args.clone()).or_else(|e| {
-                    // Cross-library function call: look up in included library.
-                    if let Some(alias) = func_ref.library_name.as_deref() {
-                        let included = self.included.ok_or_else(|| EvalError::LibraryNotFound {
-                            alias: alias.to_string(),
-                        })?;
-                        let inc_lib =
-                            included
-                                .get(alias)
-                                .ok_or_else(|| EvalError::LibraryNotFound {
+                // CQL system builtins so this works transparently. If there is
+                // no matching builtin, execute a declared function body from
+                // the local or included library (for example FHIRCommon's
+                // fluent `references` helper).
+                match eval_builtin_function(name, args.clone()) {
+                    Ok(value) => Ok(value),
+                    Err(builtin_error) => {
+                        if let Some(alias) = func_ref.library_name.as_deref() {
+                            let included =
+                                self.included.ok_or_else(|| EvalError::LibraryNotFound {
                                     alias: alias.to_string(),
                                 })?;
-
-                        let mut sub_engine =
-                            Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
-                        if let Some(fd) =
-                            sub_engine.find_function(name, args.len(), &func_ref.signature)?
-                        {
-                            return sub_engine.eval_user_function(fd, args);
+                            let inc_lib =
+                                included
+                                    .get(alias)
+                                    .ok_or_else(|| EvalError::LibraryNotFound {
+                                        alias: alias.to_string(),
+                                    })?;
+                            let mut sub_engine =
+                                Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
+                            sub_engine.active_context = self.active_context;
+                            sub_engine.named_expression_depth = self.named_expression_depth;
+                            if !sub_engine.function_index.contains_key(name) {
+                                return Err(builtin_error);
+                            }
+                            sub_engine.eval_user_function(name, args, &func_ref.signature)
+                        } else if self.function_index.contains_key(name) {
+                            self.eval_user_function(name, args, &func_ref.signature)
+                        } else {
+                            Err(builtin_error)
                         }
-
-                        return Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")));
                     }
-
-                    // Same-library function call: look up in this library.
-                    if let Some(fd) = self.find_function(name, args.len(), &func_ref.signature)? {
-                        return self.eval_user_function(fd, args);
-                    }
-
-                    Err(e)
-                })
+                }
             }
 
             other => Err(EvalError::General(format!(
@@ -1566,12 +1669,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         ) -> Result<bool, EvalError> {
             match filter {
                 // ValueSetRef resolved to a URL string
-                Value::String(url) => match ctx.in_valueset(c, url) {
-                    Ok(b) => Ok(b),
-                    // No terminology provider or valueset not found → skip filter
-                    Err(EvalError::TerminologyError(_)) => Ok(false),
-                    Err(e) => Err(e),
-                },
+                Value::String(url) => ctx.in_valueset(c, url),
                 Value::Code(fc) => Ok(c.code == fc.code && c.system == fc.system),
                 Value::List(codes) => {
                     for fc in codes {
@@ -1610,35 +1708,45 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                     Ok(false)
                 }
-                // FHIR CodeableConcept: a Tuple with a "coding" field
-                // containing a list of coding Tuples, each with "system" and "code" string fields.
+                // FHIR resources enter the evaluator as JSON-shaped tuples.
+                // A retrieve's code path commonly resolves to a
+                // CodeableConcept (`{ coding: [{ system, code, ... }] }`) or
+                // a Coding. Normalize just those structural forms for
+                // terminology membership. `in_valueset` deliberately retains
+                // its existing system+code matching semantics; a Coding's
+                // optional version is preserved but does not become an
+                // invented extra predicate here.
                 Value::Tuple(fields) => {
-                    if let Some(Value::List(codings)) = fields.get("coding") {
-                        for coding in codings {
-                            if let Value::Tuple(cf) = coding {
-                                let system = match cf.get("system") {
-                                    Some(Value::String(s)) => s.as_str(),
-                                    _ => "",
-                                };
-                                let code = match cf.get("code") {
-                                    Some(Value::String(s)) => s.as_str(),
-                                    _ => "",
-                                };
-                                if !system.is_empty() && !code.is_empty() {
-                                    let c = CqlCode {
-                                        code: code.to_string(),
-                                        system: system.to_string(),
-                                        display: None,
-                                        version: None,
-                                    };
-                                    if code_in_filter(ctx, &c, filter)? {
-                                        return Ok(true);
-                                    }
-                                }
-                            }
-                        }
+                    if let Some(coding) = fields.get("coding") {
+                        return val_matches(ctx, coding, filter);
                     }
-                    Ok(false)
+                    let code = fields.get("code").and_then(|value| match value {
+                        Value::String(value) => Some(value.clone()),
+                        _ => None,
+                    });
+                    let system = fields.get("system").and_then(|value| match value {
+                        Value::String(value) => Some(value.clone()),
+                        _ => None,
+                    });
+                    match (code, system) {
+                        (Some(code), Some(system)) => code_in_filter(
+                            ctx,
+                            &CqlCode {
+                                code,
+                                system,
+                                display: fields.get("display").and_then(|value| match value {
+                                    Value::String(value) => Some(value.clone()),
+                                    _ => None,
+                                }),
+                                version: fields.get("version").and_then(|value| match value {
+                                    Value::String(value) => Some(value.clone()),
+                                    _ => None,
+                                }),
+                            },
+                            filter,
+                        ),
+                        _ => Ok(false),
+                    }
                 }
                 _ => Ok(false),
             }
@@ -1659,6 +1767,42 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// birthDate argument). Returns `None` if `name` is not a recognised age
     /// function.
     fn eval_age_function(&self, name: &str, args: &[Value]) -> Option<Result<Value, EvalError>> {
+        // RH's native compiler represents the generic CQL forms as FunctionRef
+        // rather than the precision-bearing ELM CalculateAge[At] operators.
+        // CQL defaults these forms to whole elapsed years.
+        if matches!(name, "CalculateAge" | "CalculateAgeAt") {
+            let birth_raw = match args.first() {
+                Some(value) => value.clone(),
+                None => {
+                    return Some(Err(EvalError::General(format!(
+                        "{name}: expected a birthDate argument"
+                    ))))
+                }
+            };
+            let birth = match birth_raw {
+                Value::Date(_) | Value::DateTime(_) => birth_raw,
+                Value::Null => return Some(Ok(Value::Null)),
+                ref value @ Value::String(_) => match to_date(value) {
+                    Ok(value) => value,
+                    Err(error) => return Some(Err(error)),
+                },
+                _ => return Some(Ok(Value::Null)),
+            };
+            let as_of = if name == "CalculateAgeAt" {
+                match args.get(1) {
+                    Some(value) => value.clone(),
+                    None => {
+                        return Some(Err(EvalError::General(format!(
+                            "{name}: expected an as-of date argument"
+                        ))))
+                    }
+                }
+            } else {
+                Value::Date(self.ctx.today())
+            };
+            return Some(self.eval_calculate_age(birth, as_of, Some("Year")));
+        }
+
         let explicit_birth = name.starts_with("CalculateAgeIn");
         let unit_part = name
             .strip_prefix("CalculateAgeIn")
@@ -1725,6 +1869,33 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         };
 
         Some(duration_between(&birth_val, &ref_val, unit))
+    }
+
+    /// Evaluate ELM's clinical `CalculateAge[At]` operators. CQFramework's
+    /// FHIR model emits these instead of the source-level `CalculateAgeInYearsAt`
+    /// function, carrying the requested unit in `precision`.
+    fn eval_calculate_age(
+        &self,
+        birth: Value,
+        as_of: Value,
+        precision: Option<&str>,
+    ) -> Result<Value, EvalError> {
+        if matches!(birth, Value::Null) || matches!(as_of, Value::Null) {
+            return Ok(Value::Null);
+        }
+        let unit = precision.unwrap_or("Year");
+        // CQL permits the Date and DateTime overloads of CalculateAge[At].
+        // A standard FHIR model supplies Patient.birthDate as Date while
+        // FHIRHelpers.ToDateTime(Encounter.period.start) is DateTime. Bring
+        // the Date operand to DateTime precision before asking the temporal
+        // operator for whole elapsed periods, rather than rejecting the
+        // otherwise valid FHIR-model expression as mixed temporal types.
+        let (birth, as_of) = match (&birth, &as_of) {
+            (Value::Date(_), Value::DateTime(_)) => (to_datetime(&birth)?, as_of),
+            (Value::DateTime(_), Value::Date(_)) => (birth, to_datetime(&as_of)?),
+            _ => (birth, as_of),
+        };
+        duration_between(&birth, &as_of, unit)
     }
 
     /// Evaluate logical and null-propagation expressions:
@@ -1872,12 +2043,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 let v = self.eval_expr_opt(agg.source.as_deref())?;
                 super::lists::avg(&v)
             }
-            Expression::First(unary) => {
-                let v = self.eval_unary_arg(unary)?;
+            Expression::First(list_access) => {
+                let v = self.eval_expr_opt(list_access.source.as_deref())?;
                 super::lists::first(&v)
             }
-            Expression::Last(unary) => {
-                let v = self.eval_unary_arg(unary)?;
+            Expression::Last(list_access) => {
+                let v = self.eval_expr_opt(list_access.source.as_deref())?;
                 super::lists::last(&v)
             }
             Expression::Flatten(unary) => {
@@ -2110,6 +2281,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &a {
                     Value::Interval { .. } => super::intervals::contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
+                    Value::String(valueset_url) => match &b {
+                        Value::Code(code) => {
+                            self.ctx.in_valueset(code, valueset_url).map(Value::Boolean)
+                        }
+                        Value::Null => Ok(Value::Null),
+                        _ => Err(EvalError::General(
+                            "Contains: expected Code when checking a ValueSet".to_string(),
+                        )),
+                    },
                     // Null interval/list = empty, doesn't contain anything
                     Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
@@ -2125,6 +2305,15 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &b {
                     Value::Interval { .. } => super::intervals::in_interval(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
+                    Value::String(valueset_url) => match &a {
+                        Value::Code(code) => {
+                            self.ctx.in_valueset(code, valueset_url).map(Value::Boolean)
+                        }
+                        Value::Null => Ok(Value::Null),
+                        _ => Err(EvalError::General(
+                            "In: expected Code when checking a ValueSet".to_string(),
+                        )),
+                    },
                     // Null interval/list = empty, element can't be in it
                     Value::Null => Ok(Value::Boolean(false)),
                     _ => Err(EvalError::General(
@@ -2402,7 +2591,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 })
             }
             Expression::Retrieve(r) => {
+                if r.context.is_some() {
+                    return Err(EvalError::RetrieveError(
+                        "explicit Retrieve.context is not supported by this evaluator".to_string(),
+                    ));
+                }
                 let raw_type = r.data_type.as_deref().unwrap_or("");
+                if self.active_context == EvaluationContext::Patient
+                    && raw_type.starts_with('{')
+                    && !raw_type.starts_with("{http://hl7.org/fhir}")
+                {
+                    return Err(EvalError::RetrieveError(format!(
+                        "Patient-context retrieve is unsupported for non-FHIR data type '{raw_type}'"
+                    )));
+                }
                 // Strip Clark-notation namespace prefix `{uri}LocalName` → `LocalName`
                 let data_type = if let Some(pos) = raw_type.find('}') {
                     &raw_type[pos + 1..]
@@ -2427,8 +2629,12 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     .transpose()?;
 
                 // Fetch candidate resources (provider may return unfiltered results).
+                let patient_context = match self.active_context {
+                    EvaluationContext::Unfiltered => None,
+                    EvaluationContext::Patient => Some(self.patient_context_reference()?),
+                };
                 let candidates = self.ctx.retrieve(
-                    None,
+                    patient_context.as_deref(),
                     data_type,
                     code_path,
                     codes_val.as_ref(),
@@ -2437,6 +2643,11 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 )?;
 
                 // Post-filter by code when both a code path and a filter are present.
+                let candidates = filter_resources_for_context(
+                    candidates,
+                    data_type,
+                    patient_context.as_deref(),
+                )?;
                 let results = match (code_path, &codes_val) {
                     (Some(path), Some(filter)) => {
                         self.filter_resources_by_code(candidates, path, filter)?
@@ -2466,15 +2677,18 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ------ Value set / code system reference resolution ------
             Expression::ValueSetRef(vs_ref) => {
                 let name = vs_ref.name.as_deref().unwrap_or("");
-                let url = self
+                let canonical = self
                     .library
                     .value_sets
                     .as_ref()
                     .and_then(|vs| vs.defs.iter().find(|d| d.name.as_deref() == Some(name)))
-                    .and_then(|d| d.id.as_deref())
-                    .unwrap_or(name) // fall back to name as-is if not found
-                    .to_string();
-                Ok(Value::String(url))
+                    .map(|definition| match (&definition.id, &definition.version) {
+                        (Some(id), Some(version)) => format!("{id}|{version}"),
+                        (Some(id), None) => id.clone(),
+                        _ => name.to_string(),
+                    })
+                    .unwrap_or_else(|| name.to_string());
+                Ok(Value::String(canonical))
             }
             Expression::CodeSystemRef(cs_ref) => {
                 let name = cs_ref.name.as_deref().unwrap_or("");
@@ -2840,6 +3054,148 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     }
 }
 
+/// Return the runtime type-name represented by an ELM type specifier. Official
+/// translators prefer `*TypeSpecifier` fields while this compiler also emits
+/// legacy QName fields, so evaluation accepts both encodings.
+fn type_specifier_name(specifier: Option<&TypeSpecifier>) -> Option<&str> {
+    match specifier? {
+        TypeSpecifier::Named(named) => Some(named.name.as_str()),
+        TypeSpecifier::List(_) => Some("List"),
+        TypeSpecifier::Interval(_) => Some("Interval"),
+        TypeSpecifier::Tuple(_) => Some("Tuple"),
+        TypeSpecifier::Choice(_) | TypeSpecifier::Parameter(_) => None,
+    }
+}
+
+fn runtime_value_matches(value: &Value, specifier: &TypeSpecifier) -> bool {
+    if matches!(value, Value::Null) {
+        // Null is compatible with every CQL type. Keeping every candidate here
+        // intentionally leaves indistinguishable overloads ambiguous.
+        return true;
+    }
+    match specifier {
+        TypeSpecifier::Named(named) => runtime_named_value_matches(value, &named.name),
+        TypeSpecifier::List(_) => matches!(value, Value::List(_)),
+        TypeSpecifier::Interval(_) => matches!(value, Value::Interval { .. }),
+        TypeSpecifier::Tuple(_) => matches!(value, Value::Tuple(_)),
+        TypeSpecifier::Choice(choice) => choice
+            .choice
+            .iter()
+            .any(|choice| runtime_value_matches(value, choice)),
+        TypeSpecifier::Parameter(_) => true,
+    }
+}
+
+fn runtime_named_value_matches(value: &Value, raw_type_name: &str) -> bool {
+    if matches!(value, Value::Null) {
+        return true;
+    }
+    let type_name = strip_elm_namespace(raw_type_name);
+    if type_name == "Any" || is_type(value, type_name) == Value::Boolean(true) {
+        return true;
+    }
+    matches!(
+        value,
+        Value::Tuple(fields)
+            if fields
+                .get("resourceType")
+                .and_then(|resource_type| match resource_type {
+                    Value::String(resource_type) => Some(resource_type.as_str()),
+                    _ => None,
+                })
+                == Some(type_name)
+    )
+}
+
+fn resolve_property(source: Value, path: &str) -> Result<Value, EvalError> {
+    // Preserve an exact serialized property name before interpreting a dotted
+    // FHIR-model path. This keeps existing tuple access and wire properties
+    // deterministic while accepting CQFramework ELM paths such as
+    // `birthDate.value`.
+    if let Value::Tuple(fields) = &source {
+        if let Some(value) = fields.get(path) {
+            return Ok(coerce_fhir_primitive_field(path, value));
+        }
+    }
+
+    path.split('.').try_fold(source, resolve_direct_property)
+}
+
+fn resolve_direct_property(source: Value, path: &str) -> Result<Value, EvalError> {
+    match source {
+        Value::Tuple(fields) => {
+            if let Some(value) = fields.get(path) {
+                return Ok(coerce_fhir_primitive_field(path, value));
+            }
+            Ok(fhir_choice_value(&fields, path).unwrap_or(Value::Null))
+        }
+        Value::Null => Ok(Value::Null),
+        value if path == "value" && is_fhir_primitive_value(&value) => Ok(value),
+        _ => Err(EvalError::General(format!(
+            "Property '{path}': cannot access property on non-tuple"
+        ))),
+    }
+}
+
+fn coerce_fhir_primitive_field(path: &str, value: &Value) -> Value {
+    match path {
+        "birthDate" => to_date(value).unwrap_or_else(|_| value.clone()),
+        "start" | "end" => to_datetime(value).unwrap_or_else(|_| value.clone()),
+        _ => value.clone(),
+    }
+}
+
+fn fhir_choice_value(fields: &BTreeMap<String, Value>, path: &str) -> Option<Value> {
+    // ELM uses the logical FHIR choice-element name (for example,
+    // `Observation.effective`) while JSON carries the selected wire property
+    // (`effectiveDateTime`). Restrict this fallback to the FHIR choice paths
+    // currently supported by the evaluator so an unrelated `fooBar` field is
+    // never inferred as a `foo` property. Exact serialized properties still
+    // win in `resolve_direct_property` above.
+    if !matches!(path, "value" | "effective" | "onset" | "abatement") {
+        return None;
+    }
+
+    // Count wire alternatives before converting their primitive values. A
+    // malformed `effectiveDate` must not be discarded while a valid
+    // `effectiveDateTime` is accepted: FHIR choice elements permit exactly
+    // one selected wire representation.
+    let mut values = fields.iter().filter_map(|(name, value)| {
+        let suffix = name
+            .strip_prefix(path)
+            .filter(|suffix| suffix.chars().next().is_some_and(char::is_uppercase))?;
+        Some((suffix, value))
+    });
+    let (suffix, value) = values.next()?;
+    if values.next().is_some() {
+        return None;
+    }
+
+    // JSON primitive values arrive as untyped strings. A logical FHIR
+    // dateTime choice must retain its declared type so the standard ELM
+    // `(O.effective as FHIR.dateTime)` succeeds, while a valueString is
+    // never accepted as a temporal value.
+    match suffix {
+        "DateTime" => to_datetime(value).ok(),
+        "Date" => to_date(value).ok(),
+        _ => Some(value.clone()),
+    }
+}
+
+fn is_fhir_primitive_value(value: &Value) -> bool {
+    matches!(
+        value,
+        Value::Boolean(_)
+            | Value::Integer(_)
+            | Value::Long(_)
+            | Value::Decimal(_)
+            | Value::String(_)
+            | Value::Date(_)
+            | Value::DateTime(_)
+            | Value::Time(_)
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Helpers (free-standing utilities used by the dispatch)
 // ---------------------------------------------------------------------------
@@ -2896,8 +3252,9 @@ fn eval_time_function_args(args: &[Value]) -> Result<Value, EvalError> {
 mod tests {
     use super::*;
     use crate::elm::{
-        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, FunctionDef,
-        FunctionRef, Library, Literal, NamedTypeSpecifier, OperandDef, StatementDef, TypeSpecifier,
+        AsExpr, BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef,
+        FunctionDef, FunctionRef, Library, Literal, NamedTypeSpecifier, OperandDef, Property,
+        StatementDef, TupleElement, TupleExpr, TypeSpecifier, UnaryExpression,
     };
     use crate::eval::context::{EvalContextBuilder, FixedClock};
     use crate::eval::value::CqlDateTime;
@@ -2957,6 +3314,283 @@ mod tests {
         let lib = make_library("X", bool_literal(true));
         let result = evaluate_elm(&lib, "X", &fixed_ctx()).unwrap();
         assert_eq!(result, Value::Boolean(true));
+    }
+
+    #[test]
+    fn fhir_choice_value_access_requires_one_wire_value_and_preserves_exact_property() {
+        let mut exact = BTreeMap::new();
+        exact.insert("value".to_string(), Value::String("exact".to_string()));
+        exact.insert("valueBoolean".to_string(), Value::Boolean(true));
+        assert_eq!(
+            resolve_property(Value::Tuple(exact), "value").unwrap(),
+            Value::String("exact".to_string())
+        );
+
+        let mut boolean = BTreeMap::new();
+        boolean.insert("valueBoolean".to_string(), Value::Boolean(false));
+        assert_eq!(
+            resolve_property(Value::Tuple(boolean), "value").unwrap(),
+            Value::Boolean(false)
+        );
+
+        let mut ambiguous = BTreeMap::new();
+        ambiguous.insert("valueBoolean".to_string(), Value::Boolean(false));
+        ambiguous.insert(
+            "valueString".to_string(),
+            Value::String("false".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(ambiguous), "value").unwrap(),
+            Value::Null
+        );
+
+        let mut effective = BTreeMap::new();
+        effective.insert(
+            "effectiveDateTime".to_string(),
+            Value::String("2026-06-15T09:20:00Z".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(effective), "effective").unwrap(),
+            Value::DateTime(crate::eval::value::CqlDateTime {
+                year: 2026,
+                month: Some(6),
+                day: Some(15),
+                hour: Some(9),
+                minute: Some(20),
+                second: Some(0),
+                millisecond: None,
+                offset_seconds: Some(0),
+            })
+        );
+
+        let effective_value = resolve_property(
+            Value::Tuple(BTreeMap::from([(
+                "effectiveDateTime".to_string(),
+                Value::String("2026-06-15T09:20:00Z".to_string()),
+            )])),
+            "effective",
+        )
+        .unwrap();
+        // Mirrors the translated source-CQL shape:
+        // FHIRHelpers.ToDateTime(O.effective as FHIR.dateTime).
+        assert_eq!(
+            crate::eval::as_type(&effective_value, "dateTime"),
+            effective_value
+        );
+        assert_eq!(
+            crate::eval::to_datetime(&effective_value).unwrap(),
+            effective_value
+        );
+
+        let mut value_only = BTreeMap::new();
+        value_only.insert("valueInteger".to_string(), Value::Integer(1));
+        assert_eq!(
+            resolve_property(Value::Tuple(value_only), "effective").unwrap(),
+            Value::Null
+        );
+
+        let mut ambiguous_effective = BTreeMap::new();
+        ambiguous_effective.insert(
+            "effectiveDateTime".to_string(),
+            Value::String("2026-06-15T09:20:00Z".to_string()),
+        );
+        ambiguous_effective.insert("effectivePeriod".to_string(), Value::Tuple(BTreeMap::new()));
+        assert_eq!(
+            resolve_property(Value::Tuple(ambiguous_effective), "effective").unwrap(),
+            Value::Null
+        );
+
+        // Count matching wire fields before conversion: a malformed second
+        // temporal field must make the logical choice ambiguous rather than
+        // disappearing during conversion.
+        let mut malformed_second_effective = BTreeMap::new();
+        malformed_second_effective.insert(
+            "effectiveDateTime".to_string(),
+            Value::String("2026-06-15T09:20:00Z".to_string()),
+        );
+        malformed_second_effective.insert(
+            "effectiveDate".to_string(),
+            Value::String("not-a-fhir-date".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(malformed_second_effective), "effective").unwrap(),
+            Value::Null
+        );
+
+        let onset_period = Value::Tuple(BTreeMap::from([(
+            "start".to_string(),
+            Value::String("2009-01-16T08:30:00Z".to_string()),
+        )]));
+        assert_eq!(
+            resolve_property(
+                Value::Tuple(BTreeMap::from([(
+                    "onsetPeriod".to_string(),
+                    onset_period.clone(),
+                )])),
+                "onset",
+            )
+            .unwrap(),
+            onset_period
+        );
+
+        let mut unrelated = BTreeMap::new();
+        unrelated.insert("fooBar".to_string(), Value::Integer(1));
+        assert_eq!(
+            resolve_property(Value::Tuple(unrelated), "foo").unwrap(),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn cqframework_elm_effective_datetime_as_fhir_datetime_reaches_to_datetime() {
+        // This is the translated ELM shape for
+        // `FHIRHelpers.ToDateTime(O.effective as FHIR.dateTime)`: logical
+        // choice access, followed by an FHIR type cast and conversion.
+        let expr = Expression::ToDateTime(UnaryExpression {
+            operand: Some(Box::new(Expression::As(AsExpr {
+                operand: Some(Box::new(Expression::Property(Property {
+                    source: Some(Box::new(Expression::Tuple(TupleExpr {
+                        elements: vec![TupleElement {
+                            name: Some("effectiveDateTime".to_string()),
+                            value: Some(Box::new(Expression::Literal(Literal {
+                                value: Some("2026-06-15T09:20:00Z".to_string()),
+                                value_type: Some("String".to_string()),
+                                ..Default::default()
+                            }))),
+                        }],
+                        ..Default::default()
+                    }))),
+                    path: Some("effective".to_string()),
+                    ..Default::default()
+                }))),
+                as_type: Some("{http://hl7.org/fhir}dateTime".to_string()),
+                ..Default::default()
+            }))),
+            ..Default::default()
+        });
+        let lib = make_library("Effective", expr);
+        assert_eq!(
+            evaluate_elm(&lib, "Effective", &fixed_ctx()).unwrap(),
+            Value::DateTime(crate::eval::value::CqlDateTime {
+                year: 2026,
+                month: Some(6),
+                day: Some(15),
+                hour: Some(9),
+                minute: Some(20),
+                second: Some(0),
+                millisecond: None,
+                offset_seconds: Some(0),
+            })
+        );
+    }
+
+    #[test]
+    fn fhir_primitive_value_access_preserves_false_and_zero() {
+        assert_eq!(
+            resolve_property(Value::Boolean(false), "value").unwrap(),
+            Value::Boolean(false)
+        );
+        assert_eq!(
+            resolve_property(Value::Integer(0), "value").unwrap(),
+            Value::Integer(0)
+        );
+    }
+
+    #[test]
+    fn fhir_model_paths_traverse_primitive_value_without_changing_exact_precedence() {
+        let mut patient = BTreeMap::new();
+        patient.insert(
+            "birthDate".to_string(),
+            Value::String("1961-06-16".to_string()),
+        );
+        assert_eq!(
+            resolve_property(Value::Tuple(patient), "birthDate.value").unwrap(),
+            Value::Date(crate::eval::value::CqlDate {
+                year: 1961,
+                month: Some(6),
+                day: Some(16),
+            })
+        );
+    }
+
+    #[test]
+    fn calculate_age_uses_month_precision_from_reference_elm_shape() {
+        let birth = Expression::Literal(Literal {
+            value: Some("2020-01-15".to_string()),
+            value_type: Some("Date".to_string()),
+            ..Default::default()
+        });
+        let expr = Expression::CalculateAge(UnaryExpression {
+            operand: Some(Box::new(birth)),
+            precision: Some("Month".to_string()),
+            ..Default::default()
+        });
+        let lib = make_library("Age", expr);
+        let clock = FixedClock::new(CqlDateTime {
+            year: 2020,
+            month: Some(3),
+            day: Some(14),
+            hour: Some(0),
+            minute: Some(0),
+            second: Some(0),
+            millisecond: None,
+            offset_seconds: None,
+        });
+        let ctx = EvalContextBuilder::new(clock).build();
+        assert_eq!(evaluate_elm(&lib, "Age", &ctx).unwrap(), Value::Integer(1));
+    }
+
+    #[test]
+    fn calculate_age_at_uses_elapsed_years_from_reference_elm_shape() {
+        let date = |value: &str| {
+            Expression::Literal(Literal {
+                value: Some(value.to_string()),
+                value_type: Some("Date".to_string()),
+                ..Default::default()
+            })
+        };
+        let expr = Expression::CalculateAgeAt(BinaryExpression {
+            operand: vec![date("1961-06-16"), date("2026-06-15")],
+            precision: Some("Year".to_string()),
+            ..Default::default()
+        });
+        let lib = make_library("Age", expr);
+        assert_eq!(
+            evaluate_elm(&lib, "Age", &fixed_ctx()).unwrap(),
+            Value::Integer(64)
+        );
+    }
+
+    #[test]
+    fn calculate_age_at_function_ref_uses_elapsed_years() {
+        // CQFramework's FHIR 4.0.1 model translates the portable CQL form
+        // `CalculateAgeAt(Patient.birthDate.value, asOf)` to a FunctionRef,
+        // rather than to the precision-bearing CalculateAgeAt ELM operator.
+        use crate::elm::FunctionRef;
+
+        let date = |value: &str| {
+            Expression::Literal(Literal {
+                value: Some(value.to_string()),
+                value_type: Some("Date".to_string()),
+                ..Default::default()
+            })
+        };
+        let expr = Expression::FunctionRef(FunctionRef {
+            name: Some("CalculateAgeAt".to_string()),
+            operand: vec![
+                date("1961-06-16"),
+                Expression::ToDateTime(UnaryExpression {
+                    operand: Some(Box::new(date("2026-06-15"))),
+                    ..Default::default()
+                }),
+            ],
+            ..Default::default()
+        });
+        let lib = make_library("Age", expr);
+        assert_eq!(
+            evaluate_elm(&lib, "Age", &fixed_ctx()).unwrap(),
+            Value::Integer(64)
+        );
     }
 
     #[test]
@@ -3155,6 +3789,41 @@ mod tests {
     }
 
     #[test]
+    fn evaluate_elm_with_libraries_and_trace_resolves_cross_library_expression_ref() {
+        let helpers_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Answer".to_string()),
+                    expression: Some(Box::new(int_literal(42))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let main_lib = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![StatementDef::Expression(ExpressionDef {
+                    name: Some("Main".to_string()),
+                    expression: Some(Box::new(Expression::ExpressionRef(ExpressionRef {
+                        name: Some("Answer".to_string()),
+                        library_name: Some("FHIRCommon".to_string()),
+                        ..Default::default()
+                    }))),
+                    ..Default::default()
+                })],
+            }),
+            ..Default::default()
+        };
+        let included: HashMap<String, Library> = [("FHIRCommon".to_string(), helpers_lib)]
+            .into_iter()
+            .collect();
+        let (value, _trace) =
+            evaluate_elm_with_libraries_and_trace(&main_lib, &included, "Main", &fixed_ctx())
+                .unwrap();
+        assert_eq!(value, Value::Integer(42));
+    }
+
+    #[test]
     fn evaluate_elm_with_libraries_returns_library_not_found_for_unknown_alias() {
         let main_lib = Library {
             statements: Some(ExpressionDefs {
@@ -3228,5 +3897,52 @@ mod tests {
 
         let value = evaluate_elm_with_libraries(&main, &included, "Main", &fixed_ctx()).unwrap();
         assert_eq!(value, Value::Integer(2));
+    }
+
+    #[test]
+    fn cross_library_function_ref_uses_runtime_type_when_signature_is_absent() {
+        let overload = |operand_type: &str, result: i64| {
+            StatementDef::Function(FunctionDef {
+                name: Some("ToInterval".to_string()),
+                operand: vec![OperandDef {
+                    name: Some("value".to_string()),
+                    operand_type_name: Some(format!("{{http://hl7.org/fhir}}{operand_type}")),
+                    ..Default::default()
+                }],
+                expression: Some(Box::new(int_literal(result))),
+                ..Default::default()
+            })
+        };
+        let helpers = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![overload("Period", 1), overload("Range", 2)],
+            }),
+            ..Default::default()
+        };
+        let period = Expression::Tuple(TupleExpr {
+            elements: vec![TupleElement {
+                name: Some("start".to_string()),
+                value: Some(Box::new(Expression::Literal(Literal {
+                    value: Some("2026-01-01T00:00:00Z".to_string()),
+                    value_type: Some("String".to_string()),
+                    ..Default::default()
+                }))),
+            }],
+            ..Default::default()
+        });
+        let main = make_library(
+            "Main",
+            Expression::FunctionRef(FunctionRef {
+                name: Some("ToInterval".to_string()),
+                library_name: Some("Helpers".to_string()),
+                operand: vec![period],
+                ..Default::default()
+            }),
+        );
+        let included = [("Helpers".to_string(), helpers)].into_iter().collect();
+
+        let value = evaluate_elm_with_libraries(&main, &included, "Main", &fixed_ctx()).unwrap();
+
+        assert_eq!(value, Value::Integer(1));
     }
 }

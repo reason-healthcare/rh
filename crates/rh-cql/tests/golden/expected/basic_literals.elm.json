@@ -11,93 +11,101 @@
     "statements": {
       "def": [
         {
-          "name": "IntLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Literal",
             "localId": "1",
             "locator": "0-0:0-0",
-            "valueType": "{urn:hl7-org:elm-types:r1}Integer",
-            "value": "42"
-          }
+            "type": "Literal",
+            "value": "42",
+            "valueType": "{urn:hl7-org:elm-types:r1}Integer"
+          },
+          "name": "IntLiteral",
+          "type": "ExpressionDef"
         },
         {
-          "name": "NegIntLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Negate",
             "localId": "2",
             "locator": "0-0:0-0",
             "operand": {
               "type": "Literal",
-              "valueType": "{urn:hl7-org:elm-types:r1}Integer",
-              "value": "7"
-            }
-          }
+              "value": "7",
+              "valueType": "{urn:hl7-org:elm-types:r1}Integer"
+            },
+            "type": "Negate"
+          },
+          "name": "NegIntLiteral",
+          "type": "ExpressionDef"
         },
         {
-          "name": "DecimalLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Literal",
             "localId": "3",
             "locator": "0-0:0-0",
-            "valueType": "{urn:hl7-org:elm-types:r1}Decimal",
-            "value": "3.14"
-          }
+            "type": "Literal",
+            "value": "3.14",
+            "valueType": "{urn:hl7-org:elm-types:r1}Decimal"
+          },
+          "name": "DecimalLiteral",
+          "type": "ExpressionDef"
         },
         {
-          "name": "StrLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Literal",
             "localId": "4",
             "locator": "0-0:0-0",
-            "valueType": "{urn:hl7-org:elm-types:r1}String",
-            "value": "hello world"
-          }
+            "type": "Literal",
+            "value": "hello world",
+            "valueType": "{urn:hl7-org:elm-types:r1}String"
+          },
+          "name": "StrLiteral",
+          "type": "ExpressionDef"
         },
         {
-          "name": "EmptyStr",
           "accessLevel": "Public",
           "expression": {
-            "type": "Literal",
             "localId": "5",
             "locator": "0-0:0-0",
-            "valueType": "{urn:hl7-org:elm-types:r1}String",
-            "value": ""
-          }
+            "type": "Literal",
+            "value": "",
+            "valueType": "{urn:hl7-org:elm-types:r1}String"
+          },
+          "name": "EmptyStr",
+          "type": "ExpressionDef"
         },
         {
-          "name": "TrueLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Literal",
             "localId": "6",
             "locator": "0-0:0-0",
-            "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
-            "value": "true"
-          }
+            "type": "Literal",
+            "value": "true",
+            "valueType": "{urn:hl7-org:elm-types:r1}Boolean"
+          },
+          "name": "TrueLiteral",
+          "type": "ExpressionDef"
         },
         {
-          "name": "FalseLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Literal",
             "localId": "7",
             "locator": "0-0:0-0",
-            "valueType": "{urn:hl7-org:elm-types:r1}Boolean",
-            "value": "false"
-          }
+            "type": "Literal",
+            "value": "false",
+            "valueType": "{urn:hl7-org:elm-types:r1}Boolean"
+          },
+          "name": "FalseLiteral",
+          "type": "ExpressionDef"
         },
         {
-          "name": "NullLiteral",
           "accessLevel": "Public",
           "expression": {
-            "type": "Null",
             "localId": "8",
-            "locator": "0-0:0-0"
-          }
+            "locator": "0-0:0-0",
+            "type": "Null"
+          },
+          "name": "NullLiteral",
+          "type": "ExpressionDef"
         }
       ]
     },

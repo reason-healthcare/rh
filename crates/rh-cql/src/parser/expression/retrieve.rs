@@ -28,12 +28,20 @@ pub(crate) fn parse_retrieve(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     // 1. [Type] - no codes
     // 2. [Type: codesExpression] - codes with default code path
     // 3. [Type: codePath in codesExpression] - explicit code path
+    // 4. [Type: codePath ~ codeExpression] - explicit equivalent code path
     let (input, code_info) = opt(preceded(
         ws(char(':')),
         alt((
             // Form 3: codePath in codesExpression
             map(
                 tuple((any_identifier, ws(keyword("in")), expression)),
+                |(path, _, codes_expr)| (Some(path), codes_expr),
+            ),
+            // Form 4: codePath ~ codeExpression. CQL's equivalent operator is
+            // commonly used with a declared code, for example
+            // `[Encounter: class ~ "Ambulatory"]`.
+            map(
+                tuple((any_identifier, ws(char('~')), expression)),
                 |(path, _, codes_expr)| (Some(path), codes_expr),
             ),
             // Form 2: just codesExpression (default code path)
@@ -143,5 +151,23 @@ fn parse_qualified_type_name(input: Span<'_>) -> IResult<Span<'_>, (Option<Strin
         let name = parts.pop().unwrap();
         let namespace = parts.join(".");
         Ok((input, (Some(namespace), name)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_retrieve;
+    use crate::parser::ast::Expression;
+    use crate::parser::span::Span;
+
+    #[test]
+    fn parses_equivalent_operator_with_an_explicit_code_path() {
+        let (_, expression) = parse_retrieve(Span::new("[Encounter: class ~ \"Ambulatory\"]"))
+            .expect("retrieve parses");
+        let Expression::Retrieve(retrieve) = expression else {
+            panic!("expected retrieve");
+        };
+        assert_eq!(retrieve.code_path.as_deref(), Some("class"));
+        assert!(retrieve.codes.is_some());
     }
 }

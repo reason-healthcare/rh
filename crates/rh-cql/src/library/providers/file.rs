@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use rh_foundation::{MemoryStore, MemoryStoreConfig};
+use serde::Deserialize;
 
 use super::LibrarySourceProvider;
 use crate::library::identifiers::LibraryIdentifier;
@@ -24,7 +25,7 @@ use crate::library::sources::LibrarySource;
 ///     .with_path("./cql")
 ///     .with_path("./libs");
 ///
-/// // Will search for Common.cql or Common-1.0.0.cql in ./cql and ./libs
+/// // Will search for Common-1.0.0.cql in ./cql and ./libs
 /// let id = LibraryIdentifier::new("Common", Some("1.0.0"));
 /// let source = provider.get_source(&id);
 /// ```
@@ -93,7 +94,9 @@ impl FileLibrarySourceProvider {
             ));
         }
 
-        // Then try unversioned: LibraryName.cql
+        // CQL publishers commonly use an unversioned filename even when the
+        // library declaration is versioned. The loader validates the declared
+        // identity before accepting this fallback for a version-pinned include.
         names.push(format!("{}.{}", identifier.name, self.extension));
 
         names
@@ -109,6 +112,19 @@ impl FileLibrarySourceProvider {
                 if file_path.exists() {
                     match std::fs::read_to_string(&file_path) {
                         Ok(content) => {
+                            if let Some(expected_version) = identifier.version.as_deref() {
+                                let declared = crate::parser::statement::parse_library_identifier(
+                                    crate::parser::span::Span::new(&content),
+                                )
+                                .ok()
+                                .map(|(_, declared)| declared);
+                                if !declared.is_some_and(|declared| {
+                                    declared.name == identifier.name
+                                        && declared.version.as_deref() == Some(expected_version)
+                                }) {
+                                    continue;
+                                }
+                            }
                             let location = file_path.to_string_lossy().to_string();
                             return Some(LibrarySource::new(
                                 identifier.clone(),
@@ -123,6 +139,67 @@ impl FileLibrarySourceProvider {
         }
 
         None
+    }
+
+    fn load_precompiled_elm(
+        &self,
+        identifier: &LibraryIdentifier,
+    ) -> Result<Option<crate::elm::Library>, String> {
+        let Some(version) = identifier.version.as_deref() else {
+            return Ok(None);
+        };
+        let filename = format!("{}-{}.json", identifier.name, version);
+        let candidates: Vec<PathBuf> = self
+            .paths
+            .iter()
+            .map(|path| path.join("elm").join(&filename))
+            .filter(|path| path.is_file())
+            .collect();
+        if candidates.len() > 1 {
+            return Err(format!(
+                "ambiguous precompiled ELM dependency for {identifier}: {}",
+                candidates
+                    .iter()
+                    .map(|path| path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        let Some(path) = candidates.first() else {
+            return Ok(None);
+        };
+        let contents = std::fs::read_to_string(path).map_err(|error| {
+            format!(
+                "cannot read precompiled ELM dependency {}: {error}",
+                path.display()
+            )
+        })?;
+        #[derive(Deserialize)]
+        struct ElmDocument {
+            library: crate::elm::Library,
+        }
+        let document: ElmDocument = serde_json::from_str(&contents).map_err(|error| {
+            format!(
+                "invalid precompiled ELM dependency {}: {error}",
+                path.display()
+            )
+        })?;
+        let matched = document
+            .library
+            .identifier
+            .as_ref()
+            .and_then(|identity| identity.id.as_deref().zip(identity.version.as_deref()))
+            .is_some_and(|(name, actual_version)| {
+                name == identifier.name && actual_version == version
+            });
+        if !matched {
+            return Err(format!(
+                "precompiled ELM dependency {} does not declare exact identifier {}",
+                path.display(),
+                identifier
+            ));
+        }
+        Ok(Some(document.library))
     }
 }
 
@@ -144,23 +221,20 @@ impl LibrarySourceProvider for FileLibrarySourceProvider {
         None
     }
 
+    fn get_precompiled_elm(
+        &self,
+        identifier: &LibraryIdentifier,
+    ) -> Result<Option<crate::elm::Library>, String> {
+        self.load_precompiled_elm(identifier)
+    }
+
     fn has_library(&self, identifier: &LibraryIdentifier) -> bool {
         // Check cache
         if self.cache.contains(&identifier.to_key()) {
             return true;
         }
 
-        // Check filesystem
-        let filenames = self.possible_filenames(identifier);
-        for search_path in &self.paths {
-            for filename in &filenames {
-                if search_path.join(filename).exists() {
-                    return true;
-                }
-            }
-        }
-
-        false
+        self.load_from_disk(identifier).is_some()
     }
 
     fn list_libraries(&self) -> Vec<LibraryIdentifier> {
@@ -198,5 +272,261 @@ impl LibrarySourceProvider for FileLibrarySourceProvider {
         }
 
         libraries
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::elm::{Library, VersionedIdentifier};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("rh-cql-{name}-{nonce}"))
+    }
+
+    fn write_elm(root: &Path, name: &str, version: &str, declared_name: &str) {
+        let path = root.join("elm");
+        std::fs::create_dir_all(&path).expect("create elm directory");
+        let library = Library {
+            identifier: Some(VersionedIdentifier {
+                id: Some(declared_name.to_string()),
+                version: Some(version.to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        std::fs::write(
+            path.join(format!("{name}-{version}.json")),
+            serde_json::json!({ "library": library }).to_string(),
+        )
+        .expect("write elm");
+    }
+
+    #[test]
+    fn versioned_source_lookup_accepts_unversioned_filename_with_exact_identity() {
+        let root = temp_dir("source-unversioned-filename");
+        std::fs::create_dir_all(&root).expect("create temp directory");
+        std::fs::write(
+            root.join("Helper.cql"),
+            "library Helper version '1.0.0' define Answer: 42",
+        )
+        .expect("write source");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let identifier = LibraryIdentifier::new("Helper", Some("1.0.0"));
+
+        let source = provider
+            .get_source(&identifier)
+            .expect("exact declared identity should load");
+
+        assert!(source.location.unwrap().ends_with("Helper.cql"));
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn versioned_source_lookup_rejects_unversioned_filename_with_wrong_identity() {
+        let root = temp_dir("source-wrong-identity");
+        std::fs::create_dir_all(&root).expect("create temp directory");
+        std::fs::write(
+            root.join("Helper.cql"),
+            "library Helper version '2.0.0' define Answer: 42",
+        )
+        .expect("write source");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let identifier = LibraryIdentifier::new("Helper", Some("1.0.0"));
+
+        assert!(provider.get_source(&identifier).is_none());
+        assert!(!provider.has_library(&identifier));
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn precompiled_elm_requires_exact_versioned_identity() {
+        let root = temp_dir("precompiled-mismatch");
+        write_elm(&root, "Helper", "1.0.0", "Other");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let result = provider.get_precompiled_elm(&LibraryIdentifier::new("Helper", Some("1.0.0")));
+        assert!(
+            matches!(result, Err(message) if message.contains("does not declare exact identifier"))
+        );
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn precompiled_elm_is_versioned_only() {
+        let root = temp_dir("precompiled-unversioned");
+        write_elm(&root, "Helper", "1.0.0", "Helper");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        assert!(provider
+            .get_precompiled_elm(&LibraryIdentifier::unversioned("Helper"))
+            .expect("unversioned lookup is not an error")
+            .is_none());
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn precompiled_elm_loads_exact_versioned_document() {
+        let root = temp_dir("precompiled-valid");
+        write_elm(&root, "Helper", "1.0.0", "Helper");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let library = provider
+            .get_precompiled_elm(&LibraryIdentifier::new("Helper", Some("1.0.0")))
+            .expect("valid precompiled dependency")
+            .expect("versioned ELM found");
+        assert_eq!(library.identifier.unwrap().id.as_deref(), Some("Helper"));
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn malformed_selected_precompiled_elm_does_not_fall_back_to_source() {
+        let root = temp_dir("precompiled-no-fallback");
+        std::fs::create_dir_all(&root).expect("create temp directory");
+        std::fs::write(
+            root.join("Helper-1.0.0.cql"),
+            "library Helper version '1.0.0' define Answer: 42",
+        )
+        .expect("write source fallback candidate");
+        write_elm(&root, "Helper", "1.0.0", "Other");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let main = "library Main version '1.0.0' include Helper version '1.0.0' called H define X: H.Answer";
+        let result = crate::compile_with_libraries(main, None, &provider);
+        assert!(
+            matches!(result, Err(crate::CompilationError::PrecompiledLibrary(message)) if message.contains("does not declare exact identifier"))
+        );
+        std::fs::remove_dir_all(root).expect("remove temp directory");
+    }
+
+    #[test]
+    fn fluent_call_to_precompiled_function_preserves_receiver_alias_and_signature() {
+        let root = temp_dir("precompiled-fluent");
+        let elm_dir = root.join("elm");
+        std::fs::create_dir_all(&elm_dir).expect("create elm directory");
+        let named_type = |name: &str| {
+            crate::elm::TypeSpecifier::Named(crate::elm::NamedTypeSpecifier {
+                name: name.to_string(),
+                ..Default::default()
+            })
+        };
+        let helper = Library {
+            identifier: Some(VersionedIdentifier {
+                id: Some("Helper".into()),
+                version: Some("1.0.0".into()),
+                ..Default::default()
+            }),
+            statements: Some(crate::elm::ExpressionDefs {
+                defs: vec![
+                    crate::elm::StatementDef::Function(crate::elm::FunctionDef {
+                        name: Some("references".into()),
+                        fluent: Some(true),
+                        operand: vec![
+                            crate::elm::OperandDef {
+                                name: Some("reference".into()),
+                                operand_type_specifier: Some(named_type(
+                                    "{urn:hl7-org:elm-types:r1}String",
+                                )),
+                                ..Default::default()
+                            },
+                            crate::elm::OperandDef {
+                                name: Some("resource".into()),
+                                operand_type_specifier: Some(named_type(
+                                    "{urn:hl7-org:elm-types:r1}String",
+                                )),
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    }),
+                    crate::elm::StatementDef::Function(crate::elm::FunctionDef {
+                        name: Some("references".into()),
+                        fluent: Some(true),
+                        operand: vec![
+                            crate::elm::OperandDef {
+                                name: Some("reference".into()),
+                                operand_type_specifier: Some(named_type(
+                                    "{urn:hl7-org:elm-types:r1}String",
+                                )),
+                                ..Default::default()
+                            },
+                            crate::elm::OperandDef {
+                                name: Some("resource".into()),
+                                operand_type_specifier: Some(named_type(
+                                    "{urn:hl7-org:elm-types:r1}Integer",
+                                )),
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    }),
+                ],
+            }),
+            ..Default::default()
+        };
+        std::fs::write(
+            elm_dir.join("Helper-1.0.0.json"),
+            serde_json::json!({ "library": helper }).to_string(),
+        )
+        .expect("write helper ELM");
+        let provider = FileLibrarySourceProvider::new().with_path(&root);
+        let main = "library Main version '1.0.0' include Helper version '1.0.0' define X: 'ref'.references('resource')";
+        let output = crate::compile_with_libraries(main, None, &provider)
+            .expect("compile with precompiled helper");
+        let defs = &output.result.library.statements.expect("statements").defs;
+        let crate::elm::StatementDef::Expression(definition) = &defs[0] else {
+            panic!("expected expression definition");
+        };
+        let Some(expression) = &definition.expression else {
+            panic!("expected expression body");
+        };
+        let crate::elm::Expression::FunctionRef(call) = expression.as_ref() else {
+            panic!("expected emitted FunctionRef");
+        };
+        assert_eq!(call.library_name.as_deref(), Some("Helper"));
+        assert_eq!(call.operand.len(), 2);
+        assert_eq!(call.signature.len(), 2);
+        assert_eq!(
+            call.signature[0],
+            named_type("{urn:hl7-org:elm-types:r1}String")
+        );
+        assert_eq!(
+            call.signature[1],
+            named_type("{urn:hl7-org:elm-types:r1}String")
+        );
+
+        let qualified = "library Main version '1.0.0' include Helper version '1.0.0' define X: Helper.references('ref', 'resource')";
+        let output = crate::compile_with_libraries(qualified, None, &provider)
+            .expect("compile qualified imported helper");
+        let defs = &output.result.library.statements.expect("statements").defs;
+        let crate::elm::StatementDef::Expression(definition) = &defs[0] else {
+            panic!("expected expression definition");
+        };
+        let Some(expression) = &definition.expression else {
+            panic!("expected expression body");
+        };
+        let crate::elm::Expression::FunctionRef(call) = expression.as_ref() else {
+            panic!("expected emitted FunctionRef");
+        };
+        assert_eq!(call.library_name.as_deref(), Some("Helper"));
+        assert_eq!(
+            call.signature[1],
+            named_type("{urn:hl7-org:elm-types:r1}String")
+        );
+
+        let unresolved = "library Main version '1.0.0' include Helper version '1.0.0' define X: missing.value.references('resource')";
+        let unresolved = crate::compile_with_libraries(unresolved, None, &provider)
+            .expect("analysis reports unresolved fluent function as a diagnostic");
+        assert!(
+            !unresolved.result.is_success()
+                && unresolved
+                    .result
+                    .errors
+                    .iter()
+                    .any(|error| error.message.contains("declared imported overload")),
+            "unresolved fluent calls must fail rather than emit an unqualified FunctionRef"
+        );
+        std::fs::remove_dir_all(root).expect("remove temp directory");
     }
 }

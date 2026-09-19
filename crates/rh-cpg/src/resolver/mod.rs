@@ -1,8 +1,57 @@
 use std::collections::{HashMap, HashSet};
 
-use serde_json::Value;
+use serde_json::{json, Map, Value};
 
 use crate::error::{CpgError, CpgResult};
+
+/// Convert tolerant content input into a FHIR collection Bundle.
+pub fn as_content_bundle(value: Value) -> CpgResult<Value> {
+    if value.get("resourceType").and_then(Value::as_str) == Some("Bundle") {
+        return Ok(value);
+    }
+
+    let resources = match value {
+        Value::Array(resources) => resources,
+        Value::Object(_) => vec![value],
+        Value::Null => {
+            return Err(CpgError::InvalidResource(
+                "content JSON must contain resources".to_string(),
+            ))
+        }
+        other => {
+            return Err(CpgError::InvalidResource(format!(
+                "content JSON must be a Bundle, resource object, or resource array; got {}",
+                json_type_name(&other)
+            )))
+        }
+    };
+
+    let entries: Vec<Value> = resources
+        .into_iter()
+        .map(|resource| {
+            let mut entry = Map::new();
+            entry.insert("resource".to_string(), resource);
+            Value::Object(entry)
+        })
+        .collect();
+
+    Ok(json!({
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": entries,
+    }))
+}
+
+fn json_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
 
 pub trait ContentResolver: Send + Sync {
     /// Resolve a resource by canonical URL (e.g. "http://example.org/PlanDefinition/x|1.0").
@@ -18,11 +67,12 @@ pub trait ContentResolver: Send + Sync {
 
 #[derive(Debug, Default)]
 pub struct BundleResolver {
-    /// Resources keyed by their exact canonical identity. Versioned resources
-    /// are only present as `url|version` so an unavailable requested version
-    /// cannot silently resolve to a different artifact.
+    /// Resources indexed by an exact canonical. Versioned resources are keyed
+    /// only by `url|version` so a request for an unavailable version cannot
+    /// silently resolve to another version.
     canonical: HashMap<String, Value>,
-    /// Unversioned lookup is available only when a URL identifies one resource.
+    /// A canonical URL can be used without a version only while it identifies
+    /// exactly one resource in the content Bundle.
     unversioned_canonical: HashMap<String, Value>,
     ambiguous_unversioned_canonical: HashSet<String>,
     references: HashMap<String, Value>,

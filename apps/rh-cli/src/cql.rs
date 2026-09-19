@@ -12,6 +12,8 @@ use crate::output::{
     error_envelope, Envelope, EnvelopeError, ExitCode, OutputContext, OutputFormat,
 };
 
+use rh_cpg::context::{parse_cql_datetime, MeasurementPeriod};
+use rh_cpg::fhir_to_cql::fhir_to_cql_value;
 use rh_cql::analytics::{
     data_requirements, emit_measure_runtime_manifest, emit_sql_query_library, emit_sql_text,
     emit_view_definitions, format_data_requirements, format_dependencies, format_elm_inspection,
@@ -22,11 +24,11 @@ use rh_cql::analytics::{
 use rh_cql::options::CompilerOption;
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
-    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_trace, explain_compile,
-    explain_parse, get_default_packages_dir, CompilationError, CompilationResult, CompilerOptions,
-    CqlDateTime, Diagnostic, EvalContextBuilder, EvalError, FileLibrarySourceProvider, FixedClock,
-    InMemoryDataProvider, InMemoryTerminologyProvider, PackageLibrarySourceProvider,
-    SignatureLevel, SourceMapCompilationResult, Value,
+    elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_libraries_and_trace,
+    explain_compile, explain_parse, get_default_packages_dir, CompilationError, CompilationResult,
+    CompilerOptions, CqlCode, CqlDateTime, Diagnostic, EvalContextBuilder, EvalError,
+    FileLibrarySourceProvider, FixedClock, InMemoryDataProvider, InMemoryTerminologyProvider,
+    PackageLibrarySourceProvider, SignatureLevel, SourceMapCompilationResult, Value,
 };
 
 #[derive(Serialize)]
@@ -370,6 +372,32 @@ pub enum CqlCommands {
         #[clap(long, value_name = "FILE")]
         data: Option<String>,
 
+        /// ValueSet JSON or Bundle JSON containing complete ValueSet expansions.
+        /// May be specified multiple times. The input is used only for CQL
+        /// terminology membership; patient data remains supplied by --data.
+        #[clap(long, value_name = "FILE", num_args = 1, conflicts_with = "valuesets")]
+        terminology: Vec<PathBuf>,
+
+        /// Subject reference used to select the CQL context resource from --data.
+        #[clap(long)]
+        subject: Option<String>,
+
+        /// RFC 3339 date-time or FHIR date used for deterministic CQL evaluation.
+        #[clap(long)]
+        evaluation_date: Option<String>,
+
+        /// Inclusive Measurement Period start as an RFC 3339 date-time or FHIR date.
+        #[clap(long, requires = "measurement_period_end")]
+        measurement_period_start: Option<String>,
+
+        /// Inclusive Measurement Period end as an RFC 3339 date-time or FHIR date.
+        #[clap(long, requires = "measurement_period_start")]
+        measurement_period_end: Option<String>,
+
+        /// Additional CQL parameter as NAME=JSON. May be specified multiple times.
+        #[clap(long, value_name = "NAME=JSON")]
+        parameter: Vec<String>,
+
         /// Additional directory to search for included CQL libraries.
         /// May be specified multiple times.  The input file's directory is
         /// always searched automatically.
@@ -522,6 +550,12 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             file,
             expression,
             data,
+            terminology,
+            subject,
+            evaluation_date,
+            measurement_period_start,
+            measurement_period_end,
+            parameter,
             lib_path,
             valuesets,
             trace,
@@ -529,10 +563,17 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             eval_cql(
                 &file,
                 &expression,
-                data.as_deref(),
-                &lib_path,
-                valuesets.as_deref(),
-                trace,
+                EvalCqlOptions {
+                    data: data.as_deref(),
+                    terminology_paths: &terminology,
+                    subject: subject.as_deref(),
+                    evaluation_date: evaluation_date.as_deref(),
+                    measurement_period: measurement_period_start.zip(measurement_period_end),
+                    parameters: &parameter,
+                    lib_paths: &lib_path,
+                    valuesets_path: valuesets.as_deref(),
+                    show_trace: trace,
+                },
             )?;
         }
     }
@@ -1610,15 +1651,31 @@ fn compile_with_search_dirs_and_sourcemap(
 // Eval service
 // ---------------------------------------------------------------------------
 
-/// Evaluate a named expression in a CQL library
-fn eval_cql(
-    input: &str,
-    expression: &str,
-    data: Option<&str>,
-    lib_paths: &[PathBuf],
-    valuesets_path: Option<&str>,
+struct EvalCqlOptions<'a> {
+    data: Option<&'a str>,
+    terminology_paths: &'a [PathBuf],
+    subject: Option<&'a str>,
+    evaluation_date: Option<&'a str>,
+    measurement_period: Option<(String, String)>,
+    parameters: &'a [String],
+    lib_paths: &'a [PathBuf],
+    valuesets_path: Option<&'a str>,
     show_trace: bool,
-) -> Result<()> {
+}
+
+/// Evaluate a named expression in a CQL library.
+fn eval_cql(input: &str, expression: &str, options: EvalCqlOptions<'_>) -> Result<()> {
+    let EvalCqlOptions {
+        data,
+        terminology_paths,
+        subject,
+        evaluation_date,
+        measurement_period,
+        parameters,
+        lib_paths,
+        valuesets_path,
+        show_trace,
+    } = options;
     let source = read_source(input)?;
 
     // Compile to ELM, resolving any included libraries.
@@ -1630,23 +1687,49 @@ fn eval_cql(
         ));
     }
 
-    // Build a minimal EvalContext pinned to the current system time
-    let now = {
-        use chrono::{Datelike, Local, Timelike};
-        let t = Local::now();
-        CqlDateTime {
-            year: t.year(),
-            month: Some(t.month() as u8),
-            day: Some(t.day() as u8),
-            hour: Some(t.hour() as u8),
-            minute: Some(t.minute() as u8),
-            second: Some(t.second() as u8),
-            millisecond: Some(t.timestamp_subsec_millis()),
-            offset_seconds: Some(t.offset().local_minus_utc()),
-        }
-    };
+    // Keep the historical current-time default while allowing a reproducible
+    // clock to be supplied by fixture and automated execution callers.
+    let now = evaluation_date
+        .map(parse_cql_datetime)
+        .transpose()?
+        .unwrap_or_else(|| {
+            use chrono::{Datelike, Local, Timelike};
+            let t = Local::now();
+            CqlDateTime {
+                year: t.year(),
+                month: Some(t.month() as u8),
+                day: Some(t.day() as u8),
+                hour: Some(t.hour() as u8),
+                minute: Some(t.minute() as u8),
+                second: Some(t.second() as u8),
+                millisecond: Some(t.timestamp_subsec_millis()),
+                offset_seconds: Some(t.offset().local_minus_utc()),
+            }
+        });
 
     let mut builder = EvalContextBuilder::new(FixedClock::new(now));
+
+    for parameter in parameters {
+        let (name, json) = parameter
+            .split_once('=')
+            .with_context(|| format!("invalid --parameter '{parameter}': expected NAME=JSON"))?;
+        if name.is_empty() {
+            bail!("invalid --parameter '{parameter}': parameter name is required");
+        }
+        let value = serde_json::from_str(json).with_context(|| {
+            format!("invalid --parameter '{parameter}': value must be valid JSON")
+        })?;
+        builder = builder.parameter(name, fhir_to_cql_value(&value));
+    }
+    if let Some((start, end)) = measurement_period {
+        let period = MeasurementPeriod {
+            start,
+            end,
+            start_inclusive: true,
+            end_inclusive: true,
+        };
+        builder = builder.parameter("Measurement Period", period.as_cql_interval()?);
+    }
 
     if let Some(data_path) = data {
         // Determine the declared context type (e.g. "Patient") so that
@@ -1659,15 +1742,18 @@ fn eval_cql(
             .as_ref()
             .and_then(|c| c.defs.first())
             .and_then(|d| d.name.as_deref());
-        let (provider, context_value) = load_fhir_data(data_path, context_type)?;
+        let (provider, context_value) = load_fhir_data(data_path, context_type, subject)?;
         builder = builder.data_provider(provider);
         if let Some(cv) = context_value {
             builder = builder.context_value(cv);
         }
     }
 
-    // Load value set expansions from a JSON file if provided.
-    if let Some(vs_path) = valuesets_path {
+    if !terminology_paths.is_empty() {
+        builder = builder.terminology_provider(load_terminology(terminology_paths)?);
+    } else if let Some(vs_path) = valuesets_path {
+        // Retain the historical compact URL-to-code map input when the newer
+        // FHIR ValueSet/Bundle terminology input is not used.
         let vs_content = read_source(vs_path)?;
         let vs_json: serde_json::Value = serde_json::from_str(&vs_content)
             .context("Failed to parse value set expansions JSON")?;
@@ -1702,10 +1788,11 @@ fn eval_cql(
     let included = &output.included;
 
     if show_trace {
-        // Trace is only available for the main library; use evaluate_elm_with_trace
-        // for the trace view (cross-library refs will still be resolved for result).
-        let (value, trace) = evaluate_elm_with_trace(library, expression, &ctx)
-            .map_err(|e| enrich_eval_error(e, expression, library))?;
+        // Trace events remain scoped to the main library, but evaluation must use
+        // the same included-library closure as the non-trace path.
+        let (value, trace) =
+            evaluate_elm_with_libraries_and_trace(library, included, expression, &ctx)
+                .map_err(|e| enrich_eval_error(e, expression, library))?;
         println!("Result: {value}");
         println!();
         println!("Trace ({} events):", trace.len());
@@ -1728,6 +1815,232 @@ fn eval_cql(
     }
 
     Ok(())
+}
+
+/// Load complete FHIR ValueSet expansions for native CQL evaluation.
+///
+/// This mirrors the package-content terminology contract used by rh-cpg while
+/// keeping clinical data (`--data`) separate from knowledge content
+/// (`--terminology`). Versioned aliases are always registered. An unversioned
+/// alias is available only if exactly one version of the canonical was loaded.
+fn load_terminology(paths: &[PathBuf]) -> Result<InMemoryTerminologyProvider> {
+    type ValueSetVersions = Vec<(Option<String>, Vec<CqlCode>)>;
+
+    let mut valuesets: BTreeMap<String, ValueSetVersions> = BTreeMap::new();
+    let mut loaded_valuesets = 0usize;
+
+    for path in paths {
+        let source = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read terminology input {}", path.display()))?;
+        let document: serde_json::Value = serde_json::from_str(&source)
+            .with_context(|| format!("Failed to parse terminology JSON {}", path.display()))?;
+        let resources: Vec<&serde_json::Value> = if document
+            .get("resourceType")
+            .and_then(serde_json::Value::as_str)
+            == Some("Bundle")
+        {
+            document
+                .get("entry")
+                .and_then(serde_json::Value::as_array)
+                .map(|entries| {
+                    entries
+                        .iter()
+                        .filter_map(|entry| entry.get("resource"))
+                        .collect()
+                })
+                .unwrap_or_default()
+        } else {
+            vec![&document]
+        };
+
+        for value_set in resources {
+            if value_set
+                .get("resourceType")
+                .and_then(serde_json::Value::as_str)
+                != Some("ValueSet")
+            {
+                continue;
+            }
+            let url = value_set
+                .get("url")
+                .and_then(serde_json::Value::as_str)
+                .with_context(|| format!("ValueSet in {} is missing url", path.display()))?;
+            let expansion = value_set.get("expansion").with_context(|| {
+                format!(
+                    "ValueSet '{}' in {} has no complete expansion",
+                    url,
+                    path.display()
+                )
+            })?;
+            if expansion.get("offset").is_some() {
+                bail!(
+                    "ValueSet '{}' in {} is a paged expansion; --terminology accepts only complete unfiltered expansions",
+                    url,
+                    path.display()
+                );
+            }
+            // `used-codesystem` records provenance for a complete expansion;
+            // it is not an expansion filter. Permit exactly one well-formed
+            // canonical|version declaration and reject all other parameters.
+            let used_codesystem = match expansion.get("parameter") {
+                None => None,
+                Some(parameters) => {
+                    let parameters = parameters.as_array().with_context(|| {
+                        format!(
+                            "ValueSet '{}' in {} has non-array expansion.parameter",
+                            url,
+                            path.display()
+                        )
+                    })?;
+                    let parameter = parameters.first().and_then(serde_json::Value::as_object);
+                    if parameters.len() != 1
+                        || parameter.is_none_or(|object| {
+                            object.len() != 2
+                                || object.get("name").and_then(serde_json::Value::as_str)
+                                    != Some("used-codesystem")
+                                || !object.contains_key("valueUri")
+                        })
+                    {
+                        bail!(
+                            "ValueSet '{}' in {} has filtered or unsupported expansion.parameter; --terminology accepts only a single used-codesystem provenance parameter with name and valueUri",
+                            url,
+                            path.display()
+                        );
+                    }
+                    let value = parameters[0]
+                        .get("valueUri")
+                        .and_then(serde_json::Value::as_str)
+                        .with_context(|| {
+                            format!(
+                                "ValueSet '{}' in {} has used-codesystem without valueUri",
+                                url,
+                                path.display()
+                            )
+                        })?;
+                    let (system, version) = value
+                        .split_once('|')
+                        .filter(|(system, version)| {
+                            !system.is_empty() && !version.is_empty() && !version.contains('|')
+                        })
+                        .with_context(|| {
+                            format!(
+                                "ValueSet '{}' in {} has used-codesystem without canonical|version",
+                                url,
+                                path.display()
+                            )
+                        })?;
+                    Some((system.to_string(), version.to_string()))
+                }
+            };
+            let contains = value_set
+                .pointer("/expansion/contains")
+                .and_then(serde_json::Value::as_array)
+                .with_context(|| {
+                    format!(
+                        "ValueSet '{}' in {} has no complete expansion.contains",
+                        url,
+                        path.display()
+                    )
+                })?;
+            if expansion
+                .get("total")
+                .and_then(serde_json::Value::as_u64)
+                .is_some_and(|total| total != contains.len() as u64)
+            {
+                bail!(
+                    "ValueSet '{}' in {} has an incomplete expansion: total does not equal contains length",
+                    url,
+                    path.display()
+                );
+            }
+            let mut codes = Vec::with_capacity(contains.len());
+            for concept in contains {
+                if concept.get("contains").is_some() {
+                    bail!(
+                        "ValueSet '{}' in {} has a hierarchical expansion; --terminology accepts only flat complete expansions",
+                        url,
+                        path.display()
+                    );
+                }
+                let code = concept
+                    .get("code")
+                    .and_then(serde_json::Value::as_str)
+                    .with_context(|| {
+                        format!(
+                            "ValueSet '{}' in {} has expansion.contains without code",
+                            url,
+                            path.display()
+                        )
+                    })?;
+                let system = concept
+                    .get("system")
+                    .and_then(serde_json::Value::as_str)
+                    .with_context(|| {
+                        format!(
+                            "ValueSet '{}' in {} has expansion.contains without system",
+                            url,
+                            path.display()
+                        )
+                    })?;
+                codes.push(CqlCode {
+                    code: code.to_string(),
+                    system: system.to_string(),
+                    display: concept
+                        .get("display")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_string),
+                    version: concept
+                        .get("version")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_string),
+                });
+            }
+            if let Some((used_system, used_version)) = &used_codesystem {
+                if codes.iter().any(|code| {
+                    code.system != *used_system || code.version.as_deref() != Some(used_version)
+                }) {
+                    bail!(
+                        "ValueSet '{}' in {} has used-codesystem provenance that does not match every expansion concept system/version",
+                        url,
+                        path.display()
+                    );
+                }
+            }
+            valuesets.entry(url.to_string()).or_default().push((
+                value_set
+                    .get("version")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
+                codes,
+            ));
+            loaded_valuesets += 1;
+        }
+    }
+
+    if loaded_valuesets == 0 {
+        bail!("--terminology input did not contain any ValueSet resources");
+    }
+
+    let mut provider = InMemoryTerminologyProvider::new();
+    for (url, versions) in valuesets {
+        let mut seen_versions = BTreeSet::new();
+        for (version, codes) in &versions {
+            if !seen_versions.insert(version.clone()) {
+                bail!(
+                    "duplicate ValueSet canonical/version '{}|{}'",
+                    url,
+                    version.as_deref().unwrap_or("")
+                );
+            }
+            if let Some(version) = version {
+                provider.register_valueset(format!("{url}|{version}"), codes.clone());
+            }
+        }
+        if versions.len() == 1 {
+            provider.register_valueset(url, versions[0].1.clone());
+        }
+    }
+    Ok(provider)
 }
 
 /// Convert an `EvalError` into an `anyhow::Error` with a helpful message.
@@ -1808,10 +2121,12 @@ fn enrich_eval_error(
 fn load_fhir_data(
     path: &str,
     context_type: Option<&str>,
+    subject: Option<&str>,
 ) -> Result<(InMemoryDataProvider, Option<Value>)> {
     let content = read_source(path)?;
     let mut provider = InMemoryDataProvider::new();
     let mut single_context: Option<Value> = None;
+    let mut subject_found = subject.is_none();
 
     // Try NDJSON: multiple non-empty lines each being a JSON object.
     let trimmed = content.trim();
@@ -1825,9 +2140,20 @@ fn load_fhir_data(
             .unwrap_or_default();
         if parsed.len() == lines.len() {
             for resource in parsed {
+                if subject.is_some_and(|reference| resource_matches_reference(&resource, reference))
+                {
+                    single_context = Some(json_to_cql_value(resource.clone()));
+                    subject_found = true;
+                }
                 add_fhir_resource(&mut provider, resource);
             }
-            return Ok((provider, None));
+            if !subject_found {
+                bail!(
+                    "--subject '{}' was not found in --data",
+                    subject.unwrap_or_default()
+                );
+            }
+            return Ok((provider, single_context));
         }
     }
 
@@ -1842,7 +2168,12 @@ fn load_fhir_data(
                 if let Some(resource) = entry.get("resource") {
                     // Set context_value to the first resource whose resourceType
                     // matches the library's declared context (e.g. "Patient").
-                    if single_context.is_none() {
+                    if subject
+                        .is_some_and(|reference| resource_matches_reference(resource, reference))
+                    {
+                        single_context = Some(json_to_cql_value(resource.clone()));
+                        subject_found = true;
+                    } else if single_context.is_none() {
                         if let Some(ct) = context_type {
                             if resource.get("resourceType").and_then(|v| v.as_str()) == Some(ct) {
                                 single_context = Some(json_to_cql_value(resource.clone()));
@@ -1853,14 +2184,37 @@ fn load_fhir_data(
                 }
             }
         }
+        if !subject_found {
+            bail!(
+                "--subject '{}' was not found in --data",
+                subject.unwrap_or_default()
+            );
+        }
     } else {
         // Single resource — also set it as context value.
+        if subject.is_some_and(|reference| !resource_matches_reference(&json, reference)) {
+            bail!(
+                "--subject '{}' was not found in --data",
+                subject.unwrap_or_default()
+            );
+        }
         let value = json_to_cql_value(json.clone());
         add_fhir_resource(&mut provider, json);
         single_context = Some(value);
     }
 
     Ok((provider, single_context))
+}
+
+fn resource_matches_reference(resource: &serde_json::Value, reference: &str) -> bool {
+    let Some((resource_type, id)) = reference.split_once('/') else {
+        return false;
+    };
+    resource
+        .get("resourceType")
+        .and_then(serde_json::Value::as_str)
+        == Some(resource_type)
+        && resource.get("id").and_then(serde_json::Value::as_str) == Some(id)
 }
 
 /// Recursively convert a `serde_json::Value` to a CQL `Value`.
@@ -2116,3 +2470,166 @@ fn show_info(input: &str) -> Result<()> {
 // ---------------------------------------------------------------------------
 // (REPL moved to rh-cql::repl; see crates/rh-cql/src/repl.rs)
 // ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::load_terminology;
+    use rh_cql::eval::{CqlCode, TerminologyProvider};
+    use std::fs;
+
+    fn write_terminology(document: serde_json::Value) -> tempfile::NamedTempFile {
+        let file = tempfile::NamedTempFile::new().expect("temporary terminology file");
+        fs::write(
+            file.path(),
+            serde_json::to_vec(&document).expect("serialize terminology"),
+        )
+        .expect("write terminology");
+        file
+    }
+
+    #[test]
+    fn terminology_loader_rejects_partial_expansions() {
+        let file = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "total": 2,
+                "contains": [{ "system": "http://example.org/system", "code": "one" }]
+            }
+        }));
+
+        let error = load_terminology(&[file.path().to_path_buf()])
+            .expect_err("partial expansion must be rejected");
+        assert!(error.to_string().contains("incomplete expansion"));
+    }
+
+    #[test]
+    fn terminology_loader_rejects_inputs_without_valuesets() {
+        let file = write_terminology(serde_json::json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [{ "resource": { "resourceType": "Patient", "id": "patient" } }]
+        }));
+
+        let error = load_terminology(&[file.path().to_path_buf()])
+            .expect_err("terminology input without ValueSets must fail");
+        assert!(error.to_string().contains("did not contain any ValueSet"));
+    }
+
+    #[test]
+    fn terminology_loader_accepts_complete_used_codesystem_provenance() {
+        let file = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "version": "2.0.0",
+            "expansion": {
+                "total": 1,
+                "parameter": [{
+                    "name": "used-codesystem",
+                    "valueUri": "http://example.org/system|1.0.0"
+                }],
+                "contains": [{
+                    "system": "http://example.org/system",
+                    "version": "1.0.0",
+                    "code": "one"
+                }]
+            }
+        }));
+        let provider =
+            load_terminology(&[file.path().to_path_buf()]).expect("provenance expansion must load");
+        assert!(provider
+            .in_valueset(
+                &CqlCode {
+                    system: "http://example.org/system".to_string(),
+                    version: Some("1.0.0".to_string()),
+                    code: "one".to_string(),
+                    display: None,
+                },
+                "http://example.org/ValueSet/test|2.0.0"
+            )
+            .expect("exact version is registered"));
+    }
+
+    #[test]
+    fn terminology_loader_rejects_filtered_and_wrong_used_codesystem_provenance() {
+        let filtered = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "parameter": [{ "name": "filter", "valueString": "active" }],
+                "contains": [{ "system": "http://example.org/system", "code": "one" }]
+            }
+        }));
+        let error = load_terminology(&[filtered.path().to_path_buf()])
+            .expect_err("filter parameter must be rejected");
+        assert!(error.to_string().contains("filtered or unsupported"));
+
+        let wrong_version = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "parameter": [{
+                    "name": "used-codesystem",
+                    "valueUri": "http://example.org/system|2.0.0"
+                }],
+                "contains": [{
+                    "system": "http://example.org/system",
+                    "version": "1.0.0",
+                    "code": "one"
+                }]
+            }
+        }));
+        let error = load_terminology(&[wrong_version.path().to_path_buf()])
+            .expect_err("mismatched used-codesystem version must be rejected");
+        assert!(error
+            .to_string()
+            .contains("does not match every expansion concept"));
+
+        let malformed_shape = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "expansion": {
+                "parameter": [{
+                    "name": "used-codesystem",
+                    "valueUri": "http://example.org/system|1.0.0",
+                    "valueString": "must-not-be-ignored"
+                }],
+                "contains": [{
+                    "system": "http://example.org/system",
+                    "version": "1.0.0",
+                    "code": "one"
+                }]
+            }
+        }));
+        let error = load_terminology(&[malformed_shape.path().to_path_buf()])
+            .expect_err("used-codesystem must not contain a second value[x]");
+        assert!(error.to_string().contains("filtered or unsupported"));
+    }
+
+    #[test]
+    fn terminology_loader_registers_exact_versioned_valueset() {
+        let file = write_terminology(serde_json::json!({
+            "resourceType": "ValueSet",
+            "url": "http://example.org/ValueSet/test",
+            "version": "2.0.0",
+            "expansion": {
+                "contains": [{ "system": "http://example.org/system", "code": "one" }]
+            }
+        }));
+        let provider =
+            load_terminology(&[file.path().to_path_buf()]).expect("complete expansion must load");
+        let code = CqlCode {
+            system: "http://example.org/system".to_string(),
+            code: "one".to_string(),
+            display: None,
+            version: None,
+        };
+
+        assert!(provider
+            .in_valueset(&code, "http://example.org/ValueSet/test|2.0.0")
+            .expect("exact version is registered"));
+        assert!(provider
+            .in_valueset(&code, "http://example.org/ValueSet/test|3.0.0")
+            .is_err());
+    }
+}

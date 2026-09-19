@@ -407,6 +407,7 @@ wasm:
     just wasm-build fhirpath all
     just wasm-build vcl all
     just wasm-build cql all
+    just wasm-build cpg all
 
 # Build one WASM-bindgen crate for a target: web, node, bundler, or all.
 wasm-build crate target="all":
@@ -416,7 +417,8 @@ wasm-build crate target="all":
       fhirpath) crate_dir="crates/rh-fhirpath" ;;
       vcl) crate_dir="crates/rh-vcl" ;;
       cql) crate_dir="crates/rh-cql" ;;
-      *) echo "unknown WASM crate: {{crate}} (expected fhirpath, vcl, or cql)" >&2; exit 2 ;;
+      cpg) crate_dir="crates/rh-cpg" ;;
+      *) echo "unknown WASM crate: {{crate}} (expected fhirpath, vcl, cql, or cpg)" >&2; exit 2 ;;
     esac
 
     case "{{target}}" in
@@ -438,6 +440,7 @@ wasm-check:
     cargo check -p rh-fhirpath --target wasm32-unknown-unknown --features wasm
     cargo check -p rh-vcl --target wasm32-unknown-unknown --features wasm
     cargo check -p rh-cql --target wasm32-unknown-unknown --no-default-features --features wasm
+    cargo check -p rh-cpg --target wasm32-unknown-unknown --features wasm
 
 # Build WASM web packages.
 build-wasm:

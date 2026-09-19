@@ -1,4 +1,4 @@
-import { cpSync, rmSync } from "node:fs";
+import { cpSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -34,6 +34,11 @@ for (const [target, outDir] of targets) {
   rmSync(destination, { force: true, recursive: true });
   cpSync(source, destination, { recursive: true });
   rmSync(resolve(destination, ".gitignore"), { force: true });
+  // wasm-pack's nodejs target is CommonJS. This nested package marker keeps
+  // Node from inheriting the parent package's `type: module` declaration.
+  if (target === "node") {
+    writeFileSync(resolve(destination, "package.json"), '{"type":"commonjs"}\n');
+  }
 }
 
 console.log(`Built ${wasmName} WASM artifacts for ${crate}`);

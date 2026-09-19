@@ -286,6 +286,14 @@ fn resolve_includes_to_elm(
 
         let lib_id = crate::library::LibraryIdentifier::new(&inc.path, inc.version.as_deref());
 
+        if let Some(precompiled) = provider
+            .get_precompiled_elm(&lib_id)
+            .map_err(CompilationError::PrecompiledLibrary)?
+        {
+            result.insert(alias, precompiled);
+            continue;
+        }
+
         let source =
             provider
                 .get_source(&lib_id)
@@ -405,6 +413,11 @@ pub enum CompilationError {
         /// report them).
         searched_paths: Vec<String>,
     },
+
+    /// A version-pinned precompiled ELM dependency was discovered but was
+    /// malformed, mismatched, or ambiguous.
+    #[error("Precompiled library error: {0}")]
+    PrecompiledLibrary(String),
 }
 
 /// Compile CQL source code to ELM.

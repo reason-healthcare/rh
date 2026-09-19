@@ -27,7 +27,7 @@ pub mod parser;
 pub mod repl;
 
 // WASM bindings - only compiled for wasm32 target
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 pub mod wasm;
 
 // Re-export the main public types users need

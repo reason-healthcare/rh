@@ -694,6 +694,9 @@ pub struct FunctionInvocation {
     pub name: String,
     /// Arguments
     pub arguments: Vec<Expression>,
+    /// Whether the first argument was supplied through CQL fluent invocation
+    /// syntax (`receiver.function(...)`).
+    pub fluent: bool,
     /// Source location
     pub location: Option<SourceLocation>,
 }

@@ -398,13 +398,74 @@ pub struct ExpressionDefs {
 }
 
 /// A statement definition (expression or function).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StatementDef {
     /// An expression definition.
     Expression(ExpressionDef),
     /// A function definition.
     Function(FunctionDef),
+}
+
+impl Serialize for StatementDef {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let value = match self {
+            StatementDef::Expression(definition) => serde_json::to_value(definition),
+            StatementDef::Function(definition) => serde_json::to_value(definition),
+        };
+        let type_name = match self {
+            StatementDef::Expression(_) => "ExpressionDef",
+            StatementDef::Function(_) => "FunctionDef",
+        };
+        let mut value = value.map_err(serde::ser::Error::custom)?;
+        let object = value.as_object_mut().ok_or_else(|| {
+            serde::ser::Error::custom("statement definition must serialize as an object")
+        })?;
+        object.insert(
+            "type".to_owned(),
+            serde_json::Value::String(type_name.to_owned()),
+        );
+        value.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for StatementDef {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let object = value
+            .as_object()
+            .ok_or_else(|| serde::de::Error::custom("statement definition must be an object"))?;
+        match object.get("type") {
+            Some(serde_json::Value::String(type_name)) => match type_name.as_str() {
+                "ExpressionDef" => serde_json::from_value(value)
+                    .map(StatementDef::Expression)
+                    .map_err(serde::de::Error::custom),
+                "FunctionDef" => serde_json::from_value(value)
+                    .map(StatementDef::Function)
+                    .map_err(serde::de::Error::custom),
+                other => Err(serde::de::Error::custom(format!(
+                    "unknown statement definition type {other}"
+                ))),
+            },
+            Some(_) => Err(serde::de::Error::custom(
+                "statement definition type must be a string",
+            )),
+            // RH's early native ELM omitted this discriminator. `operand`,
+            // including an empty array, identifies FunctionDef; all other
+            // legacy entries are ExpressionDef. New output is tagged above.
+            None if object.contains_key("operand") => serde_json::from_value(value)
+                .map(StatementDef::Function)
+                .map_err(serde::de::Error::custom),
+            None => serde_json::from_value(value)
+                .map(StatementDef::Expression)
+                .map_err(serde::de::Error::custom),
+        }
+    }
 }
 
 /// An expression definition (CQL define statement).
@@ -489,5 +550,31 @@ mod tests {
         let json = serde_json::to_string(&def).unwrap();
         assert!(json.contains("\"name\":\"InPopulation\""));
         assert!(json.contains("\"context\":\"Patient\""));
+    }
+
+    #[test]
+    fn statement_definition_reads_legacy_untagged_entries_and_writes_tags() {
+        let expression: StatementDef = serde_json::from_str(
+            r#"{"name":"Population","context":"Patient","expression":{"type":"Literal","valueType":"{urn:hl7-org:elm-types:r1}Boolean","value":"true"}}"#,
+        )
+        .unwrap();
+        assert!(matches!(expression, StatementDef::Expression(_)));
+        let expression_json = serde_json::to_value(expression).unwrap();
+        assert_eq!(expression_json["type"], "ExpressionDef");
+
+        let function: StatementDef =
+            serde_json::from_str(r#"{"name":"Utility","operand":[]}"#).unwrap();
+        assert!(matches!(function, StatementDef::Function(_)));
+        let function_json = serde_json::to_value(function).unwrap();
+        assert_eq!(function_json["type"], "FunctionDef");
+    }
+
+    #[test]
+    fn statement_definition_rejects_unknown_explicit_tag() {
+        let error = serde_json::from_str::<StatementDef>(r#"{"type":"OtherDef"}"#)
+            .expect_err("unknown explicit statement type must fail");
+        assert!(error
+            .to_string()
+            .contains("unknown statement definition type"));
     }
 }

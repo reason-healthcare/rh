@@ -1896,14 +1896,68 @@ fn date_duration_between(a: &Value, b: &Value, unit: &str) -> Result<Value, Eval
 }
 
 fn date_difference_between(a: &Value, b: &Value, unit: &str) -> Result<Value, EvalError> {
-    // For most units, DifferenceBetween equals DurationBetween.
-    // The distinction matters for month/year truncation (not boundary crossing).
-    date_duration_between(a, b, unit)
+    let a = coerce_to_temporal(a)?;
+    let b = coerce_to_temporal(b)?;
+    let difference = match (&a, &b) {
+        (Value::Date(a), Value::Date(b)) => date_difference_diff(a, b, unit)?,
+        (Value::DateTime(a), Value::DateTime(b)) => datetime_difference_diff(a, b, unit)?,
+        _ => {
+            return Err(err(
+                "DifferenceBetween",
+                "arguments must be same temporal type",
+            ))
+        }
+    };
+    Ok(Value::Integer(difference))
+}
+
+/// Difference counts precision boundaries, unlike Duration which counts whole
+/// elapsed periods. Keep this separate from the age-duration implementation.
+fn date_difference_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, EvalError> {
+    match unit {
+        "year" => Ok((b.year - a.year) as i64),
+        "month" => Ok((b.year as i64 - a.year as i64) * 12
+            + (b.month
+                .ok_or_else(|| err("DifferenceBetween", "no month"))? as i64
+                - a.month
+                    .ok_or_else(|| err("DifferenceBetween", "no month"))?
+                    as i64)),
+        _ => date_duration_diff(a, b, unit),
+    }
+}
+
+fn datetime_difference_diff(
+    a: &CqlDateTime,
+    b: &CqlDateTime,
+    unit: &str,
+) -> Result<i64, EvalError> {
+    match unit {
+        "year" => Ok((b.year - a.year) as i64),
+        "month" => Ok((b.year as i64 - a.year as i64) * 12
+            + (b.month
+                .ok_or_else(|| err("DifferenceBetween", "no month"))? as i64
+                - a.month
+                    .ok_or_else(|| err("DifferenceBetween", "no month"))?
+                    as i64)),
+        _ => datetime_duration_diff(a, b, unit),
+    }
 }
 
 fn date_duration_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, EvalError> {
     match unit {
-        "year" => Ok((b.year - a.year) as i64),
+        "year" => {
+            let mut years = (b.year - a.year) as i64;
+            if let (Some(a_month), Some(a_day), Some(b_month), Some(b_day)) =
+                (a.month, a.day, b.month, b.day)
+            {
+                if years > 0 && (b_month, b_day) < (a_month, a_day) {
+                    years -= 1;
+                } else if years < 0 && (b_month, b_day) > (a_month, a_day) {
+                    years += 1;
+                }
+            }
+            Ok(years)
+        }
         "month" => {
             let a_m = a
                 .month
@@ -1911,7 +1965,15 @@ fn date_duration_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, EvalE
             let b_m = b
                 .month
                 .ok_or_else(|| err("DurationBetween", "year-precision Date has no month"))?;
-            Ok((b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64))
+            let mut months = (b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64);
+            if let (Some(a_day), Some(b_day)) = (a.day, b.day) {
+                if months > 0 && b_day < a_day {
+                    months -= 1;
+                } else if months < 0 && b_day > a_day {
+                    months += 1;
+                }
+            }
+            Ok(months)
         }
         "week" => Ok(date_duration_diff(a, b, "day")? / 7),
         "day" => {
@@ -1934,11 +1996,31 @@ fn date_duration_diff(a: &CqlDate, b: &CqlDate, unit: &str) -> Result<i64, EvalE
 
 fn datetime_duration_diff(a: &CqlDateTime, b: &CqlDateTime, unit: &str) -> Result<i64, EvalError> {
     match unit {
-        "year" => Ok((b.year - a.year) as i64),
+        "year" => {
+            let mut years = (b.year - a.year) as i64;
+            if let (Some(a_month), Some(a_day), Some(b_month), Some(b_day)) =
+                (a.month, a.day, b.month, b.day)
+            {
+                if years > 0 && (b_month, b_day) < (a_month, a_day) {
+                    years -= 1;
+                } else if years < 0 && (b_month, b_day) > (a_month, a_day) {
+                    years += 1;
+                }
+            }
+            Ok(years)
+        }
         "month" => {
             let a_m = a.month.ok_or_else(|| err("DurationBetween", "no month"))?;
             let b_m = b.month.ok_or_else(|| err("DurationBetween", "no month"))?;
-            Ok((b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64))
+            let mut months = (b.year as i64 - a.year as i64) * 12 + (b_m as i64 - a_m as i64);
+            if let (Some(a_day), Some(b_day)) = (a.day, b.day) {
+                if months > 0 && b_day < a_day {
+                    months -= 1;
+                } else if months < 0 && b_day > a_day {
+                    months += 1;
+                }
+            }
+            Ok(months)
         }
         // Weeks are derived from elapsed hours so that the time-of-day
         // components are included (14 calendar days starting at 22:00 and

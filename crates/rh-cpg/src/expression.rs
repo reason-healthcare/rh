@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use base64::Engine;
 use rh_cql::compile;
 use rh_cql::elm::Library;
 use rh_cql::eval::engine::evaluate_elm_with_libraries;
-use rh_cql::eval::{CqlDateTime, EvalContextBuilder, FixedClock, InMemoryTerminologyProvider};
+use rh_cql::eval::{CqlCode, EvalContextBuilder, FixedClock, InMemoryTerminologyProvider};
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -29,8 +29,8 @@ pub fn evaluate_expression(
 }
 
 #[derive(Serialize, Deserialize)]
-struct ElmWrapper {
-    library: Library,
+pub(crate) struct ElmWrapper {
+    pub(crate) library: Library,
 }
 
 fn language(expression: &Value) -> CpgResult<&str> {
@@ -115,12 +115,18 @@ fn evaluate_cql_identifier(
     let included_libraries = included_libraries(ctx, &canonical)?;
 
     let patient = ctx.resolve_context_resource(&ctx.subject);
-    let mut builder = EvalContextBuilder::new(FixedClock::new(fixed_now()))
+    let mut builder = EvalContextBuilder::new(FixedClock::new(ctx.cql_evaluation_date()?))
         .data_provider(FhirDataProvider::from_bundle(
             ctx.data.as_ref().unwrap_or(&Value::Null),
             &ctx.subject,
         ))
-        .terminology_provider(InMemoryTerminologyProvider::new());
+        .terminology_provider(terminology_provider(ctx)?);
+    for (name, value) in &ctx.parameters {
+        builder = builder.parameter(name, fhir_to_cql_value(value));
+    }
+    if let Some(measurement_period) = &ctx.measurement_period {
+        builder = builder.parameter("Measurement Period", measurement_period.as_cql_interval()?);
+    }
     if let Some(patient) = patient {
         builder = builder.context_value(fhir_to_cql_value(&patient));
     }
@@ -135,6 +141,77 @@ fn evaluate_cql_identifier(
             .map_err(|error| CpgError::CqlEval(error.to_string()))?;
 
     Ok(cql_value_to_json(&result))
+}
+
+fn terminology_provider(ctx: &ApplyContext) -> CpgResult<InMemoryTerminologyProvider> {
+    type ValueSetVersions = Vec<(Option<String>, Vec<CqlCode>)>;
+
+    let mut provider = InMemoryTerminologyProvider::new();
+    let mut valuesets: HashMap<String, ValueSetVersions> = HashMap::new();
+    for value_set in ctx.content_resolver.all_by_type("ValueSet")? {
+        let Some(url) = value_set.get("url").and_then(Value::as_str) else {
+            continue;
+        };
+        let codes = value_set
+            .pointer("/expansion/contains")
+            .and_then(Value::as_array)
+            .map_or_else(Vec::new, |contains| collect_expansion_codes(contains));
+        if codes.is_empty() {
+            continue;
+        }
+        valuesets.entry(url.to_string()).or_default().push((
+            value_set
+                .get("version")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+            codes,
+        ));
+    }
+
+    for (url, versions) in valuesets {
+        let mut seen_versions = HashSet::new();
+        for (version, codes) in &versions {
+            if let Some(version) = version {
+                if !seen_versions.insert(version) {
+                    return Err(CpgError::EvaluationError(format!(
+                        "duplicate ValueSet canonical '{url}|{version}' in execution content"
+                    )));
+                }
+                provider.register_valueset(format!("{url}|{version}"), codes.clone());
+            }
+        }
+        if versions.len() == 1 {
+            provider.register_valueset(url, versions[0].1.clone());
+        }
+    }
+    Ok(provider)
+}
+
+fn collect_expansion_codes(contains: &[Value]) -> Vec<CqlCode> {
+    let mut codes = Vec::new();
+    for concept in contains {
+        if let (Some(code), Some(system)) = (
+            concept.get("code").and_then(Value::as_str),
+            concept.get("system").and_then(Value::as_str),
+        ) {
+            codes.push(CqlCode {
+                code: code.to_string(),
+                system: system.to_string(),
+                display: concept
+                    .get("display")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+                version: concept
+                    .get("version")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+            });
+        }
+        if let Some(children) = concept.get("contains").and_then(Value::as_array) {
+            codes.extend(collect_expansion_codes(children));
+        }
+    }
+    codes
 }
 
 fn included_libraries(
@@ -220,24 +297,12 @@ fn expression_source(expression: &Value) -> CpgResult<&str> {
         .ok_or_else(|| CpgError::ExpressionError("expression value is required".to_string()))
 }
 
-fn fixed_now() -> CqlDateTime {
-    CqlDateTime {
-        year: 2026,
-        month: Some(1),
-        day: Some(1),
-        hour: Some(0),
-        minute: Some(0),
-        second: Some(0),
-        millisecond: None,
-        offset_seconds: Some(0),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use crate::resolver::BundleResolver;
+    use rh_cql::eval::TerminologyProvider;
     use serde_json::json;
 
     use super::*;
@@ -287,6 +352,267 @@ mod tests {
             .expect("CQL evaluation should succeed");
 
         assert_eq!(result, json!(true));
+    }
+
+    #[test]
+    fn evaluates_patient_questionnaire_period_clock_and_parameters_from_context() {
+        let source = r#"library ConnectathonContext version '1.0.0'
+using FHIR version '4.0.1'
+parameter "Measurement Period" Interval<DateTime>
+parameter "Marker" Boolean
+context Patient
+define "Completed Three Question Screen":
+  exists ([QuestionnaireResponse] Response
+    where Response.status = 'completed'
+      and Count(Response.item) = 3
+      and exists (Response.item Item
+        where exists (Item.answer Answer where Answer.valueBoolean = true)))
+define "Three Question Risk":
+  if exists ([QuestionnaireResponse]) then
+    if "Completed Three Question Screen" then true else null
+  else null
+define "Measurement Period Is 2027":
+  start of "Measurement Period" = @2027-01-01T00:00:00.000Z
+define "Clock Is 2027": year from Now() = 2027
+define "Marker Is True": "Marker"
+"#;
+        let library = compile(source, None)
+            .expect("context library should compile")
+            .library;
+        let content = json!({
+            "resourceType": "Bundle",
+            "entry": [{"resource": {
+                "resourceType": "Library",
+                "url": "http://test/Library/ConnectathonContext",
+                "name": "ConnectathonContext",
+                "content": [{"contentType": "application/elm+json", "data": encode_elm(&library)}]
+            }}]
+        });
+        let resolver = Arc::new(BundleResolver::new(&content).expect("content should resolve"));
+        let mut ctx = ApplyContext::new(resolver, "Patient/fixture");
+        ctx.data = Some(json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {"resourceType": "Patient", "id": "fixture"}},
+                {"resource": {
+                    "resourceType": "QuestionnaireResponse",
+                    "subject": {"reference": "Patient/fixture"},
+                    "status": "completed",
+                    "item": [
+                        {"linkId": "unsteady", "answer": [{"valueBoolean": true}]},
+                        {"linkId": "worries", "answer": [{"valueBoolean": false}]},
+                        {"linkId": "prior", "answer": [{"valueBoolean": false}]}
+                    ]
+                }}
+            ]
+        }));
+        ctx.evaluation_date = Some("2027-06-15T09:20:00Z".to_string());
+        ctx.measurement_period = Some(crate::context::MeasurementPeriod {
+            start: "2027-01-01T00:00:00Z".to_string(),
+            end: "2027-12-31T23:59:59Z".to_string(),
+            start_inclusive: true,
+            end_inclusive: true,
+        });
+        ctx.parameters.insert("Marker".to_string(), json!(true));
+
+        for definition in [
+            "Completed Three Question Screen",
+            "Three Question Risk",
+            "Measurement Period Is 2027",
+            "Clock Is 2027",
+            "Marker Is True",
+        ] {
+            let expression = json!({
+                "language": "text/cql-identifier",
+                "expression": definition,
+                "reference": "http://test/Library/ConnectathonContext"
+            });
+            assert_eq!(
+                evaluate_expression(&expression, &json!({}), &[], &ctx)
+                    .expect("contextual CQL should evaluate"),
+                json!(true),
+                "{definition}"
+            );
+        }
+
+        let incomplete_response = ctx
+            .data
+            .as_mut()
+            .and_then(|bundle| bundle.pointer_mut("/entry/1/resource"))
+            .expect("response fixture")
+            .as_object_mut()
+            .expect("response object");
+        incomplete_response.insert("status".to_string(), json!("in-progress"));
+        let expression = json!({
+            "language": "text/cql-identifier",
+            "expression": "Three Question Risk",
+            "reference": "http://test/Library/ConnectathonContext"
+        });
+        assert_eq!(
+            evaluate_expression(&expression, &json!({}), &[], &ctx)
+                .expect("incomplete response should evaluate"),
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn evaluates_valueset_membership_from_bundled_expansion() {
+        let source = r#"library ValueSetContext version '1.0.0'
+codesystem "Test System": 'http://example.org/system'
+code "Allowed": 'allowed' from "Test System"
+code "Denied": 'denied' from "Test System"
+valueset "Test ValueSet": 'http://example.org/ValueSet/test'
+define "Allowed Is Member": "Allowed" in "Test ValueSet"
+define "Denied Is Member": "Denied" in "Test ValueSet"
+"#;
+        let library = compile(source, None)
+            .expect("valueset library should compile")
+            .library;
+        let content = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {
+                    "resourceType": "Library",
+                    "url": "http://test/Library/ValueSetContext",
+                    "name": "ValueSetContext",
+                    "content": [{"contentType": "application/elm+json", "data": encode_elm(&library)}]
+                }},
+                {"resource": {
+                    "resourceType": "ValueSet",
+                    "url": "http://example.org/ValueSet/test",
+                    "version": "1.0.0",
+                    "expansion": {"contains": [{
+                        "system": "http://example.org/system",
+                        "code": "allowed"
+                    }]}
+                }}
+            ]
+        });
+        let ctx = ApplyContext::new(
+            Arc::new(BundleResolver::new(&content).expect("content should resolve")),
+            "Patient/example",
+        );
+
+        for (definition, expected) in [
+            ("Allowed Is Member", json!(true)),
+            ("Denied Is Member", json!(false)),
+        ] {
+            let expression = json!({
+                "language": "text/cql-identifier",
+                "expression": definition,
+                "reference": "http://test/Library/ValueSetContext"
+            });
+            assert_eq!(
+                evaluate_expression(&expression, &json!({}), &[], &ctx)
+                    .expect("membership should evaluate"),
+                expected,
+                "{definition}"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_duplicate_valueset_canonical_versions() {
+        let content = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {
+                    "resourceType": "ValueSet",
+                    "url": "http://example.org/ValueSet/test",
+                    "version": "1.0.0",
+                    "expansion": {"contains": [{"system": "http://example.org/system", "code": "one"}]}
+                }},
+                {"resource": {
+                    "resourceType": "ValueSet",
+                    "url": "http://example.org/ValueSet/test",
+                    "version": "1.0.0",
+                    "expansion": {"contains": [{"system": "http://example.org/system", "code": "two"}]}
+                }}
+            ]
+        });
+        assert!(matches!(
+            BundleResolver::new(&content),
+            Err(CpgError::InvalidResource(message)) if message.contains("duplicate canonical")
+        ));
+    }
+
+    #[test]
+    fn valueset_membership_fails_when_a_bundled_valueset_has_no_expansion() {
+        let source = r#"library MissingExpansion version '1.0.0'
+codesystem "Test System": 'http://example.org/system'
+code "Allowed": 'allowed' from "Test System"
+valueset "Test ValueSet": 'http://example.org/ValueSet/test'
+define "Allowed Is Member": "Allowed" in "Test ValueSet"
+"#;
+        let library = compile(source, None)
+            .expect("valueset library should compile")
+            .library;
+        let content = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {
+                    "resourceType": "Library",
+                    "url": "http://test/Library/MissingExpansion",
+                    "name": "MissingExpansion",
+                    "content": [{"contentType": "application/elm+json", "data": encode_elm(&library)}]
+                }},
+                {"resource": {
+                    "resourceType": "ValueSet",
+                    "url": "http://example.org/ValueSet/test"
+                }}
+            ]
+        });
+        let ctx = ApplyContext::new(
+            Arc::new(BundleResolver::new(&content).expect("content should resolve")),
+            "Patient/example",
+        );
+        let expression = json!({
+            "language": "text/cql-identifier",
+            "expression": "Allowed Is Member",
+            "reference": "http://test/Library/MissingExpansion"
+        });
+
+        assert!(matches!(
+            evaluate_expression(&expression, &json!({}), &[], &ctx),
+            Err(CpgError::CqlEval(message)) if message.contains("ValueSet")
+        ));
+    }
+
+    #[test]
+    fn requires_an_explicit_version_when_bundled_valueset_versions_differ() {
+        let content = json!({
+            "resourceType": "Bundle",
+            "entry": [
+                {"resource": {
+                    "resourceType": "ValueSet",
+                    "url": "http://example.org/ValueSet/test",
+                    "version": "1.0.0",
+                    "expansion": {"contains": [{"system": "http://example.org/system", "code": "one"}]}
+                }},
+                {"resource": {
+                    "resourceType": "ValueSet",
+                    "url": "http://example.org/ValueSet/test",
+                    "version": "2.0.0",
+                    "expansion": {"contains": [{"system": "http://example.org/system", "code": "two"}]}
+                }}
+            ]
+        });
+        let ctx = ApplyContext::new(
+            Arc::new(BundleResolver::new(&content).expect("content should resolve")),
+            "Patient/example",
+        );
+        let provider = terminology_provider(&ctx).expect("versioned valuesets should load");
+
+        assert!(provider
+            .expand_valueset("http://example.org/ValueSet/test")
+            .is_err());
+        assert_eq!(
+            provider
+                .expand_valueset("http://example.org/ValueSet/test|2.0.0")
+                .expect("versioned valueset should resolve")[0]
+                .code,
+            "two"
+        );
     }
 
     fn test_context(bundle: Option<Value>) -> ApplyContext {

@@ -66,6 +66,60 @@ fn age_in_years_at_supplied_date() {
 }
 
 #[test]
+fn age_in_years_at_counts_only_completed_birthdays() {
+    let ctx = patient_ctx("1961-06-16");
+    assert_eq!(
+        eval("library T define X: AgeInYearsAt(@2026-06-15)", "X", &ctx),
+        Value::Integer(64)
+    );
+    assert_eq!(
+        eval("library T define X: AgeInYearsAt(@2026-06-16)", "X", &ctx),
+        Value::Integer(65)
+    );
+    assert_eq!(
+        eval("library T define X: AgeInYearsAt(@2026-06-17)", "X", &ctx),
+        Value::Integer(65)
+    );
+}
+
+#[test]
+fn age_duration_handles_leap_days_and_completed_months() {
+    let ctx = EvalContextBuilder::new(clock_2024_06_15()).build();
+    assert_eq!(
+        eval(
+            "library T define X: CalculateAgeInYearsAt(@2000-02-29, @2021-02-28)",
+            "X",
+            &ctx,
+        ),
+        Value::Integer(20)
+    );
+    assert_eq!(
+        eval(
+            "library T define X: CalculateAgeInYearsAt(@2000-02-29, @2021-03-01)",
+            "X",
+            &ctx,
+        ),
+        Value::Integer(21)
+    );
+    assert_eq!(
+        eval(
+            "library T define X: CalculateAgeInMonthsAt(@2026-01-31, @2026-02-28)",
+            "X",
+            &ctx,
+        ),
+        Value::Integer(0)
+    );
+    assert_eq!(
+        eval(
+            "library T define X: CalculateAgeInMonthsAt(@2026-01-31, @2026-03-01)",
+            "X",
+            &ctx,
+        ),
+        Value::Integer(1)
+    );
+}
+
+#[test]
 fn age_is_null_without_patient_context() {
     let ctx = EvalContextBuilder::new(clock_2024_06_15()).build();
     assert_eq!(

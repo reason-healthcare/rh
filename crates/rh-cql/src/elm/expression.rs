@@ -150,8 +150,8 @@ pub enum Expression {
     List(ListExpr),
     Exists(UnaryExpression),
     Times(BinaryExpression),
-    First(UnaryExpression),
-    Last(UnaryExpression),
+    First(ListAccessExpression),
+    Last(ListAccessExpression),
     Indexer(BinaryExpression),
     Flatten(UnaryExpression),
     Sort(Sort),
@@ -292,8 +292,32 @@ pub struct NullaryExpression {
 pub struct UnaryExpression {
     #[serde(flatten)]
     pub element: ElementFields,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    // ELM list aggregators (First, Last, Exists, …) encode their input as
+    // `source`, while most unary operators use `operand`. Accept both on
+    // input and retain the established `operand` serialization shape.
+    #[serde(alias = "source", skip_serializing_if = "Option::is_none")]
     pub operand: Option<Box<Expression>>,
+    /// Optional temporal precision used by clinical unary operators such as
+    /// `CalculateAge` in reference ELM.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signature: Vec<TypeSpecifier>,
+}
+
+/// List-access expression (`First` or `Last`).
+///
+/// ELM represents the input list as `source` for these expressions. This is
+/// deliberately distinct from [`UnaryExpression`], whose input is `operand`.
+/// We accept the former native serialization shape on input for backwards
+/// compatibility, but emit the standard ELM shape.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListAccessExpression {
+    #[serde(flatten)]
+    pub element: ElementFields,
+    #[serde(alias = "operand", skip_serializing_if = "Option::is_none")]
+    pub source: Option<Box<Expression>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signature: Vec<TypeSpecifier>,
 }
@@ -323,6 +347,11 @@ pub struct BinaryExpression {
     pub element: ElementFields,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub operand: Vec<Expression>,
+    /// Optional temporal precision used by clinical binary operators such as
+    /// `CalculateAgeAt`. Kept on the generic node because ELM encodes this
+    /// operator as a `BinaryExpression`, rather than `TimeBinaryExpression`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub precision: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signature: Vec<TypeSpecifier>,
 }
@@ -1290,5 +1319,25 @@ mod tests {
         let json = serde_json::to_string(&expr).unwrap();
         let roundtrip: Expression = serde_json::from_str(&json).unwrap();
         assert_eq!(expr, roundtrip);
+    }
+
+    #[test]
+    fn first_and_last_use_source_not_operand() {
+        let first: Expression = serde_json::from_str(
+            r#"{"type":"First","source":{"type":"List","element":[{"type":"Literal","valueType":"{urn:hl7-org:elm-types:r1}Integer","value":"1"}]}}"#,
+        )
+        .unwrap();
+        let first_json = serde_json::to_value(&first).unwrap();
+        assert!(first_json.get("source").is_some());
+        assert!(first_json.get("operand").is_none());
+
+        // Earlier native output used `operand`; retain read compatibility while
+        // re-emitting standard ELM.
+        let last: Expression =
+            serde_json::from_str(r#"{"type":"Last","operand":{"type":"List","element":[]}}"#)
+                .unwrap();
+        let last_json = serde_json::to_value(&last).unwrap();
+        assert!(last_json.get("source").is_some());
+        assert!(last_json.get("operand").is_none());
     }
 }
