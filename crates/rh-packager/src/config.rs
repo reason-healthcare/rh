@@ -316,37 +316,20 @@ pub struct FshConfig {}
 ///
 /// ```toml
 /// [link]
-/// terminology_server = "https://tx.fhir.org/r4"
 /// terminology_dir = "/path/to/terminology-snapshots"
-/// fhir_helpers = "/path/to/FHIRHelpers.cql"
 /// format = "bundle"
 /// packages_dir = "/custom/.fhir/packages"
 /// ```
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LinkConfig {
-    /// FHIR terminology server URL for ValueSet `$expand`.
-    ///
-    /// Used by the `expand-valuesets` processor when a ValueSet has `compose`
-    /// but no `expansion`. The server's `$expand` endpoint is called to
-    /// populate `expansion.contains`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub terminology_server: Option<String>,
-
     /// Local directory of pre-expanded ValueSets and CodeSystems.
     ///
-    /// Alternative to `terminology_server` — fully offline. The directory
-    /// should contain ValueSet JSON files with complete `expansion.contains`
-    /// arrays, keyed by canonical URL or filename stem.
+    /// The directory should contain ValueSet JSON files with complete
+    /// `expansion.contains` arrays and the same canonical URL and version as
+    /// the source ValueSet.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terminology_dir: Option<String>,
-
-    /// Path to FHIRHelpers CQL source or pre-compiled ELM JSON.
-    ///
-    /// If absent, a version bundled with `rh-packager` is used.
-    /// The FHIRHelpers library is added to the resource set when any CQL
-    /// library imports it.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fhir_helpers: Option<String>,
 
     /// Output format for `rh package link`.
     ///
@@ -370,9 +353,7 @@ fn default_link_format() -> String {
 impl Default for LinkConfig {
     fn default() -> Self {
         Self {
-            terminology_server: None,
             terminology_dir: None,
-            fhir_helpers: None,
             format: default_link_format(),
             packages_dir: None,
         }
@@ -585,24 +566,14 @@ license     = "Apache-2.0"
 fn parses_link_section() {
     let toml = r#"
 [link]
-terminology_server = "https://tx.fhir.org/r4"
 terminology_dir = "/path/to/terminology"
-fhir_helpers = "/path/to/FHIRHelpers.cql"
 format = "directory"
 packages_dir = "/custom/.fhir/packages"
 "#;
     let cfg = PublisherConfig::from_toml_str(toml).unwrap();
     assert_eq!(
-        cfg.link.terminology_server.as_deref(),
-        Some("https://tx.fhir.org/r4")
-    );
-    assert_eq!(
         cfg.link.terminology_dir.as_deref(),
         Some("/path/to/terminology")
-    );
-    assert_eq!(
-        cfg.link.fhir_helpers.as_deref(),
-        Some("/path/to/FHIRHelpers.cql")
     );
     assert_eq!(cfg.link.format, "directory");
     assert_eq!(
@@ -613,7 +584,7 @@ packages_dir = "/custom/.fhir/packages"
 
 #[test]
 fn link_section_defaults_to_bundle_format() {
-    let toml = "[link]\nterminology_server = \"https://tx.fhir.org/r4\"";
+    let toml = "[link]\nterminology_dir = \"/tmp/terminology\"";
     let cfg = PublisherConfig::from_toml_str(toml).unwrap();
     assert_eq!(cfg.link.format, "bundle");
 }
@@ -621,9 +592,15 @@ fn link_section_defaults_to_bundle_format() {
 #[test]
 fn absent_link_section_uses_defaults() {
     let cfg = PublisherConfig::from_toml_str("").unwrap();
-    assert!(cfg.link.terminology_server.is_none());
     assert!(cfg.link.terminology_dir.is_none());
-    assert!(cfg.link.fhir_helpers.is_none());
     assert_eq!(cfg.link.format, "bundle");
     assert!(cfg.link.packages_dir.is_none());
+}
+
+#[test]
+fn link_section_rejects_unimplemented_options() {
+    for field in ["terminology_server", "fhir_helpers"] {
+        let toml = format!("[link]\n{field} = \"unsupported\"");
+        assert!(PublisherConfig::from_toml_str(&toml).is_err());
+    }
 }

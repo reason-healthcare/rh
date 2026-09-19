@@ -1,5 +1,8 @@
 {
   "resourceType": "ValueSet",
+  "id": "expanded-from-dir",
+  "url": "http://example.org/fhir/ValueSet/expanded-from-dir",
+  "version": "1.0.0",
   "expansion": {
     "contains": [
       {"system": "http://test.org/cs", "code": "X", "display": "Xavier"},

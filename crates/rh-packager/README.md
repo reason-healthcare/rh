@@ -22,8 +22,8 @@ StructureDefinition is snapshotted, every CQL library is compiled to ELM, and
 every transitive dependency is resolved and included — suitable for passing
 to a WASM evaluation engine with zero external I/O.
 
-See the [link configuration](#link) section below for terminology server,
-FHIRHelpers, and output format settings.
+See the [link configuration](#link) section below for local terminology
+expansions, dependency resolution, and output format settings.
 
 ---
 
@@ -241,18 +241,12 @@ The processor fails the pipeline on any CQL syntax or compilation error.
 ### `[link]`
 
 Configuration for the executable bundle pipeline, used by `rh package link`.
-Controls terminology expansion, FHIRHelpers bundling, and output format.
+Controls local terminology expansion, dependency resolution, and output format.
 
 ```toml
 [link]
-# FHIR terminology server URL for ValueSet $expand.
-terminology_server = "https://tx.fhir.org/r4"
-
-# Local directory of pre-expanded ValueSets (alternative to terminology_server).
+# Local directory of pre-expanded ValueSets.
 # terminology_dir = "/path/to/terminology-snapshots"
-
-# Path to FHIRHelpers.cql or pre-compiled ELM (defaults to bundled).
-# fhir_helpers = "/path/to/FHIRHelpers.cql"
 
 # Output format: "bundle" (single FHIR Bundle JSON, default) or "directory".
 format = "bundle"
@@ -263,11 +257,15 @@ format = "bundle"
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `terminology_server` | string | — | FHIR terminology server URL for ValueSet `$expand`. |
-| `terminology_dir` | string | — | Local directory of pre-expanded ValueSets and CodeSystems. |
-| `fhir_helpers` | string | bundled | Path to FHIRHelpers source or pre-compiled ELM. |
+| `terminology_dir` | string | — | Local directory of pre-expanded ValueSets. Each resource must match the source canonical URL and version. |
 | `format` | string | `"bundle"` | Output format: `"bundle"` or `"directory"`. |
 | `packages_dir` | string | top-level | Packages cache for dependency resolution. |
+
+Remote terminology-server expansion is not implemented. ValueSets must already
+be expanded, use explicit `compose.include.concept` entries, or have a matching
+resource in `terminology_dir`. FHIRHelpers is not embedded by the packager;
+packages whose CQL imports it must supply a FHIRHelpers `Library` with inline,
+parseable ELM.
 
 ---
 

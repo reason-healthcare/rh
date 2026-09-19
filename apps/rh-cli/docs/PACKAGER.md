@@ -262,10 +262,8 @@ rh package link [OPTIONS] <DIR>
 **Options:**
 - `-o, --out <PATH>` — Output directory (default: `<DIR>/executable`)
 - `--format <FORMAT>` — Output format: `"bundle"` (single FHIR Bundle JSON) or `"directory"` (one file per resource)
-- `--terminology <URL>` — Override terminology server URL from `packager.toml`
 - `--terminology-dir <PATH>` — Override terminology directory from `packager.toml`
 - `--no-validate` — Skip `link-validate` completeness check
-- `--verbose` — Show resolution trace for each dependency
 
 **Examples:**
 ```bash
@@ -318,12 +316,17 @@ Configure the link pipeline in `packager.toml`:
 
 ```toml
 [link]
-terminology_server = "https://tx.fhir.org/r4"
-# terminology_dir = "/path/to/terminology-snapshots"  # alternative to server
-# fhir_helpers = "/path/to/FHIRHelpers.cql"           # defaults to bundled
-format = "bundle"                                      # or "directory"
-# packages_dir = "/custom/.fhir/packages"             # override for dep resolution
+# Local pre-expanded ValueSets; canonical URL and version must match.
+terminology_dir = "/path/to/terminology-snapshots"
+format = "bundle"                          # or "directory"
+# packages_dir = "/custom/.fhir/packages" # override for dep resolution
 ```
+
+Remote terminology-server expansion is not implemented. ValueSets must already
+contain an expansion, list explicit `compose.include.concept` entries, or have a
+matching pre-expanded resource in `terminology_dir`. FHIRHelpers is not bundled
+automatically; include its `Library` resource with inline ELM in the source or a
+declared dependency package when CQL imports it.
 
 See [rh-packager README](../../../crates/rh-packager/README.md#link) for the
 full `[link]` configuration reference.

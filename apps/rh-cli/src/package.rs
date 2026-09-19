@@ -147,10 +147,6 @@ pub struct LinkArgs {
     #[clap(long)]
     pub format: Option<String>,
 
-    /// Override terminology server URL from packager.toml
-    #[clap(long)]
-    pub terminology: Option<String>,
-
     /// Override terminology directory from packager.toml
     #[clap(long)]
     pub terminology_dir: Option<PathBuf>,
@@ -311,7 +307,12 @@ pub async fn handle_command(cmd: PackageCommands, ctx: &OutputContext) -> Result
         }
         PackageCommands::Link(args) => {
             let output_dir = args.out.unwrap_or_else(|| args.dir.join("executable"));
-            let output = rh_packager::link_package(&args.dir, &output_dir)?;
+            let options = rh_packager::LinkOptions {
+                format: args.format,
+                terminology_dir: args.terminology_dir,
+                no_validate: args.no_validate,
+            };
+            let output = rh_packager::link_with_options(&args.dir, &output_dir, options)?;
             if ctx.is_json() {
                 print_envelope(
                     ctx,

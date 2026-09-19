@@ -51,5 +51,6 @@ pub use init::{init_package, name_from_canonical, InitOptions};
 pub use lock::{CanonicalRef, LockReport};
 pub use manifest::PackageJson;
 pub use pipeline::{
-    build, check, check_lock, link as link_package, lock as lock_package, pack_dir,
+    build, check, check_lock, link as link_package, link_with_options, lock as lock_package,
+    pack_dir, LinkOptions,
 };

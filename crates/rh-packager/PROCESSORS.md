@@ -477,7 +477,6 @@ expansion), so the bundle is self-contained for WASM terminology evaluation.
 
 ```toml
 [link]
-terminology_server = "https://tx.fhir.org/r4"
 # terminology_dir = "/path/to/terminology-snapshots"
 ```
 
@@ -489,7 +488,8 @@ terminology_server = "https://tx.fhir.org/r4"
   2. `expand_from_compose` — builds expansion directly from `compose.include.concept`
      entries (works when all concepts are explicitly listed, no filters, no nested
      ValueSet references)
-  3. Terminology server (`terminology_server`) — planned, not yet implemented
+- Requires terminology-directory resources to match the source ValueSet's
+  canonical URL and version before copying the expansion.
 - Skips ValueSets that already have a non-empty `expansion.contains`.
 - Logs a warning for any ValueSet that cannot be expanded.
 

@@ -6,9 +6,8 @@
 //! Terminology data sources (in priority order):
 //!   1. Local terminology directory (`[link] terminology_dir`)
 //!   2. Already-expanded ValueSets in the resource map (skip)
-//!   3. FHIR terminology server (`[link] terminology_server`) — future, not yet implemented
 
-use crate::{context::PublishContext, hooks::HookProcessor, Result};
+use crate::{context::PublishContext, hooks::HookProcessor, PublisherError, Result};
 use serde_json::Value;
 use std::path::Path;
 use tracing::{info, warn};
@@ -54,14 +53,6 @@ impl HookProcessor for ExpandValueSetsProcessor {
                     info!("expand-valuesets: expanded {key} from terminology dir");
                     continue;
                 }
-            }
-
-            // Try terminology server (future — not yet implemented).
-            if ctx.config.link.terminology_server.is_some() {
-                warn!(
-                    "expand-valuesets: terminology_server expansion not yet implemented \
-                     for {key} ({url})"
-                );
             }
 
             // If the ValueSet has explicit concepts in compose.include, we can
@@ -123,6 +114,10 @@ fn expand_from_dir(vs: &Value, dir: &str) -> Result<Option<Value>> {
             + ".json",
     ];
 
+    let expected_version = vs.get("version").and_then(Value::as_str);
+    let expected_identity = format_canonical_identity(url, expected_version, id);
+    let mut mismatch: Option<(String, String)> = None;
+
     for candidate in &candidates {
         let path = dir_path.join(candidate);
         if path.exists() {
@@ -130,13 +125,29 @@ fn expand_from_dir(vs: &Value, dir: &str) -> Result<Option<Value>> {
             let expanded_vs: Value = serde_json::from_str(&text)?;
 
             // Verify it's a ValueSet with an expansion.
-            if expanded_vs.get("resourceType").and_then(|r| r.as_str()) == Some("ValueSet")
+            if expanded_vs.get("resourceType").and_then(Value::as_str) == Some("ValueSet")
                 && expanded_vs
                     .get("expansion")
                     .and_then(|e| e.get("contains"))
-                    .and_then(|c| c.as_array())
+                    .and_then(Value::as_array)
                     .is_some()
             {
+                let actual_url = expanded_vs.get("url").and_then(Value::as_str).unwrap_or("");
+                let actual_id = expanded_vs.get("id").and_then(Value::as_str).unwrap_or("");
+                let actual_version = expanded_vs.get("version").and_then(Value::as_str);
+                let same_canonical = if url.is_empty() {
+                    !id.is_empty() && actual_id == id
+                } else {
+                    actual_url == url
+                };
+                if !same_canonical || actual_version != expected_version {
+                    mismatch = Some((
+                        path.display().to_string(),
+                        format_canonical_identity(actual_url, actual_version, actual_id),
+                    ));
+                    continue;
+                }
+
                 // Merge the expansion into the original ValueSet, preserving
                 // the original's url, id, name, etc.
                 let mut result = vs.clone();
@@ -146,7 +157,23 @@ fn expand_from_dir(vs: &Value, dir: &str) -> Result<Option<Value>> {
         }
     }
 
+    if let Some((path, actual)) = mismatch {
+        return Err(PublisherError::TerminologyIdentityMismatch {
+            path,
+            expected: expected_identity,
+            actual,
+        });
+    }
+
     Ok(None)
+}
+
+fn format_canonical_identity(url: &str, version: Option<&str>, id: &str) -> String {
+    let base = if url.is_empty() { id } else { url };
+    match version {
+        Some(version) => format!("{base}|{version}"),
+        None => base.to_string(),
+    }
 }
 
 /// Build an expansion directly from `compose.include.concept` entries.
@@ -356,20 +383,18 @@ mod tests {
         let term_dir = tmp.path().join("terminology");
         fs::create_dir_all(&term_dir).unwrap();
 
-        // Write a pre-expanded ValueSet to the terminology directory.
-        fs::write(
-            term_dir.join("ValueSet-test-codes.json"),
-            r#"{"resourceType":"ValueSet","expansion":{"contains":[{"system":"http://snomed.info/sct","code":"123","display":"Foo"},{"system":"http://snomed.info/sct","code":"456","display":"Bar"}]}}"#,
-        )
-        .unwrap();
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/terminology-dir/ValueSet-expanded-from-dir.json");
+        fs::copy(&fixture, term_dir.join("ValueSet-expanded-from-dir.json")).unwrap();
 
         let mut resources = HashMap::new();
         resources.insert(
-            "ValueSet-test-codes".to_string(),
+            "ValueSet-expanded-from-dir".to_string(),
             json!({
                 "resourceType": "ValueSet",
-                "id": "test-codes",
-                "url": "http://example.org/fhir/ValueSet/test-codes",
+                "id": "expanded-from-dir",
+                "url": "http://example.org/fhir/ValueSet/expanded-from-dir",
+                "version": "1.0.0",
                 "compose": {"include": [{"system": "http://snomed.info/sct"}]}
             }),
         );
@@ -382,11 +407,39 @@ mod tests {
         let mut ctx = make_ctx(&tmp, resources, link_config);
         ExpandValueSetsProcessor.run(&mut ctx).unwrap();
 
-        let vs = ctx.resources.get("ValueSet-test-codes").unwrap();
+        let vs = ctx.resources.get("ValueSet-expanded-from-dir").unwrap();
         let contains = vs["expansion"]["contains"].as_array().unwrap();
         assert_eq!(contains.len(), 2);
         // Original metadata preserved
-        assert_eq!(vs["url"], "http://example.org/fhir/ValueSet/test-codes");
+        assert_eq!(
+            vs["url"],
+            "http://example.org/fhir/ValueSet/expanded-from-dir"
+        );
+    }
+
+    #[test]
+    fn rejects_terminology_expansion_for_wrong_canonical_version() {
+        let tmp = TempDir::new().unwrap();
+        let term_dir = tmp.path().join("terminology");
+        fs::create_dir_all(&term_dir).unwrap();
+        fs::write(
+            term_dir.join("ValueSet-test.json"),
+            r#"{"resourceType":"ValueSet","id":"test","url":"http://example.org/fhir/ValueSet/test","version":"2.0.0","expansion":{"contains":[{"system":"http://example.org/cs","code":"WRONG"}]}}"#,
+        )
+        .unwrap();
+
+        let source = json!({
+            "resourceType": "ValueSet",
+            "id": "test",
+            "url": "http://example.org/fhir/ValueSet/test",
+            "version": "1.0.0",
+            "compose": {"include": [{"system": "http://example.org/cs"}]}
+        });
+        let err = expand_from_dir(&source, term_dir.to_str().unwrap()).unwrap_err();
+        assert!(matches!(
+            err,
+            PublisherError::TerminologyIdentityMismatch { .. }
+        ));
     }
 
     #[test]

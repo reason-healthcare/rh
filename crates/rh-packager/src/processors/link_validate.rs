@@ -10,6 +10,7 @@
 //!   6. No circular Library dependencies
 
 use crate::{context::PublishContext, hooks::HookProcessor, lock, PublisherError, Result};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde_json::Value;
 use std::collections::HashSet;
 use tracing::info;
@@ -27,7 +28,7 @@ impl HookProcessor for LinkValidateProcessor {
 
         // 1. Check all canonical references resolve.
         for (key, resource) in &ctx.resources {
-            for url in lock::collect_canonicals(resource) {
+            for url in lock::collect_canonical_references(resource) {
                 if lock::is_excluded(&url) {
                     continue;
                 }
@@ -55,12 +56,12 @@ impl HookProcessor for LinkValidateProcessor {
             }
         }
 
-        // 4. Check all Libraries have ELM attachments.
+        // 4. Check all Libraries have valid, inline ELM attachments.
         for (key, resource) in &ctx.resources {
-            if resource.get("resourceType").and_then(|r| r.as_str()) == Some("Library")
-                && !has_elm(resource)
-            {
-                errors.push(format!("Library missing ELM attachment: {key}"));
+            if resource.get("resourceType").and_then(|r| r.as_str()) == Some("Library") {
+                if let Err(message) = validate_elm(resource) {
+                    errors.push(format!("Library {key} has invalid ELM: {message}"));
+                }
             }
         }
 
@@ -96,7 +97,7 @@ impl HookProcessor for LinkValidateProcessor {
 fn canonical_in_resources(ctx: &PublishContext, url: &str) -> bool {
     ctx.resources
         .values()
-        .any(|v| v.get("url").and_then(|u| u.as_str()) == Some(url))
+        .any(|resource| lock::resource_matches_canonical(resource, url))
 }
 
 /// Check if a ValueSet has a non-empty expansion.
@@ -115,18 +116,43 @@ fn has_snapshot(sd: &Value) -> bool {
         .is_some_and(|arr| !arr.is_empty())
 }
 
-/// Check if a Library has an ELM attachment.
-fn has_elm(lib: &Value) -> bool {
-    lib.get("content")
+/// Require at least one inline, base64-encoded, parseable ELM JSON attachment.
+fn validate_elm(lib: &Value) -> std::result::Result<(), String> {
+    let elm_attachments: Vec<&Value> = lib
+        .get("content")
         .and_then(|c| c.as_array())
-        .is_some_and(|content| {
-            content.iter().any(|attachment| {
-                attachment
-                    .get("contentType")
-                    .and_then(|t| t.as_str())
-                    .is_some_and(|t| t == "application/elm+json")
-            })
+        .into_iter()
+        .flatten()
+        .filter(|attachment| {
+            attachment.get("contentType").and_then(Value::as_str) == Some("application/elm+json")
         })
+        .collect();
+
+    if elm_attachments.is_empty() {
+        return Err("missing application/elm+json attachment".to_string());
+    }
+
+    for attachment in elm_attachments {
+        decode_elm_attachment(attachment)?;
+    }
+
+    Ok(())
+}
+
+fn decode_elm_attachment(attachment: &Value) -> std::result::Result<rh_cql::elm::Library, String> {
+    let encoded = attachment
+        .get("data")
+        .and_then(Value::as_str)
+        .filter(|data| !data.is_empty())
+        .ok_or_else(|| "ELM attachment must contain non-empty inline data".to_string())?;
+    let decoded = STANDARD
+        .decode(encoded)
+        .map_err(|error| format!("ELM attachment is not valid base64: {error}"))?;
+    let document: Value = serde_json::from_slice(&decoded)
+        .map_err(|error| format!("ELM attachment is not valid JSON: {error}"))?;
+    let library = document.get("library").cloned().unwrap_or(document);
+    serde_json::from_value(library)
+        .map_err(|error| format!("ELM attachment is not a valid ELM library: {error}"))
 }
 
 /// Check if any Library's CQL content imports FHIRHelpers.
@@ -135,16 +161,29 @@ fn uses_fhir_helpers(ctx: &PublishContext) -> bool {
         if resource.get("resourceType").and_then(|r| r.as_str()) != Some("Library") {
             continue;
         }
-        if let Some(content) = resource.get("content").and_then(|c| c.as_array()) {
+        if let Some(content) = resource.get("content").and_then(Value::as_array) {
             for attachment in content {
-                if attachment
-                    .get("contentType")
-                    .and_then(|t| t.as_str())
-                    .is_some_and(|t| t == "text/cql")
+                let content_type = attachment.get("contentType").and_then(Value::as_str);
+                let data = attachment.get("data").and_then(Value::as_str);
+                if content_type == Some("text/cql")
+                    && data
+                        .and_then(|encoded| STANDARD.decode(encoded).ok())
+                        .and_then(|decoded| String::from_utf8(decoded).ok())
+                        .is_some_and(|cql| cql.lines().any(cql_line_imports_fhir_helpers))
                 {
-                    // Check if CQL source references FHIRHelpers.
-                    // The data is base64-encoded; for now check relatedArtifact
-                    // which is more reliable.
+                    return true;
+                }
+                if content_type == Some("application/elm+json")
+                    && decode_elm_attachment(attachment)
+                        .ok()
+                        .and_then(|elm| elm.includes)
+                        .is_some_and(|includes| {
+                            includes.defs.iter().any(|include| {
+                                include.path.as_deref().is_some_and(is_fhir_helpers_name)
+                            })
+                        })
+                {
+                    return true;
                 }
             }
         }
@@ -152,7 +191,11 @@ fn uses_fhir_helpers(ctx: &PublishContext) -> bool {
         if let Some(related) = resource.get("relatedArtifact").and_then(|r| r.as_array()) {
             for art in related {
                 let display = art.get("display").and_then(|d| d.as_str()).unwrap_or("");
-                let url = art.get("url").and_then(|u| u.as_str()).unwrap_or("");
+                let url = art
+                    .get("resource")
+                    .or_else(|| art.get("url"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("");
                 if display.contains("FHIRHelpers") || url.contains("FHIRHelpers") {
                     return true;
                 }
@@ -162,6 +205,20 @@ fn uses_fhir_helpers(ctx: &PublishContext) -> bool {
     false
 }
 
+fn cql_line_imports_fhir_helpers(line: &str) -> bool {
+    let line = line.trim_start();
+    line.starts_with("include ")
+        && line
+            .split_ascii_whitespace()
+            .nth(1)
+            .is_some_and(is_fhir_helpers_name)
+}
+
+fn is_fhir_helpers_name(name: &str) -> bool {
+    name.split(['.', '/', '|'])
+        .any(|segment| segment == "FHIRHelpers")
+}
+
 /// Check if a FHIRHelpers Library resource is present.
 fn has_fhir_helpers(ctx: &PublishContext) -> bool {
     ctx.resources.values().any(|v| {
@@ -169,10 +226,13 @@ fn has_fhir_helpers(ctx: &PublishContext) -> bool {
             && (v
                 .get("name")
                 .and_then(|n| n.as_str())
-                .is_some_and(|n| n == "FHIRHelpers")
+                .is_some_and(is_fhir_helpers_name)
                 || v.get("id")
                     .and_then(|i| i.as_str())
-                    .is_some_and(|i| i == "FHIRHelpers"))
+                    .is_some_and(is_fhir_helpers_name)
+                || v.get("url")
+                    .and_then(Value::as_str)
+                    .is_some_and(is_fhir_helpers_name))
     })
 }
 
@@ -202,9 +262,14 @@ fn detect_circular_library_deps(ctx: &PublishContext) -> Option<Vec<String>> {
         if let Some(related) = resource.get("relatedArtifact").and_then(|r| r.as_array()) {
             for art in related {
                 if art.get("type").and_then(|t| t.as_str()) == Some("depends-on") {
-                    if let Some(url) = art.get("url").and_then(|u| u.as_str()) {
+                    if let Some(url) = art
+                        .get("resource")
+                        .or_else(|| art.get("url"))
+                        .and_then(Value::as_str)
+                    {
                         // Try to find the library name from the URL.
-                        if let Some(dep_name) = url.rsplit('/').next() {
+                        let (canonical, _) = lock::canonical_url_and_version(url);
+                        if let Some(dep_name) = canonical.rsplit('/').next() {
                             deps.push(dep_name.to_string());
                         }
                     }
@@ -273,6 +338,11 @@ mod tests {
     use std::collections::HashMap;
     use tempfile::TempDir;
 
+    fn valid_elm_data() -> String {
+        let library = serde_json::json!({"library": {"identifier": {"id": "TestLogic"}}});
+        STANDARD.encode(serde_json::to_vec(&library).unwrap())
+    }
+
     fn make_ctx(resources: HashMap<String, Value>) -> PublishContext {
         let tmp = TempDir::new().unwrap();
         PublishContext {
@@ -318,7 +388,7 @@ mod tests {
                 "url": "http://example.org/fhir/Library/TestLogic",
                 "content": [
                     {"contentType": "text/cql", "data": ""},
-                    {"contentType": "application/elm+json", "data": ""}
+                    {"contentType": "application/elm+json", "data": valid_elm_data()}
                 ]
             }),
         );
@@ -344,6 +414,38 @@ mod tests {
         let err = LinkValidateProcessor.run(&mut ctx).unwrap_err();
         assert!(
             matches!(err, PublisherError::LinkValidation(ref errs) if errs.iter().any(|e| e.contains("Unresolved canonical reference")))
+        );
+    }
+
+    #[test]
+    fn fails_on_unresolved_versioned_canonical() {
+        let mut resources = HashMap::new();
+        resources.insert(
+            "PlanDefinition-test".to_string(),
+            json!({
+                "resourceType": "PlanDefinition",
+                "id": "test",
+                "url": "http://example.org/fhir/PlanDefinition/test",
+                "library": ["http://example.org/fhir/Library/TestLogic|2.0.0"]
+            }),
+        );
+        resources.insert(
+            "Library-TestLogic".to_string(),
+            json!({
+                "resourceType": "Library",
+                "id": "TestLogic",
+                "url": "http://example.org/fhir/Library/TestLogic",
+                "version": "1.0.0",
+                "content": [
+                    {"contentType": "application/elm+json", "data": valid_elm_data()}
+                ]
+            }),
+        );
+
+        let mut ctx = make_ctx(resources);
+        let err = LinkValidateProcessor.run(&mut ctx).unwrap_err();
+        assert!(
+            matches!(err, PublisherError::LinkValidation(ref errs) if errs.iter().any(|e| e.contains("TestLogic|2.0.0")))
         );
     }
 
@@ -428,13 +530,39 @@ mod tests {
     }
 
     #[test]
-    fn has_elm_checks() {
-        assert!(has_elm(
+    fn elm_validation_checks_inline_content() {
+        assert!(validate_elm(
+            &json!({"content": [{"contentType": "application/elm+json", "data": valid_elm_data()}]})
+        )
+        .is_ok());
+        assert!(validate_elm(
             &json!({"content": [{"contentType": "application/elm+json", "data": ""}]})
-        ));
-        assert!(!has_elm(
-            &json!({"content": [{"contentType": "text/cql", "data": ""}]})
-        ));
-        assert!(!has_elm(&json!({})));
+        )
+        .is_err());
+        assert!(validate_elm(
+            &json!({"content": [{"contentType": "application/elm+json", "data": "bm90IGpzb24="}]})
+        )
+        .is_err());
+        assert!(
+            validate_elm(&json!({"content": [{"contentType": "text/cql", "data": ""}]})).is_err()
+        );
+        assert!(validate_elm(&json!({})).is_err());
+    }
+
+    #[test]
+    fn detects_fhir_helpers_import_from_inline_cql() {
+        let cql = STANDARD.encode(
+            "library Test version '1.0.0'\ninclude FHIRHelpers version '4.0.1' called FHIRHelpers",
+        );
+        let resources = [(
+            "Library-Test".to_string(),
+            json!({
+                "resourceType": "Library",
+                "content": [{"contentType": "text/cql", "data": cql}]
+            }),
+        )]
+        .into_iter()
+        .collect();
+        assert!(uses_fhir_helpers(&make_ctx(resources)));
     }
 }

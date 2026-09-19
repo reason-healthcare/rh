@@ -1,6 +1,6 @@
 //! Integration tests for the `rh package link` executable bundle pipeline.
 
-use rh_packager::link_package;
+use rh_packager::{link_package, link_with_options, LinkOptions};
 use serde_json::Value;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -117,35 +117,16 @@ fn link_produces_bundle_metadata() {
 /// Test 5: link() with --format directory produces separate files.
 #[test]
 fn link_directory_format_produces_separate_files() {
-    // We need to modify the packager.toml to use directory format.
-    // Since we can't easily pass CLI flags through the pipeline function,
-    // we'll create a modified fixture.
-    let tmp = TempDir::new().unwrap();
-    let fixture_copy = tmp.path().join("fixture");
-    std::fs::create_dir_all(&fixture_copy).unwrap();
-
-    // Copy the fixture and modify packager.toml
-    copy_dir_recursive(&executable_fixture(), &fixture_copy);
-
-    // Overwrite packager.toml with directory format
-    std::fs::write(
-        fixture_copy.join("packager.toml"),
-        r#"id = "test.executable"
-version = "1.0.0"
-fhir_version = "4.0.1"
-canonical = "http://test.org/fhir"
-
-[hooks]
-before_build = ["cql"]
-
-[link]
-format = "directory"
-"#,
+    let output_dir = TempDir::new().unwrap();
+    let output = link_with_options(
+        &executable_fixture(),
+        output_dir.path(),
+        LinkOptions {
+            format: Some("directory".to_string()),
+            ..Default::default()
+        },
     )
     .unwrap();
-
-    let output_dir = TempDir::new().unwrap();
-    let output = link_package(&fixture_copy, output_dir.path()).unwrap();
 
     // Output should be the directory itself.
     assert!(output.is_dir());
@@ -216,6 +197,55 @@ format = "bundle"
     assert!(
         msg.contains("Unresolved canonical reference") || msg.contains("Link validation failed"),
         "Error should mention unresolved reference, got: {msg}"
+    );
+
+    let output_dir = TempDir::new().unwrap();
+    let output = link_with_options(
+        &fixture,
+        output_dir.path(),
+        LinkOptions {
+            no_validate: true,
+            ..Default::default()
+        },
+    )
+    .expect("--no-validate should skip the completeness gate");
+    assert!(output.exists());
+}
+
+#[test]
+fn terminology_directory_override_is_applied() {
+    let tmp = TempDir::new().unwrap();
+    let fixture_copy = tmp.path().join("fixture");
+    copy_dir_recursive(&executable_fixture(), &fixture_copy);
+    std::fs::write(
+        fixture_copy.join("input/ValueSet-test-codes.json"),
+        r#"{"resourceType":"ValueSet","id":"expanded-from-dir","url":"http://example.org/fhir/ValueSet/expanded-from-dir","version":"1.0.0","status":"active","compose":{"include":[{"system":"http://example.org/codes"}]}}"#,
+    )
+    .unwrap();
+    let terminology_dir = fixtures_dir().join("terminology-dir");
+    let output_dir = TempDir::new().unwrap();
+
+    let output = link_with_options(
+        &fixture_copy,
+        output_dir.path(),
+        LinkOptions {
+            terminology_dir: Some(terminology_dir),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let bundle = read_json(&output);
+    let value_set = bundle["entry"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find_map(|entry| {
+            (entry["resource"]["id"] == "expanded-from-dir").then_some(&entry["resource"])
+        })
+        .unwrap();
+    assert_eq!(
+        value_set["expansion"]["contains"].as_array().unwrap().len(),
+        2
     );
 }
 

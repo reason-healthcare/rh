@@ -106,8 +106,8 @@ struct Engine<'lib, 'ctx> {
     next_event_id: u64,
     /// Expression name → body, built at construction for O(1) lookup.
     expr_index: HashMap<String, &'lib Expression>,
-    /// Function name → definition, built at construction for O(1) lookup.
-    func_index: HashMap<String, &'lib crate::elm::FunctionDef>,
+    /// Function name → overloads, built at construction for O(1) lookup.
+    func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>>,
     /// Set of parameter names declared in the library, for fast membership test.
     param_names: HashSet<String>,
     /// Binding scope stack — top frame is the innermost scope.
@@ -138,7 +138,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         let mut expr_index: HashMap<String, &'lib Expression> = HashMap::new();
         let mut param_names: HashSet<String> = HashSet::new();
 
-        let mut func_index: HashMap<String, &'lib crate::elm::FunctionDef> = HashMap::new();
+        let mut func_index: HashMap<String, Vec<&'lib crate::elm::FunctionDef>> = HashMap::new();
 
         if let Some(stmts) = &library.statements {
             for def in &stmts.defs {
@@ -150,7 +150,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     }
                     StatementDef::Function(fd) => {
                         if let Some(name) = &fd.name {
-                            func_index.insert(name.clone(), fd);
+                            func_index.entry(name.clone()).or_default().push(fd);
                         }
                     }
                 }
@@ -191,9 +191,35 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             .ok_or_else(|| EvalError::General(format!("Expression '{name}' not found in library")))
     }
 
-    /// Look up a user-defined function by name in this library.
-    fn find_function(&self, name: &str) -> Option<&'lib crate::elm::FunctionDef> {
-        self.func_index.get(name).copied()
+    /// Select one user-defined function overload by arity and ELM signature.
+    fn find_function(
+        &self,
+        name: &str,
+        argument_count: usize,
+        signature: &[crate::elm::TypeSpecifier],
+    ) -> Result<Option<&'lib crate::elm::FunctionDef>, EvalError> {
+        let Some(overloads) = self.func_index.get(name) else {
+            return Ok(None);
+        };
+        let mut matches = overloads
+            .iter()
+            .copied()
+            .filter(|function| function.operand.len() == argument_count)
+            .filter(|function| {
+                signature.is_empty()
+                    || function
+                        .operand
+                        .iter()
+                        .map(|operand| operand.operand_type_specifier.as_ref())
+                        .eq(signature.iter().map(Some))
+            });
+        let selected = matches.next();
+        if selected.is_some() && matches.next().is_some() {
+            return Err(EvalError::General(format!(
+                "Function '{name}' overload is ambiguous without a unique ELM signature match"
+            )));
+        }
+        Ok(selected)
     }
 
     /// Evaluate a user-defined function by binding arguments to operand names,
@@ -203,6 +229,20 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
         fd: &crate::elm::FunctionDef,
         args: Vec<Value>,
     ) -> Result<Value, EvalError> {
+        if fd.external == Some(true) {
+            return Err(EvalError::General(format!(
+                "External function '{}' is not supported",
+                fd.name.as_deref().unwrap_or("?")
+            )));
+        }
+        if fd.operand.len() != args.len() {
+            return Err(EvalError::General(format!(
+                "Function '{}' expected {} arguments, got {}",
+                fd.name.as_deref().unwrap_or("?"),
+                fd.operand.len(),
+                args.len()
+            )));
+        }
         let body = fd.expression.as_ref().ok_or_else(|| {
             EvalError::General(format!(
                 "Function '{}' has no body",
@@ -1441,27 +1481,19 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                                     alias: alias.to_string(),
                                 })?;
 
-                        // Find the function definition in the included library.
-                        if let Some(stmts) = &inc_lib.statements {
-                            for def in &stmts.defs {
-                                if let crate::elm::StatementDef::Function(fd) = def {
-                                    if fd.name.as_deref() == Some(name) {
-                                        let mut sub_engine = Engine::new_with_libraries(
-                                            inc_lib,
-                                            Some(included),
-                                            self.ctx,
-                                        );
-                                        return sub_engine.eval_user_function(fd, args);
-                                    }
-                                }
-                            }
+                        let mut sub_engine =
+                            Engine::new_with_libraries(inc_lib, Some(included), self.ctx);
+                        if let Some(fd) =
+                            sub_engine.find_function(name, args.len(), &func_ref.signature)?
+                        {
+                            return sub_engine.eval_user_function(fd, args);
                         }
 
                         return Err(EvalError::ExpressionNotFound(format!("{alias}.{name}")));
                     }
 
                     // Same-library function call: look up in this library.
-                    if let Some(fd) = self.find_function(name) {
+                    if let Some(fd) = self.find_function(name, args.len(), &func_ref.signature)? {
                         return self.eval_user_function(fd, args);
                     }
 
@@ -2864,8 +2896,8 @@ fn eval_time_function_args(args: &[Value]) -> Result<Value, EvalError> {
 mod tests {
     use super::*;
     use crate::elm::{
-        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, Library,
-        Literal, StatementDef,
+        BinaryExpression, Expression, ExpressionDef, ExpressionDefs, ExpressionRef, FunctionDef,
+        FunctionRef, Library, Literal, NamedTypeSpecifier, OperandDef, StatementDef, TypeSpecifier,
     };
     use crate::eval::context::{EvalContextBuilder, FixedClock};
     use crate::eval::value::CqlDateTime;
@@ -3147,5 +3179,54 @@ mod tests {
                 alias: "Unknown".to_string()
             }
         );
+    }
+
+    #[test]
+    fn cross_library_function_ref_selects_typed_overload() {
+        fn named_type(name: &str) -> TypeSpecifier {
+            TypeSpecifier::Named(NamedTypeSpecifier {
+                name: format!("{{urn:hl7-org:elm-types:r1}}{name}"),
+                ..Default::default()
+            })
+        }
+
+        let integer_type = named_type("Integer");
+        let string_type = named_type("String");
+        let overload = |operand_type: TypeSpecifier, result: i64| {
+            StatementDef::Function(FunctionDef {
+                name: Some("Convert".to_string()),
+                operand: vec![OperandDef {
+                    name: Some("value".to_string()),
+                    operand_type_specifier: Some(operand_type),
+                    ..Default::default()
+                }],
+                expression: Some(Box::new(int_literal(result))),
+                ..Default::default()
+            })
+        };
+        let helpers = Library {
+            statements: Some(ExpressionDefs {
+                defs: vec![overload(integer_type, 1), overload(string_type.clone(), 2)],
+            }),
+            ..Default::default()
+        };
+        let main = make_library(
+            "Main",
+            Expression::FunctionRef(FunctionRef {
+                name: Some("Convert".to_string()),
+                library_name: Some("Helpers".to_string()),
+                operand: vec![Expression::Literal(Literal {
+                    value: Some("text".to_string()),
+                    value_type: Some("String".to_string()),
+                    ..Default::default()
+                })],
+                signature: vec![string_type],
+                ..Default::default()
+            }),
+        );
+        let included = [("Helpers".to_string(), helpers)].into_iter().collect();
+
+        let value = evaluate_elm_with_libraries(&main, &included, "Main", &fixed_ctx()).unwrap();
+        assert_eq!(value, Value::Integer(2));
     }
 }

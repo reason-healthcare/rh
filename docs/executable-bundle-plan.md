@@ -52,10 +52,8 @@ Options:
   --format <FORMAT>        Output format: "bundle" (single FHIR Bundle JSON) or
                            "directory" (one .json file per resource) [default: from
                            packager.toml, or "bundle"]
-  --terminology <URL>      Override terminology server URL from packager.toml
   --terminology-dir <PATH> Override terminology directory from packager.toml
   --no-validate            Skip link-validate completeness check
-  --verbose                Show resolution trace for each dependency
 ```
 
 CLI flags override `packager.toml` `[link]` section values when present.
@@ -105,17 +103,8 @@ New config section, added to `PublisherConfig`:
 
 ```toml
 [link]
-# FHIR terminology server URL for ValueSet $expand.
-# Used by the expand-valuesets processor.
-terminology_server = "https://tx.fhir.org/r4"
-
-# Local directory of pre-expanded ValueSets and CodeSystems.
-# Alternative to terminology_server -- fully offline.
+# Local directory of pre-expanded ValueSets.
 # terminology_dir = "/path/to/terminology-snapshots"
-
-# Path to FHIRHelpers.cql or pre-compiled FHIRHelpers ELM JSON.
-# Defaults to a version bundled with rh-packager.
-# fhir_helpers = "/path/to/FHIRHelpers.cql"
 
 # Output format for `rh package link`.
 # "bundle" = single FHIR Bundle JSON (default)
@@ -129,11 +118,13 @@ format = "bundle"
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `terminology_server` | string | -- | FHIR terminology server base URL for `$expand`. |
-| `terminology_dir` | string | -- | Local directory of pre-expanded ValueSets and CodeSystems. |
-| `fhir_helpers` | string | bundled | Path to FHIRHelpers source or pre-compiled ELM. |
+| `terminology_dir` | string | -- | Local pre-expanded ValueSets matching source canonical URL and version. |
 | `format` | string | `"bundle"` | Output format: `"bundle"` or `"directory"`. |
 | `packages_dir` | string | top-level | Packages cache for dependency resolution. |
+
+Remote `$expand` and automatic FHIRHelpers bundling are outside the implemented
+scope. Callers provide local terminology expansions and include FHIRHelpers as
+a normal `Library` resource or dependency package.
 
 ---
 
@@ -174,18 +165,15 @@ expansion).
 1. Collect all ValueSet resources in `ctx.resources` that need expansion.
 2. For each, resolve the expansion:
    - If `terminology_dir` is configured, look for a pre-expanded ValueSet
-     file matching the URL.
-   - If `terminology_server` is configured, call `$expand` via
-     `rh-foundation` HTTP client.
+     file matching the canonical URL and version.
    - If the ValueSet already has `expansion.contains`, skip it.
-3. For ValueSets that compose from other ValueSets (`compose.include.valueSet`),
-   expand referenced ValueSets first (transitive).
-4. Store the full expansion in `ValueSet.expansion.contains`.
-5. If a ValueSet cannot be expanded, fail with `PublisherError::Other`.
+   - Otherwise, expand explicit `compose.include.concept` entries locally.
+3. Store the full expansion in `ValueSet.expansion.contains`.
+4. Let `link-validate` reject any ValueSet that remains unexpanded.
 
 **Typical stage:** `after_build` (run after `resolve-dependencies`).
 
-**Config:** Uses `[link] terminology_server` and `[link] terminology_dir`.
+**Config:** Uses `[link] terminology_dir`.
 
 ### `link-validate` (processors/link_validate.rs)
 
@@ -194,14 +182,14 @@ completeness gate -- if it fails, the bundle is not executable.
 
 **Checks:**
 1. **No dangling canonical references** -- every `instantiatesCanonical`,
-   `definitionCanonical`, `library`, `relatedArtifact.url`, `answerValueSet`,
+   `definitionCanonical`, `library`, `relatedArtifact.resource`, `answerValueSet`,
    `valueSet` reference resolves to a resource in `ctx.resources`.
 2. **All ValueSets are expanded** -- every ValueSet has `expansion.contains`
    with at least one entry (or is explicitly empty by design).
 3. **All StructureDefinitions are snapshotted** -- every SD has
    `snapshot.element`.
-4. **All Libraries have ELM** -- every Library that will be evaluated has an
-   `application/elm+json` attachment in `content[]`.
+4. **All Libraries have ELM** -- every Library has a non-empty inline,
+   base64-encoded, parseable `application/elm+json` attachment in `content[]`.
 5. **FHIRHelpers is present** -- if any Library's CQL imports FHIRHelpers,
    a FHIRHelpers Library resource is in `ctx.resources`.
 6. **No circular Library dependencies** -- detect and report cycles in
@@ -311,10 +299,9 @@ patterns (tempdir-based, `make_ctx` helper, assert on resource map mutations).
 - The bundle contains all resources from the source directory plus any resolved
   dependencies.
 - `--format directory` produces one file per resource plus `_manifest.json`.
-- CLI flags (`--terminology`, `--terminology-dir`, `--format`, `--no-validate`)
+- CLI flags (`--terminology-dir`, `--format`, `--no-validate`)
   override `packager.toml` values.
 - `--no-validate` skips the `link-validate` processor.
-- `--verbose` shows resolution trace output.
 
 ### Phase 3: Documentation
 
@@ -405,7 +392,7 @@ patterns (tempdir-based, `make_ctx` helper, assert on resource map mutations).
 - `input/ImplementationGuide.json`
 - `input/PlanDefinition-test.json` referencing a Library and ValueSet
 - `input/Library-TestLogic.json` with CQL source
-- `input/cql/TestLogic.cql` importing FHIRHelpers
+- `input/cql/TestLogic.cql` with a self-contained expression
 - `input/ValueSet-test-codes.json` with compose (not expanded)
 - A fake dependency package directory with a CodeSystem
 
@@ -491,7 +478,7 @@ are already in `Cargo.toml` and sufficient for the new functionality.
 |---|---|
 | WASM CQL evaluation | All ValueSets pre-expanded -- `InMemoryTerminologyProvider` works with no I/O |
 | WASM `$apply` | All dependencies resolved -- `BundleResolver` finds everything in the bundle |
-| CQL FHIRHelpers | Bundled as pre-compiled ELM -- eval engine loads it as a dependency library |
+| CQL FHIRHelpers | Supplied as a pre-compiled Library dependency and verified before output |
 | Questionnaire rendering | SDs snapshotted -- renderer reads `snapshot.element` directly |
 | Deterministic preview | Bundle is self-contained -- same bundle always produces same evaluation results |
 | Offline preview | No terminology server needed at runtime -- works in browser with no network |

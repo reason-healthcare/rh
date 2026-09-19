@@ -37,7 +37,7 @@ impl HookProcessor for ResolveDependenciesProcessor {
             let all_canonicals: HashSet<String> = ctx
                 .resources
                 .values()
-                .flat_map(lock::collect_canonicals)
+                .flat_map(lock::collect_canonical_references)
                 .filter(|url| !lock::is_excluded(url))
                 .collect();
 
@@ -88,7 +88,7 @@ impl HookProcessor for ResolveDependenciesProcessor {
 fn canonical_in_resources(ctx: &PublishContext, url: &str) -> bool {
     ctx.resources
         .values()
-        .any(|v| v.get("url").and_then(|u| u.as_str()) == Some(url))
+        .any(|resource| lock::resource_matches_canonical(resource, url))
 }
 
 /// Derive a resource map key from a FHIR resource.
@@ -139,7 +139,7 @@ fn search_package_for_resource(pkg_dir: &std::path::Path, url: &str) -> Result<O
         }
         let text = std::fs::read_to_string(&path)?;
         let value: Value = serde_json::from_str(&text)?;
-        if value.get("url").and_then(|v| v.as_str()) == Some(url) {
+        if lock::resource_matches_canonical(&value, url) {
             return Ok(Some(value));
         }
     }
@@ -254,6 +254,55 @@ mod tests {
         let mut ctx = ctx;
         ResolveDependenciesProcessor.run(&mut ctx).unwrap();
         assert_eq!(ctx.resources.len(), count);
+    }
+
+    #[test]
+    fn resolves_the_requested_canonical_version() {
+        let tmp = TempDir::new().unwrap();
+        let packages_dir = tmp.path().join("packages");
+        let canonical = "http://dep.org/fhir/Library/shared";
+        let mut deps = HashMap::new();
+
+        for version in ["1.0.0", "2.0.0"] {
+            let package_name = format!("dep{version}");
+            let package_dir = packages_dir.join(format!("{package_name}#{version}"));
+            fs::create_dir_all(&package_dir).unwrap();
+            fs::write(
+                package_dir.join("Library-shared.json"),
+                serde_json::to_vec(&json!({
+                    "resourceType": "Library",
+                    "id": format!("shared-{version}"),
+                    "url": canonical,
+                    "version": version
+                }))
+                .unwrap(),
+            )
+            .unwrap();
+            deps.insert(package_name, version.to_string());
+        }
+
+        let resources = [(
+            "PlanDefinition-test".to_string(),
+            json!({
+                "resourceType": "PlanDefinition",
+                "id": "test",
+                "url": "http://example.org/fhir/PlanDefinition/test",
+                "library": [format!("{canonical}|2.0.0")]
+            }),
+        )]
+        .into_iter()
+        .collect();
+        let mut ctx = make_ctx(&tmp, resources, deps);
+        ctx.config.link.packages_dir = Some(packages_dir.to_string_lossy().into_owned());
+
+        ResolveDependenciesProcessor.run(&mut ctx).unwrap();
+
+        let resolved = ctx
+            .resources
+            .values()
+            .find(|resource| resource.get("url").and_then(Value::as_str) == Some(canonical))
+            .expect("requested dependency should be resolved");
+        assert_eq!(resolved["version"], "2.0.0");
     }
 
     #[test]

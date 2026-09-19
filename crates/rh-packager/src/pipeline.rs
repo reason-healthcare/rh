@@ -21,6 +21,20 @@ use std::{
 };
 use tracing::{info, warn};
 
+/// Per-invocation overrides for the executable-bundle link pipeline.
+///
+/// Values set here take precedence over the `[link]` section in
+/// `packager.toml`. `None` preserves the project configuration.
+#[derive(Debug, Clone, Default)]
+pub struct LinkOptions {
+    /// Output format override (`bundle` or `directory`).
+    pub format: Option<String>,
+    /// Local directory containing pre-expanded ValueSet resources.
+    pub terminology_dir: Option<PathBuf>,
+    /// Skip the final executable-bundle completeness validation.
+    pub no_validate: bool,
+}
+
 /// Run the full `rh package build` pipeline.
 ///
 /// Steps:
@@ -230,7 +244,29 @@ pub fn pack_dir(output_dir: &Path) -> Result<PathBuf> {
 /// println!("Executable bundle written to {}", output.display());
 /// ```
 pub fn link(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
+    link_with_options(source_dir, output_dir, LinkOptions::default())
+}
+
+/// Run [`link`] with command-specific overrides.
+pub fn link_with_options(
+    source_dir: &Path,
+    output_dir: &Path,
+    options: LinkOptions,
+) -> Result<PathBuf> {
     let mut ctx = load_source_dir(source_dir, output_dir.to_path_buf())?;
+
+    if let Some(format) = options.format {
+        if !matches!(format.as_str(), "bundle" | "directory") {
+            return Err(crate::PublisherError::LinkValidation(vec![format!(
+                "Unsupported executable bundle format '{format}'; expected 'bundle' or 'directory'"
+            )]));
+        }
+        ctx.config.link.format = format;
+    }
+    if let Some(terminology_dir) = options.terminology_dir {
+        ctx.config.link.terminology_dir = Some(terminology_dir.to_string_lossy().into_owned());
+    }
+
     warn_if_likely_implementation_guide_resource_url(ctx.package_json.url.as_deref());
     check_ig_sync(&ctx)?;
 
@@ -275,8 +311,10 @@ pub fn link(source_dir: &Path, output_dir: &Path) -> Result<PathBuf> {
     warn_resource_canonical_url_mismatches(&ctx);
 
     // Phase 3: Validate completeness
-    let link_validate = vec!["link-validate".to_string()];
-    run_stage(&registry, &link_validate, &mut ctx)?;
+    if !options.no_validate {
+        let link_validate = vec!["link-validate".to_string()];
+        run_stage(&registry, &link_validate, &mut ctx)?;
+    }
 
     // Phase 4: Write executable bundle output
     let output = write_executable_bundle(&ctx, output_dir)?;
