@@ -127,10 +127,8 @@ fn assemble_with_visited(
     if let Some(items) = questionnaire_items(&assembled) {
         let mut replaced = Vec::new();
         for item in items {
-            match assemble_item(item, &contained_resources, visited, ctx) {
-                Ok(mut result) => replaced.append(&mut result),
-                Err(error) => return Err(error),
-            }
+            let mut result = assemble_item(item, &contained_resources, visited, ctx)?;
+            replaced.append(&mut result);
         }
         assembled["item"] = Value::Array(replaced);
     }
