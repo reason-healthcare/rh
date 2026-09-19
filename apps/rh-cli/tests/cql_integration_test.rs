@@ -284,7 +284,9 @@ fn test_compile_source_map_resolves_lib_path_includes() {
     let lib_dir = dir.path().join("libs");
     fs::create_dir(&lib_dir).unwrap();
 
-    let helper_path = lib_dir.join("Helper.cql");
+    // A versioned include must resolve a versioned source filename. Falling
+    // back to Helper.cql could silently compile the wrong library version.
+    let helper_path = lib_dir.join("Helper-1.0.cql");
     fs::write(
         &helper_path,
         r#"library Helper version '1.0'

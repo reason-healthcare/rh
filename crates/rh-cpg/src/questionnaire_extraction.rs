@@ -86,7 +86,7 @@ pub fn extract_sdc_boolean_observations(
     let authored = required_string(response, "authored", "QuestionnaireResponse")?;
     let author = required_reference(response, "author", "QuestionnaireResponse")?;
     validate_reference_type(
-        &author,
+        author,
         PERFORMER_REFERENCE_TYPES,
         "QuestionnaireResponse.author",
     )?;
@@ -103,6 +103,17 @@ pub fn extract_sdc_boolean_observations(
         "QuestionnaireResponse.partOf",
     )?;
     let security = optional_security_labels(response)?;
+    let observation_provenance = ObservationProvenance {
+        subject,
+        encounter,
+        authored,
+        author,
+        response_reference: &response_reference,
+        category: specification.category.as_ref(),
+        security: security.as_ref(),
+        based_on: based_on.as_deref(),
+        part_of: part_of.as_deref(),
+    };
 
     let mut observations = specification
         .boolean_items
@@ -160,15 +171,7 @@ pub fn extract_sdc_boolean_observations(
             observations.push(numeric_observation(
                 item,
                 calculated,
-                subject,
-                encounter,
-                authored,
-                &author,
-                &response_reference,
-                specification.category.as_ref(),
-                security.as_ref(),
-                based_on.as_ref(),
-                part_of.as_ref(),
+                &observation_provenance,
             ));
         }
     }
@@ -706,38 +709,42 @@ fn single_integral_score(value: FhirPathValue, link_id: &str) -> CpgResult<i32> 
     })
 }
 
+struct ObservationProvenance<'a> {
+    subject: &'a str,
+    encounter: &'a str,
+    authored: &'a str,
+    author: &'a str,
+    response_reference: &'a str,
+    category: Option<&'a Value>,
+    security: Option<&'a Value>,
+    based_on: Option<&'a [Value]>,
+    part_of: Option<&'a [Value]>,
+}
+
 fn numeric_observation(
     item: &CalculatedScoreItem,
     score: i32,
-    subject: &str,
-    encounter: &str,
-    authored: &str,
-    author: &str,
-    response_reference: &str,
-    category: Option<&Value>,
-    security: Option<&Value>,
-    based_on: Option<&Vec<Value>>,
-    part_of: Option<&Vec<Value>>,
+    provenance: &ObservationProvenance<'_>,
 ) -> Value {
     let mut observation = json!({
         "resourceType": "Observation", "status": "final",
         "code": { "coding": [item.coding.clone()] },
-        "subject": { "reference": subject }, "encounter": { "reference": encounter },
-        "effectiveDateTime": authored, "issued": authored,
-        "performer": [{ "reference": author }], "valueInteger": score,
-        "derivedFrom": [{ "reference": response_reference }],
+        "subject": { "reference": provenance.subject }, "encounter": { "reference": provenance.encounter },
+        "effectiveDateTime": provenance.authored, "issued": provenance.authored,
+        "performer": [{ "reference": provenance.author }], "valueInteger": score,
+        "derivedFrom": [{ "reference": provenance.response_reference }],
     });
-    if let Some(category) = category {
+    if let Some(category) = provenance.category {
         observation["category"] = Value::Array(vec![category.clone()]);
     }
-    if let Some(security) = security {
+    if let Some(security) = provenance.security {
         observation["meta"] = json!({ "security": security });
     }
-    if let Some(based_on) = based_on {
-        observation["basedOn"] = Value::Array(based_on.clone());
+    if let Some(based_on) = provenance.based_on {
+        observation["basedOn"] = Value::Array(based_on.to_vec());
     }
-    if let Some(part_of) = part_of {
-        observation["partOf"] = Value::Array(part_of.clone());
+    if let Some(part_of) = provenance.part_of {
+        observation["partOf"] = Value::Array(part_of.to_vec());
     }
     observation
 }

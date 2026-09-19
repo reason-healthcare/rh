@@ -428,7 +428,7 @@ impl SemanticAnalyzer {
                                         operand
                                             .operand_type_specifier
                                             .as_ref()
-                                            .and_then(|spec| self.elm_type_to_data_type(spec))
+                                            .and_then(Self::elm_type_to_data_type)
                                             .unwrap_or(DataType::Unknown)
                                     })
                                     .collect(),
@@ -462,7 +462,7 @@ impl SemanticAnalyzer {
     /// declarations into semantic types. Imported function overloads must be
     /// selected by these declared types; choosing the first equal-arity
     /// overload emits a misleading FunctionRef.
-    fn elm_type_to_data_type(&self, specifier: &crate::elm::TypeSpecifier) -> Option<DataType> {
+    fn elm_type_to_data_type(specifier: &crate::elm::TypeSpecifier) -> Option<DataType> {
         match specifier {
             crate::elm::TypeSpecifier::Named(named) => {
                 let name = named.name.as_str();
@@ -477,18 +477,18 @@ impl SemanticAnalyzer {
             crate::elm::TypeSpecifier::List(list) => list
                 .element_type
                 .as_deref()
-                .and_then(|element| self.elm_type_to_data_type(element))
+                .and_then(Self::elm_type_to_data_type)
                 .map(DataType::list),
             crate::elm::TypeSpecifier::Interval(interval) => interval
                 .point_type
                 .as_deref()
-                .and_then(|point| self.elm_type_to_data_type(point))
+                .and_then(Self::elm_type_to_data_type)
                 .map(DataType::interval),
             crate::elm::TypeSpecifier::Choice(choice) => {
                 let choices: Vec<_> = choice
                     .choice
                     .iter()
-                    .filter_map(|choice| self.elm_type_to_data_type(choice))
+                    .filter_map(Self::elm_type_to_data_type)
                     .collect();
                 (!choices.is_empty()).then(|| DataType::choice(choices))
             }

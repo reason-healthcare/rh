@@ -112,7 +112,6 @@ fn evaluate_group(
                     population,
                     group_index,
                     population_index,
-                    measure,
                     library_canonicals,
                     ctx,
                 )
@@ -133,7 +132,6 @@ fn evaluate_group(
                 evaluate_stratifier(
                     stratifier,
                     group_index,
-                    measure,
                     library_canonicals,
                     ctx,
                     &populations,
@@ -162,15 +160,12 @@ fn evaluate_group(
                         .to_string(),
                 );
             } else {
-                match proportion_measure_score(&report_populations)? {
-                    Some(measure_score) => {
-                        report_group.insert("measureScore".to_string(), measure_score);
-                    }
-                    // A zero denominator has no defined proportion. Keep the
-                    // group and its population counts, but omit the score;
-                    // this is a normal individual-report result, not report-
-                    // level missing data.
-                    None => {}
+                // A zero denominator has no defined proportion. Keep the
+                // group and its population counts, but omit the score; this
+                // is a normal individual-report result, not report-level
+                // missing data.
+                if let Some(measure_score) = proportion_measure_score(&report_populations)? {
+                    report_group.insert("measureScore".to_string(), measure_score);
                 }
             }
         }
@@ -257,7 +252,6 @@ fn evaluate_population(
     population: &Value,
     group_index: usize,
     population_index: usize,
-    measure: &Value,
     library_canonicals: &[String],
     ctx: &ApplyContext,
 ) -> CpgResult<(Value, Vec<String>)> {
@@ -303,7 +297,6 @@ fn is_member(result: &Value) -> bool {
 fn evaluate_stratifier(
     stratifier: &Value,
     group_index: usize,
-    measure: &Value,
     library_canonicals: &[String],
     ctx: &ApplyContext,
     populations: &[(Value, Vec<String>)],

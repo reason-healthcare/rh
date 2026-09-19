@@ -144,8 +144,10 @@ fn evaluate_cql_identifier(
 }
 
 fn terminology_provider(ctx: &ApplyContext) -> CpgResult<InMemoryTerminologyProvider> {
+    type ValueSetVersions = Vec<(Option<String>, Vec<CqlCode>)>;
+
     let mut provider = InMemoryTerminologyProvider::new();
-    let mut valuesets: HashMap<String, Vec<(Option<String>, Vec<CqlCode>)>> = HashMap::new();
+    let mut valuesets: HashMap<String, ValueSetVersions> = HashMap::new();
     for value_set in ctx.content_resolver.all_by_type("ValueSet")? {
         let Some(url) = value_set.get("url").and_then(Value::as_str) else {
             continue;
