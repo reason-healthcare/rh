@@ -43,10 +43,13 @@ pub fn apply_plan_definition(plan_definition: &Value, ctx: &ApplyContext) -> Cpg
                 "organization": {"reference": organization},
             });
             push_bundle_entry(&mut entries, &practitioner_role);
+            let practitioner_role_id = practitioner_role["id"]
+                .as_str()
+                .expect("practitioner role id was just generated");
             set_field(
                 &mut request_group,
                 "author",
-                json!({"reference": format!("PractitionerRole/{}", practitioner_role["id"]) }),
+                json!({"reference": format!("PractitionerRole/{practitioner_role_id}") }),
             );
         } else {
             set_field(
@@ -413,6 +416,28 @@ mod tests {
         assert_eq!(
             goal_entry["resource"]["category"].as_array().unwrap().len(),
             1
+        );
+    }
+
+    #[test]
+    fn references_generated_practitioner_role_without_json_quotes() {
+        let bundle = content_bundle(false);
+        let mut ctx = context(&bundle);
+        ctx.practitioner = Some("Practitioner/456".to_string());
+        ctx.organization = Some("Organization/789".to_string());
+
+        let result = apply_plan_definition(&main_plan(&bundle), &ctx).unwrap();
+        let entries = result["entry"].as_array().unwrap();
+        let request_group = &entries[0]["resource"];
+        let practitioner_role = entries
+            .iter()
+            .find(|entry| entry["resource"]["resourceType"] == "PractitionerRole")
+            .unwrap();
+        let practitioner_role_id = practitioner_role["resource"]["id"].as_str().unwrap();
+
+        assert_eq!(
+            request_group["author"]["reference"],
+            format!("PractitionerRole/{practitioner_role_id}")
         );
     }
 
