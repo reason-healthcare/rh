@@ -35,6 +35,39 @@ describe("@reasonhealth/cpg node wrapper", () => {
 });
 
 describe("@reasonhealth/cpg measure and questionnaire wrappers", () => {
+  it("extracts coded answers with explicit host focus and preserves source observations", () => {
+    const coding = { system: "http://loinc.org", code: "LA6576-8", display: "Positive", userSelected: true };
+    const questionnaire = {
+      resourceType: "Questionnaire", url: "https://example.org/Questionnaire/diagnostic-review", version: "1",
+      meta: { profile: ["http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-extr-obsn"] },
+      extension: [{ url: "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-observationExtract", valueBoolean: true }],
+      item: [{ linkId: "er", type: "choice", required: true,
+        code: [{ system: "http://loinc.org", version: "2.81", code: "16112-5" }],
+        answerOption: [{ valueCoding: { system: coding.system, code: coding.code } }] }]
+    };
+    const response = { resourceType: "QuestionnaireResponse", id: "diagnostic-review", status: "completed",
+      questionnaire: `${questionnaire.url}|1`, subject: { reference: "Patient/1" }, encounter: { reference: "Encounter/1" },
+      author: { reference: "Practitioner/1" }, authored: "2026-09-20T12:00:00Z",
+      item: [{ linkId: "er", answer: [{ valueCoding: coding }] }] };
+    const result = extractQuestionnaireObservations(questionnaire, response, "Patient/1", {
+      encounter: "Encounter/1", focus: [{ reference: "Condition/index-cancer" }]
+    });
+    expect(result.success).toBe(true);
+    expect(result.value?.observations).toEqual([expect.objectContaining({
+      valueCodeableConcept: { coding: [coding] }, focus: [{ reference: "Condition/index-cancer" }],
+      derivedFrom: [{ reference: "QuestionnaireResponse/diagnostic-review" }]
+    })]);
+    expect((result.value?.transaction as { entry: Array<{ resource: unknown }> }).entry[0].resource).toEqual(result.value?.observations?.[0]);
+    expect(JSON.parse(result.data ?? "{}")).toEqual(result.value);
+    expect(extractQuestionnaireObservations(questionnaire, response, "Patient/1", {
+      encounter: "Encounter/1", focus: [{ reference: "Patient/1" }]
+    }).success).toBe(false);
+    const source = { resourceType: "Observation", id: "original-pathology", valueCodeableConcept: { coding: [coding] } };
+    const reconciled = reconcileExtractedObservations({ resourceType: "Bundle", type: "collection", entry: [{ resource: source }] },
+      "QuestionnaireResponse/diagnostic-review", result.value?.transaction);
+    expect(reconciled.entry).toEqual(expect.arrayContaining([{ resource: source }]));
+  });
+
   it("extracts constrained SDC Boolean Observations and replaces exact QR provenance", () => {
     const questionnaire = {
       resourceType: "Questionnaire",

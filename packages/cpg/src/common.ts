@@ -29,6 +29,9 @@ export interface SdcExtractionOptions {
   encounter: string;
   /** Defaults to true, applying completed-response and required-answer gating. */
   workflowGated?: boolean;
+  /** Host-supplied clinical context, additional to the standard SDC answer mapping.
+   * The host must resolve these references and verify their subject before extraction. */
+  focus?: Array<{ reference: string }>;
 }
 
 export interface QuestionnaireObservationExtraction {
@@ -73,6 +76,34 @@ export function toPlainResult<T>(result: RawWasmResult): WasmCallResult<T> {
 
 export function resourceToJson(resource: unknown): string {
   return typeof resource === "string" ? resource : JSON.stringify(resource);
+}
+
+export function applyObservationFocus(
+  result: WasmCallResult<QuestionnaireObservationExtraction>,
+  focus: SdcExtractionOptions["focus"]
+): WasmCallResult<QuestionnaireObservationExtraction> {
+  if (focus === undefined || !result.success) return result;
+  if (!Array.isArray(focus) || focus.length === 0 || focus.some((reference) =>
+    !isRecord(reference) || typeof reference.reference !== "string" ||
+    !/^Condition\/[A-Za-z0-9-.]{1,64}$/.test(reference.reference)
+  )) return { success: false, error: "SDC contextual focus requires explicit Condition/id references" };
+  if (result.value?.status !== "extracted") return result;
+  const references = focus.map(({ reference }) => ({ reference }));
+  const augment = (resource: unknown) => isRecord(resource) && resource.resourceType === "Observation"
+    ? { ...resource, focus: references }
+    : resource;
+  const extraction = result.value;
+  const transaction = extraction.transaction;
+  const value = {
+    ...extraction,
+    observations: extraction.observations?.map(augment),
+    ...(isRecord(transaction) && Array.isArray(transaction.entry) ? {
+      transaction: { ...transaction, entry: transaction.entry.map((entry) =>
+        isRecord(entry) ? { ...entry, resource: augment(entry.resource) } : entry
+      ) }
+    } : {})
+  };
+  return { ...result, value, data: JSON.stringify(value) };
 }
 
 /**

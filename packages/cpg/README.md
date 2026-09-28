@@ -1,5 +1,20 @@
 # @reasonhealth/cpg
 
+The constrained SDC Observation extractor supports flat, non-repeating Boolean
+questions, coded `choice` questions with inline `answerOption.valueCoding`, and
+the supported calculated integer scores. This is a supported subset, not full
+SDC conformance. Question codes require an explicit terminology version; answer
+codings preserve a version when supplied, and a version pinned in an answer
+option must match. Coded answers become `Observation.valueCodeableConcept`.
+Item observation-category metadata overrides the root category.
+
+`extractQuestionnaireObservations(..., { encounter, focus })` optionally adds
+explicit host-provided `Condition/id` focus references to each extracted
+Observation. This contextual augmentation is additional to standard SDC answer
+mapping: callers must resolve the Conditions and verify the patient's identity.
+It does not infer a focus, reinterpret QuestionnaireResponse reasons, or update
+source clinical Observations.
+
 Typed TypeScript wrapper for the Reason Health Clinical Practice Guidelines WebAssembly build.
 
 ```ts

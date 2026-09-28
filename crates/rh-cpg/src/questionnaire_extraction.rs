@@ -1,7 +1,7 @@
-//! Constrained SDC Boolean independent-Observation extraction.
+//! Constrained SDC typed independent-Observation extraction.
 //!
 //! This module is deliberately smaller than the SDC QuestionnaireResponse
-//! extraction operation. It supports source-profiled Boolean question items and
+//! extraction operation. It supports source-profiled Boolean and coded-choice items and
 //! returns a standard FHIR transaction Bundle for callers that invoke it.
 
 use chrono::DateTime;
@@ -57,7 +57,7 @@ pub enum SdcObservationExtraction {
     },
 }
 
-/// Extract usable Boolean answers and, only when every required Boolean answer
+/// Extract usable Boolean and coded-choice answers and, only when every required answer
 /// is present, calculated integer score Observations without imposing workflow
 /// status gating.
 ///
@@ -76,7 +76,7 @@ pub fn extract_sdc_boolean_observations(
         subject,
         encounter,
     )?;
-    let answers = response_answers(response, &specification.boolean_items)?;
+    let answers = response_answers(response, &specification.extractable_items)?;
     let submitted_scores = response_scores(response, &specification.calculated_score_items)?;
 
     let response_reference = format!(
@@ -116,10 +116,10 @@ pub fn extract_sdc_boolean_observations(
     };
 
     let mut observations = specification
-        .boolean_items
+        .extractable_items
         .iter()
-        .filter_map(|item| answers.get(&item.link_id).map(|answer| (item, *answer)))
-        .map(|(item, value_boolean)| {
+        .filter_map(|item| answers.get(&item.link_id).map(|answer| (item, answer)))
+        .map(|(item, answer)| {
             let mut observation = json!({
                 "resourceType": "Observation",
                 "status": "final",
@@ -129,10 +129,14 @@ pub fn extract_sdc_boolean_observations(
                 "effectiveDateTime": authored,
                 "issued": authored,
                 "performer": [{ "reference": author }],
-                "valueBoolean": value_boolean,
                 "derivedFrom": [{ "reference": response_reference }],
             });
-            if let Some(category) = &specification.category {
+            if item.answer_options.is_some() {
+                observation["valueCodeableConcept"] = json!({ "coding": [answer] });
+            } else {
+                observation["valueBoolean"] = answer.clone();
+            }
+            if let Some(category) = item.category.as_ref().or(specification.category.as_ref()) {
                 observation["category"] = Value::Array(vec![category.clone()]);
             }
             if let Some(security) = &security {
@@ -152,7 +156,7 @@ pub fn extract_sdc_boolean_observations(
     // score is never inferred from partial input. This does not substitute a
     // false/default value for an unanswered Boolean.
     let required_answers_complete = specification
-        .boolean_items
+        .extractable_items
         .iter()
         .all(|item| !item.required || answers.contains_key(&item.link_id));
     if required_answers_complete {
@@ -195,7 +199,7 @@ pub fn extract_completed_sdc_boolean_observations(
         encounter,
     )?;
 
-    let answers = response_answers(response, &specification.boolean_items)?;
+    let answers = response_answers(response, &specification.extractable_items)?;
 
     if response.get("status").and_then(Value::as_str) != Some("completed") {
         return Ok(SdcObservationExtraction::NotInvoked {
@@ -204,7 +208,7 @@ pub fn extract_completed_sdc_boolean_observations(
         });
     }
     let missing = specification
-        .boolean_items
+        .extractable_items
         .iter()
         .filter(|item| item.required && !answers.contains_key(&item.link_id))
         .map(|item| item.link_id.as_str())
@@ -212,7 +216,7 @@ pub fn extract_completed_sdc_boolean_observations(
     if !missing.is_empty() {
         return Ok(SdcObservationExtraction::NotInvoked {
             reason: format!(
-                "QuestionnaireResponse is missing required Boolean answers: {}",
+                "QuestionnaireResponse is missing required answers: {}",
                 missing.join(", ")
             ),
         });
@@ -230,15 +234,17 @@ pub fn extract_completed_sdc_boolean_observations(
 struct ExtractionSpecification {
     questionnaire_canonical: String,
     category: Option<Value>,
-    boolean_items: Vec<BooleanItem>,
+    extractable_items: Vec<ExtractableItem>,
     calculated_score_items: Vec<CalculatedScoreItem>,
 }
 
 #[derive(Debug)]
-struct BooleanItem {
+struct ExtractableItem {
     link_id: String,
     required: bool,
     coding: Value,
+    answer_options: Option<Vec<Value>>,
+    category: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -263,16 +269,16 @@ fn extraction_specification(questionnaire: &Value) -> CpgResult<ExtractionSpecif
         )));
     }
 
-    let (boolean_items, calculated_score_items) = collect_extractable_items(questionnaire)?;
-    if boolean_items.is_empty() {
+    let (extractable_items, calculated_score_items) = collect_extractable_items(questionnaire)?;
+    if extractable_items.is_empty() {
         return Err(invalid(
-            "Questionnaire has no Boolean items supported by the SDC extraction subset",
+            "Questionnaire has no Boolean or coded-choice items supported by the SDC extraction subset",
         ));
     }
     Ok(ExtractionSpecification {
         questionnaire_canonical: canonical_identity(questionnaire, "Questionnaire")?,
         category: extraction_category(questionnaire)?,
-        boolean_items,
+        extractable_items,
         calculated_score_items,
     })
 }
@@ -333,11 +339,11 @@ fn extraction_category(questionnaire: &Value) -> CpgResult<Option<Value>> {
 
 fn collect_extractable_items(
     questionnaire: &Value,
-) -> CpgResult<(Vec<BooleanItem>, Vec<CalculatedScoreItem>)> {
+) -> CpgResult<(Vec<ExtractableItem>, Vec<CalculatedScoreItem>)> {
     let Some(items) = questionnaire.get("item").and_then(Value::as_array) else {
         return Ok((Vec::new(), Vec::new()));
     };
-    let mut boolean_items = Vec::new();
+    let mut extractable_items = Vec::new();
     let mut calculated_score_items = Vec::new();
     let mut link_ids = HashSet::new();
 
@@ -350,12 +356,19 @@ fn collect_extractable_items(
             )));
         }
         match item.get("type").and_then(Value::as_str) {
-            Some("boolean") => {
+            Some("boolean" | "choice") => {
                 reject_item_extensions(item, &link_id)?;
-                boolean_items.push(BooleanItem {
+                let answer_options = if item.get("type").and_then(Value::as_str) == Some("choice") {
+                    Some(coded_answer_options(item, &link_id)?)
+                } else {
+                    None
+                };
+                extractable_items.push(ExtractableItem {
                     link_id,
                     required: item.get("required").and_then(Value::as_bool) == Some(true),
-                    coding: exactly_one_coding(item, "Questionnaire Boolean item")?,
+                    coding: exactly_one_coding(item, "Questionnaire extraction item")?,
+                    answer_options,
+                    category: extraction_category(item)?,
                 });
             }
             Some("integer") => {
@@ -384,7 +397,7 @@ fn collect_extractable_items(
             ))),
         }
     }
-    Ok((boolean_items, calculated_score_items))
+    Ok((extractable_items, calculated_score_items))
 }
 
 fn reject_unsupported_item_structure(item: &Value) -> CpgResult<()> {
@@ -395,42 +408,96 @@ fn reject_unsupported_item_structure(item: &Value) -> CpgResult<()> {
     reject_modifier_extensions(item, &format!("Questionnaire.item '{link_id}'"))?;
     if item.get("item").is_some() {
         return Err(invalid(format!(
-            "Questionnaire item '{link_id}' has nested items, unsupported by the SDC Boolean extraction subset"
+            "Questionnaire item '{link_id}' has nested items, unsupported by the SDC extraction subset"
         )));
     }
     if item.get("enableWhen").is_some() || item.get("enableBehavior").is_some() {
         return Err(invalid(format!(
-            "Questionnaire item '{link_id}' has conditional enablement, unsupported by the SDC Boolean extraction subset"
+            "Questionnaire item '{link_id}' has conditional enablement, unsupported by the SDC extraction subset"
         )));
     }
     if item.get("repeats").and_then(Value::as_bool) == Some(true) {
         return Err(invalid(format!(
-            "Questionnaire item '{link_id}' repeats, unsupported by the SDC Boolean extraction subset"
+            "Questionnaire item '{link_id}' repeats, unsupported by the SDC extraction subset"
         )));
     }
     Ok(())
 }
 
 fn reject_item_extensions(item: &Value, link_id: &str) -> CpgResult<()> {
+    if extensions(item)
+        .iter()
+        .filter(|extension| {
+            extension.get("url").and_then(Value::as_str) == Some(OBSERVATION_EXTRACT)
+        })
+        .count()
+        > 1
+    {
+        return Err(invalid(format!(
+            "Questionnaire item '{link_id}' declares duplicate observationExtract extensions"
+        )));
+    }
     if item
         .get("extension")
         .and_then(Value::as_array)
-        .is_some_and(|extensions| !extensions.is_empty())
+        .is_some_and(|extensions| {
+            extensions.iter().any(|extension| {
+                let url = extension.get("url").and_then(Value::as_str);
+                url != Some(OBSERVATION_CATEGORY)
+                    && !(url == Some(OBSERVATION_EXTRACT)
+                        && extension.get("valueBoolean").and_then(Value::as_bool) == Some(true))
+            })
+        })
     {
         return Err(invalid(format!(
-            "Questionnaire Boolean item '{link_id}' has extensions, unsupported by the constrained SDC extraction subset"
+            "Questionnaire extraction item '{link_id}' has extensions, unsupported by the constrained SDC extraction subset"
         )));
     }
     Ok(())
 }
 
-fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMap<String, bool>> {
+fn coded_answer_options(item: &Value, link_id: &str) -> CpgResult<Vec<Value>> {
+    if item.get("answerValueSet").is_some() {
+        return Err(invalid(format!("Questionnaire choice item '{link_id}' requires inline coded answerOption values for extraction")));
+    }
+    let options = item
+        .get("answerOption")
+        .and_then(Value::as_array)
+        .filter(|options| !options.is_empty())
+        .ok_or_else(|| {
+            invalid(format!(
+                "Questionnaire choice item '{link_id}' requires coded answerOption values"
+            ))
+        })?;
+    options.iter().map(|option| {
+        if option.as_object().is_none_or(|fields| fields.keys().filter(|field| field.starts_with("value")).count() != 1) {
+            return Err(invalid(format!("Questionnaire choice item '{link_id}' answerOption must contain exactly one valueCoding")));
+        }
+        let coding = option.get("valueCoding").filter(|coding| has_system_and_code(coding))
+            .ok_or_else(|| invalid(format!("Questionnaire choice item '{link_id}' requires answerOption.valueCoding with system and code")))?;
+        Ok(coding.clone())
+    }).collect()
+}
+
+fn same_coding(left: &Value, right: &Value) -> bool {
+    ["system", "code"]
+        .iter()
+        .all(|field| left.get(*field) == right.get(*field))
+        && left
+            .get("version")
+            .is_none_or(|version| right.get("version") == Some(version))
+}
+
+fn response_answers(
+    response: &Value,
+    items: &[ExtractableItem],
+) -> CpgResult<HashMap<String, Value>> {
     require_resource_type(response, "QuestionnaireResponse")?;
     reject_modifier_extensions(response, "QuestionnaireResponse")?;
     let supported = items
         .iter()
-        .map(|item| item.link_id.as_str())
-        .collect::<HashSet<_>>();
+        .map(|item| (item.link_id.as_str(), item))
+        .collect::<HashMap<_, _>>();
     let mut answers = HashMap::new();
     let mut seen_items = HashSet::new();
 
@@ -439,12 +506,12 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
         let Some(link_id) = item.get("linkId").and_then(Value::as_str) else {
             continue;
         };
-        if !supported.contains(link_id) {
+        let Some(specification) = supported.get(link_id) else {
             continue;
-        }
+        };
         if !seen_items.insert(link_id) {
             return Err(invalid(format!(
-                "QuestionnaireResponse has duplicate item '{link_id}' for the non-repeating SDC Boolean extraction subset"
+                "QuestionnaireResponse has duplicate item '{link_id}' for the non-repeating SDC extraction subset"
             )));
         }
         let Some(answer_array) = item.get("answer").and_then(Value::as_array) else {
@@ -452,7 +519,7 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
         };
         if answer_array.len() != 1 {
             return Err(invalid(format!(
-                "QuestionnaireResponse item '{link_id}' must contain exactly one Boolean answer"
+                "QuestionnaireResponse item '{link_id}' must contain exactly one answer"
             )));
         }
         let answer = &answer_array[0];
@@ -466,19 +533,32 @@ fn response_answers(response: &Value, items: &[BooleanItem]) -> CpgResult<HashMa
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
-        if value_fields.len() != 1 || value_fields[0] != "valueBoolean" {
+        let value_field = if specification.answer_options.is_some() {
+            "valueCoding"
+        } else {
+            "valueBoolean"
+        };
+        if value_fields.len() != 1 || value_fields[0] != value_field {
             return Err(invalid(format!(
-                "QuestionnaireResponse item '{link_id}' must contain exactly one value[x], valueBoolean"
+                "QuestionnaireResponse item '{link_id}' must contain exactly one value[x], {value_field}"
             )));
         }
-        let Some(value) = answer.get("valueBoolean").and_then(Value::as_bool) else {
+        let value = &answer[value_field];
+        if let Some(options) = &specification.answer_options {
+            reject_modifier_extensions(value, "QuestionnaireResponse.item.answer.valueCoding")?;
+            if !has_system_and_code(value)
+                || !options.iter().any(|option| same_coding(option, value))
+            {
+                return Err(invalid(format!("QuestionnaireResponse item '{link_id}' valueCoding must match an answerOption system, code, and any pinned version")));
+            }
+        } else if !value.is_boolean() {
             return Err(invalid(format!(
                 "QuestionnaireResponse item '{link_id}' must contain valueBoolean"
             )));
         };
-        if answers.insert(link_id.to_string(), value).is_some() {
+        if answers.insert(link_id.to_string(), value.clone()).is_some() {
             return Err(invalid(format!(
-                "QuestionnaireResponse has duplicate answers for Boolean item '{link_id}'"
+                "QuestionnaireResponse has duplicate answers for item '{link_id}'"
             )));
         }
     }
@@ -839,7 +919,11 @@ fn has_system_and_code(value: &Value) -> bool {
             .get(*field)
             .and_then(Value::as_str)
             .is_some_and(|value| !value.is_empty())
-    })
+    }) && ["version", "display"].iter().all(|field| {
+        value
+            .get(*field)
+            .is_none_or(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+    }) && value.get("userSelected").is_none_or(Value::is_boolean)
 }
 
 fn flatten_response_items(items: Option<&Value>) -> Vec<&Value> {
@@ -866,7 +950,7 @@ fn reject_modifier_extensions(resource: &Value, path: &str) -> CpgResult<()> {
         .is_some_and(|extensions| !extensions.is_empty())
     {
         return Err(invalid(format!(
-            "{path}.modifierExtension is unsupported by the SDC Boolean extraction subset"
+            "{path}.modifierExtension is unsupported by the SDC extraction subset"
         )));
     }
     Ok(())
@@ -1031,6 +1115,154 @@ mod tests {
             ]
         }));
         value
+    }
+
+    fn coded_questionnaire() -> Value {
+        let mut value = questionnaire();
+        value["item"] = json!([{
+            "linkId":"er", "type":"choice", "required":true,
+            "code":[{"system":"http://loinc.org","version":"2.81","code":"16112-5"}],
+            "answerOption":[{"valueCoding":{"system":"http://loinc.org","version":"2.81","code":"LA6576-8","display":"Positive"}}]
+        }]);
+        value
+    }
+
+    fn coded_response() -> Value {
+        let mut value = response("completed");
+        value["item"] = json!([{"linkId":"er","answer":[{"valueCoding":{
+            "system":"http://loinc.org","version":"2.81","code":"LA6576-8","display":"Positive"
+        }}]}]);
+        value
+    }
+
+    #[test]
+    fn coded_choice_extracts_codeable_concept_with_source_provenance() {
+        let SdcObservationExtraction::Extracted {
+            observations,
+            transaction,
+        } = extract_completed_sdc_boolean_observations(
+            &coded_questionnaire(),
+            &coded_response(),
+            SUBJECT,
+            ENCOUNTER,
+        )
+        .expect("extract")
+        else {
+            panic!("expected extraction")
+        };
+        assert_eq!(observations.len(), 1);
+        assert_eq!(
+            observations[0]["valueCodeableConcept"]["coding"][0],
+            coded_response()["item"][0]["answer"][0]["valueCoding"]
+        );
+        assert!(observations[0].get("valueBoolean").is_none());
+        assert_eq!(
+            observations[0]["derivedFrom"][0]["reference"],
+            "QuestionnaireResponse/response-1"
+        );
+        assert_eq!(transaction["entry"][0]["resource"], observations[0]);
+    }
+
+    #[test]
+    fn coded_choice_required_gate_and_strict_coding_membership() {
+        let mut partial = coded_response();
+        partial["item"][0]
+            .as_object_mut()
+            .expect("item")
+            .remove("answer");
+        assert!(matches!(
+            extract_completed_sdc_boolean_observations(
+                &coded_questionnaire(),
+                &partial,
+                SUBJECT,
+                ENCOUNTER
+            )
+            .expect("gate"),
+            SdcObservationExtraction::NotInvoked { .. }
+        ));
+        for (field, invalid_value) in [
+            ("version", "wrong-version"),
+            ("code", "wrong-code"),
+            ("system", "https://wrong.example"),
+        ] {
+            let mut invalid_response = coded_response();
+            invalid_response["item"][0]["answer"][0]["valueCoding"][field] = json!(invalid_value);
+            assert!(extract_completed_sdc_boolean_observations(
+                &coded_questionnaire(),
+                &invalid_response,
+                SUBJECT,
+                ENCOUNTER
+            )
+            .is_err());
+        }
+        let mut wrong_type = coded_response();
+        wrong_type["item"][0]["answer"] = json!([{"valueBoolean":true}]);
+        assert!(extract_completed_sdc_boolean_observations(
+            &coded_questionnaire(),
+            &wrong_type,
+            SUBJECT,
+            ENCOUNTER
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn coded_choice_allows_unversioned_answers_and_item_category_override() {
+        let mut question = coded_questionnaire();
+        question["item"][0]["answerOption"][0]["valueCoding"]
+            .as_object_mut()
+            .expect("coding")
+            .remove("version");
+        question["item"][0]["extension"] = json!([{
+            "url":OBSERVATION_CATEGORY,
+            "valueCodeableConcept":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory"}]}
+        }]);
+        let mut answer = coded_response();
+        answer["item"][0]["answer"][0]["valueCoding"]
+            .as_object_mut()
+            .expect("coding")
+            .remove("version");
+        answer["item"][0]["answer"][0]["valueCoding"]["userSelected"] = json!(true);
+        let observations = extract_sdc_boolean_observations(&question, &answer, SUBJECT, ENCOUNTER)
+            .expect("extract");
+        assert_eq!(
+            observations[0]["category"][0]["coding"][0]["code"],
+            "laboratory"
+        );
+        assert_eq!(
+            observations[0]["valueCodeableConcept"]["coding"][0],
+            answer["item"][0]["answer"][0]["valueCoding"]
+        );
+        answer["item"][0]["answer"][0]["valueCoding"]["version"] = json!("2.81");
+        assert!(extract_sdc_boolean_observations(&question, &answer, SUBJECT, ENCOUNTER).is_ok());
+        question["item"][0]["answerOption"][0]["valueCoding"]["version"] = json!("2.80");
+        assert!(extract_sdc_boolean_observations(&question, &answer, SUBJECT, ENCOUNTER).is_err());
+    }
+
+    #[test]
+    fn rejects_malformed_optional_coding_fields_and_conflicting_answer_options() {
+        let mut question = coded_questionnaire();
+        question["item"][0]["answerOption"][0]["valueCoding"]
+            .as_object_mut()
+            .expect("coding")
+            .remove("version");
+        for (field, malformed) in [
+            ("version", json!({})),
+            ("version", json!("")),
+            ("display", json!(false)),
+            ("userSelected", json!("true")),
+        ] {
+            let mut answer = coded_response();
+            answer["item"][0]["answer"][0]["valueCoding"][field] = malformed;
+            assert!(
+                extract_sdc_boolean_observations(&question, &answer, SUBJECT, ENCOUNTER).is_err()
+            );
+        }
+        question["item"][0]["answerOption"][0]["valueBoolean"] = json!(true);
+        assert!(
+            extract_sdc_boolean_observations(&question, &coded_response(), SUBJECT, ENCOUNTER)
+                .is_err()
+        );
     }
 
     fn scored_response(status: &str, supplied_score: Option<i32>) -> Value {
