@@ -8,6 +8,7 @@ import {
   type WasmCallResult,
   type QuestionnaireValidationResult,
   resourceToJson,
+  applyObservationFocus,
   toPlainResult
 } from "./common.js";
 
@@ -127,7 +128,7 @@ export function extractQuestionnaireObservations(
   subject: string,
   options: SdcExtractionOptions
 ): WasmCallResult<QuestionnaireObservationExtraction> {
-  return toPlainResult<QuestionnaireObservationExtraction>(
+  return applyObservationFocus(toPlainResult<QuestionnaireObservationExtraction>(
     wasm.extract_questionnaire_observations(
       resourceToJson(questionnaire),
       resourceToJson(response),
@@ -135,7 +136,7 @@ export function extractQuestionnaireObservations(
       options.encounter,
       options.workflowGated ?? true
     )
-  );
+  ), options.focus);
 }
 
 export { reconcileExtractedObservations } from "./common.js";
