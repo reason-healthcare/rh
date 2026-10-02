@@ -194,8 +194,8 @@ See [docs/PACKAGER.md](docs/PACKAGER.md) for the full documentation including th
 
 ### `rh cql` SQL-on-FHIR helpers
 
-`rh cql` can inspect compiled ELM and emit first-pass SQL-on-FHIR artifacts for
-retrieve-centric measure logic:
+`rh cql` can inspect compiled ELM, sketch a relational plan, and emit first-pass
+SQL-on-FHIR artifacts from retrieve requirements:
 
 ```
 rh cql data-requirements measure.cql
@@ -206,10 +206,16 @@ rh cql emit-sql measure.cql --views views/ --out query-library.json
 rh cql emit-runtime measure.cql --query query-library.json --views views/
 ```
 
-The lowerer emits deterministic ViewDefinition JSON, SQLQuery Library resources,
-and runtime manifests for supported retrieve patterns. It is intentionally
-reported as a first-pass lowerer; full CQL semantics may still require fallback
-evaluation.
+The SQL emitter builds retrieve CTEs and selects the first one; it does not
+consume the relational plan. `code IS NOT NULL` is a terminology placeholder,
+and the analytics commands pass only the main library to artifact generation.
+Generated artifacts therefore do not yet implement full measure semantics.
+
+`lower-check` classifies ELM node kinds. `supported: true` means its
+`unsupportedNodes` list is empty, even when `fallbackNodes` is nonempty; it does
+not certify executable SQL. ReasonHealth Analytics has no CQL fallback
+executor. See the [current RA boundary](../../crates/rh-cql/ARCHITECTURE.md#experimental-relational-algebra)
+and [CQL command guide](docs/CQL.md) for details.
 
 ### `rh validate` subcommands
 

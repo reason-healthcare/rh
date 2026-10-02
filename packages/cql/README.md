@@ -11,6 +11,16 @@ const result = evaluate(compiled.data!, { expression: "X" });
 
 SQL-on-FHIR helpers are also exposed from each entry point:
 
+These experimental helpers provide inspection and artifact scaffolding, not
+validated measure execution. The current relational plan is a shallow
+diagnostic tree; SQL emission bypasses it, builds retrieve CTEs, and selects the
+first one. Its `code IS NOT NULL` check does not implement value-set membership.
+Complete clinical predicates and included-library dependency closure are not
+preserved in emitted artifacts. A `supported: true` classification is not an
+executable SQL support guarantee; a `fallbackNodes` label does not provide a
+CQL fallback executor in the analytics runtime. See
+[current relational-algebra status](../../crates/rh-cql/ARCHITECTURE.md#experimental-relational-algebra).
+
 ```ts
 import {
   dataRequirements,
@@ -52,7 +62,7 @@ Main functions:
 - `inspect(source, options?)` summarizes compiled ELM.
 - `dataRequirements(source, options?)` extracts resource, retrieve, terminology, and parameter requirements.
 - `relationalPlan(source, options?)` builds the first-pass relational plan.
-- `lowerCheck(source, options?)` reports whether the library can lower to the target, defaulting to `sql-on-fhir`.
+- `lowerCheck(source, options?)` inventories node-kind classifications; the target is a report label defaulting to `sql-on-fhir`, not a backend execution check.
 - `emitViewDefinitions(source, options?)` emits SQL-on-FHIR ViewDefinition JSON.
-- `emitSql(source, options?)` emits SQL text plus the generated ViewDefinition dependencies.
-- `emitSqlQueryLibrary(source, options?)` emits a SQLQuery FHIR Library artifact plus SQL text and ViewDefinition dependencies.
+- `emitSql(source, options?)` emits retrieval-skeleton SQL text plus the generated ViewDefinition dependencies.
+- `emitSqlQueryLibrary(source, options?)` packages retrieval-skeleton SQL in a FHIR Library artifact with SQL text and ViewDefinition dependencies.
