@@ -6,9 +6,18 @@ The `rh cql` command provides tools for working with CQL (Clinical Quality Langu
 
 It also includes first-pass SQL-on-FHIR helpers for retrieve-centric measure
 logic: `data-requirements`, `plan`, `lower-check`, `emit-views`, `emit-sql`,
-and `emit-runtime`. These commands expose what a CQL library needs, whether its
-ELM nodes are supported by the current relational lowerer, and the generated
-ViewDefinition, SQLQuery Library, and runtime manifest artifacts.
+and `emit-runtime`. These commands expose main-library retrieve requirements,
+an inspectable plan, node-kind classifications, and generated ViewDefinition,
+SQLQuery Library, and runtime manifest artifacts.
+
+These helpers are experimental diagnostics and artifact scaffolding. SQL
+emission currently bypasses the relational plan and selects the first retrieve
+CTE; it does not preserve complete clinical predicates or terminology
+membership. Included libraries can be resolved during compilation, but their
+dependency closure is not passed into analytics emission. A `supported: true`
+report does not establish executable SQL equivalence, and the analytics runtime
+has no CQL fallback executor. See
+[current relational-algebra status](../../../crates/rh-cql/ARCHITECTURE.md#experimental-relational-algebra).
 
 See the [CQL crate README](../../../crates/rh-cql/README.md) for library-level documentation.
 
@@ -474,6 +483,11 @@ retrieves:
 
 Build a first-pass relational plan from compiled ELM.
 
+The current output is a shallow diagnostic tree, not an executable clinical
+IR. Generic `Expr` nodes retain the ELM kind without its operands or reference
+identity; query sort and aggregate nodes retain only placeholders. The
+`--target` value is a label, and SQL emission does not consume this plan.
+
 **Usage:**
 ```bash
 rh cql plan [OPTIONS] <FILE>
@@ -488,6 +502,7 @@ rh cql plan [OPTIONS] <FILE>
 
 ```bash
 rh cql plan measure.cql --target relational
+rh cql plan measure.cql --target relational --display-format json --format json
 ```
 
 Output:
@@ -507,8 +522,17 @@ Has Diabetes
 
 ### `rh cql lower-check`
 
-Report whether compiled ELM can lower to a target backend with the current
-first-pass relational lowerer.
+Report the current first-pass node-kind classification for compiled ELM.
+`supported: true` means the inspected main library contains no node kind
+classified as unsupported. It does not verify preserved operand semantics,
+included-library dependencies, emitted predicates, or backend execution.
+
+`fallbackNodes` assigns evaluator-fallback labels to node kinds; it does not
+verify individual function bodies. The diagnostic output's wording about
+runtime fallback does not mean SQL emission or `rh-analytics` executes these functions.
+Both fallback and unsupported dependencies need faithful lowering, or a
+separately implemented and validated fallback contract, before a full measure
+can execute. The `--target` option is a report label.
 
 **Usage:**
 ```bash
@@ -549,6 +573,10 @@ Notes:
 
 Emit SQL-on-FHIR ViewDefinition JSON artifacts from CQL retrieve
 requirements.
+
+Current projections are derived from main-library retrieve metadata, not the
+complete relational plan or included-library dependency closure. They may omit
+fields needed by clinical predicates elsewhere in the measure.
 
 **Usage:**
 ```bash
@@ -623,6 +651,13 @@ Generated `views/condition_view.json`:
 
 Emit a SQL-on-FHIR SQLQuery Library artifact, or raw SQL text, from CQL and
 ViewDefinition metadata.
+
+Current SQL is a retrieval skeleton: it creates retrieve CTEs and selects the
+first one. The `code IS NOT NULL /* valueSet: ... */` predicate shown below
+checks for a populated code, not membership in the referenced value set.
+Clinical filters, patient-level population logic, and complete included-library
+semantics are not emitted. Successful artifact generation is integration
+evidence, not a claim of CQL-to-SQL equivalence.
 
 **Usage:**
 ```bash

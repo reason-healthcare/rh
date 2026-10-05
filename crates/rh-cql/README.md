@@ -12,7 +12,7 @@ This crate provides:
 - **Source Maps**: CQL source span → ELM node correlation via `compile_to_elm_with_sourcemap`
 - **Explain Output**: Human-readable parse tree and compilation details (`explain_parse`, `explain_compile`)
 - **ELM Evaluator**: Pure Rust evaluation engine (`evaluate_elm`, `evaluate_elm_with_trace`)
-- **Analytics and SQL-on-FHIR**: Data requirements, relational planning, lowerability checks, ViewDefinition generation, and SQLQuery Library emission
+- **Analytics and SQL-on-FHIR**: Data requirements, diagnostic relational plans, node-kind classification, ViewDefinition generation, and SQLQuery Library emission
 - **ModelInfo Types**: FHIR and custom model definitions for type resolution
 - **DataType System**: Type checking, compatibility, and implicit conversions
 
@@ -245,10 +245,10 @@ for event in &trace {
 
 ### Analytics and SQL-on-FHIR
 
-`rh-cql` includes first-pass analytics helpers for inspecting compiled ELM and
-generating SQL-on-FHIR artifacts from supported CQL retrieve patterns. These
-APIs expose what was found, what can lower, and where fallback evaluation may
-still be needed.
+`rh-cql` includes first-pass analytics helpers for inspecting compiled ELM,
+sketching a relational plan, classifying node kinds, and generating retrieve-based
+SQL-on-FHIR artifacts. These APIs provide diagnostic and artifact scaffolding;
+they do not establish that generated SQL implements the CQL measure.
 
 ```rust
 use rh_cql::{
@@ -297,20 +297,28 @@ println!("{sql}");
 println!("{}", serde_json::to_string_pretty(&sql_library).unwrap());
 ```
 
-The SQL-on-FHIR lowerer is currently a first-pass bridge for retrieve-centric
-measure logic. It can emit deterministic ViewDefinition JSON, SQL text, and
-FHIR `Library` resources carrying SQLQuery content. Complete CQL semantics,
-terminology expansion, interval precision, quantity handling, and complex list
-semantics may still require runtime fallback evaluation.
+The SQL emitter currently builds retrieve CTEs and selects the first one; it
+does not consume the relational plan. Its `code IS NOT NULL` terminology filter
+is a placeholder, not value-set membership. Generic plan `Expr` nodes preserve
+operator kinds without their operands. The CLI analytics path passes only the
+main library, so included-library requirements are incomplete.
 
 The `cql lower-check` report distinguishes three cases:
 
-- `supportedNodes`: ELM node kinds the first-pass lowerer recognizes.
-- `fallbackNodes`: ELM node kinds evaluated at runtime rather than lowered
-  relationally (e.g. user-defined or context-dependent `FunctionRef`s such as
-  `AgeIn<unit>At`). These still count toward `supported: true`.
-- `unsupportedNodes`: ELM node kinds with no relational lowering path and no
-  runtime fallback. An empty list means the library is `supported: true`.
+- `supportedNodes`: ELM node kinds recognized by the first-pass allow-list.
+- `fallbackNodes`: ELM node kinds assigned an evaluator-fallback label (e.g.
+  user-defined or context-dependent `FunctionRef`s such as `AgeIn<unit>At`).
+  The report does not verify the function body or execute it.
+- `unsupportedNodes`: ELM node kinds in neither classification. An empty list
+  sets `supported: true`, even when fallback nodes remain.
+
+Thus the example's `assert!(report.supported)` checks classification only.
+It does not prove executable lowering or semantic equivalence. ReasonHealth
+Analytics currently consumes JSON artifacts with Arrow/DataFusion and has no
+CQL fallback executor. Complete CQL, terminology, interval, quantity, and list
+semantics remain work for the compiler and separately validated evaluator.
+See the [current RA boundary](ARCHITECTURE.md#experimental-relational-algebra)
+and [target architecture](../../docs/cql-sql-on-fhir-relational-plan.md).
 
 ### Working with CompilationResult
 

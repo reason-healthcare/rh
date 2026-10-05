@@ -202,32 +202,29 @@ pub struct RelNode {
     pub inputs: Vec<RelNode>,
 }
 
-/// Lowering support report for a target backend.
+/// First-pass ELM node-kind classification with a target label.
+///
+/// This report does not validate executable lowering or SQL equivalence.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LowerCheckReport {
     /// Lowering target name.
     pub target: String,
-    /// Whether all encountered node kinds are supported by the first-pass lowerer
-    /// (node kinds supported via runtime fallback are excluded from this
-    /// determination — see `fallback_nodes`).
+    /// Whether `unsupported_nodes` is empty, even if `fallback_nodes` is not.
     pub supported: bool,
-    /// Supported ELM node kinds encountered in the library.
+    /// ELM node kinds recognized by the first-pass allow-list.
     pub supported_nodes: Vec<NodeSupport>,
-    /// Unsupported ELM node kinds encountered in the library. These have no
-    /// relational lowering path *and* no runtime fallback.
+    /// ELM node kinds assigned neither a recognized nor a fallback classification.
     pub unsupported_nodes: Vec<NodeSupport>,
-    /// ELM node kinds that are not lowered relationally but are supported at
-    /// runtime via fallback evaluation (for example, user-defined CQL function
-    /// calls and context-dependent functions such as `AgeIn<unit>At`). These
-    /// are reported separately so the `supported` flag reflects genuinely
-    /// unsupported nodes only.
+    /// ELM node kinds assigned an evaluator-fallback label, such as `FunctionRef`.
+    /// This classification does not verify individual function bodies or provide
+    /// a fallback executor to downstream runtimes.
     pub fallback_nodes: Vec<FallbackSupport>,
     /// Human-readable notes about the lowering boundary.
     pub notes: Vec<String>,
 }
 
-/// A node kind supported via runtime fallback rather than relational lowering.
+/// A node kind assigned an evaluator-fallback classification.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FallbackSupport {
@@ -545,7 +542,10 @@ pub fn relational_plan(library: &Library, target: impl Into<String>) -> Relation
     }
 }
 
-/// Check whether a compiled ELM library can lower to a target.
+/// Classify ELM node kinds using the first-pass allow-list and fallback policy.
+///
+/// The target is a report label. A supported report does not establish that
+/// generated SQL preserves the library's semantics or that fallback will execute.
 pub fn lower_check(library: &Library, target: impl Into<String>) -> LowerCheckReport {
     let target = target.into();
     let inspection = inspect_elm(library);
@@ -1573,17 +1573,12 @@ fn is_supported_for_first_pass(node_type: &str) -> bool {
       || is_lowering_expr_kind(node_type)
 }
 
-/// Return a human-readable fallback reason for node kinds that have no
-/// relational lowering path but are supported at runtime via fallback
-/// evaluation. Returns `None` for kinds that are either relationally supported
-/// or genuinely unsupported.
+/// Return the fallback classification reason for an ELM node kind.
+///
+/// This policy does not inspect function bodies or establish an execution path.
+/// `None` leaves classification to the recognized and unsupported categories.
 fn fallback_reason_for_first_pass(node_type: &str) -> Option<&'static str> {
     match node_type {
-        // User-defined CQL function calls cannot be lowered relationally
-        // without function inlining, but the evaluator resolves them at
-        // runtime. Context-dependent functions (e.g. `AgeIn<unit>At`, whose
-        // birth date comes from the Patient context) also cannot be expressed
-        // relationally, so they fall back to the evaluator as well.
         "FunctionRef" => Some(
             "user-defined or context-dependent function; relational lowering requires runtime fallback evaluation",
         ),

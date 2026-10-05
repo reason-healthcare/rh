@@ -1,9 +1,11 @@
-//! CMS122 end-to-end integration test.
+//! Partial native-evaluator integration coverage for the historical CMS122 example.
 //!
 //! Loads the actual CMS122 FHIR 4.0.1 measure CQL and the 7 test-patient
 //! FHIR resources from the sibling `reasonhealth-analytics` repository.
-//! Evaluates the four population expressions per-patient and asserts the
-//! results match `expected-results.json`.
+//! Asserts five Initial Population results and one Denominator result.
+//! Numerator and Denominator Exclusions are not asserted, and the complete
+//! `expected-results.json` is not read. Tests return early if the sibling fixture
+//! is unavailable; a passing run is not proof of complete measure evaluation.
 //!
 //! Run with:
 //!   cargo test -p rh-cql --test cms122_integration_test -- --nocapture

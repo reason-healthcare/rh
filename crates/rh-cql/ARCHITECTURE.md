@@ -298,8 +298,8 @@ Current goals:
 Current CLI path:
 
 ```bash
-rh cql elm inspect measure.elm.json
-rh cql elm deps measure.elm.json
+rh cql elm inspect measure.cql
+rh cql elm deps measure.cql
 rh cql data-requirements measure.cql --format json
 rh cql plan measure.cql --target relational --display-format pretty
 rh cql lower-check measure.cql --target sql-on-fhir
@@ -307,6 +307,9 @@ rh cql emit-views measure.cql --out views/
 rh cql emit-sql measure.cql --views views/ --out query-library.json
 rh cql emit-runtime measure.cql --views views/ --query query-library.json --out measure-runtime.json
 ```
+
+`elm inspect` and `elm deps` compile CQL input internally before inspecting ELM;
+they do not accept an exported ELM JSON file as input.
 
 ### Analytics Helper Layer
 
@@ -318,7 +321,7 @@ rh cql emit-runtime measure.cql --views views/ --query query-library.json --out 
 - `DataRequirements` for resources, retrieves, value sets, code systems, and
   parameters required by a library.
 - `RelationalPlan` for the experimental CQL/ELM-to-relational boundary.
-- `LowerCheckReport` for supported and unsupported ELM node kinds.
+- `LowerCheckReport` for recognized, fallback, and unsupported ELM node kinds.
 - `ViewDefinitionArtifact`, SQLQuery Library output, SQL text, and runtime
   manifest output.
 
@@ -327,18 +330,27 @@ consumed by external runtimes without linking to compiler internals.
 
 ### Experimental Relational Algebra
 
-The relational plan is the experimental IR between ELM and SQL-on-FHIR-oriented
-artifacts:
+Reviewed against `10313d4e` on 2026-10-02. The relational plan is an inspectable
+first-pass sketch, not yet an executable or stable semantic IR. The
+[relational analytics plan](../../docs/cql-sql-on-fhir-relational-plan.md)
+describes the intended compiler pipeline. The current helpers take these
+separate paths:
 
 ```text
 ELM library
-  -> data requirements
-  -> relational plan
-  -> lowerability report
-  -> ViewDefinition artifacts
-  -> SQLQuery Library / SQL text
-  -> runtime manifest
+  -> relational_plan: diagnostic operator tree
+  -> lower_check: ELM node-kind classification
+  -> data_requirements: retrieves in the supplied library
+       -> ViewDefinition artifacts
+       -> retrieve-based SQL text / SQLQuery Library
+
+ELM metadata + artifact paths + result mappings -> runtime manifest
 ```
+
+`emit_sql_text` does not consume `relational_plan`. The CLI's
+`compile_library_for_analysis` supplies the main compiled library, not the
+included-library closure. Recognizing a node kind therefore does not establish
+that its dependencies or semantics reach generated SQL.
 
 The serialized `RelNode` shape is deliberately simple while the lowerer matures:
 
@@ -353,19 +365,22 @@ The serialized `RelNode` shape is deliberately simple while the lowerer matures:
 }
 ```
 
-The current algebra uses conventional relational operators and extends them
-with CQL/FHIR-specific metadata:
+The current sketch uses conventional relational operator names with limited
+CQL/FHIR metadata. These are plan descriptions, not implemented execution
+semantics:
 
 | Node or extension | Relation to relational algebra | Current purpose |
 |---|---|---|
-| `Scan` | Base relation | Reads a logical FHIR resource/table, usually derived from an ELM retrieve. |
-| `Filter` | Selection | Keeps rows matching a CQL predicate. |
-| `Project` | Projection | Shapes output columns or scalar expressions. |
-| `SemiJoin` | Semijoin | Represents CQL `with`, usually lowered as `EXISTS`. |
-| `AntiJoin` | Antijoin | Represents CQL `without`, usually lowered as `NOT EXISTS`. |
-| `Aggregate` | Grouping/aggregation | Represents grouped population or aggregate computations. |
-| `Exists` | Existential quantification over a relation | Produces a boolean existence result from an input relation. |
-| `Expr.kind` | CQL expression extension | Holds predicate/scalar expression kinds before they have a richer typed relational representation. |
+| `Scan` | Base relation | Records the FHIR type/resource of a retrieve; omits its terminology predicate. |
+| `Filter` | Selection | Attaches a first-pass sketch of a query's `where` expression. |
+| `Project` | Projection | Attaches a first-pass sketch of a query's return expression. |
+| `SemiJoin` | Semijoin | Records CQL `with` and its relation; omits the `suchThat` predicate. |
+| `AntiJoin` | Antijoin | Records CQL `without` and its relation; omits the `suchThat` predicate. |
+| `Aggregate` | Grouping/aggregation | Marks the presence of a query aggregate without preserving its computation. |
+| `Exists` | Existential quantification over a relation | Retains the first-pass operand plan. |
+| `Sort` / `SortMeta` | Ordering | Marks sorting without preserving its complete keys or direction. |
+| `As` | Type annotation | Records the target type and operand plan. |
+| `Expr.kind` | CQL expression extension | Records only the expression kind, without operands, literal values, or reference bindings. |
 | `Scan.detail.dataType` | FHIR/CQL metadata extension | Preserves the ELM model type such as `{http://hl7.org/fhir}Condition`. |
 | `Scan.detail.resource` | FHIR/CQL metadata extension | Normalizes model types to resource/table names such as `Condition`. |
 | `SemiJoin.detail.relationship` | CQL query extension | Preserves the source relationship intent for `with`. |
@@ -403,12 +418,20 @@ Notes on the boundary:
   `Query`; the `Query` remains the real lowering target.
 - `FunctionRef` nodes that remain after canonical system-function emission
   (user-defined CQL functions and context-dependent functions such as
-  `AgeIn<unit>At`) are reported under `fallbackNodes` as supported via runtime
-  fallback evaluation, not as bare unsupported nodes.
+  `AgeIn<unit>At`) are classified under `fallbackNodes`. The report's phrase
+  "supported via fallback" describes the node-kind policy; it does not check
+  that a particular function body can evaluate or arrange runtime fallback.
 
-These are placeholders for an evolving typed predicate model. They make the
-lowering boundary visible without pretending the first-pass IR captures all CQL
-semantics.
+`lower_check` sets `supported: true` when `unsupportedNodes` is empty, even when
+`fallbackNodes` is nonempty. It does not validate generated SQL equivalence or
+the completeness of the plan. For example, `FunctionRef` can be classified as
+fallback while appearing as `Unsupported` in the plan. The `target` field is a
+label, not a backend-specific capability check.
+
+The query planner currently visits only the first source, and generic `Expr`
+nodes lose their operands. These placeholders need typed expressions, resolved
+library/reference dependencies, terminology, parameters, and full query
+semantics before an emitter can use the plan as an executable contract.
 
 ### ViewDefinition, SQLQuery, and Runtime Manifest Output
 
@@ -417,13 +440,24 @@ artifacts from retrieve requirements. Each resource gets stable columns used by
 the current analytics fixtures, including `id`, `patient_id`, selected scalar
 paths, and code coding expansions when needed.
 
-`emit_sql_text` and `emit_sql_query_library` generate raw SQL text or a FHIR
-`Library` containing SQLQuery metadata and dependencies on emitted views.
+`emit_sql_text` builds one CTE per retrieve and selects the first CTE. Where a
+retrieve references a value set, it emits `code IS NOT NULL` with a comment;
+this is a placeholder, not value-set membership. With no retrieve CTE it
+selects the first supplied view (or the placeholder name `generated_view`).
+`emit_sql_query_library` wraps that same SQL in a FHIR `Library` with SQLQuery
+metadata and dependencies on emitted views. Neither path implements the full
+measure predicates or refuses all incomplete semantics.
 
 `emit_measure_runtime_manifest` writes a JSON manifest that references the query
-and views rather than embedding compiler internals. Runtime consumers can load
-the manifest, bind parameters, execute the selected backend, and collect named
-result columns.
+and views rather than embedding compiler internals. Its result mappings come
+from the caller; it does not derive clinically correct populations. Parameter
+metadata does not ensure that the generated SQL uses those parameters.
+
+ReasonHealth Analytics consumes these JSON artifacts and owns FHIR projection,
+Arrow/DataFusion execution, and result comparison. It does not currently
+execute the relational plan or provide CQL fallback evaluation. The native
+`rh-cql` evaluator is a separate validation path, with its own
+[remaining CMS122 gaps](docs/user-defined-function-eval-plan.md#verification).
 
 ### Experimental Limits
 
@@ -439,6 +473,7 @@ include:
 - backend-specific planning;
 - full measure population extraction.
 
-These limits should be surfaced through `lower_check` and `Unsupported` plan
-nodes. New artifact targets should consume ELM, data requirements, or the
-relational plan rather than re-walking CQL source directly.
+These limits are not yet fully captured by `lower_check` or `Unsupported` plan
+nodes. Executable emission must eventually reject required unresolved semantics
+and be verified against expected patient membership. New artifact targets
+should consume the completed semantic plan rather than re-walking CQL source.

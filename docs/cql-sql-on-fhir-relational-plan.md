@@ -1,5 +1,12 @@
 # CQL to SQL-on-FHIR Relational Analytics Plan
 
+This document describes the target architecture. Reviewed 2026-10-02 against
+`10313d4e`; the [current RA implementation](../crates/rh-cql/ARCHITECTURE.md#experimental-relational-algebra)
+is a diagnostic sketch, and SQL emission still bypasses it. The coordinated MVP
+backlog and local demonstration guide live in the separate
+`reasonhealth-analytics` repository at `docs/cms122-measure-validation-plan.md`
+and `docs/local-demo.md`.
+
 ## Purpose
 
 This plan explores a compiler-style path for population health analytics in RH:
@@ -19,8 +26,8 @@ separate ReasonHealth Analytics product.
 ## Core Idea
 
 Use CQL-to-ELM as the front end, then translate supported ELM expressions into
-an RH-owned relational algebra intermediate representation. From that IR, RH can
-emit multiple targets:
+an RH-owned relational algebra intermediate representation. Once that IR
+preserves the required semantics, RH should emit multiple targets from it:
 
 ```text
                  +-----------------------------+
@@ -39,9 +46,12 @@ emit multiple targets:
           ViewDefinition+SQLQuery           DuckDB/Trino/etc.
 ```
 
-SQL-on-FHIR should be treated as a portable artifact target, not the internal
-compiler IR. Relational algebra should be the stable internal contract between
-`rh` and downstream runtimes such as ReasonHealth Analytics.
+SQL-on-FHIR should be treated as a portable artifact target. Relational algebra
+is the intended semantic boundary inside the compiler; the current serialized
+plan is not yet a stable executable contract. Runtime integration uses generated
+JSON artifacts (ViewDefinition, SQLQuery Library, and runtime manifest), without
+linking compiler internals. Arrow, DataFusion, local materialization, and measure
+execution belong in ReasonHealth Analytics.
 
 ## Why Relational Algebra
 
@@ -115,6 +125,11 @@ Start with a deliberately narrow CQL subset:
 6. SQL-on-FHIR ViewDefinition generation for required resource projections.
 7. SQLQuery generation for joins, filters, set operations, and aggregates.
 
+These are implementation goals, not a list of supported semantics. The first
+real-measure acceptance target is the pinned historical CMS122 HbA1c example;
+its required age, encounter, diabetes, latest-observation, and exclusion logic
+must survive the complete pipeline before the MVP gate can pass.
+
 Defer initially:
 
 - full UCUM quantity normalization;
@@ -123,7 +138,7 @@ Defer initially:
 - complete interval precision semantics;
 - cross-library optimization;
 - distributed execution;
-- server-managed materialization.
+- server-managed materialization;
 - local execution and DataFusion-backed runtime behavior, which belong in
   ReasonHealth Analytics.
 
@@ -135,9 +150,12 @@ Build inspectable compiler tooling before execution.
 
 ```bash
 rh cql compile measure.cql --output measure.elm.json
-rh cql elm inspect measure.elm.json
-rh cql elm deps measure.elm.json
+rh cql elm inspect measure.cql
+rh cql elm deps measure.cql
 ```
+
+`elm inspect` and `elm deps` compile CQL internally. The separate `compile`
+command saves ELM JSON for review; that file is not their input.
 
 Outputs:
 
@@ -154,17 +172,18 @@ Outputs:
 rh cql data-requirements measure.cql --format json
 ```
 
-This extracts resource, retrieve, value set, and date-path requirements before
-attempting relational lowering.
+This currently inventories resources, retrieves, terminology declarations, and
+parameters in the main compiled library. Full included-library closure and all
+predicate-specific projection paths remain work for semantic lowering.
 
 ### 3. Relational Plan Explain
 
 ```bash
-rh cql plan measure.cql --target relational --format pretty
-rh cql plan measure.cql --target relational --format json
+rh cql plan measure.cql --target relational --display-format pretty
+rh cql plan measure.cql --target relational --display-format json
 ```
 
-Example:
+Target explain shape (not current CLI output):
 
 ```text
 PatientContext
@@ -174,7 +193,9 @@ PatientContext
       Scan Condition
 ```
 
-This should be the primary debugging surface.
+This should become the primary debugging surface. Today's generic `Expr` nodes
+retain only an operator kind; query planning also omits sources, relationship
+predicates, and complete sorting/aggregation semantics.
 
 ### 4. Lowering Support Report
 
@@ -182,8 +203,11 @@ This should be the primary debugging surface.
 rh cql lower-check measure.cql --target sql-on-fhir
 ```
 
-The report should separate supported and unsupported constructs so users can see
-why a CQL library cannot lower.
+The current report classifies node kinds as `supportedNodes`, `fallbackNodes`,
+or `unsupportedNodes`. `supported: true` means only that `unsupportedNodes` is
+empty, including when fallback nodes remain. The `target` is a report label,
+not a backend capability check. A future executable gate must validate required
+semantics and dependencies; the classifier alone does not do that.
 
 ### 5. ViewDefinition Generation
 
@@ -191,8 +215,8 @@ why a CQL library cannot lower.
 rh cql emit-views measure.cql --out views/
 ```
 
-This should emit deterministic ViewDefinitions for the resource projections
-required by CQL retrieves.
+This emits deterministic ViewDefinitions for main-library retrieve requirements.
+The target is to include all projections needed by the complete clinical plan.
 
 ### 6. SQLQuery Generation
 
@@ -202,7 +226,9 @@ rh cql emit-sql measure.cql --sql-only
 ```
 
 The first command emits a SQL-on-FHIR SQLQuery Library. The second emits raw SQL
-for review and backend experimentation.
+for review and backend experimentation. Today both use a retrieve skeleton:
+CTEs, `code IS NOT NULL` terminology placeholders, and a final select from the
+first CTE. Neither consumes the relational plan or implements the full measure.
 
 ### 7. Measure Runtime Manifest
 
@@ -212,47 +238,55 @@ rh cql emit-runtime measure.cql --views views/ --query query-library.json --out 
 
 This emits the path-oriented runtime manifest consumed by ReasonHealth
 Analytics. The manifest binds generated ViewDefinition and SQLQuery artifacts to
-stable measure result names without linking runtime execution dependencies into
-open-source `rh`.
+caller-supplied result names without linking runtime execution dependencies into
+open-source `rh`. It does not infer population predicates, and parameter metadata
+does not ensure the SQL uses those parameters.
 
 ### 8. Local Execution
 
 ```bash
 rh-analytics sql view run --view views/condition.json --input data.ndjson
-rh-analytics sql query run --query query-library.json --view views/*.json --input data/
+rh-analytics sql query run --query query-library.json --view views/ --input data/
 ```
 
-This belongs in ReasonHealth Analytics. It can use generated Arrow tables and
-DataFusion internally, but execution should come after the `rh` lowering stages
-are inspectable and testable.
+This is implemented for a bounded projection/query subset in ReasonHealth
+Analytics, using Arrow tables and DataFusion. A passing curated artifact demo
+verifies that runtime path; it does not establish CQL-to-SQL equivalence.
 
 ### 9. Measure Harness
 
 ```bash
-rh-analytics measure run measure.cql --input synthea/ --engine datafusion
-rh-analytics measure compare measure.cql --engine evaluator --engine datafusion
+rh-analytics measure run measure-runtime.json --input data/ --engine datafusion
+rh-analytics measure compare measure-runtime.json --input data/ --expected expected-results.json
 ```
 
-The compare command keeps relational lowering honest by comparing against the
-existing CQL evaluator where possible.
+These commands consume a runtime manifest, not CQL source. Comparison uses an
+exported expected-results JSON file. Native evaluation is a separate audit;
+there is no evaluator engine or automatic CQL fallback in the analytics runtime.
 
-## Recommended Build Order
+## Implementation Status and Next Gates
 
-Open-source `rh`:
+The inspection, plan, classification, ViewDefinition, SQLQuery, and manifest
+commands exist, as do local analytics execution/comparison and demo scripts.
+Their existence does not complete semantic lowering. The native CMS122 suite
+has six assertions; the broader 28-call audit still records 10 errors. See the
+[evaluator status](../crates/rh-cql/docs/user-defined-function-eval-plan.md#verification).
 
-1. Add ELM inspection tooling.
-2. Add data-requirements extraction.
-3. Add relational algebra IR and `rh cql plan`.
-4. Add lowering support reports.
-5. Add ViewDefinition generation.
-6. Add SQLQuery generation.
-7. Add measure runtime manifest generation.
+The next compiler gates, aligned with the analytics MVP plan, are:
 
-ReasonHealth Analytics:
-
-8. Add `rh-analytics sql view run`.
-9. Add `rh-analytics sql query run` with a DataFusion backend.
-10. Add measure execution and comparison harnesses.
+1. Establish a complete native evaluator baseline with reviewed terminology,
+   all patient/population results, temporal boundary fixtures, and independent
+   reference evidence (M1).
+2. Preserve included libraries, typed operands/reference bindings, terminology,
+   parameters/defaults, and required FHIR paths in the semantic plan (M2).
+3. Make executable emission reject unresolved required semantics. Generate
+   initial population predicates first, then numerator/exclusions and every
+   result mapping. Validate generated SQL against independent expected
+   membership; handwritten measure SQL is not a substitute (M2).
+4. Keep strict projection validation, typed Arrow execution, provenance, and
+   population/scoring contracts in analytics (M3). Complete the guided local
+   CMS122 demonstration only when both evaluation paths and comparisons pass
+   from a clean setup (M4).
 
 ## Testing Strategy
 
@@ -281,19 +315,21 @@ construct cases with stable diagnostic output.
   the ReasonHealth Analytics runtime boundary because its APIs evolve.
 - Terminology expansion and versioning are outside relational algebra and need a
   first-class service boundary.
-- Some CQL will always require fallback evaluation rather than relational
-  lowering.
+- CQL outside the implemented lowering subset needs an explicit failure or a
+  separately designed and validated fallback contract. The current analytics
+  runtime has no such fallback executor.
 
 ## Design Principle
 
-Keep RH's stable contract at the compiler IR boundary:
+Build RH's semantic compiler boundary around the completed IR:
 
 ```text
 ELM -> clinical relational algebra
 ```
 
-Everything after that is a backend:
+Emit portable artifacts from that boundary and keep runtime dependencies out of
+the compiler:
 
 - SQL-on-FHIR artifacts for portability;
-- DataFusion for embedded execution in ReasonHealth Analytics;
+- generated artifacts executed with DataFusion in ReasonHealth Analytics;
 - SQL text for external engines such as DuckDB, Trino, Postgres, or Spark.

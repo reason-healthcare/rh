@@ -1,10 +1,15 @@
 # User-Defined Function Evaluation in rh-cql
 
+Status reviewed 2026-10-02 against `10313d4e`. The function-dispatch changes
+below are implemented; complete CMS122 evaluation remains blocked. See
+[Verification](#verification) for the difference between the six integration
+assertions and the full patient/population audit.
+
 ## Goal
 
 Enable the rh-cql ELM evaluator to execute user-defined function bodies (both
-same-library and cross-library), so that the published CMS122 FHIR 4.0.1
-measure compiles AND evaluates correctly with `rh cql eval`.
+same-library and cross-library), as a prerequisite for correctly evaluating the
+historical CMS122 FHIR 4.0.1 example with `rh cql eval`.
 
 ## Background
 
@@ -23,7 +28,7 @@ The evaluator previously had a `TODO: support evaluating user-defined functions
 from included libraries` in the `FunctionRef` handler. Same-library user
 functions were also not evaluated by body.
 
-## Changes Made (complete)
+## Implemented function-support changes
 
 ### 1. Function index in Engine (`engine.rs`)
 
@@ -121,7 +126,8 @@ the included library).
 ## Testing
 
 ### Unit tests
-All 859 existing `rh-cql` lib tests pass after each change.
+The original implementation/refactor validation passed 859 `rh-cql` library
+tests. This historical count is not evidence of full CMS122 population coverage.
 
 ### Integration test: CMS122 patient-numer
 The patient-numer bundle has:
@@ -130,7 +136,7 @@ The patient-numer bundle has:
 - Encounter with type code 99202 (Office Visit), period 2019-01-16 to 2019-01-20
 - Two HbA1c Observations: 7.1% (2019-01-17) and 9.1% (2019-10-17)
 
-Expected results:
+Intended fixture results (not all asserted by the integration suite):
 - Initial Population: true
 - Denominator: true
 - Numerator: true (elevated HbA1c 9.1% OR no HbA1c)
@@ -138,10 +144,33 @@ Expected results:
 - Has No Record Of HbA1c: false (patient has HbA1c observations)
 
 ### Verification
-All evaluator issues described in earlier drafts are resolved. The current
-CMS122 integration suite passes for the relevant population paths, including
-patient-numer, patient-denom, patient-no-encounter, patient-no-diabetes,
-patient-no-hba1c, and patient-too-young fixtures.
+
+At the reviewed revision, `tests/cms122_integration_test.rs` has six assertions:
+five Initial Population checks and one Denominator check. It does not assert
+Numerator or Denominator Exclusions, read the complete `expected-results.json`,
+or fail when the sibling fixture is absent. A passing suite does not establish
+complete measure evaluation.
+
+The 2026-10-02 audit in the sibling `reasonhealth-analytics` repository evaluates
+all four raw population expressions for all seven patients using isolated
+patient input and an explicitly bound historical measurement period. With `rh`
+built at `10313d4e`, it records 18 boolean results and 10 errors:
+
+- All seven Initial Population and seven raw Denominator results match the
+  intended membership.
+- Three Numerator calls fail with interval errors.
+- All seven Denominator Exclusions calls fail: six on missing terminology and
+  the hospice case on an interval error.
+
+The measurement-period boundary probe passes for the audit's millisecond/UTC
+fixture scope. General CLI open/closed interval binding, unbound ELM parameter
+defaults, FHIR choice/Period normalization, and terminology completeness remain
+follow-up work. The local terminology file is a partial synthetic code list,
+not a complete versioned expansion. Errors must remain distinct from false.
+
+Reproduce from a sibling analytics checkout with `RH_BIN=/path/to/rh just
+audit-cms122`. Its `docs/cms122-measure-validation-plan.md` owns the ordered MVP
+gates; `examples/cms122-diabetes-hba1c/evaluate.py` records the raw evidence.
 
 ## Files Changed
 
@@ -155,7 +184,17 @@ All changes are in the `rh` repository:
 - `crates/rh-cql/tests/parser_cms122_gaps.rs` — parser gap tests (from Phase 0)
 
 ## Follow-up
-The native evaluator work is complete. Follow-up work is now limited to the
-SQL lowering gaps: generate SQL that preserves age, encounter, diabetes,
-HbA1c, and exclusion predicates so `rh-analytics` can reproduce the expected
-CMS122 population membership.
+
+1. Close the native audit errors with generic evaluator/CLI fixes and reviewed
+   terminology; assert all 28 raw results and boundary cases. Establish an
+   independent semantic reference before treating native output as the oracle.
+2. Preserve included libraries, typed expressions, parameters, and terminology
+   through relational lowering. Generate all clinical population predicates
+   and result mappings, and reject required unresolved semantics.
+3. Compare generated SQL membership with independently reviewed expected
+   results and the complete native evaluation. Keep the raw denominator,
+   exclusions, effective denominator, and eligible numerator distinct.
+
+The [relational architecture](../ARCHITECTURE.md#experimental-relational-algebra)
+documents why `lower-check` support labels and artifact emission alone do not
+complete these gates.
