@@ -48,7 +48,7 @@ jobs:
         run: echo "OPENSSL_VENDORED=1" >> $GITHUB_ENV
 
       - name: Cache cargo registry
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -60,11 +60,11 @@ jobs:
 
       - name: Build CLI (Unix)
         if: runner.os != 'Windows'
-        run: cargo build --release --target ${{ matrix.target }} -p rh-cli
+        run: cargo build --locked --release --target ${{ matrix.target }} -p rh-cli
 
       - name: Build CLI (Windows)
         if: runner.os == 'Windows'
-        run: cargo build --release --target ${{ matrix.target }} -p rh-cli
+        run: cargo build --locked --release --target ${{ matrix.target }} -p rh-cli
 
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
@@ -105,11 +105,15 @@ jobs:
       - name: Copy install script
         run: cp scripts/install-rh.sh artifacts/
 
+      - name: Generate release checksums
+        working-directory: artifacts
+        run: sha256sum rh-*.tar.gz rh-*.zip install-rh.sh > SHA256SUMS
+
       - name: Create GitHub release (draft)
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: artifacts/*
           body: |
             ## Changes
@@ -160,6 +164,10 @@ jobs:
             mv rh /usr/local/bin/
             ```
 
+            Download `SHA256SUMS` alongside the archive and verify its SHA-256
+            before installation. Analytics pins a specific release and archive
+            checksum when selecting its RH compiler.
+
             ---
 
             ## Publish to crates.io
@@ -180,12 +188,12 @@ jobs:
             cargo publish -p rh-hl7-fhir-r5-core
             cargo publish -p rh-codegen
             cargo publish -p rh-cql
-            cargo publish -p rh-fsh
             sleep 30
 
             # Layer 3
             cargo publish -p rh-fhirpath
             cargo publish -p rh-vcl
+            cargo publish -p rh-fsh
             sleep 30
 
             # Layer 4
@@ -193,6 +201,7 @@ jobs:
             sleep 30
 
             # Layer 5
+            cargo publish -p rh-cpg
             cargo publish -p rh-packager
             sleep 30
 
@@ -228,12 +237,13 @@ jobs:
           echo "cargo publish -p rh-hl7-fhir-r5-core" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-codegen" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-cql" >> "$GITHUB_STEP_SUMMARY"
-          echo "cargo publish -p rh-fsh" >> "$GITHUB_STEP_SUMMARY"
           echo "sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-fhirpath" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-vcl" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-fsh" >> "$GITHUB_STEP_SUMMARY"
           echo "sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-validator && sleep 30" >> "$GITHUB_STEP_SUMMARY"
+          echo "cargo publish -p rh-cpg" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-packager && sleep 30" >> "$GITHUB_STEP_SUMMARY"
           echo "cargo publish -p rh-cli" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

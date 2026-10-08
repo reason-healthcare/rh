@@ -5,17 +5,16 @@ checked-in golden terminology snapshot. The snapshot binds `Golden|1.0|Codes`
 to ValueSet version `fixture-1` and CodeSystem release `2026`. Its two codes are
 test data, not a clinical expansion or terminology release.
 
-The native golden-snapshot commands below need only the RH checkout. Before
-the paired RH and Analytics changes merge, use the `codex/value-set-snapshots`
-branch in both repositories when preparing snapshots or running the full
-cross-repository workflow; the current Analytics main branch may not include
-the matching contract yet.
+The native golden-snapshot commands below use this checkout's fixtures and the
+RH CLI. Once 0.3.0 is
+available, use the installed binary on `PATH` or set `RH_BIN` to its explicit
+path. To use a source build, run `cargo build -p rh-cli --bin rh` and set
+`RH_BIN=./target/debug/rh`. The CQL source is unchanged by the commands.
 
-From the RH repository root, build and run the native CLI:
+From the RH repository root:
 
 ```bash
-cargo build -p rh-cli --bin rh
-RH_BIN="${RH_BIN:-./target/debug/rh}"
+RH_BIN="${RH_BIN:-rh}"
 SNAPSHOT=fixtures/terminology/golden-snapshot
 EXAMPLE=examples/value-set-membership
 mkdir -p target

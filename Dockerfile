@@ -19,7 +19,7 @@ COPY apps/ apps/
 
 # Build static binary (vendored OpenSSL avoids host pkg-config dependency)
 ENV OPENSSL_VENDORED=1
-RUN cargo build --release --target x86_64-unknown-linux-musl -p rh-cli
+RUN cargo build --locked --release --target x86_64-unknown-linux-musl -p rh-cli
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 # distroless/static includes CA certificates (needed for HTTPS) and /etc/passwd

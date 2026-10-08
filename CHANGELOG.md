@@ -7,23 +7,64 @@ This project follows semantic versioning while the public API is still in the
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
 ### Added
 
-- `rh package link` — new command to build self-contained executable bundles
-  for WASM evaluation. Pre-expands ValueSets, resolves transitive dependencies,
-  validates completeness. Three new hook processors: `resolve-dependencies`,
-  `expand-valuesets`, `link-validate`. New `[link]` configuration section in
-  `packager.toml`. See [Executable Bundle Plan](docs/executable-bundle-plan.md).
+- Added the `rh-cpg` crate, `rh cpg apply`, and the `@reasonhealth/cpg` Node,
+  browser, and bundler package for PlanDefinition application and CPG workflows.
+- Added Rust, WASM, and TypeScript APIs for measure evaluation and
+  Questionnaire assembly, population, and response validation.
+- Added QuestionnaireResponse-to-Observation extraction for the supported SDC
+  subset, including version-pinned coded choices and patient-scoped Condition
+  retrieval. This is not full SDC conformance.
+- Added `rh package link` for self-contained executable FHIR bundles, with
+  dependency resolution, complete ValueSet expansion, and validation. See the
+  [executable bundle plan](docs/executable-bundle-plan.md).
+- Added versioned terminology requirements and immutable FHIR R4 ValueSet
+  snapshots for native CQL evaluation and static SQL membership.
+
+### Changed
+
+- Native CQL ValueSet references retain their declaring library, ValueSet
+  version, and CodeSystem constraints. Evaluation validates the declared
+  terminology closure before running expressions, including with empty input.
+- Generated SQL now uses `EXISTS` against `rh_valueset_members`, matching
+  system and code without a patient `Coding.version` predicate. SQLQuery
+  artifacts carry the requirements needed by the Analytics runtime.
+- `rh cql eval` consumes prepared snapshots without terminology network access.
+  Missing, ambiguous, partial, or mismatched expansions now fail closed.
+- `rh package link` uses local terminology-directory and validation overrides;
+  unsupported remote terminology and automatic FHIRHelpers options are not
+  advertised. Bundle validation resolves version-pinned canonicals, checks
+  terminology snapshots, and requires parseable inline ELM.
+- Documented the relational plan and SQL-on-FHIR helpers as experimental
+  diagnostics and retrieve-oriented scaffolding, with their current semantic
+  and included-library limits.
+- Preserved CQL function overloads and selected user-defined functions by ELM
+  signature rather than definition order.
 
 ### Fixed
 
-- Wired `rh package link` format, local terminology-directory, and validation
-  overrides into the link pipeline; unsupported remote terminology and
-  automatic FHIRHelpers options are no longer advertised.
-- Made executable-bundle validation resolve version-pinned canonicals, reject
-  mismatched terminology snapshots, and require parseable inline ELM.
-- Preserved CQL function overloads and selected user-defined functions by their
-  ELM signature instead of definition order.
+- Ran CI on pushes to `main`, canceled superseded workflow runs, and pointed the
+  CI badge to the main-push workflow.
+
+### Migration notes
+
+- Rust consumers that exhaustively match `rh_cql::eval::Value` must handle the
+  new `Value::ValueSet` variant, which represents a library-qualified ValueSet
+  reference.
+- For native CQL terminology, emit requirements with
+  `rh cql terminology-requirements`, prepare a complete snapshot with
+  `rh-analytics terminology prepare`, and pass `--terminology-snapshot` to
+  `rh cql eval`. Synthetic fixture snapshots require a preparation
+  justification and `--allow-fixture` at each consumer.
+- Static ValueSet SQL requires the prepared `rh_valueset_members` relation and
+  compiler requirements. Raw SQL consumers must supply requirements
+  separately. SQL emission remains retrieve-oriented and does not implement
+  full CQL measure semantics.
+- CMS122 and CPG examples are bounded engineering demonstrations; they do not
+  establish full clinical-measure conformance or reporting-year equivalence.
 
 ## [0.2.8] - 2026-07-29
 
@@ -172,6 +213,7 @@ This project follows semantic versioning while the public API is still in the
   include resolution consistently with normal compilation.
 - Fixed CQL conformance expected-string handling to avoid double-unescaping.
 
+[0.3.0]: https://github.com/reason-healthcare/rh/compare/v0.2.8...v0.3.0
 [0.2.8]: https://github.com/reason-healthcare/rh/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/reason-healthcare/rh/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/reason-healthcare/rh/compare/v0.2.5...v0.2.6
