@@ -1,0 +1,25 @@
+{
+  "requirements": [
+    {
+      "canonical": "https://example.test/ValueSet/codes",
+      "codeSystems": [
+        {
+          "canonical": "https://example.test/CodeSystem/codes",
+          "version": "2026"
+        }
+      ],
+      "id": "Golden|1.0|Codes",
+      "library": {
+        "name": "Golden",
+        "version": "1.0"
+      },
+      "name": "Codes",
+      "operations": [
+        "membership"
+      ],
+      "version": "fixture-1"
+    }
+  ],
+  "resourceType": "ReasonHealthTerminologyRequirements",
+  "schemaVersion": 1
+}

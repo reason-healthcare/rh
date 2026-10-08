@@ -1,0 +1,38 @@
+{
+  "bindings": [
+    {
+      "expansionId": "golden",
+      "requirementId": "Golden|1.0|Codes"
+    }
+  ],
+  "expansions": [
+    {
+      "canonical": "https://example.test/ValueSet/codes",
+      "codeSystems": [
+        {
+          "canonical": "https://example.test/CodeSystem/codes",
+          "version": "2026"
+        }
+      ],
+      "completeness": {
+        "justification": "Synthetic closed two-code interoperability fixture; not a clinical expansion.",
+        "scope": "fixture",
+        "status": "complete",
+        "total": 2
+      },
+      "contentDigest": "sha256:8721ac12c62d6787023083bf1d67cfcfbdbd4c90a60a41918e5f5ab1818e40c1",
+      "id": "golden",
+      "parameters": {},
+      "path": "expansions/golden.json",
+      "source": {
+        "identity": "sha256:8721ac12c62d6787023083bf1d67cfcfbdbd4c90a60a41918e5f5ab1818e40c1",
+        "kind": "local"
+      },
+      "version": "fixture-1"
+    }
+  ],
+  "requirementsDigest": "sha256:7ca8899ab0f409164a65e947af76695d14ce86a9f7ead3385415db1fca8fcd7e",
+  "resourceType": "ReasonHealthTerminologyLock",
+  "schemaVersion": 1,
+  "snapshotId": "sha256:a8692f092766b61d99101c28a950a36e41e90c287912312663ab19f0dc2b2c8c"
+}

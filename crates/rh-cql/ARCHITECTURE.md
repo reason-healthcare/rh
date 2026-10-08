@@ -198,6 +198,32 @@ CQL source -> parser AST -> typed AST -> ELM library -> eval::evaluate_elm
 That boundary keeps runtime behavior aligned with the serialized artifact that
 other tools also consume.
 
+### Terminology Snapshot Boundary
+
+`terminology/` extracts library-qualified requirements from the CQL library
+closure and loads validated, immutable FHIR R4 ValueSet snapshots. Snapshot
+preparation and any terminology-server access belong to the separate
+private `reasonhealth-analytics` repository (access required); native
+evaluation reads the saved snapshot without network access. Fixture-scope
+expansions require explicit preparation
+justification and `--allow-fixture` at consumption. Requirement identity keeps
+the declaring library and ValueSet versions distinct. CQL membership compares
+`system` and `code`, ignoring display and patient `Coding.version`; terminology
+versions select the expansion. See the [CQL CLI guide](../../apps/rh-cli/docs/CQL.md#prepare-and-use-a-terminology-snapshot)
+for commands and the [Analytics snapshot guide in the private repository](https://github.com/Vermonster/reasonhealth-analytics/blob/main/docs/value-set-snapshots.md)
+for preparation and provenance details.
+
+The public `terminology` module preserves its entrypoints through five private
+modules:
+
+| Module | Responsibility |
+|---|---|
+| `schema` | Versioned JSON types and schema constants |
+| `requirements` | Declaration identity and transitive requirement extraction |
+| `validation` | Pure FHIR expansion and terminology metadata checks |
+| `loader` | Snapshot files, digests, bindings, and provider construction |
+| `provider` | Qualified membership/expansion and legacy alias ambiguity |
+
 ## Library and Dependency Handling
 
 The `library/` module provides source providers and compiled library management
@@ -440,13 +466,18 @@ artifacts from retrieve requirements. Each resource gets stable columns used by
 the current analytics fixtures, including `id`, `patient_id`, selected scalar
 paths, and code coding expansions when needed.
 
-`emit_sql_text` builds one CTE per retrieve and selects the first CTE. Where a
-retrieve references a value set, it emits `code IS NOT NULL` with a comment;
-this is a placeholder, not value-set membership. With no retrieve CTE it
-selects the first supplied view (or the placeholder name `generated_view`).
-`emit_sql_query_library` wraps that same SQL in a FHIR `Library` with SQLQuery
-metadata and dependencies on emitted views. Neither path implements the full
-measure predicates or refuses all incomplete semantics.
+`emit_sql_text` builds one CTE per retrieve and selects the first CTE. Static
+ValueSet retrieve filters use `EXISTS` against `rh_valueset_members`, keyed by
+the compiler-emitted requirement ID, system, and code; `DISTINCT` preserves
+resource cardinality for multiple matching codings. The CLI uses
+`try_emit_sql_text_with_terminology_requirements` to reject unresolved ValueSets;
+compatibility wrappers returning strings emit an invalid-SQL diagnostic on
+error. New library callers should use the checked API. With no retrieve CTE it selects the first supplied
+view (or the placeholder name `generated_view`). `emit_sql_query_library`
+wraps the SQL in a FHIR `Library` with SQLQuery metadata, dependencies on
+emitted views, and terminology requirements. The CLI supplies the full declaration
+closure; the default library helper derives only local ELM declarations. Neither path implements
+full clinical predicates or complete measure semantics.
 
 `emit_measure_runtime_manifest` writes a JSON manifest that references the query
 and views rather than embedding compiler internals. Its result mappings come
@@ -465,7 +496,8 @@ The current SQL-on-FHIR support is retrieve-oriented and incomplete. Known gaps
 include:
 
 - complete CQL query semantics;
-- terminology expansion and value-set membership semantics;
+- full clinical/query semantics surrounding a static terminology filter;
+- general terminology-server operations and expansion (handled at preparation time);
 - interval precision rules;
 - quantity and UCUM normalization;
 - complex list semantics;

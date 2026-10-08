@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use super::context::{filter_resources_for_context, EvalContext, EvalError};
 use super::operators::*;
 use super::tvl::{tvl_and, tvl_implies, tvl_not, tvl_or, tvl_xor};
-use super::value::Value;
+use super::value::{CqlCode, Value, ValueSetReference};
 use crate::elm::{
     BinaryExpression, Expression, FunctionDef, Library, NaryExpression, StatementDef,
     TimeBinaryExpression, TypeSpecifier, UnaryExpression,
@@ -57,6 +57,7 @@ pub struct TraceEvent {
 ///
 /// `Ok(Value)` on success, `Err(EvalError)` on type mismatch or runtime error.
 pub fn evaluate_elm(library: &Library, name: &str, ctx: &EvalContext) -> Result<Value, EvalError> {
+    preflight_terminology(library, None, ctx)?;
     let mut engine = Engine::new(library, ctx);
     engine.eval_named_expression(name)
 }
@@ -72,6 +73,7 @@ pub fn evaluate_elm_with_libraries(
     name: &str,
     ctx: &EvalContext,
 ) -> Result<Value, EvalError> {
+    preflight_terminology(library, Some(included), ctx)?;
     let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
     engine.eval_named_expression(name)
 }
@@ -86,6 +88,7 @@ pub fn evaluate_elm_with_trace(
     name: &str,
     ctx: &EvalContext,
 ) -> Result<(Value, Vec<TraceEvent>), EvalError> {
+    preflight_terminology(library, None, ctx)?;
     let mut engine = Engine::new(library, ctx);
     let value = engine.eval_named_expression(name)?;
     let trace = std::mem::take(&mut engine.trace);
@@ -102,10 +105,89 @@ pub fn evaluate_elm_with_libraries_and_trace(
     name: &str,
     ctx: &EvalContext,
 ) -> Result<(Value, Vec<TraceEvent>), EvalError> {
+    preflight_terminology(library, Some(included), ctx)?;
     let mut engine = Engine::new_with_libraries(library, Some(included), ctx);
     let value = engine.eval_named_expression(name)?;
     let trace = std::mem::take(&mut engine.trace);
     Ok((value, trace))
+}
+
+fn preflight_terminology(
+    library: &Library,
+    included: Option<&HashMap<String, Library>>,
+    context: &EvalContext,
+) -> Result<(), EvalError> {
+    let mut visited = HashSet::new();
+    let mut libraries = vec![library];
+    if let Some(included) = included {
+        libraries.extend(included.values());
+    }
+    for library in libraries {
+        let Some(identifier) = library.identifier.as_ref() else {
+            continue;
+        };
+        let (Some(library_name), Some(value_sets)) =
+            (identifier.id.as_deref(), library.value_sets.as_ref())
+        else {
+            continue;
+        };
+        let library_version = identifier.version.as_deref();
+        for definition in &value_sets.defs {
+            let (Some(name), Some(canonical)) =
+                (definition.name.as_deref(), definition.id.as_deref())
+            else {
+                continue;
+            };
+            let requirement_id =
+                crate::terminology::requirement_id(library_name, library_version, name);
+            if !visited.insert(requirement_id.clone()) {
+                continue;
+            }
+            let mut code_systems = Vec::new();
+            for code_system_ref in &definition.code_system {
+                let code_system_name = code_system_ref.name.as_deref().unwrap_or("");
+                let target = match code_system_ref.library_name.as_deref() {
+                    Some(alias) => {
+                        included.and_then(|items| items.get(alias)).ok_or_else(|| {
+                            EvalError::LibraryNotFound {
+                                alias: alias.to_string(),
+                            }
+                        })?
+                    }
+                    None => library,
+                };
+                let code_system = target
+                    .code_systems
+                    .as_ref()
+                    .and_then(|systems| {
+                        systems
+                            .defs
+                            .iter()
+                            .find(|system| system.name.as_deref() == Some(code_system_name))
+                    })
+                    .ok_or_else(|| {
+                        EvalError::TerminologyError(format!(
+                            "ValueSet '{name}' references missing CodeSystem '{code_system_name}'"
+                        ))
+                    })?;
+                let system = code_system.id.clone().ok_or_else(|| {
+                    EvalError::TerminologyError(format!(
+                        "CodeSystem '{code_system_name}' has no canonical"
+                    ))
+                })?;
+                code_systems.push((system, code_system.version.clone()));
+            }
+            code_systems.sort();
+            let reference = ValueSetReference {
+                requirement_id,
+                canonical: canonical.to_owned(),
+                version: definition.version.clone(),
+                code_systems,
+            };
+            context.validate_valueset_ref(&reference)?;
+        }
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -1538,6 +1620,25 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             | Expression::AnyTrue(_)
             | Expression::Repeat(_) => self.eval_list_expr(expr),
 
+            Expression::ExpandValueSet(unary) => {
+                let value = self.eval_unary_arg(unary)?;
+                let codes = match value {
+                    Value::Null => return Ok(Value::Null),
+                    Value::ValueSet(reference) => self.ctx.expand_valueset_ref(&reference)?,
+                    Value::String(_) => {
+                        return Err(EvalError::TerminologyError(
+                            "dynamic ValueSet references are not supported".to_string(),
+                        ))
+                    }
+                    _ => {
+                        return Err(EvalError::General(
+                            "ExpandValueSet: expected ValueSet or null".to_string(),
+                        ))
+                    }
+                };
+                Ok(Value::List(codes.into_iter().map(Value::Code).collect()))
+            }
+
             // ----- Terminology -----
             Expression::Code(_)
             | Expression::CodeRef(_)
@@ -1637,8 +1738,8 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     /// matches the `filter`.
     ///
     /// `filter` may be:
-    /// - `Value::String(url)` — produced by evaluating a `ValueSetRef`; each
-    ///   resource code is checked against the valueset via `in_valueset`.
+    /// - `Value::ValueSet(reference)` — produced by a declared `ValueSetRef`; each
+    ///   resource code is checked against the valueset via `in_valueset_ref`.
     /// - `Value::Code` or `Value::Concept` — direct code/concept equality.
     /// - `Value::List` — any element in the list must match.
     fn filter_resources_by_code(
@@ -1670,6 +1771,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             match filter {
                 // ValueSetRef resolved to a URL string
                 Value::String(url) => ctx.in_valueset(c, url),
+                Value::ValueSet(reference) => ctx.in_valueset_ref(c, reference),
                 Value::Code(fc) => Ok(c.code == fc.code && c.system == fc.system),
                 Value::List(codes) => {
                     for fc in codes {
@@ -2281,11 +2383,41 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &a {
                     Value::Interval { .. } => super::intervals::contains(&a, &b),
                     Value::List(_) => super::lists::list_contains(&a, &b),
-                    Value::String(valueset_url) => match &b {
-                        Value::Code(code) => {
-                            self.ctx.in_valueset(code, valueset_url).map(Value::Boolean)
+                    Value::String(_) => Err(EvalError::TerminologyError(
+                        "dynamic ValueSet references are not supported".to_string(),
+                    )),
+                    Value::ValueSet(reference) => match &b {
+                        Value::Code(code) => self
+                            .ctx
+                            .in_valueset_ref(code, reference)
+                            .map(Value::Boolean),
+                        Value::String(code) => self
+                            .string_in_valueset_ref(code, &Value::ValueSet(reference.clone()))
+                            .map(Value::Boolean),
+                        Value::Concept(concept) => {
+                            let mut matched = false;
+                            for code in &concept.codes {
+                                if self.ctx.in_valueset_ref(code, reference)? {
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            Ok(Value::Boolean(matched))
                         }
-                        Value::Null => Ok(Value::Null),
+                        Value::List(values) => {
+                            let mut matched = false;
+                            for value in values {
+                                if self.value_in_valueset_ref(
+                                    value,
+                                    &Value::ValueSet(reference.clone()),
+                                )? {
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            Ok(Value::Boolean(matched))
+                        }
+                        Value::Null => Ok(Value::Boolean(false)),
                         _ => Err(EvalError::General(
                             "Contains: expected Code when checking a ValueSet".to_string(),
                         )),
@@ -2305,11 +2437,41 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                 match &b {
                     Value::Interval { .. } => super::intervals::in_interval(&a, &b),
                     Value::List(_) => super::lists::in_list(&a, &b),
-                    Value::String(valueset_url) => match &a {
-                        Value::Code(code) => {
-                            self.ctx.in_valueset(code, valueset_url).map(Value::Boolean)
+                    Value::String(_) => Err(EvalError::TerminologyError(
+                        "dynamic ValueSet references are not supported".to_string(),
+                    )),
+                    Value::ValueSet(reference) => match &a {
+                        Value::Code(code) => self
+                            .ctx
+                            .in_valueset_ref(code, reference)
+                            .map(Value::Boolean),
+                        Value::String(code) => self
+                            .string_in_valueset_ref(code, &Value::ValueSet(reference.clone()))
+                            .map(Value::Boolean),
+                        Value::Concept(concept) => {
+                            let mut matched = false;
+                            for code in &concept.codes {
+                                if self.ctx.in_valueset_ref(code, reference)? {
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            Ok(Value::Boolean(matched))
                         }
-                        Value::Null => Ok(Value::Null),
+                        Value::List(values) => {
+                            let mut matched = false;
+                            for value in values {
+                                if self.value_in_valueset_ref(
+                                    value,
+                                    &Value::ValueSet(reference.clone()),
+                                )? {
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            Ok(Value::Boolean(matched))
+                        }
+                        Value::Null => Ok(Value::Boolean(false)),
                         _ => Err(EvalError::General(
                             "In: expected Code when checking a ValueSet".to_string(),
                         )),
@@ -2677,23 +2839,103 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             // ------ Value set / code system reference resolution ------
             Expression::ValueSetRef(vs_ref) => {
                 let name = vs_ref.name.as_deref().unwrap_or("");
-                let canonical = self
-                    .library
+                let target = match vs_ref.library_name.as_deref() {
+                    Some(alias) => self
+                        .included
+                        .and_then(|libraries| libraries.get(alias))
+                        .ok_or_else(|| EvalError::LibraryNotFound {
+                            alias: alias.to_string(),
+                        })?,
+                    None => self.library,
+                };
+                let definition = target
                     .value_sets
                     .as_ref()
-                    .and_then(|vs| vs.defs.iter().find(|d| d.name.as_deref() == Some(name)))
-                    .map(|definition| match (&definition.id, &definition.version) {
-                        (Some(id), Some(version)) => format!("{id}|{version}"),
-                        (Some(id), None) => id.clone(),
-                        _ => name.to_string(),
+                    .and_then(|valuesets| {
+                        valuesets
+                            .defs
+                            .iter()
+                            .find(|definition| definition.name.as_deref() == Some(name))
                     })
-                    .unwrap_or_else(|| name.to_string());
-                Ok(Value::String(canonical))
+                    .ok_or_else(|| {
+                        EvalError::TerminologyError(format!(
+                            "ValueSetRef: definition '{name}' was not found"
+                        ))
+                    })?;
+                let identifier = target
+                    .identifier
+                    .as_ref()
+                    .and_then(|identifier| identifier.id.as_deref())
+                    .ok_or_else(|| {
+                        EvalError::TerminologyError(format!(
+                            "ValueSetRef: declaring library identity is missing for '{name}'"
+                        ))
+                    })?;
+                let mut code_systems = Vec::new();
+                for code_system_ref in &definition.code_system {
+                    let code_system_name = code_system_ref.name.as_deref().unwrap_or("");
+                    let code_system_library = match code_system_ref.library_name.as_deref() {
+                        Some(alias) => self
+                            .included
+                            .and_then(|libraries| libraries.get(alias))
+                            .ok_or_else(|| EvalError::LibraryNotFound {
+                                alias: alias.to_string(),
+                            })?,
+                        None => target,
+                    };
+                    let code_system = code_system_library
+                        .code_systems
+                        .as_ref()
+                        .and_then(|systems| {
+                            systems
+                                .defs
+                                .iter()
+                                .find(|system| system.name.as_deref() == Some(code_system_name))
+                        })
+                        .ok_or_else(|| {
+                            EvalError::TerminologyError(format!(
+                                "ValueSetRef: CodeSystem '{code_system_name}' was not found"
+                            ))
+                        })?;
+                    let canonical = code_system.id.clone().ok_or_else(|| {
+                        EvalError::TerminologyError(format!(
+                            "ValueSetRef: CodeSystem '{code_system_name}' has no canonical"
+                        ))
+                    })?;
+                    code_systems.push((canonical, code_system.version.clone()));
+                }
+                code_systems.sort();
+                let version = definition.version.clone();
+                Ok(Value::ValueSet(ValueSetReference {
+                    requirement_id: crate::terminology::requirement_id(
+                        identifier,
+                        target
+                            .identifier
+                            .as_ref()
+                            .and_then(|identifier| identifier.version.as_deref()),
+                        name,
+                    ),
+                    canonical: definition.id.clone().ok_or_else(|| {
+                        EvalError::TerminologyError(format!(
+                            "ValueSetRef: definition '{name}' has no canonical"
+                        ))
+                    })?,
+                    version,
+                    code_systems,
+                }))
             }
             Expression::CodeSystemRef(cs_ref) => {
                 let name = cs_ref.name.as_deref().unwrap_or("");
-                let url = self
-                    .library
+                let target = match cs_ref.library_name.as_deref() {
+                    Some(alias) => self
+                        .included
+                        .and_then(|libraries| libraries.get(alias))
+                        .ok_or_else(|| EvalError::LibraryNotFound {
+                            alias: alias.to_string(),
+                        })?,
+                    None => self.library,
+                };
+                let url = target
                     .code_systems
                     .as_ref()
                     .and_then(|cs| cs.defs.iter().find(|d| d.name.as_deref() == Some(name)))
@@ -2866,19 +3108,50 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
                     .valueset_expression
                     .as_deref()
                     .or(ivs.valueset.as_deref());
-                let vs_url = match vs_expr {
+                let vs_value = match vs_expr {
                     Some(e) => match self.eval_expr(e)? {
-                        Value::String(s) => s,
+                        Value::ValueSet(reference) => {
+                            self.ctx.validate_valueset_ref(&reference)?;
+                            Value::ValueSet(reference)
+                        }
+                        Value::String(_) => {
+                            return Err(EvalError::TerminologyError(
+                                "dynamic ValueSet references are not supported".to_string(),
+                            ))
+                        }
+                        Value::Null => return Ok(Value::Boolean(false)),
                         _ => return Ok(Value::Null),
                     },
                     None => return Ok(Value::Null),
                 };
                 match code_val {
                     Value::Code(ref c) => {
-                        let result = self.ctx.in_valueset(c, &vs_url)?;
-                        Ok(Value::Boolean(result))
+                        Ok(Value::Boolean(self.code_in_valueset_ref(c, &vs_value)?))
                     }
-                    Value::Null => Ok(Value::Null),
+                    Value::String(ref code) => Ok(Value::Boolean(
+                        self.string_in_valueset_ref(code, &vs_value)?,
+                    )),
+                    Value::Concept(ref concept) => {
+                        let mut matched = false;
+                        for code in &concept.codes {
+                            if self.code_in_valueset_ref(code, &vs_value)? {
+                                matched = true;
+                                break;
+                            }
+                        }
+                        Ok(Value::Boolean(matched))
+                    }
+                    Value::List(ref values) => {
+                        let mut matched = false;
+                        for value in values {
+                            if self.value_in_valueset_ref(value, &vs_value)? {
+                                matched = true;
+                                break;
+                            }
+                        }
+                        Ok(Value::Boolean(matched))
+                    }
+                    Value::Null => Ok(Value::Boolean(false)),
                     _ => Ok(Value::Null),
                 }
             }
@@ -2903,25 +3176,32 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
             }
             Expression::AnyInValueSet(aivs) => {
                 let codes_val = self.eval_expr_opt(aivs.codes.as_deref())?;
-                let vs_url = match aivs.valueset.as_deref() {
+                let vs_value = match aivs.valueset.as_deref() {
                     Some(e) => match self.eval_expr(e)? {
-                        Value::String(s) => s,
+                        Value::ValueSet(reference) => {
+                            self.ctx.validate_valueset_ref(&reference)?;
+                            Value::ValueSet(reference)
+                        }
+                        Value::String(_) => {
+                            return Err(EvalError::TerminologyError(
+                                "dynamic ValueSet references are not supported".to_string(),
+                            ))
+                        }
+                        Value::Null => return Ok(Value::Boolean(false)),
                         _ => return Ok(Value::Null),
                     },
                     None => return Ok(Value::Null),
                 };
                 let codes = match codes_val {
                     Value::List(items) => items,
-                    Value::Null => return Ok(Value::Null),
+                    Value::Null => return Ok(Value::Boolean(false)),
                     _ => return Ok(Value::Null),
                 };
                 let mut any_match = false;
                 for item in &codes {
-                    if let Value::Code(c) = item {
-                        if self.ctx.in_valueset(c, &vs_url)? {
-                            any_match = true;
-                            break;
-                        }
+                    if self.value_in_valueset_ref(item, &vs_value)? {
+                        any_match = true;
+                        break;
                     }
                 }
                 Ok(Value::Boolean(any_match))
@@ -2948,6 +3228,57 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
 
             _ => unreachable!("eval_terminology_expr: unexpected expression"),
         }
+    }
+
+    fn code_in_valueset_ref(&self, code: &CqlCode, valueset: &Value) -> Result<bool, EvalError> {
+        match valueset {
+            Value::ValueSet(reference) => self.ctx.in_valueset_ref(code, reference),
+            Value::String(url) => self.ctx.in_valueset(code, url),
+            _ => Ok(false),
+        }
+    }
+
+    fn value_in_valueset_ref(&self, value: &Value, valueset: &Value) -> Result<bool, EvalError> {
+        match value {
+            Value::Code(code) => self.code_in_valueset_ref(code, valueset),
+            Value::Concept(concept) => {
+                for code in &concept.codes {
+                    if self.code_in_valueset_ref(code, valueset)? {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            }
+            Value::List(items) => {
+                for item in items {
+                    if self.value_in_valueset_ref(item, valueset)? {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            }
+            Value::String(code) => self.string_in_valueset_ref(code, valueset),
+            _ => Ok(false),
+        }
+    }
+
+    fn string_in_valueset_ref(&self, code: &str, valueset: &Value) -> Result<bool, EvalError> {
+        let members = match valueset {
+            Value::ValueSet(reference) => self.ctx.expand_valueset_ref(reference)?,
+            Value::String(url) => self.ctx.expand_valueset(url)?,
+            _ => return Ok(false),
+        };
+        let systems = members
+            .iter()
+            .map(|member| member.system.as_str())
+            .collect::<HashSet<_>>();
+        if systems.len() > 1 {
+            return Err(EvalError::TerminologyError(
+                "string membership is ambiguous for a ValueSet containing multiple code systems"
+                    .to_string(),
+            ));
+        }
+        Ok(members.iter().any(|member| member.code == code))
     }
 
     // Like eval_expr_opt but also returns the last-emitted trace event id.

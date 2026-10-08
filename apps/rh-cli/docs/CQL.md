@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `rh cql` command provides tools for working with CQL (Clinical Quality Language), compiling CQL source files to ELM (Expression Logical Model) JSON, evaluating expressions, and inspecting compilation details.
+The `rh cql` command provides tools for working with CQL (Clinical Quality Language), compiling CQL source files to ELM (Expression Logical Model) JSON, evaluating expressions, and inspecting compilation details. Terminology requirements are emitted as versioned JSON; native evaluation consumes a prepared immutable terminology snapshot.
 
 It also includes first-pass SQL-on-FHIR helpers for retrieve-centric measure
 logic: `data-requirements`, `plan`, `lower-check`, `emit-views`, `emit-sql`,
@@ -12,11 +12,10 @@ SQLQuery Library, and runtime manifest artifacts.
 
 These helpers are experimental diagnostics and artifact scaffolding. SQL
 emission currently bypasses the relational plan and selects the first retrieve
-CTE; it does not preserve complete clinical predicates or terminology
-membership. Included libraries can be resolved during compilation, but their
-dependency closure is not passed into analytics emission. A `supported: true`
-report does not establish executable SQL equivalence, and the analytics runtime
-has no CQL fallback executor. See
+CTE. Static ValueSet retrieve membership uses a prepared `rh_valueset_members`
+relation, while complete clinical predicates and population semantics remain
+incomplete. A `supported: true` report does not establish executable SQL
+equivalence, and the analytics runtime has no CQL fallback executor. See
 [current relational-algebra status](../../../crates/rh-cql/ARCHITECTURE.md#experimental-relational-algebra).
 
 See the [CQL crate README](../../../crates/rh-cql/README.md) for library-level documentation.
@@ -652,12 +651,15 @@ Generated `views/condition_view.json`:
 Emit a SQL-on-FHIR SQLQuery Library artifact, or raw SQL text, from CQL and
 ViewDefinition metadata.
 
-Current SQL is a retrieval skeleton: it creates retrieve CTEs and selects the
-first one. The `code IS NOT NULL /* valueSet: ... */` predicate shown below
-checks for a populated code, not membership in the referenced value set.
-Clinical filters, patient-level population logic, and complete included-library
-semantics are not emitted. Successful artifact generation is integration
-evidence, not a claim of CQL-to-SQL equivalence.
+Current SQL creates retrieve CTEs and selects the first one. Static ValueSet
+retrieves use `EXISTS` against the prepared `rh_valueset_members` relation,
+qualified by the declaring requirement ID, system, and code. Patient
+`Coding.version` is not a membership predicate; ValueSet and CodeSystem versions
+select the expansion. `DISTINCT` preserves resource cardinality when several
+codings match. Unresolved terminology filters fail emission. Clinical filters,
+patient-level population logic, and complete measure semantics remain
+incomplete, so successful artifact generation is not a claim of general
+CQL-to-SQL equivalence.
 
 **Usage:**
 ```bash
@@ -679,14 +681,19 @@ Emit raw SQL:
 rh cql emit-sql measure.cql --views views/ --sql-only
 ```
 
-Output:
+Illustrative SQL (projection shortened and formatting expanded for readability):
 
 ```sql
 WITH
   diabetes_conditions AS (
-    SELECT *
-      FROM condition_view
-      WHERE code IS NOT NULL /* valueSet: Diabetes */
+    SELECT DISTINCT source.id, source.patient_id
+    FROM condition_view AS source
+    WHERE EXISTS (
+      SELECT 1 FROM rh_valueset_members AS member
+      WHERE member.requirement_id = 'DiabetesMeasure|1.0.0|Diabetes'
+      AND member.system = source.system
+      AND member.code = source.code
+    )
   )
 SELECT *
 FROM diabetes_conditions;
@@ -704,7 +711,8 @@ Output:
 Wrote SQLQuery Library to query-library.json
 ```
 
-Generated `query-library.json`:
+Generated `query-library.json` excerpt (projection and SQL formatting are simplified;
+the separate terminology-requirements extension is omitted):
 
 ```json
 {
@@ -741,7 +749,7 @@ Generated `query-library.json`:
       "extension": [
         {
           "url": "https://sql-on-fhir.org/ig/StructureDefinition/sql-text",
-          "valueString": "WITH\n  diabetes_conditions AS (\n    SELECT *\n      FROM condition_view\n      WHERE code IS NOT NULL /* valueSet: Diabetes */\n  )\nSELECT *\nFROM diabetes_conditions;\n"
+          "valueString": "(SQL text shown above)"
         }
       ],
       "data": "V0lUSAo..."
@@ -749,6 +757,12 @@ Generated `query-library.json`:
   ]
 }
 ```
+
+The generated FHIR `Library` includes a
+`https://reason.health/fhir/StructureDefinition/terminology-requirements`
+extension containing the versioned requirements JSON. Analytics validates the
+declared requirements before query execution, including for an empty input. A
+raw SQL consumer must provide those requirements separately.
 
 ---
 
@@ -815,20 +829,107 @@ Generated `measure-runtime.json`:
 
 ---
 
+### `rh cql terminology-requirements`
+
+Emit a `ReasonHealthTerminologyRequirements` v1 JSON document for every
+declared ValueSet in the resolved CQL library closure. Requirement IDs identify
+the declaring library, its optional version, and the local ValueSet name. Each
+requirement preserves the canonical and version, CodeSystem constraints, and
+supported terminology operations. The initial extractor conservatively
+requests membership, expansion, and string-membership capabilities; this is
+not an exact usage or expression-reachability analysis.
+
+```bash
+rh cql terminology-requirements measure.cql \
+  --lib-path cql-libs --output requirements.json
+```
+
+### Prepare and use a terminology snapshot
+
+Snapshot preparation belongs to the separate, private
+`reasonhealth-analytics` repository; access to that repository is required to
+build its CLI and follow the preparation guide. Build `rh` from the RH checkout
+and `rh-analytics` from the Analytics checkout. The [Analytics snapshot guide
+(private repository)](https://github.com/Vermonster/reasonhealth-analytics/blob/main/docs/value-set-snapshots.md)
+covers accepted local inputs, FHIR `$expand`, provenance, reuse, refresh, and
+snapshot diffs.
+
+For production expansions, prepare without fixture options and evaluate using
+the resulting immutable snapshot:
+
+```bash
+rh cql terminology-requirements measure.cql \
+  --lib-path cql-libs --output requirements.json
+rh-analytics terminology prepare --requirements requirements.json \
+  --terminology complete-expansions.json --output terminology-snapshot
+rh cql eval measure.cql 'Initial Population' --lib-path cql-libs \
+  --data patient.json --terminology-snapshot terminology-snapshot
+```
+
+Synthetic fixture data requires a reason at preparation and explicit opt-in at
+each consumer:
+
+```bash
+rh-analytics terminology prepare --requirements requirements.json \
+  --terminology fixture-expansions.json --output fixture-snapshot \
+  --fixture-justification 'Synthetic test fixture only.'
+rh cql eval measure.cql 'Initial Population' --lib-path cql-libs \
+  --data patient.json --terminology-snapshot fixture-snapshot --allow-fixture
+```
+
+Pass the same `--lib-path` directories used for library resolution to
+requirements extraction, evaluation, and artifact emission. Preparation can
+consume local complete ValueSet expansions or a configured FHIR `$expand`
+endpoint. Evaluation and snapshot-backed SQL execution make no terminology
+network requests. A complete empty expansion is valid and differs from a
+missing or partial expansion.
+
+Requirement versions select the expansion; CQL membership compares `system`
+and `code`, ignoring display and patient `Coding.version`. Snapshots are
+immutable. Matching preparation inputs reuse the existing snapshot. Changed
+inputs and `--refresh` require a new output directory; compare snapshots with
+`rh-analytics terminology diff OLD NEW`. Add `--allow-fixture` to the diff
+command when either snapshot is fixture-scoped. Fixture scope is provenance,
+not clinical validation; production scope is not clinical certification either.
+
+To emit a SQLQuery Library and run it with the same snapshot:
+
+```bash
+rh cql emit-views measure.cql --lib-path cql-libs --out views/
+rh cql emit-sql measure.cql --lib-path cql-libs --views views/ \
+  --out query-library.json
+rh-analytics sql query run --query query-library.json --view views/ \
+  --input patients.ndjson --terminology-snapshot terminology-snapshot
+```
+
+For a fixture snapshot, add `--allow-fixture` to the Analytics command too.
+SQLQuery artifacts carry compiler requirements automatically; raw SQL consumers
+must provide requirements separately. The
+[RH-local example](../../../examples/value-set-membership/README.md) uses the
+checked-in golden snapshot. The two-repository Analytics
+[membership example in the private Analytics repository](https://github.com/Vermonster/reasonhealth-analytics/tree/main/examples/value-set-membership)
+also exercises generated SQL and DataFusion. Both are terminology examples,
+not claims of full clinical measure conformance. CQL is read as source input;
+generated requirements and runtime artifacts are separate outputs.
+
 ### `rh cql eval`
 
 Evaluate a named expression definition in a compiled CQL library.
 
 **Usage:**
 ```bash
-rh cql eval [OPTIONS] --expression <EXPRESSION> <FILE>
+rh cql eval [OPTIONS] <FILE> <EXPRESSION>
 ```
 
 **Arguments:**
 - `<FILE>` - Path to a CQL file, or `-` to read from stdin
+- `<EXPRESSION>` - Name of the expression definition to evaluate
 
 **Options:**
-- `-e, --expression <EXPRESSION>` - Name of the expression definition to evaluate (required)
+- `--data <FILE>` - Patient FHIR data file for retrieve operations
+- `--terminology-snapshot <DIR>` - Prepared immutable terminology snapshot
+- `--allow-fixture` - Explicitly permit fixture-scope terminology
+- `--lib-path <DIR>` - Included-library search directory (repeatable)
 - `--trace` - Output a step-by-step evaluation trace
 - `-v, --verbose` - Enable verbose logging
 - `-h, --help` - Print help

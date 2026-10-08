@@ -25,6 +25,7 @@ nom = { workspace = true }
 quick-xml = { workspace = true }
 regex = { workspace = true }
 tracing = { workspace = true }
+sha2 = "0.10"
 rh-foundation = { path = "../rh-foundation", version = "0.2.8" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

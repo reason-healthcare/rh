@@ -12,6 +12,7 @@ This crate provides:
 - **Source Maps**: CQL source span → ELM node correlation via `compile_to_elm_with_sourcemap`
 - **Explain Output**: Human-readable parse tree and compilation details (`explain_parse`, `explain_compile`)
 - **ELM Evaluator**: Pure Rust evaluation engine (`evaluate_elm`, `evaluate_elm_with_trace`)
+- **Terminology snapshots**: Library-qualified ValueSet requirements, validated immutable FHIR R4 expansion loading, and native CQL membership
 - **Analytics and SQL-on-FHIR**: Data requirements, diagnostic relational plans, node-kind classification, ViewDefinition generation, and SQLQuery Library emission
 - **ModelInfo Types**: FHIR and custom model definitions for type resolution
 - **DataType System**: Type checking, compatibility, and implicit conversions
@@ -298,10 +299,21 @@ println!("{}", serde_json::to_string_pretty(&sql_library).unwrap());
 ```
 
 The SQL emitter currently builds retrieve CTEs and selects the first one; it
-does not consume the relational plan. Its `code IS NOT NULL` terminology filter
-is a placeholder, not value-set membership. Generic plan `Expr` nodes preserve
-operator kinds without their operands. The CLI analytics path passes only the
-main library, so included-library requirements are incomplete.
+does not consume the relational plan. Static ValueSet retrieve filters use
+`EXISTS` against the prepared `rh_valueset_members` relation, keyed by the
+declaring requirement, system, and code. `DISTINCT` preserves resource
+cardinality when multiple codings match. SQLQuery artifacts carry the
+requirements closure for validation by the Analytics runtime. Generic plan
+`Expr` nodes preserve operator kinds without their operands, and generated SQL
+does not implement full CQL measure semantics.
+
+The native evaluator loads immutable, validated terminology snapshots produced
+by the separate `reasonhealth-analytics` repository. Snapshot preparation is
+the network boundary; native evaluation uses the saved expansion offline.
+Fixture snapshots require explicit fixture justification during preparation
+and `--allow-fixture` during evaluation. Preparing snapshots requires access to
+the separate, private Analytics repository. See the [CQL CLI guide](../../apps/rh-cli/docs/CQL.md#prepare-and-use-a-terminology-snapshot)
+and [Analytics snapshot guide (private repository)](https://github.com/Vermonster/reasonhealth-analytics/blob/main/docs/value-set-snapshots.md).
 
 The `cql lower-check` report distinguishes three cases:
 

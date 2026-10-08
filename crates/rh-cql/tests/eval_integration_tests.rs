@@ -904,7 +904,7 @@ define X: [Observation: "Required"]"#;
     );
     assert!(matches!(
         missing_patient,
-        Err(rh_cql::EvalError::RetrieveError(_))
+        Err(rh_cql::EvalError::RetrieveError(_)) | Err(rh_cql::EvalError::TerminologyError(_))
     ));
 }
 
@@ -1402,6 +1402,186 @@ define X: "Allowed" in "Required""#;
         evaluate_elm(&result.library, "X", &ctx).expect("versioned valueset should resolve"),
         Value::Boolean(true)
     );
+}
+
+#[test]
+fn declared_valueset_context_keeps_same_canonical_versions_separate() {
+    use rh_cql::{CqlCode, EvalError, TerminologyProvider};
+    use std::collections::BTreeMap;
+
+    #[derive(Default)]
+    struct ContextualTerminology(BTreeMap<String, Vec<CqlCode>>);
+    impl TerminologyProvider for ContextualTerminology {
+        fn in_valueset(&self, _code: &CqlCode, valueset_url: &str) -> Result<bool, EvalError> {
+            Err(EvalError::TerminologyError(format!(
+                "unexpected unqualified lookup: {valueset_url}"
+            )))
+        }
+        fn expand_valueset(&self, valueset_url: &str) -> Result<Vec<CqlCode>, EvalError> {
+            Err(EvalError::TerminologyError(format!(
+                "unexpected unqualified expansion: {valueset_url}"
+            )))
+        }
+        fn lookup(&self, _code: &CqlCode, _property: &str) -> Result<Option<Value>, EvalError> {
+            Ok(None)
+        }
+        fn validate_valueset_ref(
+            &self,
+            reference: &rh_cql::eval::value::ValueSetReference,
+        ) -> Result<(), EvalError> {
+            self.0
+                .get(&reference.requirement_id)
+                .map(|_| ())
+                .ok_or_else(|| {
+                    EvalError::TerminologyError(format!("missing {}", reference.requirement_id))
+                })
+        }
+        fn in_valueset_ref(
+            &self,
+            code: &CqlCode,
+            reference: &rh_cql::eval::value::ValueSetReference,
+        ) -> Result<bool, EvalError> {
+            self.validate_valueset_ref(reference)?;
+            Ok(self.0[&reference.requirement_id]
+                .iter()
+                .any(|member| member.code == code.code && member.system == code.system))
+        }
+        fn expand_valueset_ref(
+            &self,
+            reference: &rh_cql::eval::value::ValueSetReference,
+        ) -> Result<Vec<CqlCode>, EvalError> {
+            self.validate_valueset_ref(reference)?;
+            Ok(self.0[&reference.requirement_id].clone())
+        }
+    }
+
+    let cql = r#"library T
+codesystem A: 'http://example.org/system-a'
+codesystem B: 'http://example.org/system-b'
+valueset First: 'http://example.org/shared' version '1' codesystems { A }
+valueset Second: 'http://example.org/shared' version '1' codesystems { B }
+define FirstMatch: Code 'x' from A in First
+define SecondMatch: Code 'x' from A in Second"#;
+    let result = rh_cql::compile(cql, None).expect("compile failed");
+    assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
+    let terminology = ContextualTerminology(BTreeMap::from([
+        (
+            "T||First".to_string(),
+            vec![CqlCode {
+                code: "x".into(),
+                system: "http://example.org/system-a".into(),
+                display: None,
+                version: None,
+            }],
+        ),
+        (
+            "T||Second".to_string(),
+            vec![CqlCode {
+                code: "x".into(),
+                system: "http://example.org/system-b".into(),
+                display: None,
+                version: None,
+            }],
+        ),
+    ]));
+    let context = EvalContextBuilder::new(test_clock())
+        .terminology_provider(terminology)
+        .build();
+    assert_eq!(
+        evaluate_elm(&result.library, "FirstMatch", &context).unwrap(),
+        Value::Boolean(true)
+    );
+    assert_eq!(
+        evaluate_elm(&result.library, "SecondMatch", &context).unwrap(),
+        Value::Boolean(false)
+    );
+}
+
+#[test]
+fn resolved_valueset_null_membership_is_false_and_missing_requirement_fails_preflight() {
+    use rh_cql::{CqlCode, EvalError, InMemoryTerminologyProvider};
+    let cql = r#"library T
+codesystem CS: 'http://example.org/system'
+valueset Required: 'http://example.org/vs' version '1' codesystems { CS }
+parameter Input Code
+define X: Input in Required"#;
+    let result = rh_cql::compile(cql, None).expect("compile failed");
+    assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
+    let mut terminology = InMemoryTerminologyProvider::new();
+    terminology.register_valueset(
+        "http://example.org/vs|1",
+        vec![CqlCode {
+            code: "x".into(),
+            system: "http://example.org/system".into(),
+            display: None,
+            version: None,
+        }],
+    );
+    let context = EvalContextBuilder::new(test_clock())
+        .terminology_provider(terminology)
+        .build();
+    assert_eq!(
+        evaluate_elm(&result.library, "X", &context).unwrap(),
+        Value::Boolean(false)
+    );
+
+    let missing = EvalContextBuilder::new(test_clock()).build();
+    assert!(matches!(
+        evaluate_elm(&result.library, "X", &missing),
+        Err(EvalError::TerminologyError(_))
+    ));
+}
+
+#[test]
+fn string_valueset_membership_requires_one_code_system() {
+    use rh_cql::{CqlCode, EvalError, InMemoryTerminologyProvider};
+    let cql = r#"library T
+codesystem A: 'http://example.org/a'
+codesystem B: 'http://example.org/b'
+valueset One: 'http://example.org/one'
+valueset Many: 'http://example.org/many'
+define Single: 'x' in One
+define Multi: 'x' in Many"#;
+    let result = rh_cql::compile(cql, None).expect("compile failed");
+    assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
+    let mut terminology = InMemoryTerminologyProvider::new();
+    terminology.register_valueset(
+        "http://example.org/one",
+        vec![CqlCode {
+            code: "x".into(),
+            system: "http://example.org/a".into(),
+            display: None,
+            version: None,
+        }],
+    );
+    terminology.register_valueset(
+        "http://example.org/many",
+        vec![
+            CqlCode {
+                code: "x".into(),
+                system: "http://example.org/a".into(),
+                display: None,
+                version: None,
+            },
+            CqlCode {
+                code: "x".into(),
+                system: "http://example.org/b".into(),
+                display: None,
+                version: None,
+            },
+        ],
+    );
+    let context = EvalContextBuilder::new(test_clock())
+        .terminology_provider(terminology)
+        .build();
+    assert_eq!(
+        evaluate_elm(&result.library, "Single", &context).unwrap(),
+        Value::Boolean(true)
+    );
+    assert!(matches!(
+        evaluate_elm(&result.library, "Multi", &context),
+        Err(EvalError::TerminologyError(_))
+    ));
 }
 
 #[test]

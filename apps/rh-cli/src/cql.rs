@@ -15,13 +15,15 @@ use crate::output::{
 use rh_cpg::context::{parse_cql_datetime, MeasurementPeriod};
 use rh_cpg::fhir_to_cql::fhir_to_cql_value;
 use rh_cql::analytics::{
-    data_requirements, emit_measure_runtime_manifest, emit_sql_query_library, emit_sql_text,
-    emit_view_definitions, format_data_requirements, format_dependencies, format_elm_inspection,
-    format_lower_check, format_relational_plan, inspect_elm, lower_check, relational_plan,
-    MeasureRuntimeManifest, MeasureRuntimeResultDefinition, SqlQueryLibraryArtifact,
-    ViewDefinitionArtifact,
+    data_requirements, emit_measure_runtime_manifest,
+    emit_sql_query_library_with_terminology_requirements, emit_view_definitions,
+    format_data_requirements, format_dependencies, format_elm_inspection, format_lower_check,
+    format_relational_plan, inspect_elm, lower_check, relational_plan,
+    try_emit_sql_text_with_terminology_requirements, MeasureRuntimeManifest,
+    MeasureRuntimeResultDefinition, SqlQueryLibraryArtifact, ViewDefinitionArtifact,
 };
 use rh_cql::options::CompilerOption;
+use rh_cql::terminology::{extract_terminology_requirements, load_terminology_snapshot};
 use rh_cql::{
     compile, compile_to_elm_with_sourcemap_and_libraries, compile_with_libraries,
     elm::AccessModifier, evaluate_elm_with_libraries, evaluate_elm_with_libraries_and_trace,
@@ -207,6 +209,19 @@ pub enum CqlCommands {
         input: String,
     },
 
+    /// Emit declared ValueSet requirements for a CQL library and its includes.
+    TerminologyRequirements {
+        /// CQL file, or '-' to read from stdin.
+        #[clap(value_name = "INPUT")]
+        input: String,
+        /// Output JSON file (defaults to stdout).
+        #[clap(long, value_name = "FILE")]
+        output: Option<PathBuf>,
+        /// Additional directory to search for included CQL libraries.
+        #[clap(long, value_name = "DIR", num_args = 1)]
+        lib_path: Vec<PathBuf>,
+    },
+
     /// Interactive REPL for CQL compilation
     Repl {
         /// Enable debug mode
@@ -378,6 +393,14 @@ pub enum CqlCommands {
         #[clap(long, value_name = "FILE", num_args = 1, conflicts_with = "valuesets")]
         terminology: Vec<PathBuf>,
 
+        /// Prepared immutable terminology snapshot directory.
+        #[clap(long, value_name = "DIR", conflicts_with_all = ["terminology", "valuesets"])]
+        terminology_snapshot: Option<PathBuf>,
+
+        /// Permit snapshots whose lock declares fixture scope.
+        #[clap(long, requires = "terminology_snapshot")]
+        allow_fixture: bool,
+
         /// Subject reference used to select the CQL context resource from --data.
         #[clap(long)]
         subject: Option<String>,
@@ -470,6 +493,13 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
         CqlCommands::Info { input } => {
             show_info(&input)?;
         }
+        CqlCommands::TerminologyRequirements {
+            input,
+            output,
+            lib_path,
+        } => {
+            emit_terminology_requirements(&input, output.as_deref(), &lib_path)?;
+        }
         CqlCommands::Repl { debug } => {
             rh_cql::repl::run_repl(debug)?;
         }
@@ -551,6 +581,8 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
             expression,
             data,
             terminology,
+            terminology_snapshot,
+            allow_fixture,
             subject,
             evaluation_date,
             measurement_period_start,
@@ -566,6 +598,8 @@ pub async fn handle_command(cmd: CqlCommands, ctx: &OutputContext) -> Result<()>
                 EvalCqlOptions {
                     data: data.as_deref(),
                     terminology_paths: &terminology,
+                    terminology_snapshot: terminology_snapshot.as_deref(),
+                    allow_fixture,
                     subject: subject.as_deref(),
                     evaluation_date: evaluation_date.as_deref(),
                     measurement_period: measurement_period_start.zip(measurement_period_end),
@@ -1023,7 +1057,15 @@ fn compile_library_for_analysis(
     lib_paths: &[PathBuf],
 ) -> Result<rh_cql::elm::Library> {
     let source = read_source(input)?;
-    let output = compile_with_search_dirs(&source, input, lib_paths, None)?;
+    compile_library_for_analysis_source(&source, input, lib_paths)
+}
+
+fn compile_library_for_analysis_source(
+    source: &str,
+    input: &str,
+    lib_paths: &[PathBuf],
+) -> Result<rh_cql::elm::Library> {
+    let output = compile_with_search_dirs(source, input, lib_paths, None)?;
     if !output.result.is_success() {
         return Err(report_compile_failure(
             &output.result.errors,
@@ -1199,15 +1241,24 @@ fn run_emit_sql(
     lib_paths: &[PathBuf],
     ctx: &OutputContext,
 ) -> Result<()> {
-    let library = compile_library_for_analysis(input, lib_paths)?;
+    let cql_source = read_source(input)?;
+    let library = compile_library_for_analysis_source(&cql_source, input, lib_paths)?;
     let views = if view_paths.is_empty() {
         emit_view_definitions(&library, canonical_base).views
     } else {
         load_view_definitions(view_paths)?
     };
+    let (library_provider, _) = build_library_provider(input, lib_paths);
+    let terminology_requirements = extract_terminology_requirements(&cql_source, &library_provider)
+        .map_err(|error| anyhow::anyhow!("failed to extract terminology requirements: {error}"))?;
 
     if sql_only {
-        let sql = emit_sql_text(&library, &views);
+        let sql = try_emit_sql_text_with_terminology_requirements(
+            &library,
+            &views,
+            &terminology_requirements,
+        )
+        .map_err(|error| anyhow::anyhow!("SQL emission failed: {error}"))?;
         if let Some(path) = out {
             write_output_file(path, &sql)?;
         }
@@ -1226,7 +1277,15 @@ fn run_emit_sql(
         return Ok(());
     }
 
-    let generation = emit_sql_query_library(&library, &views, canonical_base);
+    let terminology_requirements_json = serde_json::to_string(&terminology_requirements)?;
+    try_emit_sql_text_with_terminology_requirements(&library, &views, &terminology_requirements)
+        .map_err(|error| anyhow::anyhow!("SQL emission failed: {error}"))?;
+    let generation = emit_sql_query_library_with_terminology_requirements(
+        &library,
+        &views,
+        canonical_base,
+        &terminology_requirements_json,
+    );
     let json = serde_json::to_string_pretty(&generation.library)?;
     if let Some(path) = out {
         write_output_file(path, &json)?;
@@ -1587,6 +1646,25 @@ fn build_library_provider(
     (composite, search_dirs)
 }
 
+fn emit_terminology_requirements(
+    input: &str,
+    output: Option<&Path>,
+    lib_paths: &[PathBuf],
+) -> Result<()> {
+    let source = read_source(input)?;
+    let (provider, _) = build_library_provider(input, lib_paths);
+    let requirements = extract_terminology_requirements(&source, &provider)
+        .map_err(|error| anyhow::anyhow!("failed to extract terminology requirements: {error}"))?;
+    let bytes = serde_json::to_vec_pretty(&requirements)?;
+    if let Some(output) = output {
+        fs::write(output, bytes)
+            .with_context(|| format!("failed to write {}", output.display()))?;
+    } else {
+        println!("{}", String::from_utf8(bytes)?);
+    }
+    Ok(())
+}
+
 fn format_library_resolution_error(
     error: CompilationError,
     search_dirs: &[PathBuf],
@@ -1654,6 +1732,8 @@ fn compile_with_search_dirs_and_sourcemap(
 struct EvalCqlOptions<'a> {
     data: Option<&'a str>,
     terminology_paths: &'a [PathBuf],
+    terminology_snapshot: Option<&'a Path>,
+    allow_fixture: bool,
     subject: Option<&'a str>,
     evaluation_date: Option<&'a str>,
     measurement_period: Option<(String, String)>,
@@ -1668,6 +1748,8 @@ fn eval_cql(input: &str, expression: &str, options: EvalCqlOptions<'_>) -> Resul
     let EvalCqlOptions {
         data,
         terminology_paths,
+        terminology_snapshot,
+        allow_fixture,
         subject,
         evaluation_date,
         measurement_period,
@@ -1749,7 +1831,12 @@ fn eval_cql(input: &str, expression: &str, options: EvalCqlOptions<'_>) -> Resul
         }
     }
 
-    if !terminology_paths.is_empty() {
+    if let Some(snapshot) = terminology_snapshot {
+        builder = builder.terminology_provider(
+            load_terminology_snapshot(snapshot, allow_fixture)
+                .map_err(|error| anyhow::anyhow!("invalid terminology snapshot: {error}"))?,
+        );
+    } else if !terminology_paths.is_empty() {
         builder = builder.terminology_provider(load_terminology(terminology_paths)?);
     } else if let Some(vs_path) = valuesets_path {
         // Retain the historical compact URL-to-code map input when the newer

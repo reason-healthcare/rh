@@ -423,6 +423,7 @@ fn value_type(value: &Value) -> &'static str {
         Value::Ratio { .. } => "ratio",
         Value::Code(_) => "code",
         Value::Concept(_) => "concept",
+        Value::ValueSet(_) => "valueset",
         Value::List(_) => "list",
         Value::Tuple(_) => "tuple",
         Value::Interval { .. } => "interval",
@@ -450,6 +451,15 @@ fn value_to_json(value: &Value) -> serde_json::Value {
         }),
         Value::Code(value) => cql_code_to_json(value),
         Value::Concept(value) => cql_concept_to_json(value),
+        Value::ValueSet(value) => json!({
+            "requirementId": value.requirement_id,
+            "canonical": value.canonical,
+            "version": value.version,
+            "codeSystems": value.code_systems.iter().map(|(canonical, version)| json!({
+                "canonical": canonical,
+                "version": version
+            })).collect::<Vec<_>>()
+        }),
         Value::List(items) => serde_json::Value::Array(items.iter().map(value_to_json).collect()),
         Value::Tuple(fields) => serde_json::Value::Object(
             fields

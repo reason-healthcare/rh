@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::value::{CqlCode, CqlDate, CqlDateTime, CqlTime, Value};
+use super::value::{CqlCode, CqlDate, CqlDateTime, CqlTime, Value, ValueSetReference};
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -106,10 +106,43 @@ pub trait TerminologyProvider: Send + Sync {
     /// Expand the valueset at `valueset_url` to its member codes.
     fn expand_valueset(&self, valueset_url: &str) -> Result<Vec<CqlCode>, EvalError>;
 
+    /// Check a declared ValueSet reference while preserving library qualification.
+    fn validate_valueset_ref(&self, reference: &ValueSetReference) -> Result<(), EvalError> {
+        self.expand_valueset(&reference.url())?;
+        Ok(())
+    }
+
+    /// Check membership using a declared ValueSet reference.
+    fn in_valueset_ref(
+        &self,
+        code: &CqlCode,
+        reference: &ValueSetReference,
+    ) -> Result<bool, EvalError> {
+        self.in_valueset(code, &reference.url())
+    }
+
+    /// Expand a declared ValueSet reference.
+    fn expand_valueset_ref(
+        &self,
+        reference: &ValueSetReference,
+    ) -> Result<Vec<CqlCode>, EvalError> {
+        self.expand_valueset(&reference.url())
+    }
+
     /// Look up a property of a code.
     ///
     /// Returns `Ok(None)` when the code is found but the property is absent.
     fn lookup(&self, code: &CqlCode, property: &str) -> Result<Option<Value>, EvalError>;
+}
+
+impl ValueSetReference {
+    /// Canonical lookup string, with version appended for legacy providers.
+    pub fn url(&self) -> String {
+        self.version
+            .as_ref()
+            .map(|version| format!("{}|{}", self.canonical, version))
+            .unwrap_or_else(|| self.canonical.clone())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +301,46 @@ impl EvalContext {
         match &self.terminology_provider {
             Some(p) => p.in_valueset(code, valueset_url),
             None => Ok(false),
+        }
+    }
+
+    /// Validate that a declared ValueSet reference is resolvable.
+    pub fn validate_valueset_ref(&self, reference: &ValueSetReference) -> Result<(), EvalError> {
+        match &self.terminology_provider {
+            Some(provider) => provider.validate_valueset_ref(reference),
+            None => Err(EvalError::TerminologyError(format!(
+                "no terminology provider for '{}'",
+                reference.url()
+            ))),
+        }
+    }
+
+    /// Check membership while retaining the declaring requirement identity.
+    pub fn in_valueset_ref(
+        &self,
+        code: &CqlCode,
+        reference: &ValueSetReference,
+    ) -> Result<bool, EvalError> {
+        match &self.terminology_provider {
+            Some(provider) => provider.in_valueset_ref(code, reference),
+            None => Err(EvalError::TerminologyError(format!(
+                "no terminology provider for '{}'",
+                reference.url()
+            ))),
+        }
+    }
+
+    /// Expand a declared ValueSet reference while retaining its requirement identity.
+    pub fn expand_valueset_ref(
+        &self,
+        reference: &ValueSetReference,
+    ) -> Result<Vec<CqlCode>, EvalError> {
+        match &self.terminology_provider {
+            Some(provider) => provider.expand_valueset_ref(reference),
+            None => Err(EvalError::TerminologyError(format!(
+                "no terminology provider for '{}'",
+                reference.url()
+            ))),
         }
     }
 

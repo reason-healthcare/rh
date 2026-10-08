@@ -199,17 +199,23 @@ SQL-on-FHIR artifacts from retrieve requirements:
 
 ```
 rh cql data-requirements measure.cql
+rh cql terminology-requirements measure.cql --lib-path cql-libs --output requirements.json
 rh cql plan measure.cql --target sql-on-fhir
 rh cql lower-check measure.cql
 rh cql emit-views measure.cql --out views/
 rh cql emit-sql measure.cql --views views/ --out query-library.json
 rh cql emit-runtime measure.cql --query query-library.json --views views/
+rh cql eval measure.cql 'Initial Population' --data patient.json --terminology-snapshot snapshot
 ```
 
-The SQL emitter builds retrieve CTEs and selects the first one; it does not
-consume the relational plan. `code IS NOT NULL` is a terminology placeholder,
-and the analytics commands pass only the main library to artifact generation.
-Generated artifacts therefore do not yet implement full measure semantics.
+The native evaluator consumes an immutable snapshot prepared by the separate
+ReasonHealth Analytics CLI. Evaluation is offline; fixture snapshots require
+`--allow-fixture`. Static ValueSet retrieves use snapshot membership in emitted
+SQL, and SQLQuery artifacts include requirements for the resolved library
+closure. The SQL emitter still builds retrieve CTEs and selects the first one;
+generated artifacts do not implement full measure semantics. See the [CQL
+command guide](docs/CQL.md) and the
+[Analytics snapshot guide in the private repository](https://github.com/Vermonster/reasonhealth-analytics/blob/main/docs/value-set-snapshots.md).
 
 `lower-check` classifies ELM node kinds. `supported: true` means its
 `unsupportedNodes` list is empty, even when `fallbackNodes` is nonempty; it does
