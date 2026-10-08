@@ -749,7 +749,7 @@ the separate terminology-requirements extension is omitted):
       "extension": [
         {
           "url": "https://sql-on-fhir.org/ig/StructureDefinition/sql-text",
-	  "valueString": "(SQL text shown above)"
+          "valueString": "(SQL text shown above)"
         }
       ],
       "data": "V0lUSAo..."

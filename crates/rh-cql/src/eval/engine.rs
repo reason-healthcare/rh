@@ -1739,7 +1739,7 @@ impl<'lib, 'ctx> Engine<'lib, 'ctx> {
     ///
     /// `filter` may be:
     /// - `Value::ValueSet(reference)` — produced by a declared `ValueSetRef`; each
-    ///   resource code is checked against the valueset via `in_valueset`.
+    ///   resource code is checked against the valueset via `in_valueset_ref`.
     /// - `Value::Code` or `Value::Concept` — direct code/concept equality.
     /// - `Value::List` — any element in the list must match.
     fn filter_resources_by_code(
