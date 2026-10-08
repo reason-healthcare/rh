@@ -2123,6 +2123,7 @@ dependencies = [
  "rh-foundation",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "tracing",
  "wasm-bindgen",

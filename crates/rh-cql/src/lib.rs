@@ -87,6 +87,7 @@ pub mod repl;
 pub mod reporting;
 pub mod semantics;
 pub mod sourcemap;
+pub mod terminology;
 pub mod types;
 #[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 pub mod wasm;

@@ -164,6 +164,23 @@ pub struct RetrieveRequirement {
     pub date_property: Option<String>,
     /// Value sets referenced by the retrieve code expression.
     pub value_set_refs: Vec<String>,
+    /// ValueSet names with their ELM library qualifiers retained.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_set_uses: Vec<ValueSetUse>,
+    /// The retrieve has an inline Code or Concept filter without a ValueSet reference.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub unsupported_code_filter: bool,
+}
+
+/// Qualified ValueSet declaration reference from a retrieve.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ValueSetUse {
+    /// ValueSet definition name.
+    pub name: String,
+    /// ELM library alias, when the declaration is included from another library.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub library_name: Option<String>,
 }
 
 /// Relational plan for a CQL library.
@@ -613,6 +630,44 @@ pub fn emit_view_definitions(library: &Library, canonical_base: &str) -> ViewGen
 
 /// Generate SQL text from CQL retrieve requirements and emitted views.
 pub fn emit_sql_text(library: &Library, views: &[ViewDefinitionArtifact]) -> String {
+    let requirements = terminology_requirements_from_elm(library);
+    terminology_sql_or_error(try_emit_sql_text_with_terminology_requirements(
+        library,
+        views,
+        &requirements,
+    ))
+}
+
+/// Compatibility wrapper for callers that cannot yet handle emission errors.
+///
+/// On unsupported or unbound terminology it returns an unmistakable invalid-SQL
+/// diagnostic statement; callers must not execute it as an empty result query.
+#[deprecated(note = "use try_emit_sql_text_with_terminology_requirements and handle errors")]
+pub fn emit_sql_text_with_terminology_requirements(
+    library: &Library,
+    views: &[ViewDefinitionArtifact],
+    terminology: &crate::terminology::TerminologyRequirements,
+) -> String {
+    terminology_sql_or_error(try_emit_sql_text_with_terminology_requirements(
+        library,
+        views,
+        terminology,
+    ))
+}
+
+fn terminology_sql_or_error(result: Result<String, String>) -> String {
+    result.unwrap_or_else(|error| {
+        let safe_error = error.replace("*/", "* /").replace(['\n', '\r'], " ");
+        format!("RH_TERMINOLOGY_EMISSION_ERROR: {safe_error}\n")
+    })
+}
+
+/// Generate SQL text and fail when a declared membership cannot be bound.
+pub fn try_emit_sql_text_with_terminology_requirements(
+    library: &Library,
+    views: &[ViewDefinitionArtifact],
+    terminology: &crate::terminology::TerminologyRequirements,
+) -> Result<String, String> {
     let requirements = data_requirements(library);
     let table_by_resource = views
         .iter()
@@ -622,6 +677,9 @@ pub fn emit_sql_text(library: &Library, views: &[ViewDefinitionArtifact]) -> Str
     let mut cte_names = BTreeMap::<String, usize>::new();
 
     for retrieve in requirements.retrieves {
+        if retrieve.unsupported_code_filter {
+            return Err(format!("retrieve '{}' uses an inline Code or Concept filter that SQL emission does not support", retrieve.definition));
+        }
         let Some(resource) = retrieve.resource.as_ref() else {
             continue;
         };
@@ -629,12 +687,38 @@ pub fn emit_sql_text(library: &Library, views: &[ViewDefinitionArtifact]) -> Str
             continue;
         };
         let cte_name = unique_sql_name(&sql_name(&retrieve.definition), &mut cte_names);
-        let mut sql = format!("SELECT *\n  FROM {table}");
-        if !retrieve.value_set_refs.is_empty() {
-            let refs = retrieve.value_set_refs.join(", ");
-            sql.push_str(&format!(
-                "\n  WHERE code IS NOT NULL /* valueSet: {refs} */"
+        let projected = views
+            .iter()
+            .find(|view| view.resource == *resource)
+            .map(|view| {
+                view.select
+                    .iter()
+                    .flat_map(|select| select.column.iter())
+                    .filter(|column| !matches!(column.name.as_str(), "system" | "code"))
+                    .map(|column| format!("source.{}", quote_identifier(&column.name)))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let projected = if projected.is_empty() {
+            vec!["source.id".to_string()]
+        } else {
+            projected
+        };
+        let mut sql = format!(
+            "SELECT DISTINCT {}\n  FROM {table} AS source",
+            projected.join(", ")
+        );
+        let uses = retrieve.value_set_uses.clone();
+        let mut predicates = Vec::new();
+        for usage in uses {
+            let requirement = requirement_for_usage(library, terminology, &usage)?;
+            predicates.push(format!(
+                "EXISTS (SELECT 1 FROM rh_valueset_members AS member WHERE member.requirement_id = '{}' AND member.system = source.system AND member.code = source.code)",
+                requirement.id.replace('\'', "''")
             ));
+        }
+        if !predicates.is_empty() {
+            sql.push_str(&format!("\n  WHERE ({})", predicates.join(" OR ")));
         }
         ctes.push((cte_name, sql));
     }
@@ -644,7 +728,7 @@ pub fn emit_sql_text(library: &Library, views: &[ViewDefinitionArtifact]) -> Str
             .first()
             .map(|view| view.name.as_str())
             .unwrap_or("generated_view");
-        return format!("SELECT *\nFROM {first_table};\n");
+        return Ok(format!("SELECT *\nFROM {first_table};\n"));
     }
 
     let mut out = String::new();
@@ -657,7 +741,127 @@ pub fn emit_sql_text(library: &Library, views: &[ViewDefinitionArtifact]) -> Str
         ));
     }
     out.push_str(&format!("SELECT *\nFROM {};\n", ctes[0].0));
-    out
+    Ok(out)
+}
+
+fn quote_identifier(identifier: &str) -> String {
+    format!("\"{}\"", identifier.replace('"', "\"\""))
+}
+
+fn requirement_for_usage<'a>(
+    library: &Library,
+    terminology: &'a crate::terminology::TerminologyRequirements,
+    usage: &ValueSetUse,
+) -> Result<&'a crate::terminology::TerminologyRequirement, String> {
+    let (declaring_library, declaring_version) = match usage.library_name.as_deref() {
+        Some(alias) => {
+            let include = library
+                .includes
+                .as_ref()
+                .and_then(|items| {
+                    items
+                        .defs
+                        .iter()
+                        .find(|include| include.local_identifier.as_deref() == Some(alias))
+                })
+                .ok_or_else(|| {
+                    format!(
+                        "retrieve references ValueSet '{}' through unknown library alias '{alias}'",
+                        usage.name
+                    )
+                })?;
+            (
+                include.path.clone().unwrap_or_default(),
+                include.version.clone(),
+            )
+        }
+        None => (
+            library_name(library).unwrap_or_default(),
+            library_version(library),
+        ),
+    };
+    terminology
+        .requirements
+        .iter()
+        .find(|requirement| {
+            requirement.library.name == declaring_library
+                && requirement.library.version == declaring_version
+                && requirement.name == usage.name
+        })
+        .ok_or_else(|| {
+            format!(
+                "retrieve references unresolved ValueSet '{}::{}'",
+                declaring_library, usage.name
+            )
+        })
+}
+
+fn terminology_requirements_from_elm(
+    library: &Library,
+) -> crate::terminology::TerminologyRequirements {
+    let mut requirements = crate::terminology::TerminologyRequirements::empty();
+    let library_name = library_name(library).unwrap_or_default();
+    let library_version = library_version(library);
+    let systems = library
+        .code_systems
+        .as_ref()
+        .map(|defs| {
+            defs.defs
+                .iter()
+                .filter_map(|system| {
+                    Some((
+                        system.name.as_deref()?,
+                        crate::terminology::TerminologyCanonical {
+                            canonical: system.id.clone()?,
+                            version: system.version.clone(),
+                        },
+                    ))
+                })
+                .collect::<BTreeMap<_, _>>()
+        })
+        .unwrap_or_default();
+    if let Some(value_sets) = &library.value_sets {
+        for definition in &value_sets.defs {
+            let (Some(name), Some(canonical)) = (definition.name.clone(), definition.id.clone())
+            else {
+                continue;
+            };
+            let code_systems = definition
+                .code_system
+                .iter()
+                .filter_map(|reference| {
+                    reference
+                        .name
+                        .as_deref()
+                        .and_then(|name| systems.get(name).cloned())
+                })
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            requirements
+                .requirements
+                .push(crate::terminology::TerminologyRequirement {
+                    id: crate::terminology::requirement_id(
+                        &library_name,
+                        library_version.as_deref(),
+                        &name,
+                    ),
+                    library: crate::terminology::LibraryIdentifierJson {
+                        name: library_name.clone(),
+                        version: library_version.clone(),
+                    },
+                    name,
+                    canonical,
+                    version: definition.version.clone(),
+                    code_systems,
+                    operations: vec!["membership".to_string()],
+                });
+        }
+    }
+    requirements
+        .requirements
+        .sort_by(|left, right| left.id.cmp(&right.id));
+    requirements
 }
 
 /// Generate a SQLQuery Library artifact from a CQL library and ViewDefinitions.
@@ -666,7 +870,37 @@ pub fn emit_sql_query_library(
     views: &[ViewDefinitionArtifact],
     _canonical_base: &str,
 ) -> SqlQueryGeneration {
-    let sql = emit_sql_text(library, views);
+    let requirements = terminology_requirements_from_elm(library);
+    let requirements_json = match serde_json::to_string(&requirements) {
+        Ok(json) => json,
+        Err(_) => r#"{"resourceType":"ReasonHealthTerminologyRequirements","schemaVersion":1,"requirements":[]}"#.to_string(),
+    };
+    emit_sql_query_library_with_terminology_requirements(
+        library,
+        views,
+        _canonical_base,
+        &requirements_json,
+    )
+}
+
+/// Generate a SQLQuery Library artifact with its declared terminology requirements.
+pub fn emit_sql_query_library_with_terminology_requirements(
+    library: &Library,
+    views: &[ViewDefinitionArtifact],
+    _canonical_base: &str,
+    requirements_json: &str,
+) -> SqlQueryGeneration {
+    let requirements = match serde_json::from_str::<crate::terminology::TerminologyRequirements>(
+        requirements_json,
+    ) {
+        Ok(requirements) => requirements,
+        Err(_) => crate::terminology::TerminologyRequirements::empty(),
+    };
+    let sql = terminology_sql_or_error(try_emit_sql_text_with_terminology_requirements(
+        library,
+        views,
+        &requirements,
+    ));
     let name = sql_name(&format!(
         "{}_sql_query",
         library_name(library).unwrap_or_else(|| "cql".to_string())
@@ -708,10 +942,17 @@ pub fn emit_sql_query_library(
         parameter,
         content: vec![SqlAttachment {
             content_type: "application/sql".to_string(),
-            extension: vec![SqlTextExtension {
-                url: "https://sql-on-fhir.org/ig/StructureDefinition/sql-text".to_string(),
-                value_string: sql.clone(),
-            }],
+            extension: vec![
+                SqlTextExtension {
+                    url: "https://sql-on-fhir.org/ig/StructureDefinition/sql-text".to_string(),
+                    value_string: sql.clone(),
+                },
+                SqlTextExtension {
+                    url: "https://reason.health/fhir/StructureDefinition/terminology-requirements"
+                        .to_string(),
+                    value_string: requirements_json.to_owned(),
+                },
+            ],
             data: STANDARD.encode(sql.as_bytes()),
         }],
     };
@@ -1314,6 +1555,10 @@ fn collect_retrieves(definition: &str, value: &Value) -> Vec<RetrieveRequirement
                 code_comparator: string_field(object, "codeComparator"),
                 date_property: string_field(object, "dateProperty"),
                 value_set_refs: code_expr.map(collect_named_refs).unwrap_or_default(),
+                value_set_uses: code_expr
+                    .map(collect_qualified_valueset_refs)
+                    .unwrap_or_default(),
+                unsupported_code_filter: code_expr.is_some_and(contains_inline_code_filter),
             });
         }
     });
@@ -1352,11 +1597,48 @@ fn collect_dependencies(definition: &str, value: &Value) -> DefinitionDependenci
 fn collect_named_refs(value: &Value) -> Vec<String> {
     let mut refs = BTreeSet::new();
     walk_objects(value, &mut |object| {
-        if matches!(
-            object.get("type").and_then(Value::as_str),
-            Some("ValueSetRef" | "CodeRef" | "CodeSystemRef" | "ConceptRef")
-        ) {
+        if object.get("type").and_then(Value::as_str) == Some("ValueSetRef") {
             insert_name(object, &mut refs);
+        }
+    });
+    refs.into_iter().collect()
+}
+
+fn contains_inline_code_filter(value: &Value) -> bool {
+    let mut has_valueset = false;
+    let mut has_inline = false;
+    walk_objects(
+        value,
+        &mut |object| match object.get("type").and_then(Value::as_str) {
+            Some("ValueSetRef") => has_valueset = true,
+            Some("Code")
+            | Some("CodeRef")
+            | Some("Concept")
+            | Some("ConceptRef")
+            | Some("CodeSystemRef") => has_inline = true,
+            _ => {}
+        },
+    );
+    has_inline && !has_valueset
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
+fn collect_qualified_valueset_refs(value: &Value) -> Vec<ValueSetUse> {
+    let mut refs = BTreeSet::new();
+    walk_objects(value, &mut |object| {
+        if object.get("type").and_then(Value::as_str) == Some("ValueSetRef") {
+            if let Some(name) = object.get("name").and_then(Value::as_str) {
+                refs.insert(ValueSetUse {
+                    name: name.to_string(),
+                    library_name: object
+                        .get("libraryName")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned),
+                });
+            }
         }
     });
     refs.into_iter().collect()
@@ -1639,6 +1921,23 @@ define "Has Diabetes":
 
     fn library() -> Library {
         compile(CQL, None).expect("compile").library
+    }
+
+    #[test]
+    fn compatibility_sql_emitter_does_not_turn_terminology_failure_into_empty_query() {
+        let library = library();
+        let views = emit_view_definitions(&library, "http://example.org").views;
+        #[allow(deprecated)]
+        let sql = emit_sql_text_with_terminology_requirements(
+            &library,
+            &views,
+            &crate::terminology::TerminologyRequirements::empty(),
+        );
+        assert!(
+            sql.starts_with("RH_TERMINOLOGY_EMISSION_ERROR:"),
+            "expected hard diagnostic, got: {sql}"
+        );
+        assert!(!sql.to_ascii_lowercase().contains("select"));
     }
 
     fn fixture_library() -> Library {

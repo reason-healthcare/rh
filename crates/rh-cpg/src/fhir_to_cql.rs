@@ -59,6 +59,7 @@ pub fn cql_value_to_json(value: &CqlValue) -> Value {
             Value::Object(object)
         }
         CqlValue::Code(code) => Value::String(code.code.clone()),
+        CqlValue::ValueSet(reference) => Value::String(reference.url()),
         CqlValue::Concept(concept) => {
             let mut object = serde_json::Map::new();
             object.insert(

@@ -128,6 +128,15 @@ pub struct CqlConcept {
     pub display: Option<String>,
 }
 
+/// A statically declared ValueSet reference, retaining its declaring CQL context.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValueSetReference {
+    pub requirement_id: String,
+    pub canonical: String,
+    pub version: Option<String>,
+    pub code_systems: Vec<(String, Option<String>)>,
+}
+
 // ---------------------------------------------------------------------------
 // Value enum
 // ---------------------------------------------------------------------------
@@ -182,6 +191,9 @@ pub enum Value {
 
     /// `Concept` — a set of equivalent codes.
     Concept(CqlConcept),
+
+    /// A declared ValueSet reference with its library-qualified identity.
+    ValueSet(ValueSetReference),
 
     /// `List` — ordered, possibly heterogeneous collection.
     List(Vec<Value>),
@@ -321,6 +333,7 @@ impl fmt::Display for Value {
             }
             Value::Code(c) => write!(f, "{c}"),
             Value::Concept(c) => write!(f, "{c}"),
+            Value::ValueSet(reference) => write!(f, "{}", reference.url()),
             Value::List(items) => {
                 write!(f, "{{")?;
                 for (i, v) in items.iter().enumerate() {

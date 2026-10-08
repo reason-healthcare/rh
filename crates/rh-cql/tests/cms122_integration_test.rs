@@ -32,7 +32,8 @@ fn example_dir() -> Option<PathBuf> {
         .join("reasonhealth-analytics")
         .join("examples")
         .join("cms122-diabetes-hba1c");
-    if dir.is_dir() {
+    let terminology_fixture = dir.join("terminology.json");
+    if dir.is_dir() && terminology_fixture.is_file() {
         Some(dir)
     } else {
         None
@@ -145,12 +146,13 @@ fn measurement_period_clock() -> FixedClock {
 }
 
 fn load_terminology(example: &Path) -> rh_cql::InMemoryTerminologyProvider {
-    let vs_path = example.join("valueset-expansions.json");
-    let vs_content = std::fs::read_to_string(&vs_path).expect("valueset-expansions.json");
+    let vs_path = example.join("terminology.json");
+    let vs_content = std::fs::read_to_string(&vs_path).expect("full CMS122 terminology fixture");
     let vs_json: serde_json::Value = serde_json::from_str(&vs_content).unwrap();
     let mut term_provider = rh_cql::InMemoryTerminologyProvider::new();
-    if let Some(obj) = vs_json.as_object() {
+    if let Some(obj) = vs_json.get("valueSets").and_then(|value| value.as_object()) {
         for (url, entry) in obj {
+            term_provider.register_valueset(url, Vec::new());
             if let Some(codes) = entry.get("codes").and_then(|c| c.as_array()) {
                 for code in codes {
                     let system = code.get("system").and_then(|s| s.as_str()).unwrap_or("");
@@ -277,7 +279,7 @@ where
 fn cms122_patient_numer_initial_population() {
     with_large_stack(|| {
         let Some(example) = example_dir() else {
-            eprintln!("Skipping: reasonhealth-analytics example not found");
+            eprintln!("Skipping: CMS122 example or full-closure terminology fixture not found");
             return;
         };
         let data = load_patient_data(&example);
@@ -301,7 +303,7 @@ fn cms122_patient_numer_initial_population() {
 fn cms122_patient_numer_denominator() {
     with_large_stack(|| {
         let Some(example) = example_dir() else {
-            eprintln!("Skipping: reasonhealth-analytics example not found");
+            eprintln!("Skipping: CMS122 example or full-closure terminology fixture not found");
             return;
         };
         let data = load_patient_data(&example);
@@ -315,7 +317,7 @@ fn cms122_patient_numer_denominator() {
 fn cms122_patient_no_encounter_initial_population() {
     with_large_stack(|| {
         let Some(example) = example_dir() else {
-            eprintln!("Skipping: reasonhealth-analytics example not found");
+            eprintln!("Skipping: CMS122 example or full-closure terminology fixture not found");
             return;
         };
         let data = load_patient_data(&example);
@@ -339,7 +341,7 @@ fn cms122_patient_no_encounter_initial_population() {
 fn cms122_patient_no_diabetes_initial_population() {
     with_large_stack(|| {
         let Some(example) = example_dir() else {
-            eprintln!("Skipping: reasonhealth-analytics example not found");
+            eprintln!("Skipping: CMS122 example or full-closure terminology fixture not found");
             return;
         };
         let data = load_patient_data(&example);
@@ -367,7 +369,7 @@ fn cms122_patient_no_diabetes_initial_population() {
 fn cms122_patient_no_hba1c_initial_population() {
     with_large_stack(|| {
         let Some(example) = example_dir() else {
-            eprintln!("Skipping: reasonhealth-analytics example not found");
+            eprintln!("Skipping: CMS122 example or full-closure terminology fixture not found");
             return;
         };
         let data = load_patient_data(&example);
@@ -391,7 +393,7 @@ fn cms122_patient_no_hba1c_initial_population() {
 fn cms122_patient_too_young_initial_population() {
     with_large_stack(|| {
         let Some(example) = example_dir() else {
-            eprintln!("Skipping: reasonhealth-analytics example not found");
+            eprintln!("Skipping: CMS122 example or full-closure terminology fixture not found");
             return;
         };
         let data = load_patient_data(&example);

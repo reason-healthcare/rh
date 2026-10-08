@@ -291,12 +291,26 @@ impl ElmEmitter {
 
         let mut value_sets = Vec::new();
         for vs in typed_library.valuesets {
+            let code_system = vs
+                .codesystems
+                .into_iter()
+                .map(|reference| {
+                    let (library_name, name) = reference
+                        .split_once('.')
+                        .map(|(library, name)| (Some(library.to_owned()), name.to_owned()))
+                        .unwrap_or((None, reference));
+                    elm::CodeSystemDefRef {
+                        name: Some(name),
+                        library_name,
+                    }
+                })
+                .collect();
             value_sets.push(elm::ValueSetDef {
                 name: Some(vs.name),
                 id: Some(vs.id),
                 version: vs.version,
                 access_level: Some(elm::AccessModifier::Public),
-                code_system: Vec::new(),
+                code_system,
             });
         }
         let value_sets = if value_sets.is_empty() {

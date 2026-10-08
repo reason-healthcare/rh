@@ -541,7 +541,9 @@ fn test_emit_sql_sql_only_outputs_sql() {
         .assert()
         .success()
         .stdout(predicate::str::contains("WITH"))
-        .stdout(predicate::str::contains("condition_view"));
+        .stdout(predicate::str::contains("condition_view"))
+        .stdout(predicate::str::contains("rh_valueset_members"))
+        .stdout(predicate::str::contains("DiabetesMeasure|1.0.0|Diabetes"));
 }
 
 #[test]
