@@ -10,7 +10,7 @@ type crates, domain libraries, packaging/validation, and the CLI edge.
 | 0 | `rh-foundation` | Shared error types, package loading, snapshot generation, CLI helpers, WASM envelope utilities |
 | 1 | `rh-hl7-fhir-r4-core`, `rh-hl7-fhir-r5-core` | Generated FHIR model crates built on foundation traits and metadata |
 | 2 | `rh-codegen`, `rh-cql`, `rh-fhirpath`, `rh-fsh`, `rh-vcl` | Domain libraries for codegen, CQL, FHIRPath, FSH, and VCL |
-| 3 | `rh-validator`, `rh-packager` | Validation and package assembly orchestration |
+| 3 | `rh-validator`, `rh-packager`, `rh-cpg` | Validation, package assembly, and clinical workflow orchestration |
 | 4 | `rh-cli` | Command-line application and integration edge |
 
 ## Crate Dependency Graph
@@ -31,7 +31,7 @@ rh-foundation
 
 rh-cli depends on the public libraries it exposes:
 rh-codegen, rh-cql, rh-fhirpath, rh-foundation, rh-fsh,
-rh-hl7-fhir-r4-core, rh-packager, rh-validator, and rh-vcl.
+rh-hl7-fhir-r4-core, rh-cpg, rh-packager, rh-validator, and rh-vcl.
 ```
 
 The following dependency list is checked by `scripts/check-docs-sync.sh`
@@ -61,6 +61,7 @@ rh-vcl: rh-foundation
 | `rh-foundation` | Base utilities, error types, HTTP client wrappers, package loader, snapshot generation, in-memory caching, CLI helpers, and WASM result envelopes |
 | `rh-codegen` | Generates Rust crates from FHIR StructureDefinitions and package archives |
 | `rh-cql` | CQL-to-ELM compiler, evaluator, explain mode, source maps, and WASM facade |
+| `rh-cpg` | PlanDefinition execution, supported SDC extraction, patient-scoped retrieval, and WASM facade |
 | `rh-fhirpath` | Parser and evaluator for FHIRPath expressions, with R4 type metadata and WASM facade |
 | `rh-fsh` | nom-based FSH parser and FHIR JSON exporter with rayon parallel export |
 | `rh-validator` | Profile-based FHIR R4 validation with cached snapshots, compiled rules, FHIRPath invariant evaluation, and local terminology checks |
@@ -78,6 +79,7 @@ rh-vcl: rh-foundation
 | `rh-fhirpath` | `wasm` | `just wasm-build fhirpath <target>` | `@reasonhealth/fhirpath` | Exports parse/evaluate wrappers for node, web, and bundler targets |
 | `rh-vcl` | `wasm` | `just wasm-build vcl <target>` | `@reasonhealth/vcl` | Exports parse, translate, validate, and explain wrappers |
 | `rh-cql` | `wasm` | `just wasm-build cql <target>` | `@reasonhealth/cql` | Exports CQL compile and ELM evaluation wrappers |
+| `rh-cpg` | `wasm` | `just wasm-build cpg <target>` | `@reasonhealth/cpg` | Exports CPG application wrappers |
 
 Use `just wasm-check` for compile-only checks and `pnpm -r build && pnpm -r
 test` for the npm package/build test path.
@@ -90,9 +92,11 @@ WebAssembly-backed packages:
 - `packages/fhirpath` -> `@reasonhealth/fhirpath`
 - `packages/vcl` -> `@reasonhealth/vcl`
 - `packages/cql` -> `@reasonhealth/cql`
+- `packages/cpg` -> `@reasonhealth/cpg`
 
-The `examples/playground` package is a private Vite app that exercises all
-three npm packages and is deployed through the Pages workflow.
+The `examples/playground` package is a private Vite app that exercises the
+CQL, FHIRPath, and VCL npm packages and is deployed through the Pages workflow.
+The CPG package has its own package tests.
 
 ## Generated Crates
 

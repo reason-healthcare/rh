@@ -72,10 +72,11 @@ cargo --version && npm --version && gh --version
 | `rh-hl7-fhir-r5-core` | `version.workspace` | 2 | Generated FHIR R5 types |
 | `rh-codegen` | `version.workspace` | 2 | Code generation |
 | `rh-cql` | `version.workspace` | 2 | CQL library |
-| `rh-fsh` | `version.workspace` | 2 | FSH compiler |
+| `rh-fsh` | `version.workspace` | 3 | FSH compiler |
 | `rh-fhirpath` | `version.workspace` | 3 | FHIRPath library |
 | `rh-vcl` | `version.workspace` | 3 | VCL library |
 | `rh-validator` | standalone | 4 | Validation engine |
+| `rh-cpg` | `version.workspace` | 5 | PlanDefinition execution and SDC extraction |
 | `rh-packager` | `version.workspace` | 5 | Package tooling |
 | `rh-cli` | `version.workspace` | 6 | CLI binary (`rh`) |
 
@@ -84,13 +85,13 @@ cargo --version && npm --version && gh --version
 ```
 rh-foundation
     ↓
-rh-hl7-fhir-r4-core  rh-hl7-fhir-r5-core  rh-codegen  rh-cql  rh-fsh
+rh-hl7-fhir-r4-core  rh-hl7-fhir-r5-core  rh-codegen  rh-cql
     ↓
-rh-fhirpath  rh-vcl
+rh-fhirpath  rh-vcl  rh-fsh
     ↓
 rh-validator
     ↓
-rh-packager
+rh-cpg  rh-packager
     ↓
 rh-cli
 ```
@@ -160,6 +161,7 @@ the Rust workspace version. Update version in:
 - `packages/fhirpath/package.json`
 - `packages/vcl/package.json`
 - `packages/cql/package.json`
+- `packages/cpg/package.json`
 
 Then regenerate package-manager metadata:
 
@@ -167,12 +169,23 @@ Then regenerate package-manager metadata:
 pnpm install
 ```
 
+Refresh the compiler's golden ELM fixtures, which record the translator version:
+
+```bash
+UPDATE_GOLDEN=1 cargo test -p rh-cql --all-features --test golden_elm_tests
+cargo test -p rh-cql --all-features --test golden_elm_tests
+```
+
+Inspect the golden diff before accepting it. A version-only release preparation
+should change only `translatorVersion`; compiler semantic changes need their
+own review. Leave the CQL fixture sources unchanged.
+
 Verify the changes:
 
 ```bash
 git diff Cargo.toml Cargo.lock crates/*/Cargo.toml apps/*/Cargo.toml packages/*/package.json pnpm-lock.yaml
 just show-versions
-node -e "for (const p of ['fhirpath','vcl','cql']) console.log(p, require('./packages/' + p + '/package.json').version)"
+node -e "for (const p of ['fhirpath','vcl','cql','cpg']) console.log(p, require('./packages/' + p + '/package.json').version)"
 ```
 
 ### 4. Update CHANGELOG.md
@@ -206,20 +219,20 @@ All checks must pass. If `cargo audit` reports issues:
 Test crates.io publishing without uploading:
 
 ```bash
-cargo publish --dry-run --allow-dirty -p rh-foundation
-cargo publish --dry-run --allow-dirty -p rh-hl7-fhir-r4-core
-cargo publish --dry-run --allow-dirty -p rh-hl7-fhir-r5-core
-cargo publish --dry-run --allow-dirty -p rh-codegen
-cargo publish --dry-run --allow-dirty -p rh-cql
-cargo publish --dry-run --allow-dirty -p rh-fsh
-cargo publish --dry-run --allow-dirty -p rh-fhirpath
-cargo publish --dry-run --allow-dirty -p rh-vcl
-cargo publish --dry-run --allow-dirty -p rh-validator
-cargo publish --dry-run --allow-dirty -p rh-packager
-cargo publish --dry-run --allow-dirty -p rh-cli
+cargo publish --workspace --dry-run --allow-dirty --locked --target-dir target/release-packaging
 ```
 
-All must exit 0. If any fail:
+The workspace dry-run verifies the packaged crates together, including new
+internal versions that are not yet on crates.io. This is supported by the
+repository's Rust 1.91 toolchain; see the
+[Rust 1.90 workspace publishing announcement](https://blog.rust-lang.org/2025/09/18/Rust-1.90.0/).
+Individual crate dry-runs may require their new dependencies to be published
+first. Remove `--allow-dirty` when validating the committed release revision.
+Keep package verification in its own target directory and run Cargo commands
+sequentially within each target directory. Sharing a cache between workspace
+builds and packaged-source verification can mix incompatible build artifacts.
+
+The dry-run must exit 0. If it fails:
 
 - Fix the issue
 - Re-run `just check`
@@ -244,8 +257,11 @@ git push origin main --tags
 This triggers the `release.yml` GitHub Actions workflow, which:
 
 1. Builds binaries for macOS (Apple Silicon + Intel), Linux (musl), and Windows
-2. Creates a **draft** GitHub Release with all artifacts
-3. Pushes a Docker image to `ghcr.io/reason-healthcare/rh`
+2. Creates a **draft** GitHub Release with all artifacts and checksums; tags
+   containing a hyphen are marked as prereleases
+3. Pushes a Docker image to `ghcr.io/reason-healthcare/rh` with the release tag
+   and `latest`; this publication occurs on tag push, before the GitHub draft
+   is published. Complete pre-tag validation before pushing a release tag.
 
 ### 8. Publish to Crates.io
 
@@ -260,16 +276,17 @@ cargo publish -p rh-hl7-fhir-r4-core
 cargo publish -p rh-hl7-fhir-r5-core
 cargo publish -p rh-codegen
 cargo publish -p rh-cql
-cargo publish -p rh-fsh
 sleep 30
 
 cargo publish -p rh-fhirpath
 cargo publish -p rh-vcl
+cargo publish -p rh-fsh
 sleep 30
 
 cargo publish -p rh-validator
 sleep 30
 
+cargo publish -p rh-cpg
 cargo publish -p rh-packager
 sleep 30
 
@@ -296,6 +313,7 @@ https://crates.io/crates/rh-hl7-fhir-r4-core
 https://crates.io/crates/rh-hl7-fhir-r5-core
 https://crates.io/crates/rh-codegen
 https://crates.io/crates/rh-cql
+https://crates.io/crates/rh-cpg
 https://crates.io/crates/rh-fsh
 https://crates.io/crates/rh-fhirpath
 https://crates.io/crates/rh-vcl
@@ -317,6 +335,7 @@ The release draft contains:
 
 - Pre-built binaries for all platforms
 - Install script (`install-rh.sh`)
+- `SHA256SUMS` covering all binary archives and the install script
 - Release notes
 
 ### 11. Publish NPM Packages (WASM)
@@ -328,6 +347,7 @@ Published packages:
 - `@reasonhealth/fhirpath`
 - `@reasonhealth/vcl`
 - `@reasonhealth/cql`
+- `@reasonhealth/cpg`
 
 (The private playground package is not published.)
 
@@ -356,7 +376,7 @@ from Step 3. Verify package versions before publishing:
 
 
 ```bash
-node -e "for (const p of ['fhirpath','vcl','cql']) console.log(p, require('./packages/' + p + '/package.json').version)"
+node -e "for (const p of ['fhirpath','vcl','cql','cpg']) console.log(p, require('./packages/' + p + '/package.json').version)"
 ```
 
 #### Build WASM
@@ -366,9 +386,10 @@ node -e "for (const p of ['fhirpath','vcl','cql']) console.log(p, require('./pac
 just wasm
 
 # Or individually
-cd crates/rh-fhirpath && just wasm
-cd crates/rh-vcl && just wasm
-cd crates/rh-cql && just wasm
+just wasm-build fhirpath all
+just wasm-build vcl all
+just wasm-build cql all
+just wasm-build cpg all
 ```
 
 #### Test Packages
@@ -395,6 +416,7 @@ pnpm -r pack:dry-run
 npm publish --workspace @reasonhealth/fhirpath --access public
 npm publish --workspace @reasonhealth/vcl --access public
 npm publish --workspace @reasonhealth/cql --access public
+npm publish --workspace @reasonhealth/cpg --access public
 ```
 
 For pre-release versions, use the `beta` tag so it doesn't become `latest`:
@@ -403,6 +425,7 @@ For pre-release versions, use the `beta` tag so it doesn't become `latest`:
 npm publish --workspace @reasonhealth/fhirpath --access public --tag beta
 npm publish --workspace @reasonhealth/vcl --access public --tag beta
 npm publish --workspace @reasonhealth/cql --access public --tag beta
+npm publish --workspace @reasonhealth/cpg --access public --tag beta
 ```
 
 > Do not use `--provenance` for local publishes; it requires a supported CI environment with OIDC.
@@ -413,6 +436,7 @@ npm publish --workspace @reasonhealth/cql --access public --tag beta
 npm view @reasonhealth/fhirpath version dist-tags
 npm view @reasonhealth/vcl version dist-tags
 npm view @reasonhealth/cql version dist-tags
+npm view @reasonhealth/cpg version dist-tags
 ```
 
 Optionally install into a temporary project:
@@ -421,7 +445,7 @@ Optionally install into a temporary project:
 tmpdir="$(mktemp -d)"
 cd "$tmpdir"
 pnpm init
-pnpm add @reasonhealth/fhirpath @reasonhealth/vcl @reasonhealth/cql
+pnpm add @reasonhealth/fhirpath @reasonhealth/vcl @reasonhealth/cql @reasonhealth/cpg
 ```
 
 #### NPM Recovery
@@ -435,7 +459,7 @@ npm dist-tag add @reasonhealth/fhirpath@<version> beta
 npm dist-tag rm @reasonhealth/fhirpath latest
 ```
 
-Repeat dist-tag recovery for `vcl` and `cql` as needed.
+Repeat dist-tag recovery for `vcl`, `cql`, and `cpg` as needed.
 
 ### 12. Verify the Complete Release
 
@@ -464,7 +488,9 @@ curl -L https://github.com/reason-healthcare/rh/releases/download/v0.3.0/rh-x86_
 
 ## Automatic Distribution Updates
 
-After you publish the GitHub Release draft, the following happen **automatically**:
+Homebrew and Chocolatey update automatically after the GitHub Release draft
+is published. Docker publication runs when the version tag is pushed, as
+described below.
 
 ### Homebrew (macOS/Linux)
 

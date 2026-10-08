@@ -39,9 +39,13 @@ VALIDATOR_DEPENDENTS = [CLI_CARGO, PACKAGER_CARGO]
 WORKSPACE_CRATES = [
     "rh-foundation",
     "rh-hl7-fhir-r4-core",
+    "rh-hl7-fhir-r5-core",
     "rh-codegen",
+    "rh-cpg",
     "rh-cql",
     "rh-fhirpath",
+    "rh-fsh",
+    "rh-packager",
     "rh-vcl",
     "rh-cli",
 ]
