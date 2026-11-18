@@ -39,8 +39,8 @@ use nom::{
     character::complete::char,
     combinator::{cut, map, not, opt, peek, value},
     multi::{many0, separated_list0},
-    sequence::{delimited, pair, preceded, tuple},
-    IResult,
+    sequence::{delimited, pair, preceded},
+    IResult, Parser,
 };
 
 // ============================================================================
@@ -76,10 +76,10 @@ fn parse_left_assoc<'a, P>(
     operator: P,
 ) -> IResult<Span<'a>, Expression>
 where
-    P: FnMut(Span<'a>) -> IResult<Span<'a>, BinaryOperator>,
+    P: Parser<Span<'a>, Output = BinaryOperator, Error = nom::error::Error<Span<'a>>>,
 {
     let (input, first) = operand(input)?;
-    let (input, rest) = many0(pair(ws(operator), cut(operand)))(input)?;
+    let (input, rest) = many0(pair(ws(operator), cut(operand))).parse(input)?;
     Ok((input, fold_left_assoc(first, rest)))
 }
 
@@ -87,8 +87,9 @@ fn parse_unary_right_boundary(input: Span<'_>) -> IResult<Span<'_>, Option<Unary
     let (input, boundary) = opt(ws(alt((
         value(UnaryOperator::Start, keyword("start")),
         value(UnaryOperator::End, keyword("end")),
-    ))))(input)?;
-    let (input, _) = opt(ws(keyword("of")))(input)?;
+    ))))
+    .parse(input)?;
+    let (input, _) = opt(ws(keyword("of"))).parse(input)?;
     Ok((input, boundary))
 }
 
@@ -96,8 +97,9 @@ fn parse_interval_right_boundary(input: Span<'_>) -> IResult<Span<'_>, Option<In
     let (input, boundary) = opt(ws(alt((
         value(IntervalBoundary::Start, keyword("start")),
         value(IntervalBoundary::End, keyword("end")),
-    ))))(input)?;
-    let (input, _) = opt(ws(keyword("of")))(input)?;
+    ))))
+    .parse(input)?;
+    let (input, _) = opt(ws(keyword("of"))).parse(input)?;
     Ok((input, boundary))
 }
 
@@ -195,12 +197,13 @@ fn parse_between_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, first) = parse_interval_operator_expression(input)?;
 
     // Try to parse "between X and Y"
-    let result = opt(tuple((
+    let result = opt((
         ws(keyword("between")),
         cut(parse_interval_operator_expression),
         cut(ws(keyword("and"))),
         cut(parse_interval_operator_expression),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     match result {
         (input, Some((_, low, _, high))) => Ok((
@@ -282,7 +285,7 @@ fn parse_duration_difference_between(input: Span<'_>) -> IResult<Span<'_>, Expre
     // both duration and difference spellings, mirroring the previous
     // implementation's behavior.
     if let Ok((remaining, _)) = ws(keyword("of"))(input) {
-        let (remaining, operand) = cut(parse_interval_operator_expression)(remaining)?;
+        let (remaining, operand) = cut(parse_interval_operator_expression).parse(remaining)?;
         // "duration in <prec> of I" = "difference in <prec> between start of I and end of I"
         let start_expr = Expression::UnaryExpression(UnaryExpression {
             operator: UnaryOperator::Start,
@@ -336,10 +339,7 @@ fn parse_precision(input: Span<'_>) -> IResult<Span<'_>, DateTimePrecision> {
 
 /// Parse optional precision specifier: [precision] "of"
 fn parse_optional_precision_of(input: Span<'_>) -> IResult<Span<'_>, Option<DateTimePrecision>> {
-    opt(map(
-        tuple((parse_precision, ws(keyword("of")))),
-        |(prec, _)| prec,
-    ))(input)
+    opt(map((parse_precision, ws(keyword("of"))), |(prec, _)| prec)).parse(input)
 }
 
 /// Represents a parsed interval operator with optional modifier
@@ -373,7 +373,7 @@ fn parse_interval_operator_expression(input: Span<'_>) -> IResult<Span<'_>, Expr
     let (input, first) = parse_union_expression(input)?;
 
     // Parse interval relationship operators
-    let (input, rest) = many0(parse_interval_op_with_operand)(input)?;
+    let (input, rest) = many0(parse_interval_op_with_operand).parse(input)?;
 
     Ok((
         input,
@@ -472,7 +472,7 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
     }
 
     // First, try to parse compound operators: "starts/ends during/before/after [precision of] [start|end]"
-    let compound_result = opt(tuple((
+    let compound_result = opt((
         ws(alt((
             value(UnaryOperator::Start, keyword("starts")),
             value(UnaryOperator::End, keyword("ends")),
@@ -484,14 +484,15 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
         ))),
         parse_optional_precision_of,
         parse_unary_right_boundary,
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     match compound_result {
         (remaining, Some((boundary, op, precision, right_boundary))) => {
             let (remaining, expr) = if right_boundary.is_some() {
-                cut(parse_invocation_expression)(remaining)?
+                cut(parse_invocation_expression).parse(remaining)?
             } else {
-                cut(parse_union_expression)(remaining)?
+                cut(parse_union_expression).parse(remaining)?
             };
             Ok((
                 remaining,
@@ -508,23 +509,24 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
         }
         (_, None) => {
             // Try "includes" family operators: [properly] includes [precision of] [start|end]
-            let includes_result = opt(tuple((
+            let includes_result = opt((
                 ws(alt((
                     value(
                         BinaryOperator::ProperlyIncludes,
-                        tuple((keyword("properly"), ws(keyword("includes")))),
+                        (keyword("properly"), ws(keyword("includes"))),
                     ),
                     value(BinaryOperator::Includes, keyword("includes")),
                 ))),
-                opt(tuple((parse_precision, ws(keyword("of"))))),
+                opt((parse_precision, ws(keyword("of")))),
                 parse_unary_right_boundary,
-            )))(input)?;
+            ))
+            .parse(input)?;
 
             if let (remaining, Some((op, precision_opt, boundary))) = includes_result {
                 let precision = precision_opt.map(|(p, _)| p);
                 // Only use this variant if we have precision or boundary
                 if precision.is_some() || boundary.is_some() {
-                    let (remaining, expr) = cut(parse_union_expression)(remaining)?;
+                    let (remaining, expr) = cut(parse_union_expression).parse(remaining)?;
                     return Ok((
                         remaining,
                         (
@@ -542,20 +544,20 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
 
             // Try temporal operators with precision: "operator precision of"
             // This includes: during, before, after, included in, properly included in
-            let temporal_with_precision = opt(tuple((
+            let temporal_with_precision = opt((
                 ws(alt((
                     // Longer matches first
                     value(
                         BinaryOperator::ProperlyIncludedIn,
-                        tuple((
+                        (
                             keyword("properly"),
                             ws(keyword("included")),
                             ws(keyword("in")),
-                        )),
+                        ),
                     ),
                     value(
                         BinaryOperator::IncludedIn,
-                        tuple((keyword("included"), ws(keyword("in")))),
+                        (keyword("included"), ws(keyword("in"))),
                     ),
                     value(BinaryOperator::During, keyword("during")),
                     value(BinaryOperator::Before, keyword("before")),
@@ -563,18 +565,19 @@ fn parse_interval_op_with_operand(input: Span<'_>) -> IResult<Span<'_>, (Interva
                 ))),
                 parse_precision,
                 cut(ws(keyword("of"))),
-            )))(input)?;
+            ))
+            .parse(input)?;
 
             match temporal_with_precision {
                 (remaining, Some((op, precision, _))) => {
-                    let (remaining, expr) = cut(parse_union_expression)(remaining)?;
+                    let (remaining, expr) = cut(parse_union_expression).parse(remaining)?;
                     Ok((remaining, (IntervalOp::WithPrecision(op, precision), expr)))
                 }
                 (_, None) => {
                     // Fall back to simple operators
                     let (remaining, op) = parse_simple_interval_operator(input)?;
 
-                    let (remaining, expr) = cut(parse_union_expression)(remaining)?;
+                    let (remaining, expr) = cut(parse_union_expression).parse(remaining)?;
                     Ok((remaining, (IntervalOp::Simple(op), expr)))
                 }
             }
@@ -587,37 +590,37 @@ fn parse_simple_interval_operator(input: Span<'_>) -> IResult<Span<'_>, BinaryOp
     ws(alt((
         value(
             BinaryOperator::ProperlyIncludes,
-            tuple((keyword("properly"), ws(keyword("includes")))),
+            (keyword("properly"), ws(keyword("includes"))),
         ),
         value(
             BinaryOperator::ProperlyIncludedIn,
-            tuple((
+            (
                 keyword("properly"),
                 ws(keyword("included")),
                 ws(keyword("in")),
-            )),
+            ),
         ),
         value(BinaryOperator::Includes, keyword("includes")),
         value(
             BinaryOperator::IncludedIn,
-            tuple((keyword("included"), ws(keyword("in")))),
+            (keyword("included"), ws(keyword("in"))),
         ),
         value(
             BinaryOperator::OverlapsBefore,
-            tuple((keyword("overlaps"), ws(keyword("before")))),
+            (keyword("overlaps"), ws(keyword("before"))),
         ),
         value(
             BinaryOperator::OverlapsAfter,
-            tuple((keyword("overlaps"), ws(keyword("after")))),
+            (keyword("overlaps"), ws(keyword("after"))),
         ),
         value(BinaryOperator::Overlaps, keyword("overlaps")),
         value(
             BinaryOperator::MeetsBefore,
-            tuple((keyword("meets"), ws(keyword("before")))),
+            (keyword("meets"), ws(keyword("before"))),
         ),
         value(
             BinaryOperator::MeetsAfter,
-            tuple((keyword("meets"), ws(keyword("after")))),
+            (keyword("meets"), ws(keyword("after"))),
         ),
         value(BinaryOperator::Meets, keyword("meets")),
         value(BinaryOperator::During, keyword("during")),
@@ -627,16 +630,13 @@ fn parse_simple_interval_operator(input: Span<'_>) -> IResult<Span<'_>, BinaryOp
         value(BinaryOperator::After, keyword("after")),
         value(
             BinaryOperator::SameOrBefore,
-            tuple((keyword("same"), ws(keyword("or")), ws(keyword("before")))),
+            (keyword("same"), ws(keyword("or")), ws(keyword("before"))),
         ),
         value(
             BinaryOperator::SameOrAfter,
-            tuple((keyword("same"), ws(keyword("or")), ws(keyword("after")))),
+            (keyword("same"), ws(keyword("or")), ws(keyword("after"))),
         ),
-        value(
-            BinaryOperator::SameAs,
-            tuple((keyword("same"), ws(keyword("as")))),
-        ),
+        value(BinaryOperator::SameAs, (keyword("same"), ws(keyword("as")))),
         value(BinaryOperator::Within, keyword("within")),
     )))(input)
 }
@@ -654,7 +654,8 @@ fn parse_timing_phrase_with_operand(
         parse_same_timing,
         parse_within_timing,
         parse_relative_timing,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse "same" timing phrase
@@ -665,26 +666,28 @@ fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expres
         value(IntervalBoundary::Start, keyword("starts")),
         value(IntervalBoundary::End, keyword("ends")),
         value(IntervalBoundary::Start, keyword("occurs")),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
 
     // "same" keyword is required
     let (input, _) = ws(keyword("same"))(input)?;
 
     // Optional precision: day, month, year, etc.
-    let (input, precision) = opt(ws(parse_precision))(input)?;
+    let (input, precision) = opt(ws(parse_precision)).parse(input)?;
 
     // Direction: "as", "or before", "or after"
     let (input, direction) = cut(ws(alt((
         value(
             SameDirection::OrBefore,
-            tuple((keyword("or"), ws(keyword("before")))),
+            (keyword("or"), ws(keyword("before"))),
         ),
         value(
             SameDirection::OrAfter,
-            tuple((keyword("or"), ws(keyword("after")))),
+            (keyword("or"), ws(keyword("after"))),
         ),
         value(SameDirection::As, keyword("as")),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
 
     // Optional right boundary: start/end, optionally followed by "of"
     // When a right boundary is present (e.g. "start of X"), the operand
@@ -693,9 +696,9 @@ fn parse_same_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expres
     let (input, right_boundary) = parse_interval_right_boundary(input)?;
 
     let (input, expr) = if right_boundary.is_some() {
-        cut(parse_invocation_expression)(input)?
+        cut(parse_invocation_expression).parse(input)?
     } else {
-        cut(parse_union_expression)(input)?
+        cut(parse_union_expression).parse(input)?
     };
 
     Ok((
@@ -718,16 +721,17 @@ fn parse_within_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Expr
         value(IntervalBoundary::Start, keyword("starts")),
         value(IntervalBoundary::End, keyword("ends")),
         value(IntervalBoundary::Start, keyword("occurs")), // occurs uses start by convention
-    ))))(input)?;
+    ))))
+    .parse(input)?;
 
-    let (input, properly) = opt(ws(keyword("properly")))(input)?;
+    let (input, properly) = opt(ws(keyword("properly"))).parse(input)?;
     let (input, _) = ws(keyword("within"))(input)?;
-    let (input, quantity) = cut(ws(parse_duration_quantity))(input)?;
-    let (input, _) = cut(ws(keyword("of")))(input)?;
+    let (input, quantity) = cut(ws(parse_duration_quantity)).parse(input)?;
+    let (input, _) = cut(ws(keyword("of"))).parse(input)?;
 
     let (input, right_boundary) = parse_interval_right_boundary(input)?;
 
-    let (input, expr) = cut(parse_union_expression)(input)?;
+    let (input, expr) = cut(parse_union_expression).parse(input)?;
 
     let offset = TimingOffset {
         quantity: QuantityValue {
@@ -758,7 +762,8 @@ fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Ex
         value(IntervalBoundary::Start, keyword("starts")),
         value(IntervalBoundary::End, keyword("ends")),
         value(IntervalBoundary::Start, keyword("occurs")),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
 
     // Try to parse offset with optional qualifier
     // Patterns:
@@ -776,9 +781,9 @@ fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Ex
     let (input, right_boundary) = parse_interval_right_boundary(input)?;
 
     let (input, expr) = if right_boundary.is_some() {
-        cut(parse_invocation_expression)(input)?
+        cut(parse_invocation_expression).parse(input)?
     } else {
-        cut(parse_union_expression)(input)?
+        cut(parse_union_expression).parse(input)?
     };
 
     Ok((
@@ -799,11 +804,12 @@ fn parse_relative_timing(input: Span<'_>) -> IResult<Span<'_>, (TimingPhrase, Ex
 /// Parse timing offset with optional qualifier
 fn parse_timing_offset(input: Span<'_>) -> IResult<Span<'_>, Option<TimingOffset>> {
     // Try "less than <quantity>" or "more than <quantity>" first
-    let less_than = opt(tuple((
+    let less_than = opt((
         ws(keyword("less")),
         ws(keyword("than")),
         ws(parse_duration_quantity),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     if let (remaining, Some((_, _, quantity))) = less_than {
         return Ok((
@@ -818,11 +824,12 @@ fn parse_timing_offset(input: Span<'_>) -> IResult<Span<'_>, Option<TimingOffset
         ));
     }
 
-    let more_than = opt(tuple((
+    let more_than = opt((
         ws(keyword("more")),
         ws(keyword("than")),
         ws(parse_duration_quantity),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     if let (remaining, Some((_, _, quantity))) = more_than {
         return Ok((
@@ -838,7 +845,7 @@ fn parse_timing_offset(input: Span<'_>) -> IResult<Span<'_>, Option<TimingOffset
     }
 
     // Try "<quantity> [or less|or more]"
-    let quantity_result = opt(ws(parse_duration_quantity))(input)?;
+    let quantity_result = opt(ws(parse_duration_quantity)).parse(input)?;
 
     match quantity_result {
         (remaining, Some(quantity)) => {
@@ -846,13 +853,14 @@ fn parse_timing_offset(input: Span<'_>) -> IResult<Span<'_>, Option<TimingOffset
             let (remaining, qualifier) = opt(ws(alt((
                 value(
                     TimingQualifier::OrLess,
-                    tuple((keyword("or"), ws(keyword("less")))),
+                    (keyword("or"), ws(keyword("less"))),
                 ),
                 value(
                     TimingQualifier::OrMore,
-                    tuple((keyword("or"), ws(keyword("more")))),
+                    (keyword("or"), ws(keyword("more"))),
                 ),
-            ))))(remaining)?;
+            ))))
+            .parse(remaining)?;
 
             Ok((
                 remaining,
@@ -872,7 +880,7 @@ fn parse_timing_offset(input: Span<'_>) -> IResult<Span<'_>, Option<TimingOffset
 /// Parse a duration quantity (number with temporal unit keyword)
 /// Handles: 3 days, 1 year, 2 weeks, etc.
 fn parse_duration_quantity(input: Span<'_>) -> IResult<Span<'_>, (f64, String)> {
-    let (input, value) = alt((decimal_literal, map(integer_literal, |i| i as f64)))(input)?;
+    let (input, value) = alt((decimal_literal, map(integer_literal, |i| i as f64))).parse(input)?;
     let (input, unit) = ws(parse_duration_unit)(input)?;
     Ok((input, (value, unit)))
 }
@@ -906,7 +914,8 @@ fn parse_duration_unit(input: Span<'_>) -> IResult<Span<'_>, String> {
             alt((keyword("milliseconds"), keyword("millisecond"))),
             |_| "milliseconds".to_string(),
         ),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse timing direction keyword
@@ -919,11 +928,12 @@ fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection>
     // Try "on or before" / "on or after" first — this form can appear with or
     // without a preceding offset (e.g. "ends 1 hour or less on or before start of X").
     if let Ok((input, _)) = keyword("on")(input) {
-        let (input, or) = opt(ws(keyword("or")))(input)?;
+        let (input, or) = opt(ws(keyword("or"))).parse(input)?;
         let (input, direction) = cut(ws(alt((
             value(TimingDirection::Before, keyword("before")),
             value(TimingDirection::After, keyword("after")),
-        ))))(input)?;
+        ))))
+        .parse(input)?;
         let direction = match direction {
             TimingDirection::Before if or.is_some() => TimingDirection::OnOrBefore,
             TimingDirection::After if or.is_some() => TimingDirection::OnOrAfter,
@@ -937,8 +947,9 @@ fn parse_timing_direction(input: Span<'_>) -> IResult<Span<'_>, TimingDirection>
     let (input, direction) = alt((
         value(TimingDirection::Before, keyword("before")),
         value(TimingDirection::After, keyword("after")),
-    ))(input)?;
-    let (input, or_on) = opt(preceded(ws(keyword("or")), cut(ws(keyword("on")))))(input)?;
+    ))
+    .parse(input)?;
+    let (input, or_on) = opt(preceded(ws(keyword("or")), cut(ws(keyword("on"))))).parse(input)?;
     let direction = match direction {
         TimingDirection::Before if or_on.is_some() => TimingDirection::BeforeOrOn,
         TimingDirection::After if or_on.is_some() => TimingDirection::AfterOrOn,
@@ -1013,242 +1024,162 @@ fn parse_power_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 // Precedence Level 9: Unary Expressions
 // ============================================================================
 
-fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, result) = alt((
-        // "not" expression
-        map(
-            preceded(ws(keyword("not")), parse_unary_expression),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Not,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
+type ExpressionParser<'a> = fn(Span<'a>) -> IResult<Span<'a>, Expression>;
+
+fn parse_unary_operand<'a>(
+    input: Span<'a>,
+    mut prefix: impl Parser<Span<'a>, Error = nom::error::Error<Span<'a>>>,
+    operator: UnaryOperator,
+    operand: ExpressionParser<'a>,
+) -> IResult<Span<'a>, Expression> {
+    let (input, _) = prefix.parse(input)?;
+    let (input, operand) = operand(input)?;
+    Ok((input, unary_expr(operator, operand)))
+}
+
+fn parse_unary_expression<'a>(input: Span<'a>) -> IResult<Span<'a>, Expression> {
+    let alternatives: [ExpressionParser<'a>; 21] = [
+        |input| {
+            parse_unary_operand(
+                input,
+                ws(keyword("not")),
+                UnaryOperator::Not,
+                parse_unary_expression,
+            )
+        },
         // Negation (but not if followed by a number - that's a negative literal)
-        map(
-            preceded(
-                tuple((ws(char('-')), peek(not(nom::character::complete::digit1)))),
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(char('-')), peek(not(nom::character::complete::digit1))),
+                UnaryOperator::Negate,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Negate,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "exists" expression
-        map(
-            preceded(ws(keyword("exists")), parse_unary_expression),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Exists,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "distinct" expression
-        map(
-            preceded(ws(keyword("distinct")), parse_unary_expression),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Distinct,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "flatten" expression
-        map(
-            preceded(ws(keyword("flatten")), parse_unary_expression),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Flatten,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "collapse" expression
-        map(
-            preceded(ws(keyword("collapse")), parse_unary_expression),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Collapse,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "singleton from" expression
-        map(
-            preceded(
-                tuple((ws(keyword("singleton")), ws(keyword("from")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                ws(keyword("exists")),
+                UnaryOperator::Exists,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Singleton,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "predecessor of" expression
-        map(
-            preceded(
-                tuple((ws(keyword("predecessor")), ws(keyword("of")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                ws(keyword("distinct")),
+                UnaryOperator::Distinct,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Predecessor,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "successor of" expression
-        map(
-            preceded(
-                tuple((ws(keyword("successor")), ws(keyword("of")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                ws(keyword("flatten")),
+                UnaryOperator::Flatten,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Successor,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "start of" expression (interval boundary)
-        map(
-            preceded(
-                tuple((ws(keyword("start")), ws(keyword("of")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                ws(keyword("collapse")),
+                UnaryOperator::Collapse,
+                parse_unary_expression,
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("singleton")), ws(keyword("from"))),
+                UnaryOperator::Singleton,
+                parse_unary_expression,
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("predecessor")), ws(keyword("of"))),
+                UnaryOperator::Predecessor,
+                parse_unary_expression,
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("successor")), ws(keyword("of"))),
+                UnaryOperator::Successor,
+                parse_unary_expression,
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("start")), ws(keyword("of"))),
+                UnaryOperator::Start,
                 parse_invocation_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Start,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "end of" expression (interval boundary)
-        map(
-            preceded(
-                tuple((ws(keyword("end")), ws(keyword("of")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("end")), ws(keyword("of"))),
+                UnaryOperator::End,
                 parse_invocation_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::End,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "size of" expression (interval/list size)
-        map(
-            preceded(
-                tuple((ws(keyword("size")), ws(keyword("of")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("size")), ws(keyword("of"))),
+                UnaryOperator::Size,
                 parse_invocation_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::Size,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "date from" expression
-        map(
-            preceded(
-                tuple((ws(keyword("date")), ws(keyword("from")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("date")), ws(keyword("from"))),
+                UnaryOperator::DateFrom,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::DateFrom,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "time from" expression
-        map(
-            preceded(
-                tuple((ws(keyword("time")), ws(keyword("from")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("time")), ws(keyword("from"))),
+                UnaryOperator::TimeFrom,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::TimeFrom,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "timezoneoffset from" expression
-        map(
-            preceded(
-                tuple((ws(keyword("timezoneoffset")), ws(keyword("from")))),
+            )
+        },
+        |input| {
+            parse_unary_operand(
+                input,
+                (ws(keyword("timezoneoffset")), ws(keyword("from"))),
+                UnaryOperator::TimezoneOffsetFrom,
                 parse_unary_expression,
-            ),
-            |operand| {
-                Expression::UnaryExpression(UnaryExpression {
-                    operator: UnaryOperator::TimezoneOffsetFrom,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // DateTime component extraction: year/month/day/hour/minute/second/millisecond from
-        map(
-            tuple((
-                ws(alt((
-                    value(DateTimePrecision::Year, keyword("year")),
-                    value(DateTimePrecision::Month, keyword("month")),
-                    value(DateTimePrecision::Day, keyword("day")),
-                    value(DateTimePrecision::Hour, keyword("hour")),
-                    value(DateTimePrecision::Minute, keyword("minute")),
-                    value(DateTimePrecision::Second, keyword("second")),
-                    value(DateTimePrecision::Millisecond, keyword("millisecond")),
-                ))),
-                preceded(ws(keyword("from")), parse_unary_expression),
-            )),
-            |(precision, operand)| {
-                Expression::DateTimeComponentFrom(DateTimeComponentFromExpr {
-                    precision,
-                    operand: Box::new(operand),
-                    location: None,
-                })
-            },
-        ),
-        // "minimum <TypeSpecifier>" expression - returns minimum value for the type
-        map(
-            preceded(ws(keyword("minimum")), parse_type_specifier),
-            Expression::MinValue,
-        ),
-        // "maximum <TypeSpecifier>" expression - returns maximum value for the type
-        map(
-            preceded(ws(keyword("maximum")), parse_type_specifier),
-            Expression::MaxValue,
-        ),
-        // "cast X as Type" expression (prefix syntax)
-        parse_cast_expression,
-        // "convert X to Type" expression (prefix syntax)
-        parse_convert_expression,
-        // Type expression suffix handling
-        parse_type_expression,
-    ))(input)?;
+            )
+        },
+        parse_datetime_component_from as ExpressionParser<'a>,
+        |input| {
+            map(
+                preceded(ws(keyword("minimum")), parse_type_specifier),
+                Expression::MinValue,
+            )
+            .parse(input)
+        },
+        |input| {
+            map(
+                preceded(ws(keyword("maximum")), parse_type_specifier),
+                Expression::MaxValue,
+            )
+            .parse(input)
+        },
+        parse_cast_expression as ExpressionParser<'a>,
+        parse_convert_expression as ExpressionParser<'a>,
+        parse_type_expression as ExpressionParser<'a>,
+    ];
+    let (input, result) = alt(alternatives).parse(input)?;
 
     // After the alt() completes, check for literal test operators
     // ('is null', 'is true', 'is false', 'is not null', etc.) on the
@@ -1265,6 +1196,28 @@ fn parse_unary_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     }
 
     Ok((input, result))
+}
+
+fn parse_datetime_component_from(input: Span<'_>) -> IResult<Span<'_>, Expression> {
+    let (input, precision) = ws(alt((
+        value(DateTimePrecision::Year, keyword("year")),
+        value(DateTimePrecision::Month, keyword("month")),
+        value(DateTimePrecision::Day, keyword("day")),
+        value(DateTimePrecision::Hour, keyword("hour")),
+        value(DateTimePrecision::Minute, keyword("minute")),
+        value(DateTimePrecision::Second, keyword("second")),
+        value(DateTimePrecision::Millisecond, keyword("millisecond")),
+    )))(input)?;
+    let (input, _) = ws(keyword("from"))(input)?;
+    let (input, operand) = parse_unary_expression(input)?;
+    Ok((
+        input,
+        Expression::DateTimeComponentFrom(DateTimeComponentFromExpr {
+            precision,
+            operand: Box::new(operand),
+            location: None,
+        }),
+    ))
 }
 
 // ============================================================================
@@ -1307,7 +1260,7 @@ fn parse_convert_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 
 fn parse_literal_test_operator(input: Span<'_>) -> IResult<Span<'_>, (UnaryOperator, bool)> {
     let (input, _) = ws(keyword("is"))(input)?;
-    let (input, negated) = opt(ws(keyword("not")))(input)?;
+    let (input, negated) = opt(ws(keyword("not"))).parse(input)?;
     let (input, operator) = ws(alt((
         value(UnaryOperator::IsNull, keyword("null")),
         value(UnaryOperator::IsTrue, keyword("true")),
@@ -1330,8 +1283,8 @@ fn parse_type_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     }
 
     // Check for 'is not' (negated type check)
-    if let Ok((input2, _)) = tuple((ws(keyword("is")), ws(keyword("not"))))(input) {
-        let (input, type_spec) = cut(parse_type_specifier)(input2)?;
+    if let Ok((input2, _)) = (ws(keyword("is")), ws(keyword("not"))).parse(input) {
+        let (input, type_spec) = cut(parse_type_specifier).parse(input2)?;
         return Ok((
             input,
             unary_expr(
@@ -1347,13 +1300,14 @@ fn parse_type_expression(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     }
 
     // Check for type operator suffix
-    let (input, type_op) = opt(tuple((
+    let (input, type_op) = opt((
         ws(alt((
             value(TypeOperator::Is, keyword("is")),
             value(TypeOperator::As, keyword("as")),
         ))),
         cut(parse_type_specifier),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     match type_op {
         Some((op, type_spec)) => Ok((
@@ -1380,7 +1334,8 @@ fn parse_invocation_expression(input: Span<'_>) -> IResult<Span<'_>, Expression>
         parse_member_suffix,
         // Index invocation: [expr]
         parse_index_suffix,
-    )))(input)?;
+    )))
+    .parse(input)?;
 
     Ok((
         input,
@@ -1455,7 +1410,8 @@ pub(crate) fn parse_member_suffix(input: Span<'_>) -> IResult<Span<'_>, Invocati
         ws(char('(')),
         separated_list0(ws(char(',')), expression),
         ws(char(')')),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -1531,7 +1487,8 @@ fn parse_term(input: Span<'_>) -> IResult<Span<'_>, Expression> {
             parse_special_identifier,
             parse_function_or_identifier,
         )),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // ============================================================================
@@ -1546,7 +1503,8 @@ fn parse_parenthesized(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     map(
         delimited(ws(char('(')), expression, ws(char(')'))),
         |expr| Expression::Parenthesized(Box::new(expr)),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_special_identifier(input: Span<'_>) -> IResult<Span<'_>, Expression> {
@@ -1575,7 +1533,8 @@ pub(crate) fn parse_function_or_identifier(input: Span<'_>) -> IResult<Span<'_>,
         ws(char('(')),
         separated_list0(ws(char(',')), expression),
         ws(char(')')),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     match args {
         // Function call: Name(args)

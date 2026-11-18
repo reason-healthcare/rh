@@ -1,6 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rh_validator::FhirValidator;
 use serde_json::json;
+use std::hint::black_box;
 
 const US_CORE_PATIENT_PROFILE: &str =
     "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient";

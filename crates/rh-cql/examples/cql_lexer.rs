@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run -p rh-cql --example cql_lexer`
 
-use nom::InputTake;
+use nom::Input;
 use rh_cql::parser::lexer::{
     date_literal, datetime_literal, decimal_literal, identifier, integer_literal, is_keyword,
     keyword, long_literal, operator, qualified_identifier, quantity_literal, skip_ws_and_comments,

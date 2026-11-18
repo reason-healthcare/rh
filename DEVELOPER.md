@@ -32,7 +32,7 @@ This guide covers building, testing, and working with the **rh** monorepo. For c
 
 ## Prerequisites
 
-- Rust 1.91 or later (`rustup` recommended)
+- Rust 1.95 or later (`rustup` recommended)
 - [just](https://github.com/casey/just) task runner (optional but recommended)
 
 ## Setup
@@ -42,7 +42,7 @@ This guide covers building, testing, and working with the **rh** monorepo. For c
 ```
 
 This will:
-- Verify the Rust toolchain (≥ 1.91) and active `rustup` toolchain
+- Verify the Rust toolchain (≥ 1.95) and active `rustup` toolchain
 - Install `clippy`, `rustfmt`, `cargo-audit`, `cargo-watch`, and `cargo-nextest`
 - Run initial formatting and checks
 

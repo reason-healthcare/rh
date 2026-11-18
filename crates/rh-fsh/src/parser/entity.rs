@@ -10,7 +10,7 @@ use nom::{
     bytes::complete::{tag, take_while, take_while1},
     character::complete::char,
     combinator::{map, opt},
-    IResult,
+    IResult, Parser,
 };
 
 type VsComponentRulesResult<'a> =
@@ -95,7 +95,8 @@ fn parse_entity(input: Span<'_>) -> IResult<Span<'_>, Spanned<FshEntity>> {
         map(parse_mapping, |m| {
             Spanned::new(FshEntity::Mapping(m.0), m.1)
         }),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // ============================================================================
@@ -115,9 +116,10 @@ fn parse_alias(input: Span<'_>) -> IResult<Span<'_>, (Alias, SourceLocation)> {
         map(take_while1(|c: char| !c.is_whitespace()), |s: Span<'_>| {
             s.fragment().to_string()
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     Ok((input, (Alias { name, value }, loc)))
 }
 
@@ -133,7 +135,7 @@ fn parse_profile(input: Span<'_>) -> IResult<Span<'_>, (Profile, SourceLocation)
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let (input, metadata) = parse_sd_metadata(input, name)?;
     let (input, rules) = parse_sd_rules(input)?;
@@ -153,7 +155,7 @@ fn parse_extension(input: Span<'_>) -> IResult<Span<'_>, (Extension, SourceLocat
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let (input, mut metadata) = parse_sd_metadata(input, name)?;
     // FSH spec: extensions without an explicit Parent default to Extension
@@ -177,7 +179,7 @@ fn parse_logical(input: Span<'_>) -> IResult<Span<'_>, (Logical, SourceLocation)
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let (input, metadata) = parse_sd_metadata(input, name)?;
     let (input, rules) = parse_sd_rules(input)?;
@@ -207,7 +209,7 @@ fn parse_resource_def(input: Span<'_>) -> IResult<Span<'_>, (ResourceDef, Source
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let (input, metadata) = parse_sd_metadata(input, name)?;
     let (input, rules) = parse_sd_rules(input)?;
@@ -227,7 +229,7 @@ fn parse_instance(input: Span<'_>) -> IResult<Span<'_>, (Instance, SourceLocatio
     let (input, _) = ws(input)?;
     let (input, name) = instance_name(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let (input, instance_of) = parse_instance_of(input)?;
 
@@ -303,9 +305,10 @@ fn parse_instance_of(input: Span<'_>) -> IResult<Span<'_>, String> {
             take_while1(|c: char| !c.is_whitespace() && c != '\n'),
             |s: Span<'_>| s.fragment().to_string(),
         ),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     Ok((input, val))
 }
 
@@ -329,7 +332,7 @@ fn parse_value_set(input: Span<'_>) -> IResult<Span<'_>, (ValueSet, SourceLocati
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let mut remaining = input;
     let mut id: Option<String> = None;
@@ -411,7 +414,7 @@ fn parse_code_system(input: Span<'_>) -> IResult<Span<'_>, (CodeSystem, SourceLo
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let mut remaining = input;
     let mut id: Option<String> = None;
@@ -493,7 +496,7 @@ fn parse_invariant(input: Span<'_>) -> IResult<Span<'_>, (Invariant, SourceLocat
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let mut remaining = input;
     let mut description = None;
@@ -561,7 +564,7 @@ fn parse_invariant(input: Span<'_>) -> IResult<Span<'_>, (Invariant, SourceLocat
 
         if !matched {
             let (inp, _) = take_while(|c| c != '\n')(peek)?;
-            let (inp, _) = opt(char('\n'))(inp)?;
+            let (inp, _) = opt(char('\n')).parse(inp)?;
             remaining = inp;
         }
     }
@@ -596,9 +599,10 @@ fn parse_invariant_field_rule(input: Span<'_>) -> IResult<Span<'_>, (String, Str
             take_while1(|c: char| c != '\n' && c != '\r'),
             |s: Span<'_>| s.fragment().trim().to_string(),
         ),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     Ok((input, (field.to_ascii_lowercase(), value)))
 }
 
@@ -614,7 +618,7 @@ fn parse_rule_set(input: Span<'_>) -> IResult<Span<'_>, (RuleSet, SourceLocation
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     let (input, rules) = parse_sd_rules(input)?;
     Ok((input, (RuleSet { name, rules }, loc)))
 }
@@ -642,7 +646,7 @@ fn parse_param_rule_set(input: Span<'_>) -> IResult<Span<'_>, (ParamRuleSet, Sou
         .filter(|s| !s.is_empty())
         .collect();
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     // Capture raw rule lines for parameter substitution later
     let raw_rules = collect_raw_rule_lines(input.fragment());
@@ -694,7 +698,7 @@ fn parse_mapping(input: Span<'_>) -> IResult<Span<'_>, (Mapping, SourceLocation)
     let (input, _) = ws(input)?;
     let (input, name) = identifier(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     let (input, source) = opt_meta_kv("Source", input)?;
     let (input, target) = opt_meta_kv("Target", input)?;
@@ -843,7 +847,7 @@ fn parse_sd_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<SdRule>>> {
         if !peek.fragment().starts_with('*') {
             // Skip unrecognized lines
             let (inp, _) = take_while(|c| c != '\n')(peek)?;
-            let (inp, _) = opt(char('\n'))(inp)?;
+            let (inp, _) = opt(char('\n')).parse(inp)?;
             remaining = inp;
             continue;
         }
@@ -855,7 +859,7 @@ fn parse_sd_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<SdRule>>> {
             Err(_) => {
                 // skip the line
                 let (inp, _) = take_while(|c| c != '\n')(peek)?;
-                let (inp, _) = opt(char('\n'))(inp)?;
+                let (inp, _) = opt(char('\n')).parse(inp)?;
                 remaining = inp;
             }
         }
@@ -878,7 +882,7 @@ fn parse_instance_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Instan
         }
         if !peek.fragment().starts_with('*') {
             let (inp, _) = take_while(|c| c != '\n')(peek)?;
-            let (inp, _) = opt(char('\n'))(inp)?;
+            let (inp, _) = opt(char('\n')).parse(inp)?;
             remaining = inp;
             continue;
         }
@@ -889,7 +893,7 @@ fn parse_instance_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Instan
             }
             Err(_) => {
                 let (inp, _) = take_while(|c| c != '\n')(peek)?;
-                let (inp, _) = opt(char('\n'))(inp)?;
+                let (inp, _) = opt(char('\n')).parse(inp)?;
                 remaining = inp;
             }
         }
@@ -913,7 +917,7 @@ fn parse_vs_component_rules(input: Span<'_>) -> VsComponentRulesResult<'_> {
         }
         if !peek.fragment().starts_with('*') {
             let (inp, _) = take_while(|c| c != '\n')(peek)?;
-            let (inp, _) = opt(char('\n'))(inp)?;
+            let (inp, _) = opt(char('\n')).parse(inp)?;
             remaining = inp;
             continue;
         }
@@ -940,7 +944,7 @@ fn parse_vs_component_rules(input: Span<'_>) -> VsComponentRulesResult<'_> {
             }
             Err(_) => {
                 let (inp, _) = take_while(|c| c != '\n')(peek)?;
-                let (inp, _) = opt(char('\n'))(inp)?;
+                let (inp, _) = opt(char('\n')).parse(inp)?;
                 remaining = inp;
             }
         }
@@ -965,7 +969,7 @@ fn parse_concept_rules(input: Span<'_>) -> ConceptRulesResult<'_> {
         }
         if !peek.fragment().starts_with('*') {
             let (inp, _) = take_while(|c| c != '\n')(peek)?;
-            let (inp, _) = opt(char('\n'))(inp)?;
+            let (inp, _) = opt(char('\n')).parse(inp)?;
             remaining = inp;
             continue;
         }
@@ -994,7 +998,7 @@ fn parse_concept_rules(input: Span<'_>) -> ConceptRulesResult<'_> {
             }
             Err(_) => {
                 let (inp, _) = take_while(|c| c != '\n')(peek)?;
-                let (inp, _) = opt(char('\n'))(inp)?;
+                let (inp, _) = opt(char('\n')).parse(inp)?;
                 remaining = inp;
             }
         }
@@ -1017,7 +1021,7 @@ fn parse_mapping_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Mapping
         }
         if !peek.fragment().starts_with('*') {
             let (inp, _) = take_while(|c| c != '\n')(peek)?;
-            let (inp, _) = opt(char('\n'))(inp)?;
+            let (inp, _) = opt(char('\n')).parse(inp)?;
             remaining = inp;
             continue;
         }
@@ -1028,7 +1032,7 @@ fn parse_mapping_rules(input: Span<'_>) -> IResult<Span<'_>, Vec<Spanned<Mapping
             }
             Err(_) => {
                 let (inp, _) = take_while(|c| c != '\n')(peek)?;
-                let (inp, _) = opt(char('\n'))(inp)?;
+                let (inp, _) = opt(char('\n')).parse(inp)?;
                 remaining = inp;
             }
         }

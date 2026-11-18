@@ -3,13 +3,8 @@
 //! This module provides span types for tracking source locations during parsing,
 //! enabling accurate error reporting with line and column numbers.
 
-use nom::{
-    error::{ErrorKind, ParseError},
-    Compare, CompareResult, FindSubstring, IResult, InputIter, InputLength, InputTake,
-    InputTakeAtPosition, Offset, Slice,
-};
+use nom::{Compare, CompareResult, FindSubstring, Input, Offset};
 use serde::{Deserialize, Serialize};
-use std::ops::{Range, RangeFrom, RangeTo};
 
 /// A span of source code with location tracking
 ///
@@ -126,46 +121,62 @@ impl SourceRange {
 // nom trait implementations for Span
 // ============================================================================
 
-impl<'a> InputLength for Span<'a> {
+impl<'a> Input for Span<'a> {
+    type Item = char;
+    type Iter = std::str::Chars<'a>;
+    type IterIndices = std::str::CharIndices<'a>;
+
     fn input_len(&self) -> usize {
         self.input.len()
     }
-}
 
-impl<'a> InputTake for Span<'a> {
     fn take(&self, count: usize) -> Self {
-        let taken = &self.input[..count];
-        let (new_line, new_column) = Self::update_position(self.line, self.column, taken);
         Self {
-            input: taken,
-            offset: self.offset,
-            line: self.line,
-            column: self.column,
+            input: &self.input[..count],
+            ..*self
         }
-        .with_updated_position(new_line, new_column)
+    }
+
+    fn take_from(&self, count: usize) -> Self {
+        let (prefix, suffix) = self.input.split_at(count);
+        let (line, column) = Self::update_position(self.line, self.column, prefix);
+        Self {
+            input: suffix,
+            offset: self.offset + count,
+            line,
+            column,
+        }
     }
 
     fn take_split(&self, count: usize) -> (Self, Self) {
-        let (prefix, suffix) = self.input.split_at(count);
+        (self.take_from(count), self.take(count))
+    }
 
-        // Calculate new position after prefix
-        let (new_line, new_column) = Self::update_position(self.line, self.column, prefix);
+    fn iter_indices(&self) -> Self::IterIndices {
+        self.input.char_indices()
+    }
 
-        let taken = Self {
-            input: prefix,
-            offset: self.offset,
-            line: self.line,
-            column: self.column,
-        };
+    fn iter_elements(&self) -> Self::Iter {
+        self.input.chars()
+    }
 
-        let remaining = Self {
-            input: suffix,
-            offset: self.offset + count,
-            line: new_line,
-            column: new_column,
-        };
+    fn position<P>(&self, predicate: P) -> Option<usize>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        self.input.find(predicate)
+    }
 
-        (remaining, taken)
+    fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
+        self.input.slice_index(count)
+    }
+}
+
+impl<'a> Offset for Span<'a> {
+    fn offset(&self, second: &Self) -> usize {
+        let first = self.input.as_ptr() as usize;
+        let second = second.input.as_ptr() as usize;
+        second.saturating_sub(first)
     }
 }
 
@@ -181,160 +192,6 @@ impl<'a> Span<'a> {
             }
         }
         (line, column)
-    }
-
-    /// Create a new span with updated position
-    fn with_updated_position(mut self, line: usize, column: usize) -> Self {
-        self.line = line;
-        self.column = column;
-        self
-    }
-}
-
-impl<'a> InputTakeAtPosition for Span<'a> {
-    type Item = char;
-
-    fn split_at_position<P, E: ParseError<Self>>(&self, predicate: P) -> IResult<Self, Self, E>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        match self.input.find(predicate) {
-            Some(i) => Ok(self.take_split(i)),
-            None => Err(nom::Err::Incomplete(nom::Needed::new(1))),
-        }
-    }
-
-    fn split_at_position1<P, E: ParseError<Self>>(
-        &self,
-        predicate: P,
-        e: ErrorKind,
-    ) -> IResult<Self, Self, E>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        match self.input.find(predicate) {
-            Some(0) => Err(nom::Err::Error(E::from_error_kind(*self, e))),
-            Some(i) => Ok(self.take_split(i)),
-            None => Err(nom::Err::Incomplete(nom::Needed::new(1))),
-        }
-    }
-
-    fn split_at_position_complete<P, E: ParseError<Self>>(
-        &self,
-        predicate: P,
-    ) -> IResult<Self, Self, E>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        match self.input.find(predicate) {
-            Some(i) => Ok(self.take_split(i)),
-            None => Ok(self.take_split(self.input.len())),
-        }
-    }
-
-    fn split_at_position1_complete<P, E: ParseError<Self>>(
-        &self,
-        predicate: P,
-        e: ErrorKind,
-    ) -> IResult<Self, Self, E>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        match self.input.find(predicate) {
-            Some(0) => Err(nom::Err::Error(E::from_error_kind(*self, e))),
-            Some(i) => Ok(self.take_split(i)),
-            None => {
-                if self.input.is_empty() {
-                    Err(nom::Err::Error(E::from_error_kind(*self, e)))
-                } else {
-                    Ok(self.take_split(self.input.len()))
-                }
-            }
-        }
-    }
-}
-
-impl<'a> InputIter for Span<'a> {
-    type Item = char;
-    type Iter = std::str::CharIndices<'a>;
-    type IterElem = std::str::Chars<'a>;
-
-    fn iter_indices(&self) -> Self::Iter {
-        self.input.char_indices()
-    }
-
-    fn iter_elements(&self) -> Self::IterElem {
-        self.input.chars()
-    }
-
-    fn position<P>(&self, predicate: P) -> Option<usize>
-    where
-        P: Fn(Self::Item) -> bool,
-    {
-        self.input.find(predicate)
-    }
-
-    fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
-        let mut cnt = 0;
-        for (index, _) in self.input.char_indices() {
-            if cnt == count {
-                return Ok(index);
-            }
-            cnt += 1;
-        }
-        if cnt == count {
-            return Ok(self.input.len());
-        }
-        Err(nom::Needed::Unknown)
-    }
-}
-
-impl<'a> Offset for Span<'a> {
-    fn offset(&self, second: &Self) -> usize {
-        let first = self.input.as_ptr() as usize;
-        let second = second.input.as_ptr() as usize;
-        second.saturating_sub(first)
-    }
-}
-
-impl<'a> Slice<Range<usize>> for Span<'a> {
-    fn slice(&self, range: Range<usize>) -> Self {
-        let sliced = &self.input[range.clone()];
-        let prefix = &self.input[..range.start];
-        let (new_line, new_column) = Self::update_position(self.line, self.column, prefix);
-
-        Self {
-            input: sliced,
-            offset: self.offset + range.start,
-            line: new_line,
-            column: new_column,
-        }
-    }
-}
-
-impl<'a> Slice<RangeFrom<usize>> for Span<'a> {
-    fn slice(&self, range: RangeFrom<usize>) -> Self {
-        let sliced = &self.input[range.start..];
-        let prefix = &self.input[..range.start];
-        let (new_line, new_column) = Self::update_position(self.line, self.column, prefix);
-
-        Self {
-            input: sliced,
-            offset: self.offset + range.start,
-            line: new_line,
-            column: new_column,
-        }
-    }
-}
-
-impl<'a> Slice<RangeTo<usize>> for Span<'a> {
-    fn slice(&self, range: RangeTo<usize>) -> Self {
-        Self {
-            input: &self.input[..range.end],
-            offset: self.offset,
-            line: self.line,
-            column: self.column,
-        }
     }
 }
 

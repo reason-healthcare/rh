@@ -12,8 +12,8 @@ use nom::{
     character::complete::{char, digit1},
     combinator::{map, opt, recognize, value, verify},
     multi::many0,
-    sequence::{pair, tuple},
-    IResult,
+    sequence::pair,
+    IResult, Input, Parser,
 };
 
 // ============================================================================
@@ -57,7 +57,8 @@ pub fn ws(input: Span<'_>) -> IResult<Span<'_>, ()> {
     value(
         (),
         take_while(|c: char| c == ' ' || c == '\t' || c == '\u{00A0}'),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// Parse a line comment: `// ...` to end of line
@@ -84,7 +85,8 @@ pub fn trivia(input: Span<'_>) -> IResult<Span<'_>, ()> {
             line_comment,
             block_comment,
         ))),
-    )(input)
+    )
+    .parse(input)
 }
 
 // ============================================================================
@@ -96,7 +98,8 @@ pub fn identifier(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, id) = recognize(pair(
         take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
         take_while(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.'),
-    ))(input)?;
+    ))
+    .parse(input)?;
     Ok((input, id.fragment().to_string()))
 }
 
@@ -160,15 +163,13 @@ pub fn quoted_string(input: Span<'_>) -> IResult<Span<'_>, String> {
                     result.push(c);
                 }
             }
-            remaining = remaining.slice(2..);
+            remaining = remaining.take_from(2);
         } else {
             break;
         }
     }
     Ok((remaining, result))
 }
-
-use nom::Slice;
 
 /// Parse a triple-quoted multiline string: `"""..."""`
 pub fn multiline_string(input: Span<'_>) -> IResult<Span<'_>, String> {
@@ -186,7 +187,7 @@ pub fn multiline_string(input: Span<'_>) -> IResult<Span<'_>, String> {
 
 /// Parse an integer (optional leading `-` then digits)
 pub fn integer(input: Span<'_>) -> IResult<Span<'_>, i64> {
-    let (input, s) = recognize(pair(opt(char('-')), digit1))(input)?;
+    let (input, s) = recognize(pair(opt(char('-')), digit1)).parse(input)?;
     let n: i64 = s.fragment().parse().map_err(|_| {
         nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Digit))
     })?;
@@ -195,7 +196,7 @@ pub fn integer(input: Span<'_>) -> IResult<Span<'_>, i64> {
 
 /// Parse a decimal: digits `.` digits
 pub fn decimal(input: Span<'_>) -> IResult<Span<'_>, f64> {
-    let (input, s) = recognize(tuple((opt(char('-')), digit1, char('.'), digit1)))(input)?;
+    let (input, s) = recognize((opt(char('-')), digit1, char('.'), digit1)).parse(input)?;
     let n: f64 = s.fragment().parse().map_err(|_| {
         nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Digit))
     })?;
@@ -212,7 +213,8 @@ pub fn cardinal(input: Span<'_>) -> IResult<Span<'_>, (Option<u32>, Option<Strin
         map(take_while1(|c: char| c.is_ascii_digit()), |s: Span<'_>| {
             s.fragment().to_string()
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     let min = if min_str.fragment().is_empty() {
         None
@@ -285,7 +287,8 @@ fn path_identifier(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, id) = recognize(pair(
         take_while1(|c: char| c.is_ascii_alphabetic() || c == '_'),
         take_while(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-'),
-    ))(input)?;
+    ))
+    .parse(input)?;
     Ok((input, id.fragment().to_string()))
 }
 
@@ -354,7 +357,8 @@ pub fn coded_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     // Optional system part before '#'
     let (input, system_part) = opt(take_while(|c| {
         c != '#' && c != ' ' && c != '\n' && c != '\t'
-    }))(input)?;
+    }))
+    .parse(input)?;
     let has_hash = input.fragment().starts_with('#');
     if !has_hash {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -365,7 +369,7 @@ pub fn coded_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     let (input, _) = char('#')(input)?;
     let (input, code) = take_while1(|c: char| !c.is_whitespace() && c != '"')(input)?;
     let (input, _) = ws(input)?;
-    let (input, display) = opt(quoted_string)(input)?;
+    let (input, display) = opt(quoted_string).parse(input)?;
 
     let system = system_part.and_then(|s| {
         let frag = s.fragment();
@@ -399,7 +403,8 @@ pub fn fsh_flag(input: Span<'_>) -> IResult<Span<'_>, FshFlag> {
         value(FshFlag::Normative, tag("N")),
         value(FshFlag::TrialUse, tag("TU")),
         value(FshFlag::Draft, tag("D")),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse a list of flags separated by whitespace
@@ -450,7 +455,8 @@ pub fn fsh_value(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
             let (input, s) = identifier(input)?;
             Ok((input, FshValue::InstanceRef(s.to_string())))
         },
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn parse_numeric_leading_instance_ref(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
@@ -545,7 +551,8 @@ fn parse_ratio(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
         parse_quantity,
         map(decimal, FshValue::Decimal),
         map(integer, FshValue::Integer),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char(':')(input)?;
     let (input, _) = ws(input)?;
@@ -553,7 +560,8 @@ fn parse_ratio(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
         parse_quantity,
         map(decimal, FshValue::Decimal),
         map(integer, FshValue::Integer),
-    ))(input)?;
+    ))
+    .parse(input)?;
     Ok((
         input,
         FshValue::Ratio {
@@ -565,7 +573,7 @@ fn parse_ratio(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
 
 fn parse_quantity(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     // The value may be a decimal or a plain integer (`85 'kg'` is valid FSH).
-    let (input, val) = alt((decimal, map(integer, |i| i as f64)))(input)?;
+    let (input, val) = alt((decimal, map(integer, |i| i as f64))).parse(input)?;
     let (input, _) = take_while1(|c| c == ' ' || c == '\t')(input)?;
     // unit is a single-quoted UCUM code (`'kg'`), a double-quoted string, or
     // a bare calendar unit (`1 year`); a bare unit must not swallow trailing
@@ -581,9 +589,10 @@ fn parse_quantity(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
             ),
             |unit: &String| unit.starts_with(char::is_alphabetic),
         ),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, _) = ws(input)?;
-    let (input, display) = opt(quoted_string)(input)?;
+    let (input, display) = opt(quoted_string).parse(input)?;
     Ok((
         input,
         FshValue::Quantity {
@@ -607,7 +616,7 @@ fn parse_reference(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
     let (input, target) = take_while(|c| c != ')')(input)?;
     let (input, _) = char(')')(input)?;
     let (input, _) = ws(input)?;
-    let (input, display) = opt(quoted_string)(input)?;
+    let (input, display) = opt(quoted_string).parse(input)?;
     Ok((
         input,
         FshValue::Reference {
@@ -631,7 +640,7 @@ fn parse_canonical(input: Span<'_>) -> IResult<Span<'_>, FshValue> {
 /// Consume to end of line (or EOF), returning the content
 pub fn rest_of_line(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, content) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     Ok((input, content.fragment().trim().to_string()))
 }
 
@@ -649,8 +658,9 @@ pub fn meta_key_value<'a>(key: &'static str, input: Span<'a>) -> IResult<Span<'a
             take_while1(|c: char| c != '\n' && c != '\r'),
             |s: Span<'_>| strip_inline_comment(s.fragment()).trim().to_string(),
         ),
-    ))(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    ))
+    .parse(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     Ok((input, val))
 }
 

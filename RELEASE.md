@@ -37,7 +37,7 @@ This is the **single source of truth** for releasing Rust Health across all dist
 ## Prerequisites
 
 ```bash
-# Rust toolchain (≥ 1.91)
+# Rust toolchain (≥ 1.95)
 rustup update stable
 
 # Tools

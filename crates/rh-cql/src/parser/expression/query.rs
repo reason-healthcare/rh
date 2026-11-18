@@ -19,8 +19,8 @@ use nom::{
     character::complete::char,
     combinator::{map, opt, value},
     multi::{many0, separated_list1},
-    sequence::{delimited, preceded, tuple},
-    IResult,
+    sequence::{delimited, preceded},
+    IResult, Parser,
 };
 
 // ============================================================================
@@ -117,13 +117,13 @@ fn is_timing_alias_keyword(alias: &str) -> bool {
 /// form.  Using a single parser here avoids repeating the same 7-line block
 /// in five different query variants.
 fn parse_query_tail(input: Span<'_>) -> IResult<Span<'_>, QueryTail> {
-    let (input, let_groups) = many0(parse_let_clause_group)(input)?;
+    let (input, let_groups) = many0(parse_let_clause_group).parse(input)?;
     let let_clauses = let_groups.into_iter().flatten().collect::<Vec<_>>();
-    let (input, relationships) = many0(parse_relationship_clause)(input)?;
-    let (input, where_clause) = opt(preceded(ws(keyword("where")), expression))(input)?;
-    let (input, return_clause) = opt(parse_return_clause)(input)?;
-    let (input, aggregate_clause) = opt(parse_aggregate_clause)(input)?;
-    let (input, sort_clause) = opt(parse_sort_clause)(input)?;
+    let (input, relationships) = many0(parse_relationship_clause).parse(input)?;
+    let (input, where_clause) = opt(preceded(ws(keyword("where")), expression)).parse(input)?;
+    let (input, return_clause) = opt(parse_return_clause).parse(input)?;
+    let (input, aggregate_clause) = opt(parse_aggregate_clause).parse(input)?;
+    let (input, sort_clause) = opt(parse_sort_clause).parse(input)?;
     Ok((
         input,
         QueryTail {
@@ -140,7 +140,7 @@ fn parse_query_tail(input: Span<'_>) -> IResult<Span<'_>, QueryTail> {
 /// Parse a full query with explicit `from` keyword
 pub(crate) fn parse_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(keyword("from"))(input)?;
-    let (input, sources) = separated_list1(ws(char(',')), parse_query_source)(input)?;
+    let (input, sources) = separated_list1(ws(char(',')), parse_query_source).parse(input)?;
     let (input, tail) = parse_query_tail(input)?;
     Ok((input, tail.into_query(sources)))
 }
@@ -153,7 +153,7 @@ pub(crate) fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Ex
 
     // Try to parse an alias (this is what distinguishes a query from a plain retrieve)
     // Use opt to avoid consuming tokens if it fails
-    let (input, alias_opt) = opt(any_identifier)(input)?;
+    let (input, alias_opt) = opt(any_identifier).parse(input)?;
 
     // If no alias, fail - this should be handled as a plain retrieve
     let alias = match alias_opt {
@@ -188,7 +188,7 @@ pub(crate) fn parse_single_source_query(input: Span<'_>) -> IResult<Span<'_>, Ex
 pub(crate) fn parse_parenthesized_source_query(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     // Parse a parenthesized expression
     let (input, _) = skip_ws_and_comments(input)?;
-    let (input, source_expr) = delimited(ws(char('(')), expression, ws(char(')')))(input)?;
+    let (input, source_expr) = delimited(ws(char('(')), expression, ws(char(')'))).parse(input)?;
 
     // Then look for an alias (with whitespace handling)
     let (input, _) = skip_ws_and_comments(input)?;
@@ -227,7 +227,7 @@ pub(crate) fn parse_identifier_source_query(input: Span<'_>) -> IResult<Span<'_>
     });
 
     // Check for property access chain (.property)
-    let (input, properties) = many0(preceded(ws(char('.')), any_identifier))(input)?;
+    let (input, properties) = many0(preceded(ws(char('.')), any_identifier)).parse(input)?;
 
     // Build property access chain
     for prop in properties {
@@ -284,7 +284,7 @@ pub(crate) fn parse_unquoted_identifier_source_query(
     });
 
     // Check for property access chain (.property)
-    let (input, properties) = many0(preceded(ws(char('.')), any_identifier))(input)?;
+    let (input, properties) = many0(preceded(ws(char('.')), any_identifier)).parse(input)?;
 
     // Build property access chain
     for prop in properties {
@@ -358,10 +358,11 @@ fn parse_simple_source_expression(input: Span<'_>) -> IResult<Span<'_>, Expressi
         parse_bare_list_selector,
         map(delimited(ws(char('(')), expression, ws(char(')'))), |e| e),
         parse_function_or_identifier,
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     // Allow member access chains on the base
-    let (input, suffixes) = many0(alt((parse_member_suffix, parse_index_suffix)))(input)?;
+    let (input, suffixes) = many0(alt((parse_member_suffix, parse_index_suffix))).parse(input)?;
 
     Ok((
         input,
@@ -400,7 +401,7 @@ fn parse_let_clause_item(input: Span<'_>) -> IResult<Span<'_>, LetClause> {
 /// Parse a `let` group: `let <id>: <expr> [, <id>: <expr>]*`
 fn parse_let_clause_group(input: Span<'_>) -> IResult<Span<'_>, Vec<LetClause>> {
     let (input, _) = ws(keyword("let"))(input)?;
-    separated_list1(ws(char(',')), parse_let_clause_item)(input)
+    separated_list1(ws(char(',')), parse_let_clause_item).parse(input)
 }
 
 fn parse_aggregate_clause(input: Span<'_>) -> IResult<Span<'_>, AggregateClause> {
@@ -408,14 +409,16 @@ fn parse_aggregate_clause(input: Span<'_>) -> IResult<Span<'_>, AggregateClause>
     let (input, distinct) = opt(ws(alt((
         value(true, keyword("distinct")),
         value(false, keyword("all")),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
     let (input, identifier) = ws(any_identifier)(input)?;
     let (input, starting) = opt(|input| {
         let (input, _) = ws(keyword("starting"))(input)?;
         let (input, distinct_start) = opt(ws(alt((
             value(true, keyword("distinct")),
             value(false, keyword("all")),
-        ))))(input)?;
+        ))))
+        .parse(input)?;
         let (input, expr) = expression(input)?;
         Ok((
             input,
@@ -424,7 +427,8 @@ fn parse_aggregate_clause(input: Span<'_>) -> IResult<Span<'_>, AggregateClause>
                 expression: Box::new(expr),
             },
         ))
-    })(input)?;
+    })
+    .parse(input)?;
     let (input, _) = ws(char(':'))(input)?;
     let (input, expr) = expression(input)?;
 
@@ -448,9 +452,10 @@ fn parse_relationship_clause(input: Span<'_>) -> IResult<Span<'_>, RelationshipC
 
     let (input, source) = parse_query_source(input)?;
     let (input, such_that) = opt(preceded(
-        tuple((ws(keyword("such")), ws(keyword("that")))),
+        (ws(keyword("such")), ws(keyword("that"))),
         expression,
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -465,8 +470,8 @@ fn parse_relationship_clause(input: Span<'_>) -> IResult<Span<'_>, RelationshipC
 
 fn parse_return_clause(input: Span<'_>) -> IResult<Span<'_>, ReturnClause> {
     let (input, _) = ws(keyword("return"))(input)?;
-    let (input, distinct) = opt(keyword("distinct"))(input)?;
-    let (input, all) = opt(keyword("all"))(input)?;
+    let (input, distinct) = opt(keyword("distinct")).parse(input)?;
+    let (input, all) = opt(keyword("all")).parse(input)?;
     let (input, expr) = expression(input)?;
 
     Ok((
@@ -482,7 +487,7 @@ fn parse_return_clause(input: Span<'_>) -> IResult<Span<'_>, ReturnClause> {
 
 fn parse_sort_clause(input: Span<'_>) -> IResult<Span<'_>, SortClause> {
     let (input, _) = ws(keyword("sort"))(input)?;
-    let (input, _) = opt(keyword("by"))(input)?;
+    let (input, _) = opt(keyword("by")).parse(input)?;
 
     // `sort desc` / `sort asc` without a `by` clause: direction-only sort by value.
     let (input_after_dir, dir_only) = opt(ws(alt((
@@ -494,7 +499,8 @@ fn parse_sort_clause(input: Span<'_>) -> IResult<Span<'_>, SortClause> {
             SortDirection::Descending,
             alt((keyword("desc"), keyword("descending"))),
         ),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
 
     if let Some(dir) = dir_only {
         // Direction-only: sort by element value, no expression.
@@ -510,7 +516,7 @@ fn parse_sort_clause(input: Span<'_>) -> IResult<Span<'_>, SortClause> {
         ));
     }
 
-    let (input, items) = separated_list1(ws(char(',')), parse_sort_item)(input)?;
+    let (input, items) = separated_list1(ws(char(',')), parse_sort_item).parse(input)?;
 
     Ok((
         input,
@@ -532,7 +538,8 @@ fn parse_sort_item(input: Span<'_>) -> IResult<Span<'_>, SortItem> {
             SortDirection::Descending,
             alt((keyword("desc"), keyword("descending"))),
         ),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
 
     Ok((
         input,

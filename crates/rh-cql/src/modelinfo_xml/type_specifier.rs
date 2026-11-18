@@ -64,7 +64,7 @@ pub(super) fn parse_type_specifier_attrs(e: &BytesStart) -> Result<Option<TypeSp
         Some("ListTypeSpecifier") => {
             let mut spec = ListTypeSpecifier::default();
             for attr in e.attributes().flatten() {
-                let key = std::str::from_utf8(attr.key.as_ref())?;
+                let key = attr.key.into_inner();
                 let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
                 if key == "elementType" {
                     spec.element_type = Some(value);
@@ -75,7 +75,7 @@ pub(super) fn parse_type_specifier_attrs(e: &BytesStart) -> Result<Option<TypeSp
         Some("IntervalTypeSpecifier") => {
             let mut spec = IntervalTypeSpecifier::default();
             for attr in e.attributes().flatten() {
-                let key = std::str::from_utf8(attr.key.as_ref())?;
+                let key = attr.key.into_inner();
                 let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
                 if key == "pointType" {
                     spec.point_type = Some(value);
@@ -92,7 +92,7 @@ pub(super) fn parse_named_type_specifier_attrs(e: &BytesStart) -> Result<NamedTy
     let mut spec = NamedTypeSpecifier::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -115,7 +115,7 @@ pub(super) fn parse_list_type_specifier<R: BufRead>(
     let mut spec = ListTypeSpecifier::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "elementType" {
@@ -127,7 +127,7 @@ pub(super) fn parse_list_type_specifier<R: BufRead>(
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"elementTypeSpecifier" {
+                if e.name().into_inner() == "elementTypeSpecifier" {
                     if let Some(inner) = parse_type_specifier_element(reader, &e)? {
                         spec.element_type_specifier = Some(Box::new(inner));
                     }
@@ -135,16 +135,16 @@ pub(super) fn parse_list_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"elementTypeSpecifier" => {
+            Event::Empty(e) if e.name().into_inner() == "elementTypeSpecifier" => {
                 if let Some(inner) = parse_type_specifier_attrs(&e)? {
                     spec.element_type_specifier = Some(Box::new(inner));
                 }
             }
             Event::End(e) => {
                 let name = e.name();
-                if name.as_ref() == b"elementTypeSpecifier"
-                    || name.as_ref() == b"typeSpecifier"
-                    || name.as_ref().ends_with(b"TypeSpecifier")
+                if name.into_inner() == "elementTypeSpecifier"
+                    || name.into_inner() == "typeSpecifier"
+                    || name.into_inner().ends_with("TypeSpecifier")
                 {
                     break;
                 }
@@ -167,7 +167,7 @@ pub(super) fn parse_interval_type_specifier<R: BufRead>(
     let mut spec = IntervalTypeSpecifier::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "pointType" {
@@ -179,7 +179,7 @@ pub(super) fn parse_interval_type_specifier<R: BufRead>(
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"pointTypeSpecifier" {
+                if e.name().into_inner() == "pointTypeSpecifier" {
                     if let Some(inner) = parse_type_specifier_element(reader, &e)? {
                         spec.point_type_specifier = Some(Box::new(inner));
                     }
@@ -187,16 +187,16 @@ pub(super) fn parse_interval_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"pointTypeSpecifier" => {
+            Event::Empty(e) if e.name().into_inner() == "pointTypeSpecifier" => {
                 if let Some(inner) = parse_type_specifier_attrs(&e)? {
                     spec.point_type_specifier = Some(Box::new(inner));
                 }
             }
             Event::End(e) => {
                 let name = e.name();
-                if name.as_ref() == b"elementTypeSpecifier"
-                    || name.as_ref() == b"typeSpecifier"
-                    || name.as_ref().ends_with(b"TypeSpecifier")
+                if name.into_inner() == "elementTypeSpecifier"
+                    || name.into_inner() == "typeSpecifier"
+                    || name.into_inner().ends_with("TypeSpecifier")
                 {
                     break;
                 }
@@ -222,7 +222,7 @@ pub(super) fn parse_choice_type_specifier<R: BufRead>(
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
                 let name = e.name();
-                if name.as_ref() == b"choice" {
+                if name.into_inner() == "choice" {
                     if let Some(inner) = parse_type_specifier_element(reader, &e)? {
                         spec.choice.push(inner);
                     }
@@ -231,16 +231,16 @@ pub(super) fn parse_choice_type_specifier<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"choice" => {
+            Event::Empty(e) if e.name().into_inner() == "choice" => {
                 if let Some(inner) = parse_type_specifier_attrs(&e)? {
                     spec.choice.push(inner);
                 }
             }
             Event::End(e) => {
                 let name = e.name();
-                if name.as_ref() == b"elementTypeSpecifier"
-                    || name.as_ref() == b"typeSpecifier"
-                    || name.as_ref().ends_with(b"TypeSpecifier")
+                if name.into_inner() == "elementTypeSpecifier"
+                    || name.into_inner() == "typeSpecifier"
+                    || name.into_inner().ends_with("TypeSpecifier")
                 {
                     break;
                 }
@@ -265,22 +265,22 @@ pub(super) fn parse_tuple_type_specifier<R: BufRead>(
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"element" {
+                if e.name().into_inner() == "element" {
                     let elem = parse_tuple_element_definition(reader, &e)?;
                     spec.element.push(elem.into());
                 } else {
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"element" => {
+            Event::Empty(e) if e.name().into_inner() == "element" => {
                 let elem = parse_tuple_element_attrs(&e)?;
                 spec.element.push(elem.into());
             }
             Event::End(e) => {
                 let name = e.name();
-                if name.as_ref() == b"elementTypeSpecifier"
-                    || name.as_ref() == b"typeSpecifier"
-                    || name.as_ref().ends_with(b"TypeSpecifier")
+                if name.into_inner() == "elementTypeSpecifier"
+                    || name.into_inner() == "typeSpecifier"
+                    || name.into_inner().ends_with("TypeSpecifier")
                 {
                     break;
                 }
@@ -306,7 +306,7 @@ pub(super) fn parse_tuple_element_definition<R: BufRead>(
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"elementTypeSpecifier" {
+                if e.name().into_inner() == "elementTypeSpecifier" {
                     if let Some(spec) = parse_type_specifier_element(reader, &e)? {
                         elem.element_type_specifier = Some(spec);
                     }
@@ -314,12 +314,12 @@ pub(super) fn parse_tuple_element_definition<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"elementTypeSpecifier" => {
+            Event::Empty(e) if e.name().into_inner() == "elementTypeSpecifier" => {
                 if let Some(spec) = parse_type_specifier_attrs(&e)? {
                     elem.element_type_specifier = Some(spec);
                 }
             }
-            Event::End(e) if e.name().as_ref() == b"element" => break,
+            Event::End(e) if e.name().into_inner() == "element" => break,
             Event::Eof => break,
             _ => {}
         }

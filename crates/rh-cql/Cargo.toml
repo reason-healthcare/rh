@@ -2,6 +2,7 @@
 name = "rh-cql"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "CQL (Clinical Quality Language) capabilities including CQL-to-ELM translation and execution"
 license.workspace = true
 repository.workspace = true
@@ -25,23 +26,23 @@ nom = { workspace = true }
 quick-xml = { workspace = true }
 regex = { workspace = true }
 tracing = { workspace = true }
-sha2 = "0.10"
+sha2 = "0.11.1"
 rh-foundation = { path = "../rh-foundation", version = "0.3.0" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 rh-foundation = { path = "../rh-foundation", version = "0.3.0", features = ["wasm"] }
-wasm-bindgen = { version = "0.2", optional = true }
-js-sys = { version = "0.3", optional = true }
-console_error_panic_hook = { version = "0.1", optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
+console_error_panic_hook = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3"
+workspace = true
 features = [
   "console",
 ]
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { workspace = true, features = ["html_reports"] }
 quick-xml = { workspace = true }
 
 [[bench]]

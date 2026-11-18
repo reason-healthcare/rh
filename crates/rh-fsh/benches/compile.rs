@@ -1,9 +1,10 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use rh_fsh::{
     build_definition_index, compile_fsh, CompiledSchema, DependencyDefinitionSet, FhirDefs,
     FshConfig, FshParser, FshTank, SemanticProgram,
 };
 use rh_hl7_fhir_r4_core::metadata::get_field_info;
+use std::hint::black_box;
 
 fn make_fsh_input(n: usize) -> String {
     let mut buf = String::new();

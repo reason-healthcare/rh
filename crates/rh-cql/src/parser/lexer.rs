@@ -20,8 +20,8 @@ use nom::{
     character::complete::{char, digit1, multispace0, multispace1},
     combinator::{map, not, opt, peek, recognize, value},
     multi::many0,
-    sequence::{delimited, pair, preceded, tuple},
-    IResult,
+    sequence::{delimited, pair, preceded},
+    IResult, Parser,
 };
 
 // ============================================================================
@@ -184,9 +184,10 @@ pub fn is_keyword(s: &str) -> bool {
 /// Parse whitespace (spaces, tabs, newlines)
 pub fn ws<'a, F, O>(inner: F) -> impl FnMut(Span<'a>) -> IResult<Span<'a>, O>
 where
-    F: FnMut(Span<'a>) -> IResult<Span<'a>, O>,
+    F: Parser<Span<'a>, Output = O, Error = nom::error::Error<Span<'a>>>,
 {
-    delimited(skip_ws_and_comments, inner, skip_ws_and_comments)
+    let mut parser = delimited(skip_ws_and_comments, inner, skip_ws_and_comments);
+    move |input| parser.parse(input)
 }
 
 /// Skip whitespace and comments
@@ -195,18 +196,19 @@ pub fn skip_ws_and_comments(input: Span<'_>) -> IResult<Span<'_>, ()> {
         value((), multispace1),
         value((), line_comment),
         value((), block_comment),
-    )))(input)?;
+    )))
+    .parse(input)?;
     Ok((input, ()))
 }
 
 /// Parse a single-line comment (// ... \n)
 fn line_comment(input: Span<'_>) -> IResult<Span<'_>, Span<'_>> {
-    recognize(pair(tag("//"), take_while(|c| c != '\n')))(input)
+    recognize(pair(tag("//"), take_while(|c| c != '\n'))).parse(input)
 }
 
 /// Parse a block comment (/* ... */)
 fn block_comment(input: Span<'_>) -> IResult<Span<'_>, Span<'_>> {
-    recognize(tuple((tag("/*"), take_until("*/"), tag("*/"))))(input)
+    recognize((tag("/*"), take_until("*/"), tag("*/"))).parse(input)
 }
 
 // ============================================================================
@@ -221,7 +223,8 @@ pub fn identifier(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, ident) = recognize(pair(
         take_while1(|c: char| c.is_alphabetic() || c == '_'),
         take_while(|c: char| c.is_alphanumeric() || c == '_'),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     let name = ident.fragment().to_string();
 
@@ -243,18 +246,19 @@ pub fn quoted_identifier(input: Span<'_>) -> IResult<Span<'_>, String> {
             delimited(char('`'), take_while(|c| c != '`'), char('`')),
             |s: Span<'_>| s.fragment().to_string(),
         ),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse any identifier (regular or quoted)
 pub fn any_identifier(input: Span<'_>) -> IResult<Span<'_>, String> {
-    alt((quoted_identifier, identifier))(input)
+    alt((quoted_identifier, identifier)).parse(input)
 }
 
 /// Parse a qualified identifier (namespace.name or just name)
 pub fn qualified_identifier(input: Span<'_>) -> IResult<Span<'_>, Vec<String>> {
     let (input, first) = any_identifier(input)?;
-    let (input, rest) = many0(preceded(char('.'), any_identifier))(input)?;
+    let (input, rest) = many0(preceded(char('.'), any_identifier)).parse(input)?;
 
     let mut parts = vec![first];
     parts.extend(rest);
@@ -280,7 +284,7 @@ pub fn keyword<'a>(kw: &'static str) -> impl FnMut(Span<'a>) -> IResult<Span<'a>
         let (remaining, matched) = tag_no_case(kw)(input)?;
         // Ensure the keyword is not followed by an identifier character
         let (remaining, _) =
-            not(peek(take_while1(|c: char| c.is_alphanumeric() || c == '_')))(remaining)?;
+            not(peek(take_while1(|c: char| c.is_alphanumeric() || c == '_'))).parse(remaining)?;
         Ok((remaining, matched))
     }
 }
@@ -373,7 +377,8 @@ fn multi_char_operator(input: Span<'_>) -> IResult<Span<'_>, Operator> {
         value(Operator::LessOrEqual, tag("<=")),
         value(Operator::GreaterOrEqual, tag(">=")),
         value(Operator::Arrow, tag("->")),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse arithmetic operators
@@ -384,7 +389,8 @@ fn arithmetic_operator(input: Span<'_>) -> IResult<Span<'_>, Operator> {
         value(Operator::Star, char('*')),
         value(Operator::Slash, char('/')),
         value(Operator::Caret, char('^')),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse comparison operators (single char)
@@ -394,7 +400,8 @@ fn comparison_operator(input: Span<'_>) -> IResult<Span<'_>, Operator> {
         value(Operator::Equivalent, char('~')),
         value(Operator::Less, char('<')),
         value(Operator::Greater, char('>')),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse punctuation operators
@@ -406,7 +413,8 @@ fn punctuation_operator(input: Span<'_>) -> IResult<Span<'_>, Operator> {
         value(Operator::Comma, char(',')),
         value(Operator::Colon, char(':')),
         value(Operator::Semicolon, char(';')),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse bracket operators
@@ -418,7 +426,8 @@ fn bracket_operator(input: Span<'_>) -> IResult<Span<'_>, Operator> {
         value(Operator::RightBracket, char(']')),
         value(Operator::LeftBrace, char('{')),
         value(Operator::RightBrace, char('}')),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// Parse an operator
@@ -429,7 +438,8 @@ pub fn operator(input: Span<'_>) -> IResult<Span<'_>, Operator> {
         comparison_operator,
         punctuation_operator,
         bracket_operator,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // ============================================================================
@@ -472,7 +482,8 @@ pub fn string_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
                 value('\r', char('r')),
                 value('\t', char('t')),
                 value('\x0C', char('f')),
-            ))(rest)?;
+            ))
+            .parse(rest)?;
             result.push(escaped);
             remaining = rest;
         } else {
@@ -487,7 +498,7 @@ pub fn string_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
 
 /// Parse an integer literal
 pub fn integer_literal(input: Span<'_>) -> IResult<Span<'_>, i64> {
-    let (input, sign) = opt(char('-'))(input)?;
+    let (input, sign) = opt(char('-')).parse(input)?;
     let (input, digits) = digit1(input)?;
 
     let value: i64 = digits.fragment().parse().unwrap_or(0);
@@ -505,7 +516,7 @@ pub fn long_literal(input: Span<'_>) -> IResult<Span<'_>, i64> {
 
 /// Parse a decimal literal
 fn decimal_literal_text(input: Span<'_>) -> IResult<Span<'_>, Span<'_>> {
-    recognize(tuple((opt(char('-')), digit1, char('.'), digit1)))(input)
+    recognize((opt(char('-')), digit1, char('.'), digit1)).parse(input)
 }
 
 pub fn decimal_literal(input: Span<'_>) -> IResult<Span<'_>, f64> {
@@ -518,7 +529,7 @@ pub fn decimal_literal(input: Span<'_>) -> IResult<Span<'_>, f64> {
 /// Parse a quantity literal (number with unit)
 /// Example: 5 'mg', 10.5 'kg', 100 '[lb_av]'
 pub fn quantity_literal(input: Span<'_>) -> IResult<Span<'_>, (f64, String)> {
-    let (input, value) = alt((decimal_literal, map(integer_literal, |i| i as f64)))(input)?;
+    let (input, value) = alt((decimal_literal, map(integer_literal, |i| i as f64))).parse(input)?;
     let (input, _) = multispace0(input)?;
     let (input, unit) = string_literal(input)?;
     Ok((input, (value, unit)))
@@ -530,14 +541,15 @@ pub fn date_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
 
     // Optional month
-    let (input, month_day) = opt(tuple((
+    let (input, month_day) = opt((
         char('-'),
         take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        opt(tuple((
+        opt((
             char('-'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))),
-    )))(input)?;
+        )),
+    ))
+    .parse(input)?;
 
     // Ensure this is not a datetime
     if input.fragment().starts_with('T') {
@@ -572,18 +584,19 @@ pub fn time_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
 
     // Optional minutes, seconds, and milliseconds.
-    let (input, time_rest) = opt(tuple((
+    let (input, time_rest) = opt((
         char(':'),
         take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        opt(tuple((
+        opt((
             char(':'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
             opt(preceded(
                 char('.'),
                 take_while_m_n(1, 3, |c: char| c.is_ascii_digit()),
             )),
-        ))),
-    )))(input)?;
+        )),
+    ))
+    .parse(input)?;
 
     let time_str = match time_rest {
         Some((_, min, Some((_, sec, Some(ms))))) => {
@@ -617,34 +630,36 @@ pub fn datetime_literal(input: Span<'_>) -> IResult<Span<'_>, String> {
     let (input, hour) = take_while_m_n(2, 2, |c: char| c.is_ascii_digit())(input)?;
 
     // Optional minutes
-    let (input, time_rest) = opt(tuple((
+    let (input, time_rest) = opt((
         char(':'),
         take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        opt(tuple((
+        opt((
             char(':'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
             opt(preceded(
                 char('.'),
                 take_while_m_n(1, 3, |c: char| c.is_ascii_digit()),
             )),
-        ))),
-    )))(input)?;
+        )),
+    ))
+    .parse(input)?;
 
     // Optional timezone
     let (input, tz) = opt(alt((
         map(char('Z'), |_| "Z".to_string()),
         map(
-            tuple((
+            (
                 alt((char('+'), char('-'))),
                 take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
                 char(':'),
                 take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-            )),
+            ),
             |(sign, h, _, m): (char, Span<'_>, char, Span<'_>)| {
                 format!("{sign}{}:{}", h.fragment(), m.fragment())
             },
         ),
-    )))(input)?;
+    )))
+    .parse(input)?;
 
     let datetime_str = match time_rest {
         Some((_, min, Some((_, sec, Some(ms))))) => {
@@ -1163,8 +1178,13 @@ mod tests {
 
     #[test]
     fn test_block_comment_multiline() {
-        let (rest, _) = block_comment(span("/* multi\nline\ncomment */code")).unwrap();
+        let input = nom::Input::take_from(&span("  /* multi\nline\nété */code"), 2);
+        let (rest, comment) = block_comment(input).unwrap();
         assert_eq!(rest.fragment(), "code");
+        assert_eq!(rest.line(), 3);
+        assert_eq!(rest.column(), 7);
+        assert_eq!(rest.offset(), "  /* multi\nline\nété */".len());
+        assert_eq!(comment.location(), input.location());
     }
 
     #[test]

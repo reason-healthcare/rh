@@ -12,9 +12,8 @@
 #![allow(dead_code)]
 //! - [`ColorMode`] — color / TTY policy
 
-use is_terminal::IsTerminal;
 use serde::{Deserialize, Serialize};
-use std::io;
+use std::io::{self, IsTerminal};
 
 // ---------------------------------------------------------------------------
 // ExitCode

@@ -36,10 +36,10 @@ pulldown-cmark = { workspace = true }
 base64 = { workspace = true }
 
 # UUID generation for executable bundle entry fullUrls
-uuid = { version = "1", features = ["v4"] }
+uuid = { workspace = true, features = ["v4"] }
 
 # Temporary directory management for shell processors
-tempfile = "3"
+tempfile = { workspace = true }
 
 # Recursive directory walking for FSH file discovery
 walkdir = { workspace = true }
@@ -52,7 +52,7 @@ rh-fsh = { path = "../rh-fsh", version = "0.3.0" }
 rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.3.0" }
 
 [dev-dependencies]
-tempfile = "3"
+tempfile = { workspace = true }
 
 [lints]
 workspace = true
