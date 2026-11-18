@@ -10,15 +10,15 @@ use nom::{
     character::complete::char,
     combinator::{map, opt},
     multi::{separated_list0, separated_list1},
-    sequence::{preceded, terminated, tuple},
-    IResult,
+    sequence::{preceded, terminated},
+    IResult, Parser,
 };
 
 pub(crate) fn parse_retrieve(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(char('['))(input)?;
 
     // Context expression (optional)
-    let (input, context) = opt(terminated(expression, ws(tag_no_case("->"))))(input)?;
+    let (input, context) = opt(terminated(expression, ws(tag_no_case("->")))).parse(input)?;
 
     // Data type
     let (input, data_type) = parse_type_specifier(input)?;
@@ -34,20 +34,21 @@ pub(crate) fn parse_retrieve(input: Span<'_>) -> IResult<Span<'_>, Expression> {
         alt((
             // Form 3: codePath in codesExpression
             map(
-                tuple((any_identifier, ws(keyword("in")), expression)),
+                (any_identifier, ws(keyword("in")), expression),
                 |(path, _, codes_expr)| (Some(path), codes_expr),
             ),
             // Form 4: codePath ~ codeExpression. CQL's equivalent operator is
             // commonly used with a declared code, for example
             // `[Encounter: class ~ "Ambulatory"]`.
             map(
-                tuple((any_identifier, ws(char('~')), expression)),
+                (any_identifier, ws(char('~')), expression),
                 |(path, _, codes_expr)| (Some(path), codes_expr),
             ),
             // Form 2: just codesExpression (default code path)
             map(expression, |codes_expr| (None, codes_expr)),
         )),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     let (input, _) = ws(char(']'))(input)?;
 
@@ -80,12 +81,12 @@ pub fn parse_type_specifier(input: Span<'_>) -> IResult<Span<'_>, TypeSpecifier>
     alt((
         // List<Type>
         map(
-            tuple((
+            (
                 keyword("List"),
                 ws(char('<')),
                 parse_type_specifier,
                 ws(char('>')),
-            )),
+            ),
             |(_, _, element_type, _)| {
                 TypeSpecifier::List(ListTypeSpecifier {
                     element_type: Box::new(element_type),
@@ -94,12 +95,12 @@ pub fn parse_type_specifier(input: Span<'_>) -> IResult<Span<'_>, TypeSpecifier>
         ),
         // Interval<Type>
         map(
-            tuple((
+            (
                 keyword("Interval"),
                 ws(char('<')),
                 parse_type_specifier,
                 ws(char('>')),
-            )),
+            ),
             |(_, _, point_type, _)| {
                 TypeSpecifier::Interval(IntervalTypeSpecifier {
                     point_type: Box::new(point_type),
@@ -108,29 +109,30 @@ pub fn parse_type_specifier(input: Span<'_>) -> IResult<Span<'_>, TypeSpecifier>
         ),
         // Tuple { name Type, ... }
         map(
-            tuple((
+            (
                 keyword("Tuple"),
                 ws(char('{')),
                 separated_list0(ws(char(',')), parse_tuple_type_element),
                 ws(char('}')),
-            )),
+            ),
             |(_, _, elements, _)| TypeSpecifier::Tuple(TupleTypeSpecifier { elements }),
         ),
         // Choice<Type, Type, ...>
         map(
-            tuple((
+            (
                 keyword("Choice"),
                 ws(char('<')),
                 separated_list1(ws(char(',')), parse_type_specifier),
                 ws(char('>')),
-            )),
+            ),
             |(_, _, types, _)| TypeSpecifier::Choice(ChoiceTypeSpecifier { types }),
         ),
         // Named type (possibly qualified: Namespace.Type)
         map(parse_qualified_type_name, |(namespace, name)| {
             TypeSpecifier::Named(NamedTypeSpecifier { namespace, name })
         }),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn parse_tuple_type_element(input: Span<'_>) -> IResult<Span<'_>, TupleElementDef> {
@@ -142,7 +144,7 @@ fn parse_tuple_type_element(input: Span<'_>) -> IResult<Span<'_>, TupleElementDe
 }
 
 fn parse_qualified_type_name(input: Span<'_>) -> IResult<Span<'_>, (Option<String>, String)> {
-    let (input, parts) = separated_list1(char('.'), any_identifier)(input)?;
+    let (input, parts) = separated_list1(char('.'), any_identifier).parse(input)?;
 
     if parts.len() == 1 {
         Ok((input, (None, parts.into_iter().next().unwrap())))

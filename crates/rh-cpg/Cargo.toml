@@ -20,7 +20,7 @@ wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
 [dependencies]
 base64 = { workspace = true }
 chrono = { workspace = true }
-uuid = { version = "1", features = ["v4", "js"] }
+uuid = { workspace = true, features = ["v4", "js"] }
 # CPG only uses the in-memory CQL compile/evaluate APIs; the rh-cql
 # default "fs" feature (filesystem library providers) is unnecessary and
 # must not leak into the composed WASM build.
@@ -35,5 +35,5 @@ rh-validator = { path = "../rh-validator", version = "0.3.0" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 rh-foundation = { path = "../rh-foundation", version = "0.3.0", features = ["wasm"] }
-wasm-bindgen = { version = "0.2", optional = true }
-console_error_panic_hook = { version = "0.1", optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+console_error_panic_hook = { workspace = true, optional = true }

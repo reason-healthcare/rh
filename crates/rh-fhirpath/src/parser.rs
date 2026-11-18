@@ -8,19 +8,16 @@ use nom::{
     character::complete::{alpha1, char, digit1, multispace0},
     combinator::{map, opt, recognize},
     multi::{many0, separated_list0, separated_list1},
-    sequence::{delimited, preceded, tuple},
-    IResult,
+    sequence::{delimited, preceded},
+    IResult, Parser,
 };
 use rust_decimal::Decimal;
 
 // Parse compound duration literal (number + precision unit)
 // Examples: "6 months", "2 years", "24 hours"
 fn parse_compound_duration_literal(input: &str) -> IResult<&str, Literal> {
-    let (input, number_str) = recognize(tuple((
-        opt(char('-')),
-        digit1,
-        opt(tuple((char('.'), digit1))),
-    )))(input)?;
+    let (input, number_str) =
+        recognize((opt(char('-')), digit1, opt((char('.'), digit1)))).parse(input)?;
 
     let (input, _) = multispace0(input)?; // Allow space between number and precision
 
@@ -43,7 +40,8 @@ fn parse_compound_duration_literal(input: &str) -> IResult<&str, Literal> {
         map(tag("minute"), |_| DateTimePrecision::Minute),
         map(tag("second"), |_| DateTimePrecision::Second),
         map(tag("millisecond"), |_| DateTimePrecision::Millisecond),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     // Parse the number
     let count = if number_str.contains('.') {
@@ -162,9 +160,9 @@ fn strip_comments(input: &str) -> FhirPathResult<String> {
 }
 
 // Whitespace handling
-fn ws<'a, F, O>(inner: F) -> impl FnMut(&'a str) -> IResult<&'a str, O>
+fn ws<'a, F, O>(inner: F) -> impl Parser<&'a str, Output = O, Error = nom::error::Error<&'a str>>
 where
-    F: FnMut(&'a str) -> IResult<&'a str, O> + 'a,
+    F: Parser<&'a str, Output = O, Error = nom::error::Error<&'a str>>,
 {
     delimited(multispace0, inner, multispace0)
 }
@@ -177,7 +175,7 @@ fn parse_expression(input: &str) -> IResult<&str, Expression> {
 // Parse implies expressions (lowest precedence)
 fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_or_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("implies")), parse_or_expression))(input)?;
+    let (input, rest) = many0(preceded(ws(tag("implies")), parse_or_expression)).parse(input)?;
 
     Ok((
         input,
@@ -192,10 +190,8 @@ fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
 // Parse OR/XOR expressions
 fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_and_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((tag("or"), tag("xor")))),
-        parse_and_expression,
-    )))(input)?;
+    let (input, rest) =
+        many0((ws(alt((tag("or"), tag("xor")))), parse_and_expression)).parse(input)?;
 
     Ok((
         input,
@@ -217,7 +213,7 @@ fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
 // Parse AND expressions
 fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_equality_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("and")), parse_equality_expression))(input)?;
+    let (input, rest) = many0(preceded(ws(tag("and")), parse_equality_expression)).parse(input)?;
 
     Ok((
         input,
@@ -231,10 +227,8 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
 // Parse type expressions (is, as) — binds tighter than *, between unary and *
 fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_unary_expression(input)?;
-    let (input, rest) = many0(tuple((
-        ws(alt((tag("is"), tag("as")))),
-        parse_type_specifier,
-    )))(input)?;
+    let (input, rest) =
+        many0((ws(alt((tag("is"), tag("as")))), parse_type_specifier)).parse(input)?;
 
     Ok((
         input,
@@ -255,14 +249,14 @@ fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse type specifier (qualified name like System.String)
 fn parse_type_specifier(input: &str) -> IResult<&str, TypeSpecifier> {
-    let (input, qualified_name) = separated_list1(tag("."), parse_identifier)(input)?;
+    let (input, qualified_name) = separated_list1(tag("."), parse_identifier).parse(input)?;
     Ok((input, TypeSpecifier { qualified_name }))
 }
 
 // Parse equality and membership expressions (same precedence level)
 fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_inequality_expression(input)?;
-    let (input, rest) = many0(tuple((
+    let (input, rest) = many0((
         ws(alt((
             tag("!="),
             tag("!~"),
@@ -272,7 +266,8 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
             tag("in"),
         ))),
         parse_inequality_expression,
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -319,10 +314,11 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
 // Parse inequality expressions (<, <=, >, >=)
 fn parse_inequality_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_union_expression(input)?;
-    let (input, rest) = many0(tuple((
+    let (input, rest) = many0((
         ws(alt((tag("<="), tag(">="), tag("<"), tag(">")))),
         parse_union_expression,
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -346,10 +342,11 @@ fn parse_inequality_expression(input: &str) -> IResult<&str, Expression> {
 // Parse additive expressions (+, -, &)
 fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_multiplicative_expression(input)?;
-    let (input, rest) = many0(tuple((
+    let (input, rest) = many0((
         ws(alt((tag("+"), tag("-"), tag("&")))),
         parse_multiplicative_expression,
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -372,10 +369,11 @@ fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
 // Parse multiplicative expressions (*, /, div, mod)
 fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_type_expression(input)?;
-    let (input, rest) = many0(tuple((
+    let (input, rest) = many0((
         ws(alt((tag("div"), tag("mod"), tag("*"), tag("/")))),
         parse_type_expression,
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -412,13 +410,14 @@ fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
             }
         }),
         parse_invocation_expression,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // Parse union expressions — binds tighter than < but looser than +
 fn parse_union_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_additive_expression(input)?;
-    let (input, rest) = many0(preceded(ws(char('|')), parse_additive_expression))(input)?;
+    let (input, rest) = many0(preceded(ws(char('|')), parse_additive_expression)).parse(input)?;
 
     Ok((
         input,
@@ -440,7 +439,8 @@ fn parse_invocation_expression(input: &str) -> IResult<&str, Expression> {
             delimited(ws(char('[')), parse_expression, ws(char(']'))),
             InvocationOrIndex::Index,
         ),
-    )))(input)?;
+    )))
+    .parse(input)?;
 
     Ok((
         input,
@@ -477,7 +477,8 @@ fn parse_term(input: &str) -> IResult<&str, Expression> {
             delimited(ws(char('(')), parse_expression, ws(char(')'))),
             |expr| Expression::Term(Term::Parenthesized(Box::new(expr))),
         ),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // Parse invocation (function call or member access)
@@ -487,7 +488,8 @@ fn parse_invocation(input: &str) -> IResult<&str, Invocation> {
         map(tag("$index"), |_| Invocation::Index),
         map(tag("$total"), |_| Invocation::Total),
         parse_function_or_member,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // Parse function call or simple member access
@@ -498,13 +500,15 @@ fn parse_function_or_member(input: &str) -> IResult<&str, Invocation> {
             ws(char('(')),
             separated_list0(ws(char(',')), parse_sort_parameter),
             ws(char(')')),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         opt(delimited(
             ws(char('(')),
             separated_list0(ws(char(',')), parse_expression),
             ws(char(')')),
-        ))(input)?
+        ))
+        .parse(input)?
     };
 
     if let Some(parameters) = params {
@@ -516,7 +520,7 @@ fn parse_function_or_member(input: &str) -> IResult<&str, Invocation> {
 
 fn parse_sort_parameter(input: &str) -> IResult<&str, Expression> {
     let (input, expr) = parse_expression(input)?;
-    let (input, direction) = opt(ws(alt((tag("asc"), tag("desc")))))(input)?;
+    let (input, direction) = opt(ws(alt((tag("asc"), tag("desc"))))).parse(input)?;
     if let Some(direction) = direction {
         Ok((
             input,
@@ -532,7 +536,7 @@ fn parse_sort_parameter(input: &str) -> IResult<&str, Expression> {
 
 // Parse external constant
 fn parse_external_constant(input: &str) -> IResult<&str, String> {
-    preceded(char('%'), parse_identifier)(input)
+    preceded(char('%'), parse_identifier).parse(input)
 }
 
 // Parse literal values
@@ -549,7 +553,8 @@ fn parse_literal(input: &str) -> IResult<&str, Literal> {
         parse_datetime_precision_literal, // Try datetime precision keywords
         parse_string_literal,
         parse_number_literal,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // Parse string literal
@@ -612,10 +617,10 @@ fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
 
 // Parse number literal
 fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
-    let (input, number_str) = recognize(tuple((digit1, opt(tuple((char('.'), digit1))))))(input)?;
+    let (input, number_str) = recognize((digit1, opt((char('.'), digit1)))).parse(input)?;
 
     // Check for Long suffix
-    let (input, has_long_suffix) = opt(char('L'))(input)?;
+    let (input, has_long_suffix) = opt(char('L')).parse(input)?;
 
     if has_long_suffix.is_some() {
         // Explicit Long literal with 'L' suffix
@@ -660,7 +665,7 @@ fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
     let (input, year) = take_while_m_n(4, 4, |c: char| c.is_ascii_digit())(input)?;
 
     // Check if there's more date information
-    let (input, month_day) = opt(tuple((
+    let (input, month_day) = opt((
         preceded(
             char('-'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
@@ -669,7 +674,8 @@ fn parse_date_literal(input: &str) -> IResult<&str, Literal> {
             char('-'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
         )),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     // Ensure this doesn't match datetime by checking for 'T'
     if input.starts_with('T') {
@@ -703,12 +709,14 @@ fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
     let (input, month) = opt(preceded(
         char('-'),
         take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, day) = if month.is_some() {
         opt(preceded(
             char('-'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -717,12 +725,13 @@ fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
     let (input, _) = char('T')(input)?;
 
     // Optional time: hh, optional :mm, optional :ss, optional .fff (each gated on its predecessor).
-    let (input, hour) = opt(take_while_m_n(2, 2, |c: char| c.is_ascii_digit()))(input)?;
+    let (input, hour) = opt(take_while_m_n(2, 2, |c: char| c.is_ascii_digit())).parse(input)?;
     let (input, minute) = if hour.is_some() {
         opt(preceded(
             char(':'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -730,7 +739,8 @@ fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
         opt(preceded(
             char(':'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -738,7 +748,8 @@ fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
         opt(preceded(
             char('.'),
             take_while1(|c: char| c.is_ascii_digit()),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -747,13 +758,14 @@ fn parse_datetime_literal(input: &str) -> IResult<&str, Literal> {
     let (input, timezone) = if hour.is_some() {
         opt(alt((
             recognize(char('Z')),
-            recognize(tuple((
+            recognize((
                 alt((char('+'), char('-'))),
                 take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
                 char(':'),
                 take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-            ))),
-        )))(input)?
+            )),
+        )))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -802,12 +814,14 @@ fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
     let (input, minute) = opt(preceded(
         char(':'),
         take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, second) = if minute.is_some() {
         opt(preceded(
             char(':'),
             take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -815,7 +829,8 @@ fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
         opt(preceded(
             char('.'),
             take_while1(|c: char| c.is_ascii_digit()),
-        ))(input)?
+        ))
+        .parse(input)?
     } else {
         (input, None)
     };
@@ -843,11 +858,12 @@ fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
 // Examples: 5'mg', 10.5'kg', 100'mmHg', 15 'mm[Hg]' (with optional space)
 fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
     // Parse the numeric value (integer or decimal)
-    let (input, number_str) = recognize(tuple((
+    let (input, number_str) = recognize((
         opt(char('-')), // Optional negative sign
         digit1,
-        opt(tuple((char('.'), digit1))),
-    )))(input)?;
+        opt((char('.'), digit1)),
+    ))
+    .parse(input)?;
 
     // Parse optional whitespace between number and unit
     let (input, _) = multispace0(input)?;
@@ -930,7 +946,8 @@ fn parse_datetime_precision_literal(input: &str) -> IResult<&str, Literal> {
         map(tag("millisecond"), |_| {
             Literal::DateTimePrecision(DateTimePrecision::Millisecond)
         }),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // Parse identifier - simplified version
@@ -945,10 +962,11 @@ fn parse_identifier(input: &str) -> IResult<&str, String> {
             nom::error::ErrorKind::Char,
         )));
     }
-    let (input, ident) = recognize(tuple((
+    let (input, ident) = recognize((
         alt((alpha1, recognize(char('_')))),
         opt(take_while1(|c: char| c.is_alphanumeric() || c == '_')),
-    )))(input)?;
+    ))
+    .parse(input)?;
     Ok((input, ident.to_string()))
 }
 

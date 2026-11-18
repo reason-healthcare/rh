@@ -76,18 +76,12 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
     loop {
         match reader.read_event().expect("well-formed suite XML") {
             Event::Start(e) | Event::Empty(e) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
                 let attrs: HashMap<String, String> = e
                     .attributes()
                     .filter_map(|a| a.ok())
-                    .map(|a| {
-                        (
-                            String::from_utf8_lossy(a.key.as_ref()).to_string(),
-                            String::from_utf8_lossy(&a.value).to_string(),
-                        )
-                    })
+                    .map(|a| (a.key.as_ref().to_owned(), a.value.into_owned()))
                     .collect();
-                match tag.as_str() {
+                match e.name().as_ref() {
                     "group" => {
                         group = attrs.get("name").cloned().unwrap_or_default();
                     }
@@ -126,28 +120,28 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                 }
             }
             Event::Text(t) if in_expression || in_output => {
-                text_buf.push_str(&t.xml_content(XmlVersion::Implicit1_0).expect("decode text"));
+                text_buf.push_str(&t.xml_content(XmlVersion::Implicit1_0));
             }
             Event::GeneralRef(r) if in_expression || in_output => {
-                let entity = r.decode().expect("decode entity reference");
+                let entity = r.as_ref();
                 let escaped = format!("&{entity};");
                 text_buf.push_str(&unescape(&escaped).expect("unescape entity reference"));
             }
             Event::Text(_) => {}
             Event::End(e) => match e.name().as_ref() {
-                b"expression" => {
+                "expression" => {
                     if let Some(case) = current.as_mut() {
                         case.expression = text_buf.clone();
                     }
                     in_expression = false;
                 }
-                b"output" => {
+                "output" => {
                     if let Some(case) = current.as_mut() {
                         case.outputs.push((output_type.clone(), text_buf.clone()));
                     }
                     in_output = false;
                 }
-                b"test" => {
+                "test" => {
                     if let Some(case) = current.take() {
                         cases.push(case);
                     }

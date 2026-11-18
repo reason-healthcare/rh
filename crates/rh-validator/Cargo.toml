@@ -40,22 +40,22 @@ rh-fhirpath = { path = "../rh-fhirpath", version = "0.3.0" }  # FHIRPath invaria
 rust_decimal = { workspace = true }
 
 # Caching
-lru = "0.18"
+lru = "0.19.0"
 
 # Parallelism (for future batch validation)
-rayon = "1.10"
+rayon = { workspace = true }
 
 # URL encoding for terminology service
-urlencoding = "2.1"
+urlencoding = "2.1.3"
 
 # HTTP client for terminology service
 reqwest = { workspace = true, features = ["blocking", "json"] }
 
 # Home directory for cache path
-dirs = "5.0"
+dirs = "7.0.0"
 
 # Optional dependencies for FHIR test cases
-zip = { version = "0.6", optional = true }
+zip = { version = "9.7.0", default-features = false, features = ["deflate-flate2"], optional = true }
 tar = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 
@@ -64,7 +64,7 @@ flate2 = { workspace = true, optional = true }
 rh-hl7-fhir-r4-core = { path = "../rh-hl7_fhir_r4_core", version = "0.3.0" }
 
 # Benchmarking (to be added in Phase 8)
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { workspace = true, features = ["html_reports"] }
 
 [[bench]]
 name = "validation"

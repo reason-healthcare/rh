@@ -101,7 +101,7 @@ jobs:
       - name: Install MSRV toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.91.0
+          toolchain: 1.95.0
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -115,7 +115,7 @@ jobs:
             ${{ runner.os }}-msrv-cargo-
 
       - name: Run cargo check on MSRV
-        run: rustup run 1.91.0 cargo check --workspace --all-targets --all-features
+        run: rustup run 1.95.0 cargo check --workspace --all-targets --all-features
 
   test:
     name: Test Suite

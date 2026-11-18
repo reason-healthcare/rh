@@ -60,7 +60,7 @@ fn parse_model_info<R: BufRead>(reader: &mut Reader<R>) -> Result<ModelInfo> {
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) if e.name().as_ref() == b"modelInfo" => {
+            Event::Start(e) if e.name().into_inner() == "modelInfo" => {
                 parse_model_info_attrs(&e, &mut model_info)?;
                 parse_model_info_children(reader, &mut model_info)?;
             }
@@ -75,7 +75,7 @@ fn parse_model_info<R: BufRead>(reader: &mut Reader<R>) -> Result<ModelInfo> {
 
 fn parse_model_info_attrs(e: &BytesStart, model_info: &mut ModelInfo) -> Result<()> {
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -106,42 +106,42 @@ fn parse_model_info_children<R: BufRead>(
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) => match e.name().as_ref() {
-                b"requiredModelInfo" => {
+            Event::Start(e) => match e.name().into_inner() {
+                "requiredModelInfo" => {
                     let spec = parse_required_model_info(&e)?;
                     model_info.required_model_info.push(spec);
                 }
-                b"typeInfo" => {
+                "typeInfo" => {
                     if let Some(type_info) = parse_type_info(reader, &e)? {
                         model_info.type_info.push(type_info);
                     }
                 }
-                b"conversionInfo" => {
+                "conversionInfo" => {
                     let conv = parse_conversion_info(&e)?;
                     model_info.conversion_info.push(conv);
                 }
-                b"contextInfo" => {
+                "contextInfo" => {
                     let ctx = parse_context_info(&e)?;
                     model_info.context_info.push(ctx);
                 }
                 _ => skip_element(reader)?,
             },
-            Event::Empty(e) => match e.name().as_ref() {
-                b"requiredModelInfo" => {
+            Event::Empty(e) => match e.name().into_inner() {
+                "requiredModelInfo" => {
                     let spec = parse_required_model_info(&e)?;
                     model_info.required_model_info.push(spec);
                 }
-                b"conversionInfo" => {
+                "conversionInfo" => {
                     let conv = parse_conversion_info(&e)?;
                     model_info.conversion_info.push(conv);
                 }
-                b"contextInfo" => {
+                "contextInfo" => {
                     let ctx = parse_context_info(&e)?;
                     model_info.context_info.push(ctx);
                 }
                 _ => {}
             },
-            Event::End(e) if e.name().as_ref() == b"modelInfo" => break,
+            Event::End(e) if e.name().into_inner() == "modelInfo" => break,
             Event::Eof => break,
             _ => {}
         }
@@ -155,7 +155,7 @@ fn parse_required_model_info(e: &BytesStart) -> Result<ModelSpecifier> {
     let mut spec = ModelSpecifier::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -172,7 +172,7 @@ fn parse_conversion_info(e: &BytesStart) -> Result<ConversionInfo> {
     let mut conv = ConversionInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -190,7 +190,7 @@ fn parse_context_info(e: &BytesStart) -> Result<ContextInfo> {
     let mut ctx = ContextInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {

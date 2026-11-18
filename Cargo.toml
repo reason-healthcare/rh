@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["crates/*", "apps/*"]
 
 # Optional: exclude specific directories if needed
@@ -8,74 +8,84 @@ exclude = ["target", "docs"]
 # Workspace-wide dependencies that can be shared across all crates
 [workspace.dependencies]
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml = "0.9"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+serde_yaml = "0.9.34"
 
 # Error handling
-anyhow = "1.0"
-thiserror = "1.0"
+anyhow = "1.0.104"
+thiserror = "2.0.21"
 
 # Code generation
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
-prettyplease = "0.2"
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = { version = "3.0.10", features = ["full"] }
+prettyplease = "0.3.0"
 
 # Utilities
-convert_case = "0.6"
-indexmap = { version = "2.0", features = ["serde"] }
-clap = { version = "4.0", features = ["derive"] }
+convert_case = "0.12.0"
+uuid = "1.29.3"
+indexmap = { version = "2.14.2", features = ["serde"] }
+clap = { version = "4.6.8", features = ["derive"] }
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.54.1", features = ["full"] }
 
 # HTTP client and utilities
-reqwest = { version = "0.12", features = ["json", "stream"] }
-url = "2.0"
+reqwest = { version = "0.13.5", default-features = false, features = ["native-tls", "charset", "http2", "system-proxy", "json", "stream"] }
+url = "2.5.8"
 
 # Parsing
-nom = "7.1"
-regex = "1.0"
+nom = "8.0.0"
+regex = "1.13.1"
 
 # Parallel processing
-rayon = "1.10"
+rayon = "1.12.0"
 
 # XML parsing
-quick-xml = { version = "0.41", features = ["serde", "serialize"] }
+quick-xml = { version = "0.42.0", features = ["serialize"] }
 
 # Date and time handling
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4.45", features = ["serde"] }
 
 # Archive handling
-tar = "0.4"
-flate2 = "1.0"
+tar = "0.4.46"
+flate2 = "1.1.11"
 
 # TOML parsing
-toml = "0.8"
+toml = "1.2.1"
 
 # Markdown to HTML/XHTML conversion
-pulldown-cmark = "0.12"
+pulldown-cmark = "0.13.6"
 
 # Base64 encoding for CQL/ELM content in Library resources
-base64 = "0.22"
+base64 = "0.23.1"
 
 # Arbitrary-precision decimal (preserves trailing zeros for FHIRPath precision)
-rust_decimal = { version = "1.42", default-features = false, features = ["std", "serde", "maths"] }
+rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "serde", "maths"] }
+
+# WebAssembly bindings
+wasm-bindgen = "0.2.130"
+wasm-bindgen-test = "0.3.80"
+js-sys = "0.3.107"
+web-sys = "0.3.107"
+console_error_panic_hook = "0.1.7"
 
 # Synchronization primitives (poison-free locks)
-parking_lot = "0.12"
+parking_lot = "0.13.0"
 
 # Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 # REPL and command line interfaces
-rustyline = "13.0"
+rustyline = "19.0.0"
 
 # Development dependencies
-criterion = "0.5"
-walkdir = "2"
+criterion = "0.8.2"
+tempfile = "3.27.0"
+tokio-test = "0.4.6"
+walkdir = "2.5.0"
 
 # Workspace-wide lints, inherited via `[lints] workspace = true` in every member
 [workspace.lints.rust]
@@ -91,5 +101,5 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/reason-healthcare/rh"
 homepage = "https://github.com/reason-healthcare/rh"
-rust-version = "1.91"
+rust-version = "1.95"
 version = "0.3.0"

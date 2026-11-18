@@ -8,8 +8,8 @@ use nom::{
     character::complete::{char, multispace0},
     combinator::{all_consuming, map, opt, recognize, value},
     multi::{many1, separated_list1},
-    sequence::{delimited, pair, preceded, tuple},
-    IResult,
+    sequence::{delimited, pair, preceded},
+    IResult, Parser,
 };
 
 use crate::{
@@ -25,7 +25,7 @@ pub fn parse_vcl(input: &str) -> VclResult<VclExpression> {
         return Err(VclError::parse_error("Empty VCL expression", 0, input));
     }
 
-    match all_consuming(vcl)(trimmed_input) {
+    match all_consuming(vcl).parse(trimmed_input) {
         Ok((_, expr)) => Ok(expr),
         Err(nom::Err::Error(e)) | Err(nom::Err::Failure(e)) => {
             let position = trimmed_input.len() - e.input.len();
@@ -60,7 +60,7 @@ pub fn parse_vcl(input: &str) -> VclResult<VclExpression> {
 
 /// vcl: expr EOF
 fn vcl(input: &str) -> IResult<&str, VclExpression> {
-    map(expr, |expr| VclExpression { expr })(input)
+    map(expr, |expr| VclExpression { expr }).parse(input)
 }
 
 /// expr: subExpr (conjunction | disjunction | exclusion )?
@@ -71,7 +71,8 @@ fn expr(input: &str) -> IResult<&str, Expression> {
             sub_expr,
             operation,
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 /// subExpr: systemUri? (simpleExpr | OPEN expr CLOSE)
@@ -90,7 +91,8 @@ fn sub_expr(input: &str) -> IResult<&str, SubExpression> {
             system_uri,
             content,
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 /// conjunction: (COMMA subExpr)+
@@ -98,7 +100,8 @@ fn conjunction(input: &str) -> IResult<&str, Operation> {
     map(
         many1(preceded(ws(char(',')), sub_expr)),
         Operation::Conjunction,
-    )(input)
+    )
+    .parse(input)
 }
 
 /// disjunction: (SEMI subExpr)+
@@ -106,12 +109,13 @@ fn disjunction(input: &str) -> IResult<&str, Operation> {
     map(
         many1(preceded(ws(char(';')), sub_expr)),
         Operation::Disjunction,
-    )(input)
+    )
+    .parse(input)
 }
 
 /// exclusion: DASH subExpr
 fn exclusion(input: &str) -> IResult<&str, Operation> {
-    map(preceded(ws(char('-')), sub_expr), Operation::Exclusion)(input)
+    map(preceded(ws(char('-')), sub_expr), Operation::Exclusion).parse(input)
 }
 
 /// simpleExpr: STAR | code | filter | filterList | includeVs
@@ -122,7 +126,8 @@ fn simple_expr(input: &str) -> IResult<&str, SimpleExpression> {
         map(filter, SimpleExpression::Filter),
         value(SimpleExpression::Wildcard, ws(char('*'))),
         map(code, SimpleExpression::Code),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 /// includeVs: IN (URI | systemUri)
@@ -133,7 +138,8 @@ fn include_vs(input: &str) -> IResult<&str, IncludeValueSet> {
             map(system_uri, IncludeValueSet::SystemUri),
             map(uri, IncludeValueSet::Uri),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// systemUri: OPEN URI (PIPE version)? CLOSE
@@ -148,7 +154,8 @@ fn system_uri(input: &str) -> IResult<&str, SystemUri> {
             uri,
             version: version.map(|v| v.to_string()),
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 /// Parse version string (alphanumeric, dots, dashes, underscores)
@@ -158,9 +165,9 @@ fn version_string(input: &str) -> IResult<&str, &str> {
 
 /// Basic token parsers
 /// Parse whitespace wrapper
-fn ws<'a, F, O>(inner: F) -> impl FnMut(&'a str) -> IResult<&'a str, O>
+fn ws<'a, F, O>(inner: F) -> impl Parser<&'a str, Output = O, Error = nom::error::Error<&'a str>>
 where
-    F: FnMut(&'a str) -> IResult<&'a str, O>,
+    F: Parser<&'a str, Output = O, Error = nom::error::Error<&'a str>>,
 {
     delimited(multispace0, inner, multispace0)
 }
@@ -168,15 +175,16 @@ where
 /// URI: [a-zA-Z]+ [:] [a-zA-Z0-9?=:;&_%+-.@#$^!{}/]+ ('|' ~[|()] *)?
 fn uri(input: &str) -> IResult<&str, String> {
     map(
-        recognize(tuple((
+        recognize((
             take_while1(|c: char| c.is_ascii_alphabetic()),
             char(':'),
             take_while1(|c: char| {
                 c.is_ascii_alphanumeric() || "?=:;&_%+-.@#$^!{}/".contains(c) && c != '|'
             }),
-        ))),
+        )),
         |s: &str| s.to_string(),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// SCODE: [a-zA-Z0-9] [-_a-zA-Z0-9]*
@@ -187,7 +195,8 @@ fn scode(input: &str) -> IResult<&str, String> {
             take_while(|c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_'),
         )),
         |s: &str| s.to_string(),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// QUOTED_VALUE: '"' (~["\\] | '\\' ["\\])* '"'
@@ -238,7 +247,8 @@ fn code(input: &str) -> IResult<&str, Code> {
     ws(alt((
         map(quoted_value, Code::Quoted),
         map(scode, Code::Simple),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 /// codeList: LCRLY code (COMMA code)+ RCRLY
@@ -247,38 +257,40 @@ fn code_list(input: &str) -> IResult<&str, Vec<Code>> {
         ws(char('{')),
         separated_list1(ws(char(',')), code),
         ws(char('}')),
-    )(input)
+    )
+    .parse(input)
 }
 
 // Filter parsing implementation
 
 /// filter: (property ...) | ((code | codeList | STAR | URI | filterList) DOT property)
 fn filter(input: &str) -> IResult<&str, Filter> {
-    alt((property_filter, of_operation_filter))(input)
+    alt((property_filter, of_operation_filter)).parse(input)
 }
 
 /// Property-based filter: property (EQ code | IS_A code | ...)
 fn property_filter(input: &str) -> IResult<&str, Filter> {
     map(
-        tuple((
+        (
             code, // property is just a code
             filter_operator,
             filter_value,
-        )),
+        ),
         |(property, operator, value)| Filter::PropertyFilter {
             property,
             operator,
             value,
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 /// "Of" operation filter: (code|codeList|*|uri|filterList).property
 fn of_operation_filter(input: &str) -> IResult<&str, Filter> {
-    map(
-        tuple((of_source, ws(char('.')), code)),
-        |(source, _, property)| Filter::OfOperation { source, property },
-    )(input)
+    map((of_source, ws(char('.')), code), |(source, _, property)| {
+        Filter::OfOperation { source, property }
+    })
+    .parse(input)
 }
 
 /// Parse filter operators
@@ -295,7 +307,8 @@ fn filter_operator(input: &str) -> IResult<&str, FilterOperator> {
         value(FilterOperator::Equals, char('=')),
         value(FilterOperator::Regex, char('/')),
         value(FilterOperator::Exists, char('?')),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 /// Parse filter values
@@ -306,7 +319,8 @@ fn filter_value(input: &str) -> IResult<&str, FilterValue> {
         map(uri, FilterValue::Uri),
         map(quoted_value, FilterValue::String), // for regex patterns
         map(code, FilterValue::Code),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 /// Parse source for "of" operations
@@ -317,7 +331,8 @@ fn of_source(input: &str) -> IResult<&str, OfSource> {
         map(uri, OfSource::Uri),
         value(OfSource::Wildcard, char('*')),
         map(code, OfSource::Code),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 /// filterList: LCRLY filter (COMMA filter)* RCRLY
@@ -326,7 +341,8 @@ fn filter_list(input: &str) -> IResult<&str, Vec<Filter>> {
         ws(char('{')),
         separated_list1(ws(char(',')), filter),
         ws(char('}')),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

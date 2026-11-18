@@ -10,7 +10,7 @@ use nom::{
     combinator::{map, opt, recognize},
     multi::{many1, separated_list1},
     sequence::delimited,
-    IResult,
+    IResult, Parser,
 };
 
 /// Flag keywords that may appear after cardinality in contains items or flag rules.
@@ -43,11 +43,12 @@ pub fn parse_sd_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<SdRule>> {
         map(parse_card_rule_inner, SdRule::Card),
         map(parse_flag_rule_inner, SdRule::Flag),
         map(parse_path_rule_inner, SdRule::Path),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     // consume rest of line
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     Ok((input, Spanned::new(rule, loc)))
 }
@@ -63,10 +64,11 @@ pub fn parse_instance_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<Instanc
         map(parse_insert_rule_inner, InstanceRule::Insert),
         map(parse_assignment_rule_inner, InstanceRule::Assignment),
         map(parse_path_rule_inner, InstanceRule::Path),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     Ok((input, Spanned::new(rule, loc)))
 }
@@ -95,7 +97,7 @@ pub fn parse_vs_component_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<VsC
     let rule = parse_vs_component_body(input, inclusion)?;
 
     let (input, _) = take_while(|c| c != '\n')(rule.0)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     Ok((input, Spanned::new(rule.1, loc)))
 }
@@ -192,7 +194,7 @@ fn parse_vs_from_clause(
     loop {
         let (mut inp, _) = ws(remaining)?;
         if inp.fragment().starts_with('\n') || inp.fragment().starts_with("\r\n") {
-            let (after_cr, _) = opt(char('\r'))(inp)?;
+            let (after_cr, _) = opt(char('\r')).parse(inp)?;
             let (after_line, _) = char('\n')(after_cr)?;
             let (after_indent, _) = ws(after_line)?;
             if after_indent.fragment().starts_with("where")
@@ -211,7 +213,7 @@ fn parse_vs_from_clause(
         } else if inp.fragment().starts_with("valueset") {
             let (inp, _) = tag("valueset")(inp)?;
             let (inp, _) = ws(inp)?;
-            let (inp, vs) = alt((quoted_string, name_or_url))(inp)?;
+            let (inp, vs) = alt((quoted_string, name_or_url)).parse(inp)?;
             from_vs.push(vs);
             remaining = inp;
         } else if inp.fragment().starts_with("and") {
@@ -254,14 +256,16 @@ fn parse_vs_filter(input: Span<'_>) -> IResult<Span<'_>, VsFilter> {
         map(tag("not-in"), |s: Span<'_>| s.fragment().to_string()),
         map(tag("generalizes"), |s: Span<'_>| s.fragment().to_string()),
         map(tag("exists"), |s: Span<'_>| s.fragment().to_string()),
-    ))(input)?;
+    ))
+    .parse(input)?;
     let (input, _) = ws(input)?;
     let (input, value) = alt((
         quoted_string,
         // Handle #code filter values (e.g., `concept is-a #64940007`)
         parse_hash_code_value,
         identifier,
-    ))(input)?;
+    ))
+    .parse(input)?;
     Ok((
         input,
         VsFilter {
@@ -295,12 +299,12 @@ pub fn parse_concept_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<ConceptR
     //       "display"
     //       "definition"
     let (input, _) = trivia(input)?;
-    let (input, display) = opt(quoted_string)(input)?;
+    let (input, display) = opt(quoted_string).parse(input)?;
     let (input, _) = trivia(input)?;
-    let (input, definition) = opt(quoted_string)(input)?;
+    let (input, definition) = opt(quoted_string).parse(input)?;
 
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     Ok((
         input,
@@ -324,21 +328,22 @@ pub fn parse_mapping_rule(input: Span<'_>) -> IResult<Span<'_>, Spanned<MappingR
     let (input, _) = ws(input)?;
 
     // Optional path before '->'
-    let (input, path) = opt(parse_path_before_arrow)(input)?;
+    let (input, path) = opt(parse_path_before_arrow).parse(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = tag("->")(input)?;
     let (input, _) = ws(input)?;
     let (input, map_str) = quoted_string(input)?;
     let (input, _) = ws(input)?;
-    let (input, comment) = opt(quoted_string)(input)?;
+    let (input, comment) = opt(quoted_string).parse(input)?;
     let (input, _) = ws(input)?;
     let (input, language) = opt(map(
         take_while1(|c: char| !c.is_whitespace() && c != '\n'),
         |s: Span<'_>| s.fragment().to_string(),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
 
     Ok((
         input,
@@ -430,10 +435,10 @@ fn parse_binding_rule_inner(input: Span<'_>) -> IResult<Span<'_>, BindingRule> {
     let (input, _) = ws(input)?;
     let (input, _) = tag("from")(input)?;
     let (input, _) = ws(input)?;
-    let (input, vs) = alt((quoted_string, name_or_url))(input)?;
+    let (input, vs) = alt((quoted_string, name_or_url)).parse(input)?;
     let (input, _) = ws(input)?;
     // Optional strength in parentheses: (required), (extensible), etc.
-    let (input, strength) = opt(parse_binding_strength)(input)?;
+    let (input, strength) = opt(parse_binding_strength).parse(input)?;
     Ok((
         input,
         BindingRule {
@@ -488,7 +493,8 @@ fn parse_contains_rule_inner(input: Span<'_>) -> IResult<Span<'_>, ContainsRule>
             Ok((inp, ()))
         },
         parse_contains_item,
-    )(input)?;
+    )
+    .parse(input)?;
     Ok((input, ContainsRule { path, items }))
 }
 
@@ -507,12 +513,12 @@ fn parse_contains_item(input: Span<'_>) -> IResult<Span<'_>, ContainsItem> {
     };
 
     let (input, _) = ws(input)?;
-    let (input, cardinality) = opt(cardinal)(input)?;
+    let (input, cardinality) = opt(cardinal).parse(input)?;
     let (min, max) = cardinality.unwrap_or((None, None));
 
     // Consume optional flag keywords (MS, SU, ?!, N, TU, D) that may follow the cardinality
     let (input, _) = ws(input)?;
-    let (input, _) = opt(parse_flags_inline)(input)?;
+    let (input, _) = opt(parse_flags_inline).parse(input)?;
 
     Ok((
         input,
@@ -577,7 +583,8 @@ fn parse_only_rule_inner(input: Span<'_>) -> IResult<Span<'_>, OnlyRule> {
             Ok((inp, ()))
         },
         alt((parse_reference_type, map(identifier, |s| s))),
-    )(input)?;
+    )
+    .parse(input)?;
     Ok((input, OnlyRule { path, types }))
 }
 
@@ -590,7 +597,7 @@ fn parse_reference_type(input: Span<'_>) -> IResult<Span<'_>, String> {
 
 fn parse_obeys_rule_inner(input: Span<'_>) -> IResult<Span<'_>, ObeysRule> {
     // optional path, then 'obeys', then invariant list
-    let (input, path) = opt(parse_path_before_obeys)(input)?;
+    let (input, path) = opt(parse_path_before_obeys).parse(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = tag("obeys")(input)?;
     let (input, _) = ws(input)?;
@@ -602,7 +609,8 @@ fn parse_obeys_rule_inner(input: Span<'_>) -> IResult<Span<'_>, ObeysRule> {
             Ok((inp, ()))
         },
         identifier,
-    )(input)?;
+    )
+    .parse(input)?;
     Ok((input, ObeysRule { path, invariants }))
 }
 
@@ -621,7 +629,7 @@ fn parse_path_before_obeys(input: Span<'_>) -> IResult<Span<'_>, FshPath> {
 
 fn parse_caret_value_rule_inner(input: Span<'_>) -> IResult<Span<'_>, CaretValueRule> {
     // Optional path before the caret
-    let (input, path) = opt(parse_path_before_caret)(input)?;
+    let (input, path) = opt(parse_path_before_caret).parse(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('^')(input)?;
     let (input, caret_path_raw) = recognize(many1(alt((
@@ -631,7 +639,8 @@ fn parse_caret_value_rule_inner(input: Span<'_>) -> IResult<Span<'_>, CaretValue
             char(']'),
         )),
         take_while1(|c: char| !c.is_whitespace() && c != '=' && c != '['),
-    ))))(input)?;
+    ))))
+    .parse(input)?;
     let (input, _) = ws(input)?;
     let (input, _) = char('=')(input)?;
     let (input, _) = ws(input)?;
@@ -677,7 +686,8 @@ fn parse_insert_rule_inner(input: Span<'_>) -> IResult<Span<'_>, InsertRule> {
             map(take_while(|c| c != ',' && c != ')'), |s: Span<'_>| {
                 s.fragment().trim().to_string()
             }),
-        )(inp)?;
+        )
+        .parse(inp)?;
         let (inp, _) = char(')')(inp)?;
         (inp, p)
     } else {
@@ -703,9 +713,10 @@ fn parse_add_element_rule_inner(input: Span<'_>) -> IResult<Span<'_>, AddElement
             Ok((inp, ()))
         },
         identifier,
-    )(input)?;
+    )
+    .parse(input)?;
     let (input, _) = ws(input)?;
-    let (input, short) = alt((quoted_string, rest_of_line))(input)?;
+    let (input, short) = alt((quoted_string, rest_of_line)).parse(input)?;
     Ok((
         input,
         AddElementRule {
@@ -731,6 +742,6 @@ pub fn parse_caret_value_rule_pub(input: Span<'_>) -> IResult<Span<'_>, Spanned<
     let (input, _) = ws(input)?;
     let (input, rule) = parse_caret_value_rule_inner(input)?;
     let (input, _) = take_while(|c| c != '\n')(input)?;
-    let (input, _) = opt(char('\n'))(input)?;
+    let (input, _) = opt(char('\n')).parse(input)?;
     Ok((input, Spanned::new(rule, loc)))
 }
