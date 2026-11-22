@@ -15,8 +15,8 @@ if ! command -v rustup >/dev/null 2>&1; then
 fi
 
 RUST_VERSION=$(rustc --version | awk '{print $2}')
-REQUIRED_RUST="1.70.0"
-ver_ge() { printf '%s\n%s\n' "$1" "$2" | sort -V -C; }
+REQUIRED_RUST="1.95.0"
+ver_ge() { printf '%s\n%s\n' "$1" "$2" | sort -Vr -C; }
 if ! ver_ge "$RUST_VERSION" "$REQUIRED_RUST"; then
   echo "⚠️  rustc $RUST_VERSION detected; workspace requires >= $REQUIRED_RUST"
   echo "   Run: rustup update stable"

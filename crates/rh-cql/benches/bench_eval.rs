@@ -8,10 +8,11 @@
 //! cargo bench -p rh-cql --bench bench_eval
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rh_cql::{
     compile_with_model, evaluate_elm, CqlDateTime, EvalContextBuilder, FixedClock, Value,
 };
+use std::hint::black_box;
 
 // ---------------------------------------------------------------------------
 // Shared helpers

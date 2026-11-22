@@ -10,9 +10,9 @@ use std::io::BufRead;
 /// Extract the `xsi:type` attribute value from a start element.
 pub(super) fn get_xsi_type(e: &BytesStart) -> Option<String> {
     for attr in e.attributes().flatten() {
-        let key = attr.key.as_ref();
+        let key = attr.key.into_inner();
         // Accept `xsi:type` or any `*:type` Clark-notation variant.
-        if key == b"xsi:type" || key.ends_with(b":type") {
+        if key == "xsi:type" || key.ends_with(":type") {
             if let Ok(value) = attr.normalized_value(XmlVersion::Implicit1_0) {
                 return Some(value.into_owned());
             }
@@ -54,7 +54,7 @@ pub(super) fn parse_type_parameter_info<R: BufRead>(
     let mut info = TypeParameterInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -74,7 +74,7 @@ pub(super) fn parse_relationship_info(e: &BytesStart) -> Result<RelationshipInfo
     let mut info = RelationshipInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -122,7 +122,7 @@ pub(super) fn parse_tuple_element_attrs(e: &BytesStart) -> Result<TupleElementDe
     };
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {

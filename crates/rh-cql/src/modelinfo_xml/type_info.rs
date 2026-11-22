@@ -67,7 +67,7 @@ fn parse_class_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Resul
     let mut info = ClassInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -95,48 +95,48 @@ fn parse_class_info_children<R: BufRead>(
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) => match e.name().as_ref() {
-                b"element" => {
+            Event::Start(e) => match e.name().into_inner() {
+                "element" => {
                     let elem = parse_class_info_element(reader, &e)?;
                     info.element.push(elem);
                 }
-                b"parameter" => {
+                "parameter" => {
                     let param = parse_type_parameter_info(reader, &e)?;
                     info.parameter.push(param);
                 }
-                b"contextRelationship" => {
+                "contextRelationship" => {
                     let rel = parse_relationship_info(&e)?;
                     info.context_relationship.push(rel);
                     skip_element(reader)?;
                 }
-                b"targetContextRelationship" => {
+                "targetContextRelationship" => {
                     let rel = parse_relationship_info(&e)?;
                     info.target_context_relationship.push(rel);
                     skip_element(reader)?;
                 }
-                b"baseTypeSpecifier" => {
+                "baseTypeSpecifier" => {
                     if let Some(spec) = parse_type_specifier_element(reader, &e)? {
                         info.base_type_specifier = Some(spec);
                     }
                 }
                 _ => skip_element(reader)?,
             },
-            Event::Empty(e) => match e.name().as_ref() {
-                b"element" => {
+            Event::Empty(e) => match e.name().into_inner() {
+                "element" => {
                     let elem = parse_class_info_element_attrs(&e)?;
                     info.element.push(elem);
                 }
-                b"contextRelationship" => {
+                "contextRelationship" => {
                     let rel = parse_relationship_info(&e)?;
                     info.context_relationship.push(rel);
                 }
-                b"targetContextRelationship" => {
+                "targetContextRelationship" => {
                     let rel = parse_relationship_info(&e)?;
                     info.target_context_relationship.push(rel);
                 }
                 _ => {}
             },
-            Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
+            Event::End(e) if e.name().into_inner() == "typeInfo" => break,
             Event::Eof => break,
             _ => {}
         }
@@ -159,7 +159,7 @@ fn parse_class_info_element_attrs(e: &BytesStart) -> Result<ClassInfoElement> {
     let mut elem = ClassInfoElement::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -184,33 +184,33 @@ fn parse_class_info_element_children<R: BufRead>(
 
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::Start(e) => match e.name().as_ref() {
-                b"elementTypeSpecifier" => {
+            Event::Start(e) => match e.name().into_inner() {
+                "elementTypeSpecifier" => {
                     if let Some(spec) = parse_type_specifier_element(reader, &e)? {
                         elem.element_type_specifier = Some(spec);
                     }
                 }
-                b"typeSpecifier" => {
+                "typeSpecifier" => {
                     if let Some(spec) = parse_type_specifier_element(reader, &e)? {
                         elem.type_specifier = Some(spec);
                     }
                 }
                 _ => skip_element(reader)?,
             },
-            Event::Empty(e) => match e.name().as_ref() {
-                b"elementTypeSpecifier" => {
+            Event::Empty(e) => match e.name().into_inner() {
+                "elementTypeSpecifier" => {
                     if let Some(spec) = parse_type_specifier_attrs(&e)? {
                         elem.element_type_specifier = Some(spec);
                     }
                 }
-                b"typeSpecifier" => {
+                "typeSpecifier" => {
                     if let Some(spec) = parse_type_specifier_attrs(&e)? {
                         elem.type_specifier = Some(spec);
                     }
                 }
                 _ => {}
             },
-            Event::End(e) if e.name().as_ref() == b"element" => break,
+            Event::End(e) if e.name().into_inner() == "element" => break,
             Event::Eof => break,
             _ => {}
         }
@@ -231,7 +231,7 @@ fn parse_simple_type_info<R: BufRead>(
     let mut info = SimpleTypeInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -254,7 +254,7 @@ fn parse_profile_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Res
     let mut info = ProfileInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -273,18 +273,18 @@ fn parse_profile_info<R: BufRead>(reader: &mut Reader<R>, e: &BytesStart) -> Res
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"element" {
+                if e.name().into_inner() == "element" {
                     let elem = parse_class_info_element(reader, &e)?;
                     info.element.push(elem);
                 } else {
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"element" => {
+            Event::Empty(e) if e.name().into_inner() == "element" => {
                 let elem = parse_class_info_element_attrs(&e)?;
                 info.element.push(elem);
             }
-            Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
+            Event::End(e) if e.name().into_inner() == "typeInfo" => break,
             Event::Eof => break,
             _ => {}
         }
@@ -305,7 +305,7 @@ fn parse_interval_type_info<R: BufRead>(
     let mut info = IntervalTypeInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -326,7 +326,7 @@ fn parse_list_type_info<R: BufRead>(
     let mut info = ListTypeInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -351,7 +351,7 @@ fn parse_tuple_type_info<R: BufRead>(
     let mut info = TupleTypeInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "baseType" {
@@ -363,18 +363,18 @@ fn parse_tuple_type_info<R: BufRead>(
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"element" {
+                if e.name().into_inner() == "element" {
                     let elem = parse_tuple_type_info_element(reader, &e)?;
                     info.element.push(elem);
                 } else {
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"element" => {
+            Event::Empty(e) if e.name().into_inner() == "element" => {
                 let elem = parse_tuple_type_info_element_attrs(&e)?;
                 info.element.push(elem);
             }
-            Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
+            Event::End(e) if e.name().into_inner() == "typeInfo" => break,
             Event::Eof => break,
             _ => {}
         }
@@ -394,7 +394,7 @@ fn parse_tuple_type_info_element<R: BufRead>(
     loop {
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
-                if e.name().as_ref() == b"elementTypeSpecifier" {
+                if e.name().into_inner() == "elementTypeSpecifier" {
                     if let Some(spec) = parse_type_specifier_element(reader, &e)? {
                         elem.element_type_specifier = Some(spec);
                     }
@@ -402,12 +402,12 @@ fn parse_tuple_type_info_element<R: BufRead>(
                     skip_element(reader)?;
                 }
             }
-            Event::Empty(e) if e.name().as_ref() == b"elementTypeSpecifier" => {
+            Event::Empty(e) if e.name().into_inner() == "elementTypeSpecifier" => {
                 if let Some(spec) = parse_type_specifier_attrs(&e)? {
                     elem.element_type_specifier = Some(spec);
                 }
             }
-            Event::End(e) if e.name().as_ref() == b"element" => break,
+            Event::End(e) if e.name().into_inner() == "element" => break,
             Event::Eof => break,
             _ => {}
         }
@@ -421,7 +421,7 @@ fn parse_tuple_type_info_element_attrs(e: &BytesStart) -> Result<TupleTypeInfoEl
     let mut elem = TupleTypeInfoElement::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         match key {
@@ -446,7 +446,7 @@ fn parse_choice_type_info<R: BufRead>(
     let mut info = ChoiceTypeInfo::default();
 
     for attr in e.attributes().flatten() {
-        let key = std::str::from_utf8(attr.key.as_ref())?;
+        let key = attr.key.into_inner();
         let value = attr.normalized_value(XmlVersion::Implicit1_0)?.into_owned();
 
         if key == "baseType" {
@@ -459,7 +459,7 @@ fn parse_choice_type_info<R: BufRead>(
         match reader.read_event_into(&mut buf)? {
             Event::Start(e) => {
                 let name = e.name();
-                if name.as_ref() == b"choice" || name.as_ref() == b"type" {
+                if name.into_inner() == "choice" || name.into_inner() == "type" {
                     if let Some(spec) = parse_type_specifier_element(reader, &e)? {
                         info.choice.push(spec);
                     }
@@ -469,13 +469,13 @@ fn parse_choice_type_info<R: BufRead>(
             }
             Event::Empty(e) => {
                 let name = e.name();
-                if name.as_ref() == b"choice" || name.as_ref() == b"type" {
+                if name.into_inner() == "choice" || name.into_inner() == "type" {
                     if let Some(spec) = parse_type_specifier_attrs(&e)? {
                         info.choice.push(spec);
                     }
                 }
             }
-            Event::End(e) if e.name().as_ref() == b"typeInfo" => break,
+            Event::End(e) if e.name().into_inner() == "typeInfo" => break,
             Event::Eof => break,
             _ => {}
         }

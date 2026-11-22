@@ -8,11 +8,12 @@
 //! cargo bench -p rh-cql --bench bench_lookup
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rh_cql::{
     elm::{ExpressionDef, ExpressionDefs, Library, StatementDef, VersionedIdentifier},
     CompiledLibrary,
 };
+use std::hint::black_box;
 
 // ---------------------------------------------------------------------------
 // Fixture helpers

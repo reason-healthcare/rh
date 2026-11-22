@@ -12,7 +12,7 @@ use nom::{
     branch::alt,
     character::complete::multispace1,
     combinator::{map, map_res, value},
-    IResult,
+    IResult, Parser,
 };
 
 // ============================================================================
@@ -20,7 +20,7 @@ use nom::{
 // ============================================================================
 
 pub(crate) fn parse_null_literal(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    map(keyword("null"), |_| Expression::Literal(Literal::Null))(input)
+    map(keyword("null"), |_| Expression::Literal(Literal::Null)).parse(input)
 }
 
 pub(crate) fn parse_boolean_literal(input: Span<'_>) -> IResult<Span<'_>, Expression> {
@@ -31,11 +31,12 @@ pub(crate) fn parse_boolean_literal(input: Span<'_>) -> IResult<Span<'_>, Expres
         map(keyword("false"), |_| {
             Expression::Literal(Literal::Boolean(false))
         }),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 pub(crate) fn parse_string_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    map(string_literal, |s| Expression::Literal(Literal::String(s)))(input)
+    map(string_literal, |s| Expression::Literal(Literal::String(s))).parse(input)
 }
 
 pub(crate) fn parse_integer_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
@@ -45,23 +46,26 @@ pub(crate) fn parse_integer_literal_expr(input: Span<'_>) -> IResult<Span<'_>, E
         } else {
             Err("integer literal outside CQL Integer range")
         }
-    })(input)
+    })
+    .parse(input)
 }
 
 pub(crate) fn parse_long_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    map(long_literal, |n| Expression::Literal(Literal::Long(n)))(input)
+    map(long_literal, |n| Expression::Literal(Literal::Long(n))).parse(input)
 }
 
 pub(crate) fn parse_decimal_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     map(decimal_literal, |n| {
         Expression::Literal(Literal::Decimal(n))
-    })(input)
+    })
+    .parse(input)
 }
 
 pub(crate) fn parse_quantity_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     map(quantity_literal, |(value, unit)| {
         Expression::Literal(Literal::Quantity { value, unit })
-    })(input)
+    })
+    .parse(input)
 }
 
 /// Parse a ratio literal: `<quantity> : <quantity>` where each side is a
@@ -76,7 +80,8 @@ pub(crate) fn parse_ratio_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Exp
             map(decimal_literal, Literal::Decimal),
             map(long_literal, Literal::Long),
             map(integer_literal, Literal::Integer),
-        ))(input)
+        ))
+        .parse(input)
     }
 
     let (input, numerator) = ratio_part(input)?;
@@ -94,7 +99,8 @@ pub(crate) fn parse_ratio_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Exp
 }
 
 pub(crate) fn parse_duration_quantity_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    let (input, qty_value) = alt((decimal_literal, map(integer_literal, |i| i as f64)))(input)?;
+    let (input, qty_value) =
+        alt((decimal_literal, map(integer_literal, |i| i as f64))).parse(input)?;
     let (input, _) = multispace1(input)?;
     let (input, unit) = alt((
         value("year", keyword("year")),
@@ -113,7 +119,8 @@ pub(crate) fn parse_duration_quantity_expr(input: Span<'_>) -> IResult<Span<'_>,
         value("second", keyword("seconds")),
         value("millisecond", keyword("millisecond")),
         value("millisecond", keyword("milliseconds")),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -125,15 +132,16 @@ pub(crate) fn parse_duration_quantity_expr(input: Span<'_>) -> IResult<Span<'_>,
 }
 
 pub(crate) fn parse_date_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    map(date_literal, |s| Expression::Literal(Literal::Date(s)))(input)
+    map(date_literal, |s| Expression::Literal(Literal::Date(s))).parse(input)
 }
 
 pub(crate) fn parse_time_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
-    map(time_literal, |s| Expression::Literal(Literal::Time(s)))(input)
+    map(time_literal, |s| Expression::Literal(Literal::Time(s))).parse(input)
 }
 
 pub(crate) fn parse_datetime_literal_expr(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     map(datetime_literal, |s| {
         Expression::Literal(Literal::DateTime(s))
-    })(input)
+    })
+    .parse(input)
 }

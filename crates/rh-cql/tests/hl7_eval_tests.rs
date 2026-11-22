@@ -88,13 +88,11 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
         buf.clear();
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) => {
-                let name_bytes = e.name();
-                let name_ref = name_bytes.as_ref();
-                let tag = std::str::from_utf8(name_ref).unwrap_or("");
+                let tag = e.name().into_inner();
                 match tag {
                     "tests" => {
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"name" {
+                            if attr.key.into_inner() == "name" {
                                 _suite_name = attr
                                     .normalized_value(XmlVersion::Implicit1_0)
                                     .unwrap_or_default()
@@ -104,7 +102,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                     }
                     "group" => {
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"name" {
+                            if attr.key.into_inner() == "name" {
                                 group_name = attr
                                     .normalized_value(XmlVersion::Implicit1_0)
                                     .unwrap_or_default()
@@ -119,7 +117,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                         invalid = false;
                         output = None;
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"name" {
+                            if attr.key.into_inner() == "name" {
                                 test_name = attr
                                     .normalized_value(XmlVersion::Implicit1_0)
                                     .unwrap_or_default()
@@ -130,7 +128,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                     "expression" if in_test => {
                         in_expression = true;
                         for attr in e.attributes().flatten() {
-                            if attr.key.as_ref() == b"invalid" {
+                            if attr.key.into_inner() == "invalid" {
                                 invalid = attr
                                     .normalized_value(XmlVersion::Implicit1_0)
                                     .unwrap_or_default()
@@ -146,7 +144,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                 }
             }
             Ok(Event::Text(ref e)) => {
-                let text = e.xml_content(XmlVersion::Implicit1_0).unwrap_or_default();
+                let text = e.xml_content(XmlVersion::Implicit1_0);
                 if in_expression {
                     expression.push_str(&text);
                 } else if in_output {
@@ -156,7 +154,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                 }
             }
             Ok(Event::GeneralRef(ref e)) => {
-                let entity = e.decode().unwrap_or_default();
+                let entity = e.as_ref();
                 let escaped = format!("&{entity};");
                 let text = unescape(&escaped).unwrap_or_default();
                 if in_expression {
@@ -168,7 +166,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                 }
             }
             Ok(Event::CData(ref e)) => {
-                let text = std::str::from_utf8(e.as_ref()).unwrap_or("");
+                let text = e.as_ref();
                 if in_expression {
                     expression.push_str(text);
                 } else if in_output {
@@ -178,9 +176,7 @@ fn parse_hl7_xml(xml: &str) -> Vec<HlTestCase> {
                 }
             }
             Ok(Event::End(ref e)) => {
-                let end_name_bytes = e.name();
-                let end_name_ref = end_name_bytes.as_ref();
-                let tag = std::str::from_utf8(end_name_ref).unwrap_or("");
+                let tag = e.name().into_inner();
                 match tag {
                     "expression" => {
                         in_expression = false;

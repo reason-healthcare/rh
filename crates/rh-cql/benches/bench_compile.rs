@@ -7,8 +7,9 @@
 //! cargo bench -p rh-cql --bench bench_compile
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rh_cql::{compile, compile_to_json, validate, CompilerOptions};
+use std::hint::black_box;
 
 // ---------------------------------------------------------------------------
 // Fixture CQL strings

@@ -200,10 +200,10 @@ categories = ["api-bindings", "data-structures"]
 readme = "README.md"
 
 [dependencies]
-serde = {{ version = "1.0", features = ["derive"] }}
-serde_json = "1.0"
-phf = {{ version = "0.14", features = ["macros"] }}
-once_cell = "1.19"
+serde = {{ version = "1.0.229", features = ["derive"] }}
+serde_json = "1.0.154"
+phf = {{ version = "0.14.0", features = ["macros"] }}
+once_cell = "1.21.4"
 rh-foundation = {{ path = "{rh_foundation_path}", version = "{rh_foundation_version}" }}
 
 [lib]
@@ -918,8 +918,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = {{ version = "1.0", features = ["derive"] }}
-serde_json = "1.0"
+serde = {{ version = "1.0.229", features = ["derive"] }}
+serde_json = "1.0.154"
 "#
         );
 
@@ -979,7 +979,7 @@ mod tests {
             assert!(toml.contains(key), "missing workspace inheritance: {key}");
         }
         assert!(toml.contains(r#""fhir-r4""#));
-        assert!(toml.contains(r#"phf = { version = "0.14""#));
+        assert!(toml.contains(r#"phf = { version = "0.14.0""#));
     }
 
     #[test]

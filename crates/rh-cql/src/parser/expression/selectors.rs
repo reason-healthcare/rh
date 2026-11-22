@@ -15,8 +15,8 @@ use nom::{
     character::complete::char,
     combinator::{opt, value},
     multi::{many0, separated_list0, separated_list1},
-    sequence::{delimited, tuple},
-    IResult,
+    sequence::delimited,
+    IResult, Parser,
 };
 
 // ============================================================================
@@ -25,18 +25,20 @@ use nom::{
 
 pub(crate) fn parse_interval_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(keyword("Interval"))(input)?;
-    let (input, low_closed) = alt((value(true, char('[')), value(false, char('('))))(input)?;
+    let (input, low_closed) =
+        alt((value(true, char('[')), value(false, char('(')))).parse(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
 
     // Parse low bound (null for open)
-    let (input, low) = opt(expression)(input)?;
+    let (input, low) = opt(expression).parse(input)?;
     let (input, _) = ws(char(','))(input)?;
 
     // Parse high bound (null for open)
-    let (input, high) = opt(expression)(input)?;
+    let (input, high) = opt(expression).parse(input)?;
     let (input, _) = skip_ws_and_comments(input)?;
 
-    let (input, high_closed) = alt((value(true, char(']')), value(false, char(')'))))(input)?;
+    let (input, high_closed) =
+        alt((value(true, char(']')), value(false, char(')')))).parse(input)?;
 
     Ok((
         input,
@@ -61,10 +63,11 @@ pub(crate) fn parse_list_selector(input: Span<'_>) -> IResult<Span<'_>, Expressi
         ws(char('<')),
         parse_type_specifier,
         ws(char('>')),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     let (input, _) = ws(char('{'))(input)?;
-    let (input, elements) = separated_list0(ws(char(',')), expression)(input)?;
+    let (input, elements) = separated_list0(ws(char(',')), expression).parse(input)?;
     let (input, _) = ws(char('}'))(input)?;
 
     Ok((
@@ -83,7 +86,7 @@ pub(crate) fn parse_bare_list_selector(input: Span<'_>) -> IResult<Span<'_>, Exp
     let (input, _) = ws(char('{'))(input)?;
 
     // Peek ahead - if we see `identifier :`, this is a tuple, not a list
-    let result = opt(tuple((any_identifier, ws(char(':')))))(input)?;
+    let result = opt((any_identifier, ws(char(':')))).parse(input)?;
     if result.1.is_some() {
         // This looks like a tuple element (name: value), not a list
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -92,7 +95,7 @@ pub(crate) fn parse_bare_list_selector(input: Span<'_>) -> IResult<Span<'_>, Exp
         )));
     }
 
-    let (input, elements) = separated_list0(ws(char(',')), expression)(input)?;
+    let (input, elements) = separated_list0(ws(char(',')), expression).parse(input)?;
     let (input, _) = ws(char('}'))(input)?;
 
     Ok((
@@ -109,7 +112,7 @@ pub(crate) fn parse_inline_tuple_selector(input: Span<'_>) -> IResult<Span<'_>, 
     // Inline tuple: { name: value, ... } without the Tuple keyword
     // Must have at least one element to distinguish from empty list {}
     let (input, _) = ws(char('{'))(input)?;
-    let (input, elements) = separated_list1(ws(char(',')), parse_tuple_element)(input)?;
+    let (input, elements) = separated_list1(ws(char(',')), parse_tuple_element).parse(input)?;
     let (input, _) = ws(char('}'))(input)?;
 
     Ok((
@@ -124,7 +127,7 @@ pub(crate) fn parse_inline_tuple_selector(input: Span<'_>) -> IResult<Span<'_>, 
 pub(crate) fn parse_tuple_selector(input: Span<'_>) -> IResult<Span<'_>, Expression> {
     let (input, _) = ws(keyword("Tuple"))(input)?;
     let (input, _) = ws(char('{'))(input)?;
-    let (input, elements) = separated_list0(ws(char(',')), parse_tuple_element)(input)?;
+    let (input, elements) = separated_list0(ws(char(',')), parse_tuple_element).parse(input)?;
     let (input, _) = ws(char('}'))(input)?;
 
     Ok((
@@ -154,7 +157,7 @@ pub(crate) fn parse_instance_selector(input: Span<'_>) -> IResult<Span<'_>, Expr
     // Type { element: value, ... }
     let (input, class_type) = parse_type_specifier(input)?;
     let (input, _) = ws(char('{'))(input)?;
-    let (input, elements) = separated_list0(ws(char(',')), parse_instance_element)(input)?;
+    let (input, elements) = separated_list0(ws(char(',')), parse_instance_element).parse(input)?;
     let (input, _) = ws(char('}'))(input)?;
 
     Ok((
@@ -172,7 +175,7 @@ pub(crate) fn parse_code_selector(input: Span<'_>) -> IResult<Span<'_>, Expressi
     let (input, code) = ws(string_literal)(input)?;
     let (input, _) = ws(keyword("from"))(input)?;
     let (input, system) = terminology_ref(input)?;
-    let (input, display) = opt(tuple((ws(keyword("display")), ws(string_literal))))(input)?;
+    let (input, display) = opt((ws(keyword("display")), ws(string_literal))).parse(input)?;
 
     Ok((
         input,
@@ -226,20 +229,21 @@ pub(crate) fn parse_case(input: Span<'_>) -> IResult<Span<'_>, Expression> {
 
     // Try to parse case items starting with 'when' first (searched case without comparand)
     // If that works, we have no comparand. Otherwise, parse comparand + when clauses.
-    let (input, comparand, items) = if let Ok((input2, items)) = many0(parse_case_item)(input) {
+    let (input, comparand, items) = if let Ok((input2, items)) = many0(parse_case_item).parse(input)
+    {
         if !items.is_empty() {
             // Successfully parsed when clauses without comparand
             (input2, None, items)
         } else {
             // No when clauses found, try parsing comparand
             let (input, expr) = expression(input)?;
-            let (input, items) = many0(parse_case_item)(input)?;
+            let (input, items) = many0(parse_case_item).parse(input)?;
             (input, Some(expr), items)
         }
     } else {
         // Failed to parse when clauses, try comparand
         let (input, expr) = expression(input)?;
-        let (input, items) = many0(parse_case_item)(input)?;
+        let (input, items) = many0(parse_case_item).parse(input)?;
         (input, Some(expr), items)
     };
 
