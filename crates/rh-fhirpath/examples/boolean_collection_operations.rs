@@ -1,13 +1,15 @@
 //! Boolean Collection Operations Example
 //!
 //! This example demonstrates the boolean collection functions in FHIRPath expressions:
-//! - all() - checks if all items in collection evaluate to truthy
-//! - allTrue() - checks if all items are boolean true values  
+//! - all(criteria) - checks whether every item satisfies a criterion
+//! - allTrue() - checks if all items are boolean true values
 //! - anyTrue() - checks if any item is boolean true
 //! - allFalse() - checks if all items are boolean false values
 //! - anyFalse() - checks if any item is boolean false
 
-use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{
+    EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathResult, FhirPathValue,
+};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,23 +19,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Section 1: all() function - checks if all items evaluate to truthy
-    println!("1. all() Function - Checks if all items are truthy:");
+    // Section 1: all(criteria) checks whether every item satisfies a criterion
+    println!("1. all(criteria) checks whether every item satisfies a criterion");
     println!("{}", "-".repeat(60));
 
     let all_examples = vec![
-        ("(true | 1 | 'text').all()", "All truthy values"),
-        ("(true | false | 1).all()", "Mixed truthy/falsy values"),
-        ("(false | 0).all()", "All falsy values"),
-        ("true.all()", "Single truthy value"),
-        ("false.all()", "Single falsy value"),
-        ("{}.all()", "Empty collection (vacuous truth)"),
+        ("(true | 1 | 'text').all($this)", "All truthy values"),
+        ("(true | false | 1).all($this)", "Mixed truthy/falsy values"),
+        (
+            "(false | 0).all($this)",
+            "A false Boolean and a non-Boolean singleton",
+        ),
+        ("true.all($this)", "Single truthy value"),
+        ("false.all($this)", "Single falsy value"),
+        ("{}.all($this)", "Empty collection (vacuous truth)"),
     ];
 
     for (expression, description) in all_examples {
         let expr = parser.parse(expression)?;
-        let result = evaluator.evaluate(&expr, &context)?;
-        println!("  {} -> {}", expression, format_result(&result));
+        let result = evaluator.evaluate(&expr, &context);
+        println!("  {} -> {}", expression, format_evaluation(result));
         println!("    {description}");
         println!();
     }
@@ -57,8 +62,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (expression, description) in all_true_examples {
         let expr = parser.parse(expression)?;
-        let result = evaluator.evaluate(&expr, &context)?;
-        println!("  {} -> {}", expression, format_result(&result));
+        let result = evaluator.evaluate(&expr, &context);
+        println!("  {} -> {}", expression, format_evaluation(result));
         println!("    {description}");
         println!();
     }
@@ -88,8 +93,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (expression, description) in any_true_examples {
         let expr = parser.parse(expression)?;
-        let result = evaluator.evaluate(&expr, &context)?;
-        println!("  {} -> {}", expression, format_result(&result));
+        let result = evaluator.evaluate(&expr, &context);
+        println!("  {} -> {}", expression, format_evaluation(result));
         println!("    {description}");
         println!();
     }
@@ -116,8 +121,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (expression, description) in all_false_examples {
         let expr = parser.parse(expression)?;
-        let result = evaluator.evaluate(&expr, &context)?;
-        println!("  {} -> {}", expression, format_result(&result));
+        let result = evaluator.evaluate(&expr, &context);
+        println!("  {} -> {}", expression, format_evaluation(result));
         println!("    {description}");
         println!();
     }
@@ -144,8 +149,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (expression, description) in any_false_examples {
         let expr = parser.parse(expression)?;
-        let result = evaluator.evaluate(&expr, &context)?;
-        println!("  {} -> {}", expression, format_result(&result));
+        let result = evaluator.evaluate(&expr, &context);
+        println!("  {} -> {}", expression, format_evaluation(result));
         println!("    {description}");
         println!();
     }
@@ -157,16 +162,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Example FHIR scenarios where boolean collection functions are useful:");
     println!();
     println!("  Data Validation:");
-    println!("    patient.name.family.exists().all()           // All names have family name");
-    println!("    observation.component.value.exists().all()   // All components have values");
+    println!(
+        "    Patient.name.all(family.exists())                 // All names have a family name"
+    );
+    println!("    Observation.component.all(value.exists())         // All components have values");
     println!();
     println!("  Status Checking:");
-    println!("    medication.status = 'active'.allTrue()       // All medications active");
-    println!("    condition.clinicalStatus = 'resolved'.anyTrue() // Any resolved conditions");
+    println!("    Medication.status.all($this = 'active')          // All medications are active");
+    println!("    Condition.clinicalStatus.coding.code.exists($this = 'resolved') // Any resolved conditions");
     println!();
     println!("  Flag Analysis:");
     println!("    patient.active.allTrue()                     // Patient records all active");
-    println!("    encounter.status != 'cancelled'.all()        // No cancelled encounters");
+    println!("    Encounter.status.all($this != 'cancelled')        // No cancelled encounters");
     println!();
     println!("  Boolean Field Validation:");
     println!("    questionnaire.item.required.anyTrue()        // Any required questions");
@@ -178,7 +185,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "-".repeat(60));
 
     println!("  Key differences:");
-    println!("  - all() vs allTrue(): all() uses truthiness, allTrue() requires boolean true");
+    println!("  - all($this) applies singleton Boolean rules. allTrue() requires Boolean input.");
     println!(
         "  - exists() vs anyTrue(): exists() checks presence, anyTrue() checks boolean true values"
     );
@@ -187,7 +194,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let comparison_examples = vec![
         (
-            "(1 | 2 | 3).all()",
+            "(1 | 2 | 3).all($this)",
             "(1 | 2 | 3).allTrue()",
             "Truthy vs boolean true",
         ),
@@ -204,14 +211,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (expr1, expr2, description) in comparison_examples {
-        let result1 = evaluator.evaluate(&parser.parse(expr1)?, &context)?;
-        let result2 = evaluator.evaluate(&parser.parse(expr2)?, &context)?;
+        let result1 = evaluator.evaluate(&parser.parse(expr1)?, &context);
+        let result2 = evaluator.evaluate(&parser.parse(expr2)?, &context);
         println!(
             "  {} -> {} vs {} -> {}",
             expr1,
-            format_result(&result1),
+            format_evaluation(result1),
             expr2,
-            format_result(&result2)
+            format_evaluation(result2)
         );
         println!("    {description}");
         println!();
@@ -220,6 +227,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Boolean Collection Functions Example Complete ===");
 
     Ok(())
+}
+
+fn format_evaluation(result: FhirPathResult<FhirPathValue>) -> String {
+    match result {
+        Ok(value) => format_result(&value),
+        Err(error) => format!("Error: {error}"),
+    }
 }
 
 /// Format a FhirPathValue for display

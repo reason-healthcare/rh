@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::Subcommand;
+use clap::{Args, Subcommand};
 use serde::Serialize;
 use serde_json::Value;
 use std::fs;
@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use tracing::{error, info};
 
 use crate::output::{Envelope, OutputContext, OutputFormat};
-use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirModel, FhirPathEvaluator, FhirPathParser};
 
 fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> Result<()> {
     let json = if matches!(ctx.format, OutputFormat::Json) {
@@ -20,58 +20,23 @@ fn print_envelope<T: Serialize>(ctx: &OutputContext, envelope: &Envelope<T>) -> 
     Ok(())
 }
 
-/// Convert FhirPathValue to JSON Value for serialization
-fn fhirpath_value_to_json(value: &FhirPathValue) -> Value {
-    match value {
-        FhirPathValue::Boolean(b) => Value::Bool(*b),
-        FhirPathValue::TypedBoolean { value, .. } => Value::Bool(*value),
-        FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => {
-            Value::String(s.clone())
-        }
-        FhirPathValue::Number(n) => {
-            use rust_decimal::prelude::ToPrimitive;
-            if let Some(f) = n.to_f64() {
-                if let Some(json_num) = serde_json::Number::from_f64(f) {
-                    Value::Number(json_num)
-                } else {
-                    Value::Null
-                }
-            } else {
-                Value::Null
-            }
-        }
-        FhirPathValue::Integer(i) => Value::Number(serde_json::Number::from(*i)),
-        FhirPathValue::Long(l) => Value::Number(serde_json::Number::from(*l)),
-        FhirPathValue::Date(s) | FhirPathValue::DateTime(s) => Value::String(s.clone()),
-        FhirPathValue::Time(s) => Value::String(s.strip_prefix('T').unwrap_or(s).to_string()),
-        FhirPathValue::TypedDateTime { value, .. } => Value::String(value.clone()),
-        FhirPathValue::Quantity { value, unit } => {
-            use rust_decimal::prelude::ToPrimitive;
-            let mut obj = serde_json::Map::new();
-            obj.insert(
-                "value".to_string(),
-                Value::Number(
-                    value
-                        .to_f64()
-                        .and_then(serde_json::Number::from_f64)
-                        .unwrap_or_else(|| serde_json::Number::from(0)),
-                ),
-            );
-            if let Some(u) = unit {
-                obj.insert("unit".to_string(), Value::String(u.clone()));
-            }
-            Value::Object(obj)
-        }
-        FhirPathValue::DateTimePrecision(precision) => Value::String(precision.to_string()),
-        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-            let json_items: Vec<Value> = items.iter().map(fhirpath_value_to_json).collect();
-            Value::Array(json_items)
-        }
-        FhirPathValue::Object(obj) => obj.clone(),
-        FhirPathValue::TypedObject { value, .. } => value.clone(),
-        FhirPathValue::FhirPrimitive { inner, .. } => fhirpath_value_to_json(inner),
-        FhirPathValue::Empty => Value::Null,
-    }
+#[derive(Args)]
+pub struct EvalOptions {
+    /// FHIR release used for model-aware navigation
+    #[clap(long, default_value = "r4")]
+    fhir_version: FhirModel,
+
+    /// Select the initial focus with a FHIRPath expression evaluated from the resource
+    #[clap(long)]
+    context: Option<String>,
+
+    /// Enforce model-aware navigation rules
+    #[clap(long)]
+    strict: bool,
+
+    /// Reject order-sensitive functions on unordered results
+    #[clap(long)]
+    check_ordered_functions: bool,
 }
 
 #[derive(Subcommand)]
@@ -97,6 +62,9 @@ pub enum FhirpathCommands {
         /// Display format: pretty, json, debug
         #[clap(long = "display-format", default_value = "pretty")]
         display_format: String,
+
+        #[clap(flatten)]
+        options: EvalOptions,
     },
     /// Interactive REPL for FHIRPath expressions
     Repl {
@@ -128,8 +96,9 @@ pub async fn handle_command(cmd: FhirpathCommands, ctx: &OutputContext) -> Resul
             expression,
             data,
             display_format,
+            options,
         } => {
-            eval_expression(&expression, data.as_deref(), &display_format, ctx)?;
+            eval_expression(&expression, data.as_deref(), &display_format, &options, ctx)?;
         }
         FhirpathCommands::Repl { data } => {
             rh_fhirpath::repl::run_repl(data.as_deref())?;
@@ -185,6 +154,7 @@ fn eval_expression(
     expression: &str,
     data_file: Option<&std::path::Path>,
     format: &str,
+    options: &EvalOptions,
     ctx: &OutputContext,
 ) -> Result<()> {
     info!("Evaluating FHIRPath expression: {}", expression);
@@ -209,7 +179,14 @@ fn eval_expression(
     };
 
     // Create evaluation context
-    let context = EvaluationContext::new(data);
+    let mut context = EvaluationContext::new(data);
+    context.model = options.fhir_version;
+    context.strict_mode = options.strict;
+    context.check_ordered_functions = options.check_ordered_functions;
+    if let Some(focus) = &options.context {
+        let focus = evaluator.evaluate_nodes(&parser.parse(focus)?, &context)?;
+        context = context.with_initial_focus(focus);
+    }
 
     // Evaluate the expression
     match evaluator.evaluate(&ast, &context) {
@@ -226,7 +203,7 @@ fn eval_expression(
 
             match format {
                 "json" => {
-                    let json_value = fhirpath_value_to_json(&result);
+                    let json_value = result.to_json();
                     if ctx.is_json() {
                         print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
                     } else {
@@ -236,7 +213,7 @@ fn eval_expression(
                 }
                 "debug" => {
                     if ctx.is_json() {
-                        let json_value = fhirpath_value_to_json(&result);
+                        let json_value = result.to_json();
                         print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
                     } else {
                         println!("{result:#?}");
@@ -244,7 +221,7 @@ fn eval_expression(
                 }
                 "pretty" => {
                     if ctx.is_json() {
-                        let json_value = fhirpath_value_to_json(&result);
+                        let json_value = result.to_json();
                         print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
                     } else {
                         println!("✅ Expression: {expression}");
@@ -253,7 +230,7 @@ fn eval_expression(
                 }
                 _ => {
                     if ctx.is_json() {
-                        let json_value = fhirpath_value_to_json(&result);
+                        let json_value = result.to_json();
                         print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
                     } else {
                         println!("✅ Expression: {expression}");
@@ -303,7 +280,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
         match parser.parse(&test_case.expression) {
             Ok(ast) => match evaluator.evaluate(&ast, &context) {
                 Ok(result) => {
-                    let result_json = fhirpath_value_to_json(&result);
+                    let result_json = result.to_json();
                     if result_json == test_case.expected {
                         println!("✅ PASS");
                         passed += 1;

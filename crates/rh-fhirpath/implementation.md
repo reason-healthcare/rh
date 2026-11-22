@@ -1,6 +1,6 @@
 # FHIRPath Implementation Status
 
-This document provides a comprehensive overview of all supported operations and functions in the FHIRPath Rust implementation.
+This inventory records the implementation before the FHIRPath 3.0.0 work. See [Specification coverage](SPEC_COVERAGE.md) and [Conformance](CONFORMANCE.md) for current behavior.
 
 ## Operators
 

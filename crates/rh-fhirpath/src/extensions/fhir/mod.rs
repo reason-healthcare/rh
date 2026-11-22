@@ -52,7 +52,9 @@
 //! ```
 
 pub mod functions;
+pub mod host;
 pub mod variables;
+mod xhtml;
 
 use crate::error::*;
 use crate::evaluator::types::FhirPathValue;

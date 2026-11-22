@@ -527,6 +527,17 @@ fn effective_slice_name(element: &ElementDefinition) -> Option<String> {
     })
 }
 
+/// Slice children identify their slice in ElementDefinition.id. Only the slice
+/// root normally has a sliceName in a published snapshot.
+fn belongs_to_slice(element: &ElementDefinition, root: &ElementDefinition, name: &str) -> bool {
+    if let (Some(id), Some(root_id)) = (element.id.as_deref(), root.id.as_deref()) {
+        if let Some(suffix) = id.strip_prefix(root_id).and_then(|s| s.strip_prefix(':')) {
+            return suffix.split('.').next() == Some(name);
+        }
+    }
+    element.slice_name.as_deref() == Some(name)
+}
+
 fn collect_discriminator_constraints(
     elements: &[ElementDefinition],
     slicing_root: &ElementDefinition,
@@ -536,7 +547,7 @@ fn collect_discriminator_constraints(
     let mut constraints = Vec::new();
 
     for element in elements {
-        if element.slice_name.as_deref() != Some(slice_name) {
+        if !belongs_to_slice(element, slicing_root, slice_name) {
             continue;
         }
 
@@ -570,7 +581,7 @@ fn collect_profile_constraints(
     let mut profiles = Vec::new();
 
     for element in elements {
-        if element.slice_name.as_deref() != Some(slice_name) {
+        if !belongs_to_slice(element, slicing_root, slice_name) {
             continue;
         }
 

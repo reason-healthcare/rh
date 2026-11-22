@@ -1,0 +1,53 @@
+a	accesskey charset class coords dir href hreflang id lang name rel rev shape style tabindex title type xml:lang	abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+abbr	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+acronym	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+address	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+area	accesskey alt class coords dir href id lang nohref shape style tabindex title xml:lang		alt
+b	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+bdo	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	dir
+big	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+blockquote	cite class dir id lang style title xml:lang	address blockquote div dl h1 h2 h3 h4 h5 h6 hr ol p pre table ul	
+br	class id style title		
+caption	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+cite	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+code	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+col	align char charoff class dir id lang span style title valign width xml:lang		
+colgroup	align char charoff class dir id lang span style title valign width xml:lang	col	
+dd	class dir id lang style title xml:lang	a abbr acronym address b bdo big blockquote br cite code dfn div dl em h1 h2 h3 h4 h5 h6 hr i img kbd map ol p pre q samp small span strong sub sup table tt ul var	
+dfn	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+div	class dir id lang style title xml:lang	a abbr acronym address b bdo big blockquote br cite code dfn div dl em h1 h2 h3 h4 h5 h6 hr i img kbd map ol p pre q samp small span strong sub sup table tt ul var	
+dl	class dir id lang style title xml:lang	dd dt	
+dt	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+em	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+h1	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+h2	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+h3	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+h4	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+h5	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+h6	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+hr	class dir id lang style title xml:lang		
+i	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+img	alt class dir height id ismap lang longdesc src style title usemap width xml:lang		alt src
+kbd	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+li	class dir id lang style title xml:lang	a abbr acronym address b bdo big blockquote br cite code dfn div dl em h1 h2 h3 h4 h5 h6 hr i img kbd map ol p pre q samp small span strong sub sup table tt ul var	
+map	class dir id lang name style title xml:lang	address area blockquote div dl h1 h2 h3 h4 h5 h6 hr ol p pre table ul	id
+ol	class dir id lang style title xml:lang	li	
+p	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+pre	class dir id lang style title xml:lang xml:space	a abbr acronym b bdo big br cite code dfn em i kbd map q samp small span strong sub sup tt var	
+q	cite class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+samp	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+small	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+span	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+strong	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+sub	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+sup	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+table	border cellpadding cellspacing class dir frame id lang rules style summary title width xml:lang	caption col colgroup tbody tfoot thead tr	
+tbody	align char charoff class dir id lang style title valign xml:lang	tr	
+td	abbr align axis char charoff class colspan dir headers id lang rowspan scope style title valign xml:lang	a abbr acronym address b bdo big blockquote br cite code dfn div dl em h1 h2 h3 h4 h5 h6 hr i img kbd map ol p pre q samp small span strong sub sup table tt ul var	
+tfoot	align char charoff class dir id lang style title valign xml:lang	tr	
+th	abbr align axis char charoff class colspan dir headers id lang rowspan scope style title valign xml:lang	a abbr acronym address b bdo big blockquote br cite code dfn div dl em h1 h2 h3 h4 h5 h6 hr i img kbd map ol p pre q samp small span strong sub sup table tt ul var	
+thead	align char charoff class dir id lang style title valign xml:lang	tr	
+tr	align char charoff class dir id lang style title valign xml:lang	td th	
+tt	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	
+ul	class dir id lang style title xml:lang	li	
+var	class dir id lang style title xml:lang	a abbr acronym b bdo big br cite code dfn em i img kbd map q samp small span strong sub sup tt var	

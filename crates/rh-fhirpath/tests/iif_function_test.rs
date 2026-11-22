@@ -111,46 +111,24 @@ fn test_iif_with_non_boolean_conditions() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_iif_test_context();
 
-    // Per the FHIRPath spec, iif() criterion must be Boolean or empty.
-    // Non-boolean scalar inputs are TypeError.
-
-    // Integer criterion → TypeError
-    let expr = parser
-        .parse("iif(testValues.nonZeroInt, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err(), "Expected TypeError for integer criterion");
-
-    // Zero integer criterion → TypeError
-    let expr = parser
-        .parse("iif(testValues.zeroInt, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err(), "Expected TypeError for integer criterion");
-
-    // String criterion → TypeError
-    let expr = parser
-        .parse("iif(testValues.nonEmptyString, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err(), "Expected TypeError for string criterion");
-
-    // Empty string criterion → TypeError
-    let expr = parser
-        .parse("iif(testValues.emptyString, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err(), "Expected TypeError for string criterion");
-
-    // Boolean-returning expression → fine
-    let expr = parser
-        .parse("iif(testValues.nonZeroInt > 0, results.success, results.failure)")
-        .unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "SUCCESS");
-    } else {
-        panic!("Expected string result");
+    // Each non-Boolean singleton evaluates to true, including 0 and the empty string.
+    for criterion in [
+        "testValues.nonZeroInt",
+        "testValues.zeroInt",
+        "testValues.nonEmptyString",
+        "testValues.emptyString",
+        "testValues.nonZeroInt > 0",
+    ] {
+        let expr = parser
+            .parse(&format!(
+                "iif({criterion}, results.success, results.failure)"
+            ))
+            .unwrap();
+        assert_eq!(
+            evaluator.evaluate(&expr, &context).unwrap(),
+            FhirPathValue::String("SUCCESS".to_string()),
+            "{criterion}",
+        );
     }
 }
 
@@ -251,11 +229,7 @@ fn test_iif_with_complex_expressions() {
         .parse("iif(patient.name.exists(), patient.name.family, 'No Name')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "Smith");
-    } else {
-        panic!("Expected string result, got: {result:?}");
-    }
+    assert_eq!(result.as_str(), Some("Smith"));
 
     // Test with count() expression as criterion
     let expr = parser
@@ -429,15 +403,11 @@ fn test_iif_real_world_scenarios() {
         .parse("iif(patient.telecom.exists(), patient.telecom[0].value, 'No contact')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    if let FhirPathValue::String(s) = result {
-        assert_eq!(s, "555-1234");
-    } else {
-        panic!("Expected string result, got: {result:?}");
-    }
+    assert_eq!(result.as_str(), Some("555-1234"));
 
     // Scenario 2: Age-based categorization (simulated)
     let expr = parser
-        .parse("iif(patient.birthDate = '1990-01-01', 'Adult', 'Other')")
+        .parse("iif(patient.birthDate = @1990-01-01, 'Adult', 'Other')")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     if let FhirPathValue::String(s) = result {

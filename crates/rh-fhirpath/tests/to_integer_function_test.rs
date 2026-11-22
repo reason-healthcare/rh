@@ -63,15 +63,15 @@ fn test_to_integer_with_decimal_values() {
     // Test whole number decimals
     let expr = parser.parse("42.0.toInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Integer(42));
+    assert_eq!(result, FhirPathValue::Empty);
 
     let expr = parser.parse("0.0.toInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Integer(0));
+    assert_eq!(result, FhirPathValue::Empty);
 
     let expr = parser.parse("(-123.0).toInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Integer(-123));
+    assert_eq!(result, FhirPathValue::Empty);
 
     // Test non-whole decimals (should be empty)
     let expr = parser.parse("2.5.toInteger()").unwrap();
@@ -107,7 +107,7 @@ fn test_to_integer_with_string_values() {
     // Test strings with whitespace
     let expr = parser.parse("'  42  '.toInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Integer(42));
+    assert_eq!(result, FhirPathValue::Empty);
 
     // Test invalid strings (should be empty)
     let expr = parser.parse("'abc'.toInteger()").unwrap();
@@ -236,10 +236,7 @@ fn test_to_integer_comprehensive() {
             "testCases.falseBoolean.toInteger()",
             FhirPathValue::Integer(0),
         ),
-        (
-            "testCases.wholeDecimal.toInteger()",
-            FhirPathValue::Integer(42),
-        ),
+        ("testCases.wholeDecimal.toInteger()", FhirPathValue::Empty),
         (
             "testCases.fractionalDecimal.toInteger()",
             FhirPathValue::Empty,
@@ -252,7 +249,7 @@ fn test_to_integer_comprehensive() {
         ("testCases.emptyString.toInteger()", FhirPathValue::Empty),
         (
             "testCases.whitespaceString.toInteger()",
-            FhirPathValue::Integer(456),
+            FhirPathValue::Empty,
         ),
         ("testCases.decimalString.toInteger()", FhirPathValue::Empty),
     ];

@@ -49,6 +49,8 @@ impl ParseOptions {
 #[derive(Serialize, Deserialize)]
 pub struct EvaluateOptions {
     format: String,
+    #[serde(default)]
+    fhir_version: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -57,6 +59,7 @@ impl EvaluateOptions {
     pub fn new() -> Self {
         Self {
             format: "json".to_string(),
+            fhir_version: None,
         }
     }
 
@@ -68,6 +71,16 @@ impl EvaluateOptions {
     #[wasm_bindgen(setter)]
     pub fn set_format(&mut self, format: String) {
         self.format = format;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn fhir_version(&self) -> String {
+        self.fhir_version.as_deref().unwrap_or("r4").to_owned()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_fhir_version(&mut self, version: String) {
+        self.fhir_version = Some(version);
     }
 }
 
@@ -122,7 +135,13 @@ pub fn evaluate_fhirpath_expression(
 
     // Evaluate the expression
     let evaluator = FhirPathEvaluator::new();
-    let context = EvaluationContext::new(resource);
+    let mut context = EvaluationContext::new(resource);
+    if let Some(version) = &options.fhir_version {
+        match version.parse() {
+            Ok(model) => context.model = model,
+            Err(error) => return WasmResult::err(error.to_string()),
+        }
+    }
 
     let result = match evaluator.evaluate(&ast, &context) {
         Ok(result) => result,
@@ -239,5 +258,30 @@ pub fn validate_fhirpath_expression(expression: &str) -> WasmResult {
             serde_json::json!({"valid": true, "message": "Valid FHIRPath expression"}).to_string(),
         ),
         Err(e) => WasmResult::err(format!("Invalid FHIRPath expression: {e}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    #[wasm_bindgen_test]
+    fn evaluates_typed_r5_values_and_preserves_decimal_output() {
+        let mut options = EvaluateOptions::new();
+        options.set_fhir_version("r5".into());
+        let resource = r#"{"resourceType":"Parameters","parameter":[{"name":"count","valueInteger64":"9223372036854775807"}]}"#;
+        let result = evaluate_fhirpath_expression(
+            "parameter.value.getValue() is System.Long",
+            resource,
+            &options,
+        );
+        assert!(result.success, "{:?}", result.error());
+        let output: serde_json::Value = serde_json::from_str(&result.data().unwrap()).unwrap();
+        assert_eq!(output["result"], serde_json::json!(true));
+        let result = evaluate_fhirpath_expression("1.234567890123456789", "null", &options);
+        assert!(result.success, "{:?}", result.error());
+        let payload = result.data().unwrap();
+        assert!(payload.contains("1.234567890123456789"), "{payload}");
     }
 }

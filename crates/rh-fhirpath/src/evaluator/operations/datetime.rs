@@ -1,34 +1,24 @@
 //! Date and time functions for FHIRPath expressions
 //!
-//! This module implements FHIRPath date/time functions like now(), today(), and tim                let _time = NaiveTime::parse_from_str(time_part, "%H:%M:%S")?;OfDay().
+//! This module implements FHIRPath date/time functions like now(), today(), and timeOfDay().
 //! These functions return current system date/time values and don't require a target value.
 //! Also includes component extraction functions for Date, DateTime, and Time values.
 
 use crate::error::*;
-use crate::evaluator::operations::temporal::parse_temporal;
+use crate::evaluator::operations::temporal::{parse_temporal, timezone_suffix};
 use crate::evaluator::types::FhirPathValue;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use rust_decimal::Decimal;
-
-/// Helper function to parse datetime strings with timezone handling
-fn parse_datetime_str(dt_str: &str) -> Result<DateTime<chrono::FixedOffset>, chrono::ParseError> {
-    let has_tz = dt_str.ends_with('Z')
-        || dt_str
-            .find('T')
-            .is_some_and(|t| dt_str[t + 1..].contains('+') || dt_str[t + 1..].contains('-'));
-    if has_tz {
-        DateTime::parse_from_rfc3339(dt_str)
-    } else {
-        DateTime::parse_from_rfc3339(&format!("{dt_str}Z"))
-    }
-}
 
 fn component(
     value: &FhirPathValue,
     extract: impl FnOnce(crate::evaluator::operations::temporal::TemporalParts) -> Option<i64>,
 ) -> FhirPathResult<FhirPathValue> {
     let text = match value {
-        FhirPathValue::Date(s) | FhirPathValue::DateTime(s) | FhirPathValue::Time(s) => s,
+        FhirPathValue::Date(s)
+        | FhirPathValue::DateTime(s)
+        | FhirPathValue::Time(s)
+        | FhirPathValue::TypedDateTime { value: s, .. } => s,
         FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
             if items.len() == 1 =>
@@ -140,44 +130,19 @@ impl DateTimeEvaluator {
     /// timezoneOffsetOf(datetime) - Extract timezone offset from DateTime
     /// Returns the timezone offset as a Number in hours (e.g., -5.0 for EST, 0.0 for UTC)
     pub fn timezone_offset_of(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match value {
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::timezone_offset_of(&items[0])
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(FhirPathValue::Empty)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                Err(FhirPathError::TypeError {
-                    message: format!(
-                        "timezoneOffsetOf() requires a single item, found {}",
-                        items.len()
-                    ),
-                })
-            }
-            FhirPathValue::DateTime(dt_str) => {
-                let Some(parts) = parse_temporal(dt_str) else {
-                    return Ok(FhirPathValue::Empty);
-                };
-                if parts.tz_offset_min.is_none() {
-                    return Ok(FhirPathValue::Empty);
-                }
-                let datetime =
-                    parse_datetime_str(dt_str).map_err(|_| FhirPathError::TypeError {
-                        message: format!("Invalid datetime format: {dt_str}"),
-                    })?;
-                let offset_seconds = datetime.offset().local_minus_utc() as f64;
-                let offset_hours =
-                    Decimal::from_f64_retain(offset_seconds / 3600.0).unwrap_or(Decimal::ZERO);
-                Ok(FhirPathValue::Number(offset_hours))
-            }
-            _ => Ok(FhirPathValue::Empty),
-        }
+        let value = value
+            .singleton("timezoneOffsetOf()")?
+            .map(FhirPathValue::system_value);
+        let text = match value {
+            Some(
+                FhirPathValue::DateTime(text) | FhirPathValue::TypedDateTime { value: text, .. },
+            ) => text,
+            _ => return Ok(FhirPathValue::Empty),
+        };
+        let offset = parse_temporal(text).and_then(|parts| parts.tz_offset_min);
+        Ok(offset.map_or(FhirPathValue::Empty, |minutes| {
+            FhirPathValue::Number(Decimal::from(minutes) / Decimal::from(60))
+        }))
     }
 
     /// dateOf(datetime) - Extract date component from DateTime
@@ -201,7 +166,8 @@ impl DateTimeEvaluator {
                 })
             }
             FhirPathValue::Date(date_str) => Ok(FhirPathValue::Date(date_str.clone())),
-            FhirPathValue::DateTime(dt_str) => Ok(FhirPathValue::Date(
+            FhirPathValue::DateTime(dt_str)
+            | FhirPathValue::TypedDateTime { value: dt_str, .. } => Ok(FhirPathValue::Date(
                 dt_str.split('T').next().unwrap_or(dt_str).to_string(),
             )),
             _ => Ok(FhirPathValue::Empty),
@@ -228,27 +194,17 @@ impl DateTimeEvaluator {
                     message: format!("timeOf() requires a single item, found {}", items.len()),
                 })
             }
-            FhirPathValue::DateTime(dt_str) => {
-                if let Some(time) = dt_str.split_once('T').map(|(_, time)| time) {
-                    Ok(FhirPathValue::Time(strip_timezone(time).to_string()))
-                } else {
+            FhirPathValue::DateTime(text) | FhirPathValue::TypedDateTime { value: text, .. } => {
+                let time = text.split_once('T').map_or("", |(_, time)| time);
+                let time = time.trim_end_matches(timezone_suffix(text));
+                if time.is_empty() {
                     Ok(FhirPathValue::Empty)
+                } else {
+                    Ok(FhirPathValue::Time(time.to_owned()))
                 }
             }
             _ => Ok(FhirPathValue::Empty),
         }
-    }
-}
-
-fn strip_timezone(time: &str) -> &str {
-    if let Some(stripped) = time.strip_suffix('Z') {
-        return stripped;
-    }
-    let plus = time.rfind('+');
-    let minus = time.rfind('-');
-    match (plus, minus) {
-        (Some(pos), _) | (_, Some(pos)) => &time[..pos],
-        _ => time,
     }
 }
 

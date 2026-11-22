@@ -129,7 +129,9 @@ fn matches_system_type(value: &FhirPathValue, lower_name: &str, exact: bool) -> 
             }
             _ => false,
         },
-        "integer" => matches!(value, FhirPathValue::Integer(_) | FhirPathValue::Long(_)),
+        "integer" => matches!(value, FhirPathValue::Integer(_)),
+        "long" => matches!(value, FhirPathValue::Long(_)),
+        "any" => !matches!(value, FhirPathValue::Empty),
         "decimal" | "number" => matches!(value, FhirPathValue::Number(_)),
         "date" => matches!(value, FhirPathValue::Date(_)),
         "datetime" => matches!(value, FhirPathValue::DateTime(_)),
@@ -139,6 +141,9 @@ fn matches_system_type(value: &FhirPathValue, lower_name: &str, exact: bool) -> 
             value,
             FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_)
         ),
+        "typeinfo" | "simpletypeinfo" | "classinfo" => {
+            matches!(value, FhirPathValue::TypedObject {fhir_type,..} if fhir_type.strip_prefix("System.").is_some_and(|ty| matches!(ty,"SimpleTypeInfo"|"ClassInfo") && (lower_name=="typeinfo" || ty.eq_ignore_ascii_case(lower_name))))
+        }
         "object" | "resource" => matches!(value, FhirPathValue::Object(_)),
         _ => false,
     }
@@ -183,6 +188,41 @@ fn matches_fhir_type(value: &FhirPathValue, lower_name: &str, exact: bool) -> bo
 }
 
 impl TypeEvaluator {
+    pub(crate) fn validate_type(
+        model: crate::evaluator::metadata::FhirModel,
+        name: &str,
+    ) -> FhirPathResult<()> {
+        let (namespace, raw, _) = split_type_name(name.trim_end_matches("[]"));
+        let system = matches!(
+            raw,
+            "Any"
+                | "Boolean"
+                | "Integer"
+                | "Long"
+                | "Decimal"
+                | "String"
+                | "Date"
+                | "DateTime"
+                | "Time"
+                | "Quantity"
+                | "Collection"
+                | "TypeInfo"
+                | "SimpleTypeInfo"
+                | "ClassInfo"
+                | "Object"
+                | "Number"
+        );
+        if (namespace != TypeNamespace::System && model.is_type(raw))
+            || (namespace != TypeNamespace::Fhir && system)
+        {
+            Ok(())
+        } else {
+            Err(FhirPathError::TypeError {
+                message: format!("Unknown type '{name}'"),
+            })
+        }
+    }
+
     /// Evaluate type operation (is, as)
     pub fn evaluate_type_operation(
         left: &FhirPathValue,
@@ -205,6 +245,15 @@ impl TypeEvaluator {
             return Ok(FhirPathValue::Empty);
         }
         let type_name = Self::get_type_name(type_specifier);
+        let value = match value.items() {
+            [] => return Ok(FhirPathValue::Empty),
+            [item] => item,
+            _ => {
+                return Err(FhirPathError::EvaluationError {
+                    message: "is requires a singleton".into(),
+                })
+            }
+        };
         let matches = Self::value_is_type(value, &type_name)?;
         Ok(FhirPathValue::Boolean(matches))
     }
@@ -290,6 +339,20 @@ impl TypeEvaluator {
         }
 
         let (namespace, raw_name, lower_name) = split_type_name(type_name);
+        if let FhirPathValue::Node(node) = value {
+            if node.is_system_projection() {
+                return Ok(namespace != TypeNamespace::Fhir
+                    && matches_system_type(&node.inner, &lower_name, false)
+                    && (namespace == TypeNamespace::System
+                        || raw_name.starts_with(char::is_uppercase)));
+            }
+            if namespace == TypeNamespace::System
+                || (namespace == TypeNamespace::Unqualified && !node.model.is_type(raw_name))
+            {
+                return Ok(raw_name == "Any");
+            }
+            return Ok(node.model.is_subtype(&node.fhir_type, raw_name));
+        }
         match namespace {
             TypeNamespace::System => return Ok(matches_system_type(value, &lower_name, false)),
             TypeNamespace::Fhir => {
@@ -397,6 +460,23 @@ impl TypeEvaluator {
         }
 
         let (namespace, raw_name, lower_name) = split_type_name(type_name);
+        if let FhirPathValue::Node(node) = value {
+            if node.is_system_projection() {
+                return Ok(namespace != TypeNamespace::Fhir
+                    && matches_system_type(&node.inner, &lower_name, true)
+                    && (namespace == TypeNamespace::System
+                        || raw_name.starts_with(char::is_uppercase)));
+            }
+            if namespace == TypeNamespace::System
+                || (namespace == TypeNamespace::Unqualified && !node.model.is_type(raw_name))
+            {
+                return Ok(raw_name == "Any");
+            }
+            if node.is_primitive() && raw_name.starts_with(|c: char| c.is_ascii_lowercase()) {
+                return Ok(node.fhir_type == raw_name);
+            }
+            return Ok(node.model.is_subtype(&node.fhir_type, raw_name));
+        }
         match namespace {
             TypeNamespace::System => return Ok(matches_system_type(value, &lower_name, true)),
             TypeNamespace::Fhir => {

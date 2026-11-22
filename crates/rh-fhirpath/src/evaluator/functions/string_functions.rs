@@ -212,13 +212,10 @@ pub fn register_string_functions(functions: &mut HashMap<String, FhirPathFunctio
         }),
     );
 
-    // encode(format) / decode(format) — base64, urlbase64, hex
+    // Encode and decode strings in the specified format.
     functions.insert(
         "encode".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.is_empty() {
-                return Ok(FhirPathValue::Empty);
-            }
             with_string_arg(target, params, "encode", encode_string)
         }),
     );
@@ -252,22 +249,26 @@ fn with_string_arg(
     name: &str,
     apply: fn(&str, &str) -> FhirPathResult<Option<String>>,
 ) -> FhirPathResult<FhirPathValue> {
-    let value = match target {
-        FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-        FhirPathValue::Collection(items) if items.is_empty() => return Ok(FhirPathValue::Empty),
-        FhirPathValue::Collection(items) if items.len() == 1 => &items[0],
-        other => other,
+    let [parameter] = params else {
+        if params.is_empty() {
+            return Ok(FhirPathValue::Empty);
+        }
+        return Err(FhirPathError::function_error(format!(
+            "{name}() takes one format parameter"
+        )));
     };
-    let FhirPathValue::String(s) = value else {
-        return Err(FhirPathError::FunctionError {
-            message: format!("{name}() requires a string input"),
-        });
+    let Some(value) = target.singleton(name)? else {
+        return Ok(FhirPathValue::Empty);
     };
-    let Some(FhirPathValue::String(format)) = params.first() else {
-        return Err(FhirPathError::FunctionError {
-            message: format!("{name}() requires a string format parameter"),
-        });
+    let Some(format) = parameter.singleton(name)? else {
+        return Ok(FhirPathValue::Empty);
     };
+    let s = value
+        .as_str()
+        .ok_or_else(|| FhirPathError::type_error(format!("{name}() requires a String input")))?;
+    let format = format.as_str().ok_or_else(|| {
+        FhirPathError::type_error(format!("{name}() requires a String format parameter"))
+    })?;
     match apply(s, format)? {
         Some(out) => Ok(FhirPathValue::String(out)),
         None => Ok(FhirPathValue::Empty),
@@ -280,6 +281,11 @@ fn encode_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
         "base64" => Some(base64::engine::general_purpose::STANDARD.encode(s.as_bytes())),
         "urlbase64" => Some(base64::engine::general_purpose::URL_SAFE.encode(s.as_bytes())),
         "hex" => Some(s.as_bytes().iter().map(|b| format!("{b:02x}")).collect()),
+        "ascii" => Some(
+            s.chars()
+                .map(|c| if c.is_ascii() { c } else { '?' })
+                .collect(),
+        ),
         _ => {
             return Err(FhirPathError::FunctionError {
                 message: format!("encode(): unsupported format '{format}'"),
@@ -297,16 +303,12 @@ fn decode_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
         "urlbase64" => base64::engine::general_purpose::URL_SAFE
             .decode(s.as_bytes())
             .ok(),
-        "hex" => {
-            if !s.len().is_multiple_of(2) {
-                None
-            } else {
-                (0..s.len())
-                    .step_by(2)
-                    .map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok())
-                    .collect::<Option<Vec<u8>>>()
-            }
-        }
+        "hex" if s.len().is_multiple_of(2) && s.bytes().all(|b| b.is_ascii_hexdigit()) => (0..s
+            .len())
+            .step_by(2)
+            .map(|index| u8::from_str_radix(&s[index..index + 2], 16).ok())
+            .collect::<Option<Vec<_>>>(),
+        "hex" => None,
         _ => {
             return Err(FhirPathError::FunctionError {
                 message: format!("decode(): unsupported format '{format}'"),
@@ -331,13 +333,10 @@ fn escape_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
                 })
                 .collect(),
         ),
-        "json" => Some(
-            s.replace('\\', "\\\\")
-                .replace('"', "\\\"")
-                .replace('\n', "\\n")
-                .replace('\r', "\\r")
-                .replace('\t', "\\t"),
-        ),
+        "json" => {
+            let json = serde_json::to_string(s)?;
+            Some(json[1..json.len() - 1].to_owned())
+        }
         _ => {
             return Err(FhirPathError::FunctionError {
                 message: format!("escape(): unsupported format '{format}'"),
@@ -348,24 +347,73 @@ fn escape_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
 
 fn unescape_string(s: &str, format: &str) -> FhirPathResult<Option<String>> {
     Ok(match format {
-        "html" => Some(
-            s.replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                .replace("&#39;", "'")
-                .replace("&amp;", "&"),
-        ),
-        "json" => Some(
-            s.replace("\\\"", "\"")
-                .replace("\\n", "\n")
-                .replace("\\r", "\r")
-                .replace("\\t", "\t")
-                .replace("\\\\", "\\"),
-        ),
+        "html" => Some(unescape_html(s)),
+        "json" => unescape_json(s),
         _ => {
             return Err(FhirPathError::FunctionError {
                 message: format!("unescape(): unsupported format '{format}'"),
             })
         }
     })
+}
+
+fn unescape_json(text: &str) -> Option<String> {
+    let mut quoted = String::with_capacity(text.len() + 2);
+    quoted.push('"');
+    let mut after_backslash = false;
+    for character in text.chars() {
+        match character {
+            '\\' => {
+                quoted.push(character);
+                after_backslash = !after_backslash;
+                continue;
+            }
+            '"' if !after_backslash => quoted.push_str("\\\""),
+            character if character < ' ' && !after_backslash => {
+                use std::fmt::Write;
+                write!(&mut quoted, "\\u{:04x}", u32::from(character)).ok()?;
+            }
+            _ => quoted.push(character),
+        }
+        after_backslash = false;
+    }
+    quoted.push('"');
+    serde_json::from_str(&quoted).ok()
+}
+
+fn unescape_html(mut text: &str) -> String {
+    let mut output = String::with_capacity(text.len());
+    while let Some((plain, after_ampersand)) = text.split_once('&') {
+        output.push_str(plain);
+        if let Some(end) = after_ampersand.find(['&', ';']) {
+            if after_ampersand.as_bytes()[end] == b';' {
+                let entity = &after_ampersand[..end];
+                let value = match entity {
+                    "amp" => Some('&'),
+                    "lt" => Some('<'),
+                    "gt" => Some('>'),
+                    "quot" => Some('"'),
+                    "apos" => Some('\''),
+                    "nbsp" => Some('\u{a0}'),
+                    _ => entity.strip_prefix('#').and_then(|code| {
+                        if let Some(hex) = code.strip_prefix(['x', 'X']) {
+                            u32::from_str_radix(hex, 16).ok()
+                        } else {
+                            code.parse::<u32>().ok()
+                        }
+                        .and_then(char::from_u32)
+                    }),
+                };
+                if let Some(value) = value {
+                    output.push(value);
+                    text = &after_ampersand[end + 1..];
+                    continue;
+                }
+            }
+        }
+        output.push('&');
+        text = after_ampersand;
+    }
+    output.push_str(text);
+    output
 }

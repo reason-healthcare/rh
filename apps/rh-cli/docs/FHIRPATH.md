@@ -48,8 +48,12 @@ rh fhirpath eval [OPTIONS] <EXPRESSION>
 - `<EXPRESSION>` - FHIRPath expression to evaluate
 
 **Options:**
-- `-d, --data <DATA>` - Path to a JSON file containing FHIR data (reads from stdin if not provided)
-- `-f, --format <FORMAT>` - Output format: `pretty` (default), `json`, `debug`
+- `-d, --data <DATA>` - Path to a JSON file containing FHIR data (optional)
+- `--display-format <DISPLAY_FORMAT>` selects `pretty` (default), `json`, or `debug`.
+- `--fhir-version <FHIR_VERSION>` selects the R4 (default) or R5 logical model.
+- `--context <CONTEXT>` evaluates a path from the input resource to select the starting focus.
+- `--strict` enforces model-aware navigation rules.
+- `--check-ordered-functions` checks operations that require defined input ordering.
 - `-v, --verbose` - Enable verbose logging
 - `-h, --help` - Print help
 
@@ -59,8 +63,8 @@ rh fhirpath eval [OPTIONS] <EXPRESSION>
 # Evaluate against a FHIR resource file
 rh fhirpath eval "Patient.name.family" --data patient.json
 
-# Pipe FHIR data from stdin
-cat patient.json | rh fhirpath eval "Patient.name.family"
+# Evaluate at the first name using the R5 model
+rh fhirpath eval 'family' --fhir-version r5 --context 'name.first()' --data patient.json
 
 # Use a filtering expression
 rh fhirpath eval "Patient.name.where(use = 'official').family" --data patient.json

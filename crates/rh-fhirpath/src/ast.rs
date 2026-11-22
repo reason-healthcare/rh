@@ -25,6 +25,11 @@ pub enum Expression {
         left: Box<Expression>,
         index: Box<Expression>,
     },
+    /// A sort selector with an explicit direction.
+    SortKey {
+        key: Box<Expression>,
+        descending: bool,
+    },
     /// Polarity expression (e.g., -5, +10)
     Polarity {
         operator: PolarityOperator,
@@ -100,6 +105,11 @@ pub enum Term {
     ExternalConstant(String),
     /// Parenthesized expression
     Parenthesized(Box<Expression>),
+    /// A typed instance with named element expressions.
+    InstanceSelector {
+        type_specifier: TypeSpecifier,
+        elements: Vec<(String, Expression)>,
+    },
 }
 
 /// Literal value types
@@ -239,6 +249,9 @@ impl fmt::Display for Expression {
                 write!(f, "{left}.{invocation}")
             }
             Expression::Indexer { left, index } => write!(f, "{left}[{index}]"),
+            Expression::SortKey { key, descending } => {
+                write!(f, "{key} {}", if *descending { "desc" } else { "asc" })
+            }
             Expression::Polarity { operator, operand } => {
                 write!(f, "{operator}{operand}")
             }
@@ -291,6 +304,24 @@ impl fmt::Display for Term {
             Term::Literal(lit) => write!(f, "{lit}"),
             Term::ExternalConstant(name) => write!(f, "%{name}"),
             Term::Parenthesized(expr) => write!(f, "({expr})"),
+            Term::InstanceSelector {
+                type_specifier,
+                elements,
+            } => {
+                write!(f, "{type_specifier} {{")?;
+                if elements.is_empty() {
+                    write!(f, ":")?;
+                }
+                for (index, (name, value)) in elements.iter().enumerate() {
+                    if index == 0 {
+                        write!(f, " ")?;
+                    } else {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{name}: {value}")?;
+                }
+                write!(f, " }}")
+            }
         }
     }
 }

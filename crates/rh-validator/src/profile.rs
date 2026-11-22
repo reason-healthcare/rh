@@ -5,12 +5,12 @@ use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinition, StructureD
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::fhir_version::FhirVersion;
 
 pub struct ProfileRegistry {
-    generator: SnapshotGenerator,
+    generator: Mutex<SnapshotGenerator>,
     profiles: HashMap<String, StructureDefinition>,
     /// Dynamically registered profiles (can be added at runtime with &self)
     dynamic_profiles: RwLock<HashMap<String, Arc<StructureDefinition>>>,
@@ -76,7 +76,7 @@ impl ProfileRegistry {
 
         let capacity = NonZeroUsize::new(100).unwrap();
         Ok(Self {
-            generator,
+            generator: Mutex::new(generator),
             profiles,
             dynamic_profiles: RwLock::new(HashMap::new()),
             snapshot_cache: RwLock::new(LruCache::new(capacity)),
@@ -113,6 +113,8 @@ impl ProfileRegistry {
 
         let snapshot = self
             .generator
+            .lock()
+            .unwrap()
             .generate_snapshot(lookup_url)
             .context("Failed to generate snapshot")?;
 
@@ -146,9 +148,7 @@ impl ProfileRegistry {
     }
 
     /// Register a profile dynamically (can be called with &self)
-    /// Note: Dynamically registered profiles don't support snapshot generation
-    /// since the SnapshotGenerator isn't thread-safe. The profile is stored
-    /// as-is, which is sufficient for checking extension isModifier flags.
+    /// Dynamically registered profiles supply their own snapshot.
     pub fn register_profile(&self, profile: StructureDefinition) {
         self.dynamic_profiles
             .write()
@@ -158,7 +158,10 @@ impl ProfileRegistry {
 
     pub fn load_profile(&mut self, profile: StructureDefinition) -> Result<()> {
         self.profiles.insert(profile.url.clone(), profile.clone());
-        self.generator.load_structure_definition(profile);
+        self.generator
+            .get_mut()
+            .unwrap()
+            .load_structure_definition(profile);
         Ok(())
     }
 

@@ -1,8 +1,9 @@
 //! Collection operations for FHIRPath values
 
 use crate::error::*;
+use crate::evaluator::operations::comparison::ComparisonEvaluator;
 use crate::evaluator::types::FhirPathValue;
-use rust_decimal::Decimal;
+use std::cmp::Ordering;
 
 /// Collection operations handler
 pub struct CollectionEvaluator;
@@ -13,46 +14,16 @@ impl CollectionEvaluator {
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let mut result: Vec<FhirPathValue> = Vec::new();
-
-        let push_dedup = |result: &mut Vec<FhirPathValue>, v: FhirPathValue| {
+        let mut result = Vec::new();
+        for item in left.items().iter().chain(right.items()) {
             if !result
                 .iter()
-                .any(|existing| FhirPathValue::equals_static(existing, &v))
+                .any(|existing| FhirPathValue::equals_static(existing, item))
             {
-                result.push(v);
+                result.push(item.clone());
             }
-        };
-
-        // Add items from left operand
-        match left {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                for item in items {
-                    push_dedup(&mut result, item.clone());
-                }
-            }
-            FhirPathValue::Empty => {}
-            value => push_dedup(&mut result, value.clone()),
         }
-
-        // Add items from right operand, deduplicating against result so far
-        match right {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                for item in items {
-                    push_dedup(&mut result, item.clone());
-                }
-            }
-            FhirPathValue::Empty => {}
-            value => push_dedup(&mut result, value.clone()),
-        }
-
-        if result.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else if result.len() == 1 {
-            Ok(result.into_iter().next().unwrap())
-        } else {
-            Ok(FhirPathValue::Collection(result))
-        }
+        Ok(FhirPathValue::from_items(result))
     }
 
     /// Evaluate indexer operation
@@ -60,57 +31,24 @@ impl CollectionEvaluator {
         target: &FhirPathValue,
         index: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        match (target, index) {
-            (
-                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items),
-                FhirPathValue::Integer(idx),
-            ) => {
-                let idx = *idx as usize;
-                if idx < items.len() {
-                    Ok(items[idx].clone())
-                } else {
-                    Ok(FhirPathValue::Empty)
-                }
-            }
-            (FhirPathValue::Empty, FhirPathValue::Integer(_)) => Ok(FhirPathValue::Empty),
-            (value, FhirPathValue::Integer(idx)) => {
-                if *idx == 0 {
-                    Ok(value.clone())
-                } else {
-                    Ok(FhirPathValue::Empty)
-                }
-            }
-            _ => Err(FhirPathError::InvalidOperation {
-                message: "Invalid indexer operation".to_string(),
-            }),
-        }
+        let Some(index) = index.singleton("Indexer")? else {
+            return Ok(FhirPathValue::Empty);
+        };
+        let FhirPathValue::Integer(index) = index.system_value() else {
+            return Err(FhirPathError::TypeError {
+                message: "Indexer requires an Integer index".into(),
+            });
+        };
+        Ok(usize::try_from(*index)
+            .ok()
+            .and_then(|index| target.items().get(index))
+            .cloned()
+            .unwrap_or(FhirPathValue::Empty))
     }
 
     /// Remove duplicates from a collection
     pub fn distinct(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                let mut unique_items = Vec::new();
-                for item in items {
-                    if !unique_items
-                        .iter()
-                        .any(|existing| FhirPathValue::equals_static(existing, item))
-                    {
-                        unique_items.push(item.clone());
-                    }
-                }
-
-                if unique_items.is_empty() {
-                    Ok(FhirPathValue::Empty)
-                } else if unique_items.len() == 1 {
-                    Ok(unique_items.into_iter().next().unwrap())
-                } else {
-                    Ok(FhirPathValue::Collection(unique_items))
-                }
-            }
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            value => Ok(value.clone()),
-        }
+        Self::evaluate_union(target, &FhirPathValue::Empty)
     }
 
     /// Check if all items in a collection are distinct
@@ -167,23 +105,14 @@ impl CollectionEvaluator {
         }
     }
 
-    /// Get single item from collection - fails if not exactly one item
+    /// Return the sole item or empty, and signal an error for multiple items.
     pub fn single(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Ok(items[0].clone())
-                } else {
-                    Err(FhirPathError::InvalidOperation {
-                        message: format!(
-                            "single() requires exactly one item, found {}",
-                            items.len()
-                        ),
-                    })
-                }
-            }
-            value => Ok(value.clone()),
+        match target.items() {
+            [] => Ok(FhirPathValue::Empty),
+            [item] => Ok(item.clone()),
+            items => Err(FhirPathError::EvaluationError {
+                message: format!("single() requires exactly one item, found {}", items.len()),
+            }),
         }
     }
 
@@ -252,6 +181,24 @@ impl CollectionEvaluator {
                 }
             }
             _ => Ok(FhirPathValue::Empty),
+        }
+    }
+
+    pub(crate) fn subsetting_count(
+        parameters: &[FhirPathValue],
+        operation: &str,
+    ) -> FhirPathResult<Option<i64>> {
+        let [count] = parameters else {
+            return Err(FhirPathError::InvalidOperation {
+                message: format!("{operation} requires exactly one parameter (count)"),
+            });
+        };
+        match count.singleton(operation)?.map(FhirPathValue::system_value) {
+            Some(FhirPathValue::Integer(count)) => Ok(Some(*count)),
+            Some(FhirPathValue::Empty) | None => Ok(None),
+            Some(_) => Err(FhirPathError::TypeError {
+                message: format!("{operation} count parameter must be an Integer"),
+            }),
         }
     }
 
@@ -341,79 +288,36 @@ impl CollectionEvaluator {
         target: &FhirPathValue,
         other: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let target_items = match target {
-            FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.clone()
-            }
-            value => vec![value.clone()],
-        };
-
-        let other_items = match other {
-            FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.clone()
-            }
-            value => vec![value.clone()],
-        };
-
-        let mut intersection = Vec::new();
-        for item in target_items {
-            if other_items
+        let mut result = Vec::new();
+        for item in target.items() {
+            if other
+                .items()
                 .iter()
-                .any(|other_item| FhirPathValue::equals_static(&item, other_item))
-                && !intersection
+                .any(|other| FhirPathValue::equals_static(item, other))
+                && !result
                     .iter()
-                    .any(|existing| FhirPathValue::equals_static(existing, &item))
+                    .any(|existing| FhirPathValue::equals_static(existing, item))
             {
-                intersection.push(item);
+                result.push(item.clone());
             }
         }
-
-        if intersection.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else if intersection.len() == 1 {
-            Ok(intersection.into_iter().next().unwrap())
-        } else {
-            Ok(FhirPathValue::Collection(intersection))
-        }
+        Ok(FhirPathValue::from_items(result))
     }
 
     /// Exclude items in other collection from target collection
     pub fn exclude(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        let target_items = match target {
-            FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.clone()
-            }
-            value => vec![value.clone()],
-        };
-
-        let other_items = match other {
-            FhirPathValue::Empty => return Ok(target.clone()),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.clone()
-            }
-            value => vec![value.clone()],
-        };
-
-        let mut result = Vec::new();
-        for item in target_items {
-            if !other_items
-                .iter()
-                .any(|other_item| FhirPathValue::equals_static(&item, other_item))
-            {
-                result.push(item);
-            }
-        }
-
-        if result.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else if result.len() == 1 {
-            Ok(result.into_iter().next().unwrap())
-        } else {
-            Ok(FhirPathValue::Collection(result))
-        }
+        let result = target
+            .items()
+            .iter()
+            .filter(|item| {
+                !other
+                    .items()
+                    .iter()
+                    .any(|other| FhirPathValue::equals_static(item, other))
+            })
+            .cloned()
+            .collect();
+        Ok(FhirPathValue::from_items(result))
     }
 
     /// Combine this collection with another, preserving duplicates
@@ -421,80 +325,78 @@ impl CollectionEvaluator {
     /// Combining an empty collection with a non-empty collection will return the non-empty collection.
     /// There is no expectation of order in the resulting collection.
     pub fn combine(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        let mut result = Vec::new();
-
-        match target {
-            FhirPathValue::Empty => {}
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                result.extend(items.clone());
-            }
-            value => {
-                result.push(value.clone());
-            }
-        }
-
-        match other {
-            FhirPathValue::Empty => {}
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                result.extend(items.clone());
-            }
-            value => {
-                result.push(value.clone());
-            }
-        }
-
-        if result.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else if result.len() == 1 {
-            Ok(result.into_iter().next().unwrap())
-        } else {
-            Ok(FhirPathValue::Collection(result))
-        }
+        let result = target
+            .items()
+            .iter()
+            .chain(other.items())
+            .cloned()
+            .collect();
+        Ok(FhirPathValue::from_items(result))
     }
 
     /// Union operation - merge collections and remove duplicates
     /// The union function combines the target collection with the parameter collection,
     /// removing duplicate items. This is like combine() but with deduplication.
     pub fn union(target: &FhirPathValue, other: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        let mut result = Vec::new();
+        Self::evaluate_union(target, other)
+    }
 
-        match target {
-            FhirPathValue::Empty => {}
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                result.extend(items.clone());
-            }
-            value => {
-                result.push(value.clone());
+    pub(crate) fn compare_sort_keys(
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<Ordering> {
+        fn key_is_empty(value: &FhirPathValue) -> bool {
+            match value {
+                FhirPathValue::Node(node) => node.raw.is_null(),
+                value => value.system_value().is_empty(),
             }
         }
-
-        match other {
-            FhirPathValue::Empty => {}
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                result.extend(items.clone());
+        match (key_is_empty(left), key_is_empty(right)) {
+            (true, true) => Ok(Ordering::Equal),
+            (true, false) => Ok(Ordering::Less),
+            (false, true) => Ok(Ordering::Greater),
+            (false, false) if ComparisonEvaluator::equal(left, right) == Some(true) => {
+                Ok(Ordering::Equal)
             }
-            value => {
-                result.push(value.clone());
-            }
+            (false, false) => ComparisonEvaluator::compare_order(left, right)?
+                .filter(|order| *order != Ordering::Equal)
+                .ok_or_else(|| FhirPathError::EvaluationError {
+                    message: format!("sort() keys have no defined ordering: {left:?}, {right:?}"),
+                }),
         }
+    }
 
-        let mut unique_items = Vec::new();
-        for item in result {
-            if !unique_items
-                .iter()
-                .any(|existing| FhirPathValue::equals_static(existing, &item))
+    // Merging indices allows stable sorting with a fallible comparator and a
+    // single scratch allocation.
+    pub(crate) fn sort_indices_by(
+        indices: &mut [usize],
+        scratch: &mut [usize],
+        compare: &mut impl FnMut(usize, usize) -> FhirPathResult<Ordering>,
+    ) -> FhirPathResult<()> {
+        if indices.len() <= 1 {
+            return Ok(());
+        }
+        let middle = indices.len() / 2;
+        let (left, right) = indices.split_at_mut(middle);
+        let (left_scratch, right_scratch) = scratch.split_at_mut(middle);
+        Self::sort_indices_by(left, left_scratch, compare)?;
+        Self::sort_indices_by(right, right_scratch, compare)?;
+
+        let mut i = 0;
+        let mut j = 0;
+        for index in scratch.iter_mut() {
+            if i < left.len()
+                && (j == right.len() || compare(left[i], right[j])? != Ordering::Greater)
             {
-                unique_items.push(item);
+                *index = left[i];
+                i += 1;
+            } else {
+                *index = right[j];
+                j += 1;
             }
         }
-
-        if unique_items.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else if unique_items.len() == 1 {
-            Ok(unique_items.into_iter().next().unwrap())
-        } else {
-            Ok(FhirPathValue::Collection(unique_items))
-        }
+        indices.copy_from_slice(scratch);
+        Ok(())
     }
 
     /// Check if all items in collection evaluate to true
@@ -517,113 +419,43 @@ impl CollectionEvaluator {
         }
     }
 
-    /// Check if all items in collection are true (boolean true values only).
-    /// Per spec, evaluation is undefined (returns empty) if any item is not boolean.
     pub fn all_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.is_empty() {
-                    Ok(FhirPathValue::Boolean(true))
-                } else {
-                    for item in items {
-                        match item {
-                            FhirPathValue::Boolean(true) => continue,
-                            FhirPathValue::Boolean(false) => {
-                                return Ok(FhirPathValue::Boolean(false))
-                            }
-                            FhirPathValue::Empty => {}
-                            _ => return Ok(FhirPathValue::Empty),
-                        }
-                    }
-                    Ok(FhirPathValue::Boolean(true))
-                }
-            }
-            value => match value {
-                FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
-                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(false)),
-                _ => Ok(FhirPathValue::Empty),
-            },
-        }
+        Self::test_booleans(target, "allTrue()", true, true)
     }
 
-    /// Check if any item in collection evaluates to true
     pub fn any_true(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.is_empty() {
-                    Ok(FhirPathValue::Boolean(false))
-                } else {
-                    for item in items {
-                        match item {
-                            FhirPathValue::Boolean(true) => {
-                                return Ok(FhirPathValue::Boolean(true))
-                            }
-                            _ => continue,
-                        }
-                    }
-                    Ok(FhirPathValue::Boolean(false))
-                }
-            }
-            value => match value {
-                FhirPathValue::Boolean(true) => Ok(FhirPathValue::Boolean(true)),
-                _ => Ok(FhirPathValue::Boolean(false)),
-            },
-        }
+        Self::test_booleans(target, "anyTrue()", true, false)
     }
 
-    /// Check if all items in collection are false (boolean false values only)
     pub fn all_false(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(true)),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.is_empty() {
-                    Ok(FhirPathValue::Boolean(true))
-                } else {
-                    for item in items {
-                        match item {
-                            FhirPathValue::Boolean(false) => continue,
-                            FhirPathValue::Boolean(true) => {
-                                return Ok(FhirPathValue::Boolean(false))
-                            }
-                            _ => return Ok(FhirPathValue::Boolean(false)),
-                        }
-                    }
-                    Ok(FhirPathValue::Boolean(true))
-                }
-            }
-            value => match value {
-                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(true)),
-                _ => Ok(FhirPathValue::Boolean(false)),
-            },
-        }
+        Self::test_booleans(target, "allFalse()", false, true)
     }
 
-    /// Check if any item in collection is false (boolean false values only)
     pub fn any_false(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Empty => Ok(FhirPathValue::Boolean(false)),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.is_empty() {
-                    Ok(FhirPathValue::Boolean(false))
-                } else {
-                    for item in items {
-                        match item {
-                            FhirPathValue::Boolean(false) => {
-                                return Ok(FhirPathValue::Boolean(true))
-                            }
-                            _ => continue,
-                        }
-                    }
-                    Ok(FhirPathValue::Boolean(false))
+        Self::test_booleans(target, "anyFalse()", false, false)
+    }
+
+    fn test_booleans(
+        target: &FhirPathValue,
+        operation: &str,
+        expected: bool,
+        require_all: bool,
+    ) -> FhirPathResult<FhirPathValue> {
+        let mut result = require_all;
+        for item in target.items() {
+            let value = match item.system_value() {
+                FhirPathValue::Boolean(value) | FhirPathValue::TypedBoolean { value, .. } => *value,
+                other => {
+                    return Err(FhirPathError::TypeError {
+                        message: format!("{operation} requires Boolean items, got {other:?}"),
+                    })
                 }
+            };
+            if (value == expected) != require_all {
+                result = !require_all;
             }
-            value => match value {
-                FhirPathValue::Boolean(false) => Ok(FhirPathValue::Boolean(true)),
-                _ => Ok(FhirPathValue::Boolean(false)),
-            },
         }
+        Ok(FhirPathValue::Boolean(result))
     }
 
     /// Check if target collection is a subset of the other collection
@@ -632,40 +464,12 @@ impl CollectionEvaluator {
         target: &FhirPathValue,
         other: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let target_items = match target {
-            FhirPathValue::Empty => vec![],
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.clone()
-            }
-            value => vec![value.clone()],
-        };
-
-        let other_items = match other {
-            FhirPathValue::Empty => vec![],
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.clone()
-            }
-            value => vec![value.clone()],
-        };
-
-        if target_items.is_empty() {
-            return Ok(FhirPathValue::Boolean(true));
-        }
-
-        for target_item in &target_items {
-            let mut found = false;
-            for other_item in &other_items {
-                if Self::values_equal(target_item, other_item) {
-                    found = true;
-                    break;
-                }
-            }
-            if !found {
-                return Ok(FhirPathValue::Boolean(false));
-            }
-        }
-
-        Ok(FhirPathValue::Boolean(true))
+        Ok(FhirPathValue::Boolean(target.items().iter().all(|item| {
+            other
+                .items()
+                .iter()
+                .any(|other| FhirPathValue::equals_static(item, other))
+        })))
     }
 
     /// Check if target collection is a superset of the other collection
@@ -796,100 +600,10 @@ impl CollectionEvaluator {
         true_result: &FhirPathValue,
         otherwise_result: Option<&FhirPathValue>,
     ) -> FhirPathResult<FhirPathValue> {
-        // Per spec §6.9: the criterion must evaluate to a single Boolean (or
-        // empty, which is treated as false). A non-Boolean singleton is a
-        // semantic error; a multi-item collection is an execution error.
-        let effective_criterion = match criterion {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                &items[0]
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                &FhirPathValue::Empty
-            }
-            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => {
-                return Err(FhirPathError::EvaluationError {
-                    message:
-                        "iif() criterion must be a single Boolean; got a multi-item collection"
-                            .to_string(),
-                });
-            }
-            other => other,
-        };
-
-        let is_truthy = match effective_criterion {
-            FhirPathValue::Boolean(b) => *b,
-            FhirPathValue::TypedBoolean { value, .. } => *value,
-            FhirPathValue::Empty => false,
-            other => {
-                return Err(FhirPathError::TypeError {
-                    message: format!("iif() criterion must be Boolean, got {other:?}"),
-                });
-            }
-        };
-
-        if is_truthy {
+        if criterion.singleton_boolean("iif() criterion")? == Some(true) {
             Ok(true_result.clone())
         } else {
-            match otherwise_result {
-                Some(otherwise) => Ok(otherwise.clone()),
-                None => Ok(FhirPathValue::Empty),
-            }
-        }
-    }
-
-    /// Helper function to check if two FhirPathValues are equal
-    fn values_equal(left: &FhirPathValue, right: &FhirPathValue) -> bool {
-        match (left, right) {
-            (FhirPathValue::String(a), FhirPathValue::String(b)) => a == b,
-            (FhirPathValue::Integer(a), FhirPathValue::Integer(b)) => a == b,
-            (FhirPathValue::Number(a), FhirPathValue::Number(b)) => a == b,
-            (FhirPathValue::Boolean(a), FhirPathValue::Boolean(b)) => a == b,
-            (FhirPathValue::DateTime(a), FhirPathValue::DateTime(b)) => a == b,
-            (FhirPathValue::Date(a), FhirPathValue::Date(b)) => a == b,
-            (FhirPathValue::Time(a), FhirPathValue::Time(b)) => {
-                a.strip_prefix('T').unwrap_or(a) == b.strip_prefix('T').unwrap_or(b)
-            }
-            (
-                FhirPathValue::Quantity {
-                    value: a_val,
-                    unit: a_unit,
-                },
-                FhirPathValue::Quantity {
-                    value: b_val,
-                    unit: b_unit,
-                },
-            ) => a_val == b_val && a_unit == b_unit,
-            // Mixed numeric types
-            (FhirPathValue::Integer(a), FhirPathValue::Number(b)) => Decimal::from(*a) == *b,
-            (FhirPathValue::Number(a), FhirPathValue::Integer(b)) => *a == Decimal::from(*b),
-            // Objects need deep comparison
-            (FhirPathValue::Object(a), FhirPathValue::Object(b)) => a == b,
-            (
-                FhirPathValue::TypedObject { value: a, .. },
-                FhirPathValue::TypedObject { value: b, .. },
-            ) => a == b,
-            (FhirPathValue::TypedObject { value: a, .. }, FhirPathValue::Object(b))
-            | (FhirPathValue::Object(a), FhirPathValue::TypedObject { value: b, .. }) => a == b,
-            // Collections need element-wise comparison (order doesn't matter for sets)
-            (FhirPathValue::Collection(a), FhirPathValue::Collection(b))
-            | (FhirPathValue::Collection(a), FhirPathValue::UnorderedCollection(b))
-            | (FhirPathValue::UnorderedCollection(a), FhirPathValue::Collection(b))
-            | (FhirPathValue::UnorderedCollection(a), FhirPathValue::UnorderedCollection(b)) => {
-                if a.len() != b.len() {
-                    return false;
-                }
-                for item_a in a {
-                    if !b.iter().any(|item_b| Self::values_equal(item_a, item_b)) {
-                        return false;
-                    }
-                }
-                true
-            }
-            _ => false,
+            Ok(otherwise_result.cloned().unwrap_or(FhirPathValue::Empty))
         }
     }
 }

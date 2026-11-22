@@ -123,3 +123,50 @@ fn test_fhirpath_eval_invalid_expression_fails() {
         .assert()
         .failure();
 }
+
+#[test]
+fn test_fhirpath_r5_types_and_source_paths_in_json() {
+    let dir = TempDir::new().unwrap();
+    let data_path = dir.path().join("parameters.json");
+    fs::write(
+        &data_path,
+        r#"{"resourceType":"Parameters","parameter":[{"name":"count","valueInteger64":"9223372036854775807"}]}"#,
+    ).unwrap();
+    let mut command = rh_cmd();
+    let result = command
+        .args([
+            "--format",
+            "json",
+            "fhirpath",
+            "eval",
+            "--fhir-version",
+            "r5",
+            "--data",
+            data_path.to_str().unwrap(),
+            "--context",
+            "parameter.value",
+            "$this.getValue() is System.Long and %resource is Parameters",
+        ])
+        .assert()
+        .success();
+    let output: Value = serde_json::from_slice(&result.get_output().stdout).unwrap();
+    assert_eq!(output["result"], json!(true));
+
+    let mut command = rh_cmd();
+    let result = command
+        .args([
+            "--format",
+            "json",
+            "fhirpath",
+            "eval",
+            "--fhir-version",
+            "r5",
+            "--data",
+            data_path.to_str().unwrap(),
+            "parameter.value.pathname(true).first()",
+        ])
+        .assert()
+        .success();
+    let output: Value = serde_json::from_slice(&result.get_output().stdout).unwrap();
+    assert_eq!(output["result"], json!("Parameters.parameter[0].value"));
+}

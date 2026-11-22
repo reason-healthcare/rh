@@ -1,450 +1,196 @@
-//! Mathematical functions for FHIRPath expressions
+//! Mathematical functions for FHIRPath expressions.
 
-use crate::error::*;
-use crate::evaluator::types::FhirPathValue;
 use rust_decimal::prelude::ToPrimitive;
-use rust_decimal::{Decimal, RoundingStrategy};
+use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
+
+use crate::error::{FhirPathError, FhirPathResult};
+use crate::evaluator::types::FhirPathValue;
+
+use super::arithmetic::{integer_result, numeric_value};
+use FhirPathValue::{Empty, Integer, Long, Number, Quantity};
 
 pub struct MathEvaluator;
 
-fn round_decimal_away_from_zero(value: Decimal, precision: u32) -> Decimal {
-    value.round_dp_with_strategy(precision, RoundingStrategy::MidpointAwayFromZero)
-}
-
 impl MathEvaluator {
     pub fn abs(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(n.abs())),
-            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(n.abs())),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Number(n.abs())),
-            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
-                value: value.abs(),
-                unit: unit.clone(),
-            }),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::abs(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Empty)
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "abs() can only be applied to a single numeric value".to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("abs() cannot be applied to {}", Self::type_name(target)),
-            }),
-        }
+        Ok(
+            match target.singleton("abs()")?.map(FhirPathValue::system_value) {
+                Some(Integer(value)) => value.checked_abs().map_or(Empty, integer_result),
+                Some(Long(value)) => value.checked_abs().map_or(Empty, Long),
+                Some(Number(value)) => Number(value.abs()),
+                Some(Quantity { value, unit }) => Quantity {
+                    value: value.abs(),
+                    unit: unit.clone(),
+                },
+                None | Some(Empty) => Empty,
+                _ => return Err(invalid_input("abs()")),
+            },
+        )
     }
 
     pub fn ceiling(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
-            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(*n)),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(
-                n.ceil().to_i64().unwrap_or(i64::MAX),
-            )),
-            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
-                value: value.ceil(),
-                unit: unit.clone(),
-            }),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::ceiling(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "ceiling() can only be applied to a single numeric value"
-                            .to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("ceiling() cannot be applied to {}", Self::type_name(target)),
-            }),
-        }
+        integral_math(target, "ceiling()", |value| value.ceil())
     }
 
     pub fn exp(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Number(
-                Decimal::from_f64_retain((*n as f64).exp()).unwrap_or(Decimal::ZERO),
-            )),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Number(
-                Decimal::from_f64_retain(n.to_f64().unwrap().exp()).unwrap_or(Decimal::ZERO),
-            )),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::exp(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Empty)
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "exp() can only be applied to a single numeric value".to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("exp() cannot be applied to {}", Self::type_name(target)),
-            }),
-        }
+        let Some(value) = number(target, "exp()")? else {
+            return Ok(Empty);
+        };
+        Ok(float_result(value.to_f64().map(f64::exp), false))
     }
 
     pub fn floor(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
-            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(*n)),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(
-                n.floor().to_i64().unwrap_or(i64::MIN),
-            )),
-            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
-                value: value.floor(),
-                unit: unit.clone(),
-            }),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::floor(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "floor() can only be applied to a single numeric value"
-                            .to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("floor() cannot be applied to {}", Self::type_name(target)),
-            }),
-        }
+        integral_math(target, "floor()", |value| value.floor())
     }
 
     pub fn ln(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => {
-                if *n <= 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "ln() requires a positive number".to_string(),
-                    })
-                } else {
-                    Ok(FhirPathValue::Number(
-                        Decimal::from_f64_retain((*n as f64).ln()).unwrap_or(Decimal::ZERO),
-                    ))
-                }
-            }
-            FhirPathValue::Long(n) => {
-                if *n <= 0 {
-                    Err(FhirPathError::EvaluationError {
-                        message: "ln() requires a positive number".to_string(),
-                    })
-                } else {
-                    Ok(FhirPathValue::Number(
-                        Decimal::from_f64_retain((*n as f64).ln()).unwrap_or(Decimal::ZERO),
-                    ))
-                }
-            }
-            FhirPathValue::Number(n) => {
-                if *n <= Decimal::ZERO {
-                    Err(FhirPathError::EvaluationError {
-                        message: "ln() requires a positive number".to_string(),
-                    })
-                } else {
-                    Ok(FhirPathValue::Number(
-                        Decimal::from_f64_retain(n.to_f64().unwrap().ln()).unwrap_or(Decimal::ZERO),
-                    ))
-                }
-            }
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::ln(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "ln() can only be applied to a single numeric value".to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("ln() cannot be applied to {}", Self::type_name(target)),
-            }),
+        let Some(value) = number(target, "ln()")? else {
+            return Ok(Empty);
+        };
+        if value <= Decimal::ZERO {
+            return Err(FhirPathError::EvaluationError {
+                message: "ln() requires a positive number".to_string(),
+            });
         }
+        Ok(float_result(
+            value.to_f64().map(f64::ln),
+            value == Decimal::ONE,
+        ))
     }
 
     pub fn log(target: &FhirPathValue, base: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        if Self::is_empty_value(target) || Self::is_empty_value(base) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let target_num = Self::extract_number_f64(target)?;
-        let base_num = Self::extract_number_f64(base)?;
-
-        if target_num <= 0.0 {
+        let (Some(target), Some(base)) = (number(target, "log()")?, number(base, "log()")?) else {
+            return Ok(Empty);
+        };
+        if target <= Decimal::ZERO || base <= Decimal::ZERO || base == Decimal::ONE {
             return Err(FhirPathError::EvaluationError {
-                message: "log() requires a positive number".to_string(),
+                message: "log() requires a positive value and a positive base different from 1"
+                    .to_string(),
             });
         }
-
-        if base_num <= 0.0 || base_num == 1.0 {
-            return Err(FhirPathError::EvaluationError {
-                message: "log() requires a positive base that is not equal to 1".to_string(),
-            });
-        }
-
-        Ok(FhirPathValue::Number(
-            Decimal::from_f64_retain(target_num.log(base_num)).unwrap_or(Decimal::ZERO),
-        ))
+        let result = target
+            .to_f64()
+            .zip(base.to_f64())
+            .map(|(target, base)| target.log(base));
+        Ok(float_result(result, target == Decimal::ONE))
     }
 
     pub fn power(
         target: &FhirPathValue,
         exponent: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        if Self::is_empty_value(target) || Self::is_empty_value(exponent) {
-            return Ok(FhirPathValue::Empty);
+        let (Some(value), Some(exponent)) =
+            (number(target, "power()")?, number(exponent, "power()")?)
+        else {
+            return Ok(Empty);
+        };
+        if exponent.fract().is_zero() {
+            if let Some(exponent) = exponent.to_i64().filter(|value| *value != i64::MIN) {
+                return Ok(value
+                    .checked_powi(exponent)
+                    .filter(|result| !result.is_zero() || value.is_zero())
+                    .map_or(Empty, Number));
+            }
         }
-        let base_num = Self::extract_number_f64(target)?;
-        let exp_num = Self::extract_number_f64(exponent)?;
-
-        let result = base_num.powf(exp_num);
-
-        if result.is_nan() {
-            return Ok(FhirPathValue::Empty);
-        }
-
-        Ok(FhirPathValue::Number(
-            Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
-        ))
+        let result = value
+            .to_f64()
+            .zip(exponent.to_f64())
+            .map(|(value, exponent)| value.powf(exponent));
+        Ok(float_result(result, value.is_zero()))
     }
 
     pub fn round(
         target: &FhirPathValue,
         precision: Option<&FhirPathValue>,
     ) -> FhirPathResult<FhirPathValue> {
-        if Self::is_empty_value(target) {
-            return Ok(FhirPathValue::Empty);
+        let digits = match precision
+            .map(|value| value.singleton("round()"))
+            .transpose()?
+            .flatten()
+            .map(FhirPathValue::system_value)
+        {
+            None | Some(Empty) => 0,
+            Some(Integer(value)) if *value >= 0 => u32::try_from(*value).unwrap_or(u32::MAX),
+            _ => {
+                return Err(FhirPathError::TypeError {
+                    message: "round() precision must be a non-negative Integer".to_string(),
+                })
+            }
+        };
+        if digits > Decimal::MAX_SCALE {
+            return Ok(Empty);
         }
-        if let FhirPathValue::Quantity { value, unit } = target {
-            let precision_val = Self::extract_precision(precision)?;
-            return Ok(FhirPathValue::Quantity {
-                value: round_decimal_away_from_zero(*value, precision_val),
-                unit: unit.clone(),
-            });
-        }
-
-        let num = Self::extract_number(target)?;
-
-        let precision_val = Self::extract_precision(precision)?;
-
-        let result = round_decimal_away_from_zero(num, precision_val);
-
-        if precision_val == 0 && Self::is_integer_value(target) {
-            Ok(FhirPathValue::Integer(
-                result.trunc().to_i64().unwrap_or(i64::MAX),
-            ))
-        } else {
-            Ok(FhirPathValue::Number(result))
-        }
+        let round = |value: Decimal| {
+            value.round_dp_with_strategy(digits, RoundingStrategy::MidpointAwayFromZero)
+        };
+        Ok(
+            match target
+                .singleton("round()")?
+                .map(FhirPathValue::system_value)
+            {
+                Some(Quantity { value, unit }) => Quantity {
+                    value: round(*value),
+                    unit: unit.clone(),
+                },
+                Some(value) if !matches!(value, Empty) => {
+                    let value = numeric_value(value).ok_or_else(|| invalid_input("round()"))?;
+                    Number(round(value))
+                }
+                _ => Empty,
+            },
+        )
     }
 
     pub fn sqrt(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => {
-                if *n < 0 {
-                    Ok(FhirPathValue::Empty)
-                } else {
-                    Ok(FhirPathValue::Number(
-                        Decimal::from_f64_retain((*n as f64).sqrt()).unwrap_or(Decimal::ZERO),
-                    ))
-                }
-            }
-            FhirPathValue::Number(n) => {
-                if *n < Decimal::ZERO {
-                    Ok(FhirPathValue::Empty)
-                } else {
-                    Ok(FhirPathValue::Number(
-                        Decimal::from_f64_retain(n.to_f64().unwrap().sqrt())
-                            .unwrap_or(Decimal::ZERO),
-                    ))
-                }
-            }
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::sqrt(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "sqrt() can only be applied to a single numeric value".to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("sqrt() cannot be applied to {}", Self::type_name(target)),
-            }),
-        }
+        let result = number(target, "sqrt()")?.and_then(|value| value.sqrt());
+        Ok(result.map_or(Empty, Number))
     }
 
     pub fn truncate(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-        match target {
-            FhirPathValue::Integer(n) => Ok(FhirPathValue::Integer(*n)),
-            FhirPathValue::Long(n) => Ok(FhirPathValue::Long(*n)),
-            FhirPathValue::Number(n) => Ok(FhirPathValue::Integer(n.trunc().to_i64().unwrap_or(0))),
-            FhirPathValue::Quantity { value, unit } => Ok(FhirPathValue::Quantity {
-                value: value.trunc(),
-                unit: unit.clone(),
-            }),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::truncate(&items[0])
-                } else if items.is_empty() {
-                    Ok(FhirPathValue::Collection(vec![]))
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "truncate() can only be applied to a single numeric value"
-                            .to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!(
-                    "truncate() cannot be applied to {}",
-                    Self::type_name(target)
-                ),
-            }),
-        }
-    }
-
-    fn extract_number(value: &FhirPathValue) -> FhirPathResult<Decimal> {
-        match value {
-            FhirPathValue::Integer(n) => Ok(Decimal::from(*n)),
-            FhirPathValue::Long(n) => Ok(Decimal::from(*n)),
-            FhirPathValue::Number(n) => Ok(*n),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::extract_number(&items[0])
-                } else if items.is_empty() {
-                    Err(FhirPathError::TypeError {
-                        message: "Cannot extract number from empty collection".to_string(),
-                    })
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "Cannot extract number from multi-item collection".to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("Expected number, got {}", Self::type_name(value)),
-            }),
-        }
-    }
-
-    fn extract_precision(precision: Option<&FhirPathValue>) -> FhirPathResult<u32> {
-        let Some(p) = precision else {
-            return Ok(0);
-        };
-        match p {
-            FhirPathValue::Integer(i) | FhirPathValue::Long(i) => {
-                if *i < 0 {
-                    return Err(FhirPathError::EvaluationError {
-                        message: "round() precision must be non-negative".to_string(),
-                    });
-                }
-                Ok(*i as u32)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::extract_precision(Some(&items[0]))
-            }
-            FhirPathValue::Empty => Ok(0),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(0)
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: "round() precision must be an integer".to_string(),
-            }),
-        }
-    }
-
-    fn extract_number_f64(value: &FhirPathValue) -> FhirPathResult<f64> {
-        match value {
-            FhirPathValue::Integer(n) => Ok(*n as f64),
-            FhirPathValue::Long(n) => Ok(*n as f64),
-            FhirPathValue::Number(n) => Ok(n.to_f64().unwrap_or(0.0)),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Self::extract_number_f64(&items[0])
-                } else if items.is_empty() {
-                    Err(FhirPathError::TypeError {
-                        message: "Cannot extract number from empty collection".to_string(),
-                    })
-                } else {
-                    Err(FhirPathError::TypeError {
-                        message: "Cannot extract number from multi-item collection".to_string(),
-                    })
-                }
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: format!("Expected number, got {}", Self::type_name(value)),
-            }),
-        }
-    }
-
-    fn is_integer_value(value: &FhirPathValue) -> bool {
-        match value {
-            FhirPathValue::Integer(_) => true,
-            FhirPathValue::Number(n) => n.fract() == Decimal::ZERO,
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.len() == 1 && Self::is_integer_value(&items[0])
-            }
-            _ => false,
-        }
-    }
-
-    fn is_empty_value(value: &FhirPathValue) -> bool {
-        match value {
-            FhirPathValue::Empty => true,
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.is_empty()
-            }
-            _ => false,
-        }
-    }
-
-    fn type_name(value: &FhirPathValue) -> &'static str {
-        match value {
-            FhirPathValue::Boolean(_) => "Boolean",
-            FhirPathValue::TypedBoolean { .. } => "Boolean",
-            FhirPathValue::Integer(_) => "Integer",
-            FhirPathValue::Long(_) => "Long",
-            FhirPathValue::Number(_) => "Number",
-            FhirPathValue::String(_) | FhirPathValue::TypedString { .. } => "String",
-            FhirPathValue::Date(_) => "Date",
-            FhirPathValue::DateTime(_) => "DateTime",
-            FhirPathValue::TypedDateTime { .. } => "DateTime",
-            FhirPathValue::Time(_) => "Time",
-            FhirPathValue::Quantity { .. } => "Quantity",
-            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => "Collection",
-            FhirPathValue::Object(_) => "Object",
-            FhirPathValue::TypedObject { .. } => "Object",
-            FhirPathValue::FhirPrimitive { inner, .. } => Self::type_name(inner),
-            FhirPathValue::DateTimePrecision(_) => "DateTimePrecision",
-            FhirPathValue::Empty => "Empty",
-        }
+        integral_math(target, "truncate()", |value| value.trunc())
     }
 }
 
+fn integral_math(
+    target: &FhirPathValue,
+    name: &str,
+    operation: impl FnOnce(Decimal) -> Decimal,
+) -> FhirPathResult<FhirPathValue> {
+    Ok(
+        match target.singleton(name)?.map(FhirPathValue::system_value) {
+            Some(Integer(value) | Long(value)) => integer_result(*value),
+            Some(Number(value)) => operation(*value).to_i64().map_or(Empty, integer_result),
+            Some(Quantity { value, unit }) => Quantity {
+                value: operation(*value),
+                unit: unit.clone(),
+            },
+            None | Some(Empty) => Empty,
+            _ => return Err(invalid_input(name)),
+        },
+    )
+}
+
+fn number(target: &FhirPathValue, name: &str) -> FhirPathResult<Option<Decimal>> {
+    match target.singleton(name)?.map(FhirPathValue::system_value) {
+        None | Some(Empty) => Ok(None),
+        Some(value) => numeric_value(value)
+            .map(Some)
+            .ok_or_else(|| invalid_input(name)),
+    }
+}
+
+fn float_result(value: Option<f64>, allow_zero: bool) -> FhirPathValue {
+    value
+        .and_then(Decimal::from_f64_retain)
+        .filter(|value| allow_zero || !value.is_zero())
+        .map_or(Empty, Number)
+}
+
+fn invalid_input(name: &str) -> FhirPathError {
+    FhirPathError::TypeError {
+        message: format!("{name} requires a numeric input"),
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -566,7 +312,7 @@ mod tests {
         );
         assert_eq!(
             MathEvaluator::round(&FhirPathValue::Integer(5), None).unwrap(),
-            FhirPathValue::Integer(5)
+            FhirPathValue::Number(Decimal::from(5))
         );
     }
 }

@@ -4,7 +4,7 @@ A comprehensive Rust implementation of a FHIRPath expression parser and evaluato
 
 ## Background
 
-FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. This crate provides a complete implementation with:
+FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. The crate implements the published FHIRPath 3.0.0 STU 3 language with:
 
 - **Parser**: Converts FHIRPath expressions into an Abstract Syntax Tree (AST) using nom parser combinators
 - **Evaluator**: Comprehensive evaluation of FHIRPath expressions against FHIR resources
@@ -13,15 +13,10 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 ## Current Implementation Status
 
-[See implementation status](implementation.md)
-
-**Conformance**: the official HL7 FHIRPath test suite (937 cases) runs in CI
-via `cargo test -p rh-fhirpath --test hl7_conformance`. Current scored result:
-**99.8%** (933/935), with **1 known wrong answer** due to an R4/R5
-fractional-second datetime arithmetic expectation difference, **0 parse
-errors**, and **0 eval errors**; the other non-pass is one skipped HL7 fixture
-that is not published with the test case bundle. See
-[CONFORMANCE.md](CONFORMANCE.md) and [SPEC_COVERAGE.md](SPEC_COVERAGE.md).
+The native conformance harness runs pinned suites against the R4 and R5 models.
+The results include published specification differences, unavailable host
+capabilities, and decimal representation limits. [Conformance](CONFORMANCE.md) ·
+[Specification coverage](SPEC_COVERAGE.md)
 
 ## Usage
 
@@ -30,6 +25,7 @@ that is not published with the test case bundle. See
 You can use the `rh` cli. For help:
 ```
 rh fhirpath --help
+rh fhirpath eval 'parameter.value.getValue() is System.Long' --fhir-version r5 --data parameters.json
 ```
 
 There is also an interactive REPL:
@@ -81,19 +77,16 @@ let result = evaluator.evaluate(&expr, &context).unwrap();
 
 ### Error Handling
 
-The system provides clear error messages for:
-- **Incompatible units**: `Cannot add quantities with incompatible units: Some("kg") and Some("m")`
-- **Division by zero**: `Division by zero`
-- **Unknown units**: `Unknown unit: xyz`
-- **Temperature conversion errors**: `Unknown temperature unit: xyz`
-- **Mixed unit types**: `Cannot add quantities with incompatible units: Some("Cel") and Some("kg")`
+The evaluator reports invalid argument types and cardinalities through
+`FhirPathError`. Operations such as division by zero, out-of-range arithmetic,
+and comparisons of quantities with incompatible units yield an empty collection.
 
 See `examples/unit_conversion_example.rs` and `examples/temperature_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
 
 ## Grammar Support
 
 This implementation is based on the official FHIRPath grammar from:
-https://build.fhir.org/ig/HL7/FHIRPath/fhirpath.g4
+https://hl7.org/fhirpath/STU3/en/grammar.html
 
 The parser is implemented using the `nom` parser combinator library, providing a pure Rust implementation without requiring build-time code generation. The parser supports the complete core FHIRPath syntax including:
 

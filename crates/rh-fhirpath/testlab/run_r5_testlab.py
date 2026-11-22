@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -21,12 +22,10 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_SUITE = Path(__file__).resolve().with_name("tests-fhir-r5.xml")
+PINNED_FIXTURES = REPO_ROOT / "crates/rh-fhirpath/tests/fixtures/hl7_fhirpath_r5"
+DEFAULT_SUITE = PINNED_FIXTURES / "tests-fhir-r5.xml"
 DEFAULT_BASELINE = Path(__file__).resolve().with_name("Rust-0.0.1.json")
-DEFAULT_INPUT_DIRS = [
-    Path(__file__).resolve().with_name("input"),
-    REPO_ROOT / "crates/rh-fhirpath/tests/fixtures/hl7_fhirpath_tests/input",
-]
+DEFAULT_INPUT_DIRS = [PINNED_FIXTURES / "input"]
 DEFAULT_REPORT = REPO_ROOT / "target/fhirpath-r5-testlab-report.md"
 
 
@@ -46,6 +45,9 @@ class TestCase:
     expression: str
     invalid: str | None
     predicate: bool
+    context: str
+    mode: str
+    check_ordered_functions: bool
     outputs: list[ExpectedOutput] = field(default_factory=list)
 
 
@@ -153,6 +155,12 @@ def parse_suite(path: Path) -> list[TestCase]:
                     expression=expression,
                     invalid=invalid,
                     predicate=test.attrib.get("predicate") == "true",
+                    context=test.attrib.get("context", ""),
+                    mode=test.attrib.get("mode", group.attrib.get("mode", "")),
+                    check_ordered_functions=(
+                        test.attrib.get("checkOrderedFunctions") == "true"
+                        or (test.attrib.get("mode") == "strict" and test.attrib.get("ordered") == "true")
+                    ),
                     outputs=outputs,
                 )
             )
@@ -172,14 +180,16 @@ def find_or_build_rh(explicit: Path | None, no_build: bool) -> Path:
     if explicit:
         return explicit
 
-    candidate = REPO_ROOT / "target/debug/rh"
-    if candidate.exists():
-        return candidate
-
-    if no_build:
+    target = REPO_ROOT / os.environ.get("CARGO_TARGET_DIR", "target")
+    candidate = target / "debug/rh"
+    if not no_build:
+        subprocess.run(
+            ["cargo", "build", "--locked", "-p", "rh-cli", "--bin", "rh"],
+            cwd=REPO_ROOT,
+            check=True,
+        )
+    if not candidate.is_file():
         raise SystemExit(f"rh binary not found at {candidate}; pass --rh or omit --no-build")
-
-    subprocess.run(["cargo", "build", "-p", "rh-cli"], cwd=REPO_ROOT, check=True)
     return candidate
 
 
@@ -226,7 +236,15 @@ def run_case(case: TestCase, rh: Path, inputs: dict[str, Path]) -> CaseResult:
         "eval",
         "--display-format",
         "json",
+        "--fhir-version",
+        "r5",
     ]
+    if case.context:
+        cmd.extend(["--context", case.context])
+    if case.mode == "strict" or case.invalid == "semantic":
+        cmd.append("--strict")
+    if case.check_ordered_functions:
+        cmd.append("--check-ordered-functions")
     if data_path:
         cmd.extend(["--data", str(data_path)])
     cmd.extend(["--", case.expression])
@@ -668,7 +686,10 @@ def main() -> int:
     rh = find_or_build_rh(args.rh, args.no_build)
     inputs = load_inputs(args.input_dirs)
     results = [run_case(case, rh, inputs) for case in cases]
-    baseline = None if args.no_baseline_check or names else baseline_counts(args.baseline_report)
+    baseline = None
+    if not args.no_baseline_check and not names:
+        if args.suite.resolve() != DEFAULT_SUITE.resolve() or args.baseline_report != DEFAULT_BASELINE:
+            baseline = baseline_counts(args.baseline_report)
     summary = summarize(results, baseline, args.baseline_report)
 
     args.report.parent.mkdir(parents=True, exist_ok=True)

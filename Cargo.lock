@@ -2002,6 +2002,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio-test",
+ "unicase",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",

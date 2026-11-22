@@ -66,6 +66,8 @@ pub struct ValidationOptions {
     pub no_html_in_markdown: bool,
 }
 
+type InvariantExpressionCache = LruCache<String, Result<Arc<FhirPathExpression>, String>>;
+
 /// FHIR resource validator with profile-based validation support.
 ///
 /// `FhirValidator` validates FHIR resources against StructureDefinition profiles,
@@ -120,22 +122,24 @@ pub struct ValidationOptions {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct FhirValidator {
-    profile_registry: ProfileRegistry,
-    rule_compiler: RuleCompiler,
-    valueset_loader: ValueSetLoader,
-    questionnaire_loader: crate::questionnaire::QuestionnaireLoader,
-    fhirpath_parser: FhirPathParser,
-    invariant_expression_cache: Mutex<LruCache<String, Result<Arc<FhirPathExpression>, String>>>,
-    fhirpath_evaluator: FhirPathEvaluator,
+    active_conformance_checks: Vec<(String, Value)>,
+    profile_registry: Arc<ProfileRegistry>,
+    rule_compiler: Arc<RuleCompiler>,
+    valueset_loader: Arc<ValueSetLoader>,
+    questionnaire_loader: Arc<crate::questionnaire::QuestionnaireLoader>,
+    fhirpath_parser: Arc<FhirPathParser>,
+    invariant_expression_cache: Arc<Mutex<InvariantExpressionCache>>,
+    fhirpath_evaluator: Arc<FhirPathEvaluator>,
     terminology_service: Option<Arc<dyn TerminologyService>>,
     options: ValidationOptions,
     /// CodeSystem supplements: supplement_url -> base_codesystem_url
-    supplements: std::sync::RwLock<HashMap<String, String>>,
+    supplements: Arc<std::sync::RwLock<HashMap<String, String>>>,
     /// Registered CodeSystem resources keyed by canonical URL.
-    codesystems: std::sync::RwLock<HashMap<String, Value>>,
+    codesystems: Arc<std::sync::RwLock<HashMap<String, Value>>>,
     /// Registered Measure resources keyed by canonical URL.
-    measures: std::sync::RwLock<HashMap<String, Value>>,
+    measures: Arc<std::sync::RwLock<HashMap<String, Value>>>,
     #[allow(dead_code)]
     fhir_version: crate::fhir_version::FhirVersion,
 }
@@ -250,18 +254,24 @@ impl FhirValidator {
         let terminology_service = terminology_config.and_then(|config| config.build());
 
         Ok(Self {
-            profile_registry: ProfileRegistry::new(fhir_version, packages_dir)?,
-            rule_compiler: RuleCompiler::default(),
-            valueset_loader: ValueSetLoader::new(package_dirs.clone(), 100),
-            questionnaire_loader: crate::questionnaire::QuestionnaireLoader::new(package_dirs, 50),
-            fhirpath_parser: FhirPathParser::new(),
-            invariant_expression_cache: Mutex::new(LruCache::new(NonZeroUsize::new(256).unwrap())),
-            fhirpath_evaluator: FhirPathEvaluator::new(),
+            active_conformance_checks: Vec::new(),
+            profile_registry: Arc::new(ProfileRegistry::new(fhir_version, packages_dir)?),
+            rule_compiler: Arc::new(RuleCompiler::default()),
+            valueset_loader: Arc::new(ValueSetLoader::new(package_dirs.clone(), 100)),
+            questionnaire_loader: Arc::new(crate::questionnaire::QuestionnaireLoader::new(
+                package_dirs,
+                50,
+            )),
+            fhirpath_parser: Arc::new(FhirPathParser::new()),
+            invariant_expression_cache: Arc::new(Mutex::new(LruCache::new(
+                NonZeroUsize::new(256).unwrap(),
+            ))),
+            fhirpath_evaluator: Arc::new(FhirPathEvaluator::new()),
             terminology_service,
             options,
-            supplements: std::sync::RwLock::new(HashMap::new()),
-            codesystems: std::sync::RwLock::new(HashMap::new()),
-            measures: std::sync::RwLock::new(HashMap::new()),
+            supplements: Arc::new(std::sync::RwLock::new(HashMap::new())),
+            codesystems: Arc::new(std::sync::RwLock::new(HashMap::new())),
+            measures: Arc::new(std::sync::RwLock::new(HashMap::new())),
             fhir_version,
         })
     }
@@ -557,6 +567,14 @@ impl FhirValidator {
     pub fn reset_cache_metrics(&self) {
         self.profile_registry.reset_cache_metrics();
         self.rule_compiler.reset_cache_metrics();
+    }
+
+    /// A FHIRPath context backed by this validator's registered profiles, value
+    /// sets and explicitly configured terminology service.
+    pub fn fhirpath_context(&self, resource: Value) -> EvaluationContext {
+        let mut context = EvaluationContext::new(resource);
+        context.host = Some(Arc::new(self.clone()));
+        context
     }
 
     pub fn validate_with_profile(
@@ -6102,7 +6120,7 @@ impl FhirValidator {
 
         if is_resource_level {
             // Resource-level invariant - evaluate against whole resource
-            let context = EvaluationContext::new(resource.clone());
+            let context = self.fhirpath_context(resource.clone());
             let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
                 Ok(value) => value,
                 Err(e) => {
@@ -6119,7 +6137,8 @@ impl FhirValidator {
             }
         } else {
             // Element-level invariant - get elements at path and evaluate against each
-            let elements = get_values_at_path(resource, &rule.path);
+            let context = self.fhirpath_context(resource.clone());
+            let elements = rh_fhirpath::evaluator::metadata::nodes_at_path(&context, &rule.path)?;
 
             // If no elements at path, skip validation (constraint doesn't apply)
             if elements.is_empty() {
@@ -6130,8 +6149,7 @@ impl FhirValidator {
 
             for (idx, element) in elements.iter().enumerate() {
                 // root = full resource so %resource/$this work; current = element being tested
-                let context =
-                    EvaluationContext::new(resource.clone()).with_current((*element).clone());
+                let context = context.with_initial_focus(element.clone());
                 let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
                     Ok(value) => value,
                     Err(e) => {
@@ -6214,15 +6232,18 @@ impl FhirValidator {
         result: &rh_fhirpath::FhirPathValue,
     ) -> bool {
         use rh_fhirpath::FhirPathValue;
-        match result {
-            FhirPathValue::Boolean(b) => *b,
-            FhirPathValue::Empty if key == "per-1" => false,
-            FhirPathValue::Empty => true,
-            FhirPathValue::Collection(ref items) if items.is_empty() => true,
-            FhirPathValue::Collection(ref items) if items.len() == 1 => match &items[0] {
-                FhirPathValue::Boolean(b) => *b,
-                _ => true,
-            },
+        let value = match result {
+            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
+                match items.as_slice() {
+                    [item] => item,
+                    _ => return true,
+                }
+            }
+            value => value,
+        };
+        match value {
+            FhirPathValue::Boolean(value) | FhirPathValue::TypedBoolean { value, .. } => *value,
+            FhirPathValue::Empty => key != "per-1",
             _ => true,
         }
     }
@@ -7036,6 +7057,8 @@ fn collect_extension_urls(value: &Value, path: &str, extensions: &mut Vec<Extens
         _ => {}
     }
 }
+
+mod fhirpath_host;
 
 impl Default for FhirValidator {
     fn default() -> Self {

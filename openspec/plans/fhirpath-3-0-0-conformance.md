@@ -1,5 +1,7 @@
 # FHIRPath 3.0.0 conformance audit and implementation plan
 
+The audit below records the pre-implementation baseline. See [current conformance results](../../crates/rh-fhirpath/CONFORMANCE.md) for the implemented behavior and test scope.
+
 Audited November 21, 2026 on PR #77 at `97b0414cfc2820bea6e211cbcc4fb702969aad37`. The target is HL7's published FHIRPath 3.0.0 STU 3, including the language sections marked Standard for Trial Use. The published grammar governs syntax. The FHIR R4 and R5 specifications govern their respective logical models and host functions. [PR #77](https://github.com/reason-healthcare/rh/pull/77) · [FHIRPath 3.0.0](https://hl7.org/fhirpath/STU3/en/index.html) · [Grammar](https://hl7.org/fhirpath/STU3/en/grammar.html) · [Release changes](https://hl7.org/fhirpath/STU3/en/changes.html) · [FHIR R4](https://hl7.org/fhir/R4/fhirpath.html) · [FHIR R5](https://hl7.org/fhir/R5/fhirpath.html)
 
 RH needs changes to the core grammar and evaluator before it can claim 3.0.0 conformance. The largest gaps are scope and singleton evaluation, typed comparison and arithmetic, missing STU functions, and logical FHIR node handling. The FHIRPath crate, CLI, WASM bindings, and validator share parts of this behavior, so the plan includes tests at each public entry point.

@@ -10,6 +10,7 @@
 //! - Boolean functions (not, etc.)
 //! - Type functions (is, as - backward compatibility)
 
+mod aggregate_functions;
 pub mod boolean_functions;
 pub mod boundary_functions;
 pub mod collection_functions;
@@ -24,7 +25,7 @@ use std::collections::HashMap;
 
 /// Type alias for FHIRPath function implementation
 pub type FhirPathFunction =
-    Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue>>;
+    Box<dyn Fn(&FhirPathValue, &[FhirPathValue]) -> FhirPathResult<FhirPathValue> + Send + Sync>;
 
 /// Built-in function registry
 pub struct FunctionRegistry {
@@ -51,6 +52,8 @@ impl FunctionRegistry {
     fn register_builtin_functions(&mut self) {
         // Collection functions (empty, exists, count, distinct, etc.)
         collection_functions::register_collection_functions(&mut self.functions);
+
+        aggregate_functions::register_aggregate_functions(&mut self.functions);
 
         // Boolean collection functions (all, allTrue, anyTrue, etc.)
         collection_functions::register_boolean_collection_functions(&mut self.functions);

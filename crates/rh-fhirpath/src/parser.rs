@@ -6,60 +6,12 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{alpha1, char, digit1, multispace0},
-    combinator::{map, opt, recognize},
+    combinator::{map, map_res, opt, recognize},
     multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, preceded},
     IResult, Parser,
 };
 use rust_decimal::Decimal;
-
-// Parse compound duration literal (number + precision unit)
-// Examples: "6 months", "2 years", "24 hours"
-fn parse_compound_duration_literal(input: &str) -> IResult<&str, Literal> {
-    let (input, number_str) =
-        recognize((opt(char('-')), digit1, opt((char('.'), digit1)))).parse(input)?;
-
-    let (input, _) = multispace0(input)?; // Allow space between number and precision
-
-    let (input, precision) = alt((
-        // Plural forms first (to avoid partial matches)
-        map(tag("years"), |_| DateTimePrecision::Year),
-        map(tag("months"), |_| DateTimePrecision::Month),
-        map(tag("weeks"), |_| DateTimePrecision::Week),
-        map(tag("days"), |_| DateTimePrecision::Day),
-        map(tag("hours"), |_| DateTimePrecision::Hour),
-        map(tag("minutes"), |_| DateTimePrecision::Minute),
-        map(tag("seconds"), |_| DateTimePrecision::Second),
-        map(tag("milliseconds"), |_| DateTimePrecision::Millisecond),
-        // Singular forms
-        map(tag("year"), |_| DateTimePrecision::Year),
-        map(tag("month"), |_| DateTimePrecision::Month),
-        map(tag("week"), |_| DateTimePrecision::Week),
-        map(tag("day"), |_| DateTimePrecision::Day),
-        map(tag("hour"), |_| DateTimePrecision::Hour),
-        map(tag("minute"), |_| DateTimePrecision::Minute),
-        map(tag("second"), |_| DateTimePrecision::Second),
-        map(tag("millisecond"), |_| DateTimePrecision::Millisecond),
-    ))
-    .parse(input)?;
-
-    // Parse the number
-    let count = if number_str.contains('.') {
-        // For fractional durations, we'll need to handle this as a floating-point operation
-        number_str.parse::<f64>().unwrap_or(0.0) as i64
-    } else {
-        number_str.parse::<i64>().unwrap_or(0)
-    };
-
-    // Create a special compound duration quantity with the precision unit as the "unit"
-    Ok((
-        input,
-        Literal::Quantity {
-            value: Decimal::from(count),
-            unit: Some(format!("{precision}")),
-        },
-    ))
-}
 
 /// FHIRPath expression parser
 pub struct FhirPathParser;
@@ -167,6 +119,25 @@ where
     delimited(multispace0, inner, multispace0)
 }
 
+// Keyword tokens cannot consume a prefix of a simple identifier.
+fn keyword(word: &'static str) -> impl FnMut(&str) -> IResult<&str, &str> {
+    move |input| {
+        let (rest, token) = tag(word)(input)?;
+        if rest
+            .as_bytes()
+            .first()
+            .is_some_and(|c| c.is_ascii_alphanumeric() || *c == b'_')
+        {
+            Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Tag,
+            )))
+        } else {
+            Ok((rest, token))
+        }
+    }
+}
+
 // Parse expression (top level)
 fn parse_expression(input: &str) -> IResult<&str, Expression> {
     parse_implies_expression(input)
@@ -175,7 +146,8 @@ fn parse_expression(input: &str) -> IResult<&str, Expression> {
 // Parse implies expressions (lowest precedence)
 fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_or_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("implies")), parse_or_expression)).parse(input)?;
+    let (input, rest) =
+        many0(preceded(ws(keyword("implies")), parse_or_expression)).parse(input)?;
 
     Ok((
         input,
@@ -190,8 +162,11 @@ fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
 // Parse OR/XOR expressions
 fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_and_expression(input)?;
-    let (input, rest) =
-        many0((ws(alt((tag("or"), tag("xor")))), parse_and_expression)).parse(input)?;
+    let (input, rest) = many0((
+        ws(alt((keyword("or"), keyword("xor")))),
+        parse_and_expression,
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -212,8 +187,9 @@ fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse AND expressions
 fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_equality_expression(input)?;
-    let (input, rest) = many0(preceded(ws(tag("and")), parse_equality_expression)).parse(input)?;
+    let (input, first) = parse_membership_expression(input)?;
+    let (input, rest) =
+        many0(preceded(ws(keyword("and")), parse_membership_expression)).parse(input)?;
 
     Ok((
         input,
@@ -224,11 +200,14 @@ fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
     ))
 }
 
-// Parse type expressions (is, as) — binds tighter than *, between unary and *
+// Parse type expressions between arithmetic and union.
 fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_unary_expression(input)?;
-    let (input, rest) =
-        many0((ws(alt((tag("is"), tag("as")))), parse_type_specifier)).parse(input)?;
+    let (input, first) = parse_additive_expression(input)?;
+    let (input, rest) = many0((
+        ws(alt((keyword("is"), keyword("as")))),
+        parse_type_specifier,
+    ))
+    .parse(input)?;
 
     Ok((
         input,
@@ -249,65 +228,51 @@ fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse type specifier (qualified name like System.String)
 fn parse_type_specifier(input: &str) -> IResult<&str, TypeSpecifier> {
-    let (input, qualified_name) = separated_list1(tag("."), parse_identifier).parse(input)?;
+    let (input, qualified_name) = separated_list1(ws(char('.')), parse_identifier).parse(input)?;
     Ok((input, TypeSpecifier { qualified_name }))
 }
 
-// Parse equality and membership expressions (same precedence level)
+fn parse_membership_expression(input: &str) -> IResult<&str, Expression> {
+    let (input, first) = parse_equality_expression(input)?;
+    let (input, rest) = many0((
+        ws(alt((
+            map(keyword("contains"), |_| MembershipOperator::Contains),
+            map(keyword("in"), |_| MembershipOperator::In),
+        ))),
+        parse_equality_expression,
+    ))
+    .parse(input)?;
+    Ok((
+        input,
+        rest.into_iter()
+            .fold(first, |left, (operator, right)| Expression::Membership {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            }),
+    ))
+}
+
 fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_inequality_expression(input)?;
     let (input, rest) = many0((
         ws(alt((
-            tag("!="),
-            tag("!~"),
-            tag("="),
-            tag("~"),
-            tag("contains"),
-            tag("in"),
+            map(tag("!="), |_| EqualityOperator::NotEqual),
+            map(tag("!~"), |_| EqualityOperator::NotEquivalent),
+            map(tag("="), |_| EqualityOperator::Equal),
+            map(tag("~"), |_| EqualityOperator::Equivalent),
         ))),
         parse_inequality_expression,
     ))
     .parse(input)?;
-
     Ok((
         input,
-        rest.into_iter().fold(first, |acc, (op, expr)| match op {
-            "=" => Expression::Equality {
-                left: Box::new(acc),
-                operator: EqualityOperator::Equal,
-                right: Box::new(expr),
-            },
-            "~" => Expression::Equality {
-                left: Box::new(acc),
-                operator: EqualityOperator::Equivalent,
-                right: Box::new(expr),
-            },
-            "!=" => Expression::Equality {
-                left: Box::new(acc),
-                operator: EqualityOperator::NotEqual,
-                right: Box::new(expr),
-            },
-            "!~" => Expression::Equality {
-                left: Box::new(acc),
-                operator: EqualityOperator::NotEquivalent,
-                right: Box::new(expr),
-            },
-            "in" => Expression::Membership {
-                left: Box::new(acc),
-                operator: MembershipOperator::In,
-                right: Box::new(expr),
-            },
-            "contains" => Expression::Membership {
-                left: Box::new(acc),
-                operator: MembershipOperator::Contains,
-                right: Box::new(expr),
-            },
-            _ => Expression::Equality {
-                left: Box::new(acc),
-                operator: EqualityOperator::Equal,
-                right: Box::new(expr),
-            },
-        }),
+        rest.into_iter()
+            .fold(first, |left, (operator, right)| Expression::Equality {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            }),
     ))
 }
 
@@ -368,10 +333,10 @@ fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
 
 // Parse multiplicative expressions (*, /, div, mod)
 fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_type_expression(input)?;
+    let (input, first) = parse_unary_expression(input)?;
     let (input, rest) = many0((
-        ws(alt((tag("div"), tag("mod"), tag("*"), tag("/")))),
-        parse_type_expression,
+        ws(alt((keyword("div"), keyword("mod"), tag("*"), tag("/")))),
+        parse_unary_expression,
     ))
     .parse(input)?;
 
@@ -394,9 +359,10 @@ fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
     ))
 }
 
-// Parse unary expressions (-, +, not)
+// Parse unary + and - above the arithmetic operators.
 fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
     alt((
+        parse_minimum_integer,
         map(preceded(ws(char('-')), parse_unary_expression), |expr| {
             Expression::Polarity {
                 operator: PolarityOperator::Minus,
@@ -414,10 +380,10 @@ fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
     .parse(input)
 }
 
-// Parse union expressions — binds tighter than < but looser than +
+// Parse union between type operators and comparisons.
 fn parse_union_expression(input: &str) -> IResult<&str, Expression> {
-    let (input, first) = parse_additive_expression(input)?;
-    let (input, rest) = many0(preceded(ws(char('|')), parse_additive_expression)).parse(input)?;
+    let (input, first) = parse_type_expression(input)?;
+    let (input, rest) = many0(preceded(ws(char('|')), parse_type_expression)).parse(input)?;
 
     Ok((
         input,
@@ -466,6 +432,7 @@ enum InvocationOrIndex {
 // Parse term
 fn parse_term(input: &str) -> IResult<&str, Expression> {
     alt((
+        parse_instance_selector,
         map(parse_literal, |lit| Expression::Term(Term::Literal(lit))),
         map(parse_invocation, |inv| {
             Expression::Term(Term::Invocation(inv))
@@ -481,12 +448,35 @@ fn parse_term(input: &str) -> IResult<&str, Expression> {
     .parse(input)
 }
 
+fn parse_instance_selector(input: &str) -> IResult<&str, Expression> {
+    let (input, type_specifier) = parse_type_specifier(input)?;
+    let (input, elements) = delimited(
+        ws(char('{')),
+        alt((
+            map(ws(char(':')), |_| Vec::new()),
+            separated_list1(
+                ws(char(',')),
+                (parse_identifier, preceded(ws(char(':')), parse_expression)),
+            ),
+        )),
+        ws(char('}')),
+    )
+    .parse(input)?;
+    Ok((
+        input,
+        Expression::Term(Term::InstanceSelector {
+            type_specifier,
+            elements,
+        }),
+    ))
+}
+
 // Parse invocation (function call or member access)
 fn parse_invocation(input: &str) -> IResult<&str, Invocation> {
     alt((
-        map(tag("$this"), |_| Invocation::This),
-        map(tag("$index"), |_| Invocation::Index),
-        map(tag("$total"), |_| Invocation::Total),
+        map(keyword("$this"), |_| Invocation::This),
+        map(keyword("$index"), |_| Invocation::Index),
+        map(keyword("$total"), |_| Invocation::Total),
         parse_function_or_member,
     ))
     .parse(input)
@@ -520,13 +510,13 @@ fn parse_function_or_member(input: &str) -> IResult<&str, Invocation> {
 
 fn parse_sort_parameter(input: &str) -> IResult<&str, Expression> {
     let (input, expr) = parse_expression(input)?;
-    let (input, direction) = opt(ws(alt((tag("asc"), tag("desc"))))).parse(input)?;
+    let (input, direction) = opt(ws(alt((keyword("asc"), keyword("desc"))))).parse(input)?;
     if let Some(direction) = direction {
         Ok((
             input,
-            Expression::Invocation {
-                left: Box::new(expr),
-                invocation: Invocation::Member(direction.to_string()),
+            Expression::SortKey {
+                key: Box::new(expr),
+                descending: direction == "desc",
             },
         ))
     } else {
@@ -536,127 +526,147 @@ fn parse_sort_parameter(input: &str) -> IResult<&str, Expression> {
 
 // Parse external constant
 fn parse_external_constant(input: &str) -> IResult<&str, String> {
-    preceded(char('%'), parse_identifier).parse(input)
+    preceded(
+        ws(char('%')),
+        alt((parse_identifier, |s| parse_delimited_text(s, '\''))),
+    )
+    .parse(input)
 }
 
 // Parse literal values
 fn parse_literal(input: &str) -> IResult<&str, Literal> {
     alt((
-        map(tag("{}"), |_| Literal::Null),
-        map(tag("true"), |_| Literal::Boolean(true)),
-        map(tag("false"), |_| Literal::Boolean(false)),
-        parse_datetime_literal,          // Try datetime first (longer pattern)
-        parse_time_literal,              // Then time
-        parse_date_literal,              // Then date (shorter pattern)
-        parse_quantity_literal,          // Try quantity before string and number
-        parse_compound_duration_literal, // Try compound duration (number + precision)
-        parse_datetime_precision_literal, // Try datetime precision keywords
+        map((char('{'), multispace0, char('}')), |_| Literal::Null),
+        map(keyword("true"), |_| Literal::Boolean(true)),
+        map(keyword("false"), |_| Literal::Boolean(false)),
+        parse_datetime_literal, // Try datetime first (longer pattern)
+        parse_time_literal,     // Then time
+        parse_date_literal,     // Then date (shorter pattern)
+        parse_quantity_literal, // Try quantity before string and number
         parse_string_literal,
         parse_number_literal,
     ))
     .parse(input)
 }
 
-// Parse string literal
 fn parse_string_literal(input: &str) -> IResult<&str, Literal> {
-    let (input, _) = char('\'')(input)?;
-    let mut out = String::new();
-    let mut chars = input.char_indices();
-    loop {
-        match chars.next() {
-            Some((end, '\'')) => {
-                return Ok((&input[end + 1..], Literal::String(out)));
-            }
-            Some((_, '\\')) => match chars.next() {
-                Some((_, 'n')) => out.push('\n'),
-                Some((_, 'r')) => out.push('\r'),
-                Some((_, 't')) => out.push('\t'),
-                Some((_, 'f')) => out.push('\u{c}'),
-                Some((_, '\\')) => out.push('\\'),
-                Some((_, '/')) => out.push('/'),
-                Some((_, '\'')) => out.push('\''),
-                Some((_, '"')) => out.push('"'),
-                Some((_, '`')) => out.push('`'),
-                Some((start, 'u')) => {
-                    // \uXXXX — exactly four hex digits
-                    let hex: String = input[start + 1..].chars().take(4).collect();
-                    if hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
-                        if let Some(c) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32)
-                        {
-                            out.push(c);
-                            for _ in 0..4 {
-                                chars.next();
-                            }
-                            continue;
-                        }
-                    }
-                    // Not a valid unicode escape — FHIRPath drops the
-                    // backslash and keeps the following characters.
-                    out.push('u');
-                }
-                Some((_, other)) => {
-                    out.push(other);
-                }
-                None => {
-                    return Err(nom::Err::Error(nom::error::Error::new(
-                        input,
-                        nom::error::ErrorKind::Char,
-                    )))
-                }
-            },
-            Some((_, c)) => out.push(c),
-            None => {
-                return Err(nom::Err::Error(nom::error::Error::new(
-                    input,
-                    nom::error::ErrorKind::Char,
-                )))
-            }
-        }
-    }
+    map(|text| parse_delimited_text(text, '\''), Literal::String).parse(input)
 }
 
-// Parse number literal
-fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
-    let (input, number_str) = recognize((digit1, opt((char('.'), digit1)))).parse(input)?;
-
-    // Check for Long suffix
-    let (input, has_long_suffix) = opt(char('L')).parse(input)?;
-
-    if has_long_suffix.is_some() {
-        // Explicit Long literal with 'L' suffix
-        if number_str.contains('.') {
-            // Cannot have decimal with Long suffix - this is an error case
-            // For now, parse as whole number part only
-            let whole_part = number_str.split('.').next().unwrap_or("0");
-            if let Ok(num) = whole_part.parse::<i64>() {
-                Ok((input, Literal::LongNumber(num)))
-            } else {
-                Ok((input, Literal::LongNumber(0)))
-            }
-        } else {
-            // Integer with L suffix - parse as Long
-            if let Ok(num) = number_str.parse::<i64>() {
-                Ok((input, Literal::LongNumber(num)))
-            } else {
-                Ok((input, Literal::LongNumber(0)))
-            }
+/// Strings and delimited identifiers use the same UTF-16 escape syntax.
+fn parse_delimited_text(input: &str, delimiter: char) -> IResult<&str, String> {
+    let (mut rest, _) = char(delimiter)(input)?;
+    let mut output = String::new();
+    while let Some(c) = rest.chars().next() {
+        rest = &rest[c.len_utf8()..];
+        if c == delimiter {
+            return Ok((rest, output));
         }
-    } else if number_str.contains('.') {
-        // Parse as decimal (no L suffix, contains decimal point).
-        // Use rust_decimal to preserve trailing zeros for precision().
-        if let Ok(num) = Decimal::from_str_exact(number_str) {
-            Ok((input, Literal::Number(num)))
-        } else {
-            Ok((input, Literal::Number(Decimal::ZERO)))
+        if c != '\\' {
+            output.push(c);
+            continue;
         }
-    } else {
-        // Parse as integer (no L suffix, no decimal) - use Integer type
-        if let Ok(num) = number_str.parse::<i64>() {
-            Ok((input, Literal::Integer(num)))
-        } else {
-            Ok((input, Literal::Integer(0)))
+        let Some(escape) = rest.chars().next() else {
+            break;
+        };
+        rest = &rest[escape.len_utf8()..];
+        match escape {
+            'n' => output.push('\n'),
+            'r' => output.push('\r'),
+            't' => output.push('\t'),
+            'f' => output.push('\u{c}'),
+            'u' => {
+                if let Some(code_unit) = hex_code_unit(rest) {
+                    rest = &rest[4..];
+                    let mut units = [code_unit, 0];
+                    let count = if (0xd800..=0xdbff).contains(&code_unit) {
+                        if let Some(low) = rest.strip_prefix("\\u").and_then(hex_code_unit) {
+                            units[1] = low;
+                            rest = &rest[6..];
+                        }
+                        2
+                    } else {
+                        1
+                    };
+                    let scalar = char::decode_utf16(units[..count].iter().copied())
+                        .next()
+                        .and_then(Result::ok)
+                        .ok_or_else(|| {
+                            nom::Err::Failure(nom::error::Error::new(
+                                rest,
+                                nom::error::ErrorKind::Escaped,
+                            ))
+                        })?;
+                    output.push(scalar);
+                } else {
+                    output.push('u');
+                }
+            }
+            other => output.push(other),
         }
     }
+    Err(nom::Err::Error(nom::error::Error::new(
+        input,
+        nom::error::ErrorKind::Char,
+    )))
+}
+
+fn hex_code_unit(input: &str) -> Option<u16> {
+    let digits = input.get(..4)?;
+    if !digits.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    u16::from_str_radix(digits, 16).ok()
+}
+
+fn parse_number_literal(input: &str) -> IResult<&str, Literal> {
+    alt((
+        map_res((digit1, char('L')), |(digits, _): (&str, char)| {
+            digits.parse::<i64>().map(Literal::LongNumber)
+        }),
+        map_res(recognize((digit1, char('.'), digit1)), |digits| {
+            Decimal::from_str_exact(digits).map(Literal::Number)
+        }),
+        map_res(digit1, |digits: &str| {
+            digits
+                .parse::<i32>()
+                .map(|number| Literal::Integer(i64::from(number)))
+        }),
+    ))
+    .parse(input)
+}
+
+/// The signed minimum magnitude exceeds the maximum positive literal.
+fn parse_minimum_integer(input: &str) -> IResult<&str, Expression> {
+    let (rest, (digits, suffix)) =
+        preceded(ws(char('-')), (digit1, opt(char('L')))).parse(input)?;
+    let literal = match (digits.parse::<u64>(), suffix) {
+        (Ok(9_223_372_036_854_775_808), Some('L')) => Literal::LongNumber(i64::MIN),
+        (Ok(2_147_483_648), None) => Literal::Integer(i64::from(i32::MIN)),
+        _ => {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Digit,
+            )))
+        }
+    };
+    // A following decimal digit separator, unit, or postfix invocation belongs to
+    // ordinary unary parsing. The negative minimum needs parentheses before a postfix.
+    let next = rest.trim_start();
+    if next.starts_with(['.', '[', '\''])
+        || next.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+            && ![
+                "is", "as", "and", "or", "xor", "implies", "in", "contains", "div", "mod",
+            ]
+            .iter()
+            .any(|word| keyword(word)(next).is_ok())
+    {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Digit,
+        )));
+    }
+    Ok((rest, Expression::Term(Term::Literal(literal))))
 }
 
 // Parse date literal (@YYYY, @YYYY-MM, or @YYYY-MM-DD)
@@ -854,120 +864,53 @@ fn parse_time_literal(input: &str) -> IResult<&str, Literal> {
     Ok((input, Literal::Time(s)))
 }
 
-// Parse quantity literal (number followed by single-quoted unit)
-// Examples: 5'mg', 10.5'kg', 100'mmHg', 15 'mm[Hg]' (with optional space)
 fn parse_quantity_literal(input: &str) -> IResult<&str, Literal> {
-    // Parse the numeric value (integer or decimal)
-    let (input, number_str) = recognize((
-        opt(char('-')), // Optional negative sign
-        digit1,
-        opt((char('.'), digit1)),
-    ))
-    .parse(input)?;
-
-    // Parse optional whitespace between number and unit
-    let (input, _) = multispace0(input)?;
-
-    // Parse the unit string (single-quoted)
-    let (input, _) = char('\'')(input)?;
-    let (input, unit) = take_while(|c| c != '\'')(input)?;
-    let (input, _) = char('\'')(input)?;
-
-    // Convert the number string to Decimal (preserves trailing zeros)
-    let value = Decimal::from_str_exact(number_str).unwrap_or(Decimal::ZERO);
-
-    // Unit is optional per FHIR spec (can be empty string)
-    let unit_opt = if unit.is_empty() {
-        None
-    } else {
-        Some(unit.to_string())
-    };
-
+    let (rest, (digits, _, unit)) = (
+        recognize((digit1, opt((char('.'), digit1)))),
+        multispace0,
+        alt((
+            |text| parse_delimited_text(text, '\''),
+            |text| {
+                let (rest, unit) = alpha1(text)?;
+                match unit {
+                    "year" | "years" | "month" | "months" | "week" | "weeks" | "day" | "days"
+                    | "hour" | "hours" | "minute" | "minutes" | "second" | "seconds"
+                    | "millisecond" | "milliseconds" => {
+                        Ok((rest, unit.trim_end_matches('s').to_string()))
+                    }
+                    _ => Err(nom::Err::Error(nom::error::Error::new(
+                        text,
+                        nom::error::ErrorKind::Tag,
+                    ))),
+                }
+            },
+        )),
+    )
+        .parse(input)?;
+    let value = Decimal::from_str_exact(digits).map_err(|_| {
+        nom::Err::Failure(nom::error::Error::new(input, nom::error::ErrorKind::Digit))
+    })?;
     Ok((
-        input,
+        rest,
         Literal::Quantity {
             value,
-            unit: unit_opt,
+            unit: (!unit.is_empty()).then_some(unit),
         },
     ))
 }
 
-// Parse datetime precision literal
-// Examples: 'year', 'years', 'month', 'months', 'week', 'weeks', etc.
-fn parse_datetime_precision_literal(input: &str) -> IResult<&str, Literal> {
-    alt((
-        // Plural forms first (to avoid partial matches)
-        map(tag("years"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Year)
-        }),
-        map(tag("months"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Month)
-        }),
-        map(tag("weeks"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Week)
-        }),
-        map(tag("days"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Day)
-        }),
-        map(tag("hours"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Hour)
-        }),
-        map(tag("minutes"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Minute)
-        }),
-        map(tag("seconds"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Second)
-        }),
-        map(tag("milliseconds"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Millisecond)
-        }),
-        // Singular forms
-        map(tag("year"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Year)
-        }),
-        map(tag("month"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Month)
-        }),
-        map(tag("week"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Week)
-        }),
-        map(tag("day"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Day)
-        }),
-        map(tag("hour"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Hour)
-        }),
-        map(tag("minute"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Minute)
-        }),
-        map(tag("second"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Second)
-        }),
-        map(tag("millisecond"), |_| {
-            Literal::DateTimePrecision(DateTimePrecision::Millisecond)
-        }),
-    ))
-    .parse(input)
-}
-
-// Parse identifier - simplified version
 fn parse_identifier(input: &str) -> IResult<&str, String> {
-    // Delimited identifier: `div`, `name with spaces`
-    if let Some(rest) = input.strip_prefix('`') {
-        if let Some(end) = rest.find('`') {
-            return Ok((&rest[end + 1..], rest[..end].to_string()));
-        }
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Char,
-        )));
+    if input.starts_with('`') {
+        return parse_delimited_text(input, '`');
     }
-    let (input, ident) = recognize((
-        alt((alpha1, recognize(char('_')))),
-        opt(take_while1(|c: char| c.is_alphanumeric() || c == '_')),
-    ))
-    .parse(input)?;
-    Ok((input, ident.to_string()))
+    map(
+        recognize((
+            take_while_m_n(1, 1, |c: char| c.is_ascii_alphabetic() || c == '_'),
+            take_while(|c: char| c.is_ascii_alphanumeric() || c == '_'),
+        )),
+        str::to_owned,
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

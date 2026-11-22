@@ -1,19 +1,11 @@
-//! Official HL7 FHIRPath conformance suite harness.
+//! Native HL7 FHIRPath suites for the R4 and R5 logical models.
 //!
-//! Runs the vendored `tests-fhir-r4.xml` suite (937 cases) against the
-//! rh-fhirpath parser/evaluator and categorizes every case as pass,
-//! wrong-answer, parse-error, eval-error, or skipped.
-//!
-//! Gate: **no new wrong answers** — every wrong-answer must be listed in
-//! `KNOWN_WRONG_ANSWERS`. Parse/eval errors are tolerated (tracked in
-//! CONFORMANCE.md) but wrong answers are not.
-//!
-//! A machine-readable summary is written to
-//! `target/hl7_fhirpath_conformance.json` (override with
-//! `HL7_CONFORMANCE_OUT`).
+//! R5 preserves typed values, distinguishes parser and evaluator failures, and
+//! runs with the specified initial focus. Each in-profile difference is gated
+//! by ID and outcome. Reports are written under the workspace target directory
+//! or at the paths in HL7_CONFORMANCE_OUT and HL7_R5_CONFORMANCE_OUT.
 
 use std::collections::HashMap;
-use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -21,6 +13,7 @@ use quick_xml::escape::unescape;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use quick_xml::XmlVersion;
+use rh_fhirpath::evaluator::metadata::FhirModel;
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
@@ -30,14 +23,14 @@ const FIXTURES: &str = concat!(
     "/tests/fixtures/hl7_fhirpath_tests"
 );
 
-/// Wrong answers present at harness introduction (baseline 2026-06-12).
-/// Shrink-only: fixing one means removing it here. Adding to this list is a
-/// conformance regression and must not happen.
-const KNOWN_WRONG_ANSWERS: &[&str] = &[
-    // R4 fixture expects fractional-second datetime arithmetic to truncate;
-    // the R5 testlab expects @1973-12-25T00:00:00.100+10:00 here.
-    "testPlus::testPlusDate19",
-];
+const R5_FIXTURES: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/hl7_fhirpath_r5"
+);
+const R5_SOURCE: &str = "469d90ab58663266d5d7ff82ba3587257fd8a4be";
+const R5_DIFFERENCES: &str = include_str!("fixtures/hl7_fhirpath_r5/known-differences.tsv");
+
+const R4_DIFFERENCES: &str = include_str!("fixtures/hl7_fhirpath_tests/known-differences.tsv");
 
 #[derive(Debug, Clone)]
 struct TestCase {
@@ -50,6 +43,9 @@ struct TestCase {
     outputs: Vec<(String, String)>, // (type, value)
     mode: Option<String>,
     check_ordered_functions: bool,
+    ordered: bool,
+    context: Option<String>,
+    context_type: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -59,6 +55,7 @@ enum Outcome {
     ParseError,
     EvalError,
     Skipped,
+    OutsideProfile,
 }
 
 fn parse_suite(xml: &str) -> Vec<TestCase> {
@@ -67,6 +64,7 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
 
     let mut cases = Vec::new();
     let mut group = String::new();
+    let mut group_mode = None;
     let mut current: Option<TestCase> = None;
     let mut in_expression = false;
     let mut in_output = false;
@@ -84,6 +82,7 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                 match e.name().as_ref() {
                     "group" => {
                         group = attrs.get("name").cloned().unwrap_or_default();
+                        group_mode = attrs.get("mode").cloned();
                     }
                     "test" => {
                         current = Some(TestCase {
@@ -94,11 +93,20 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                             invalid: attrs.get("invalid").cloned(),
                             predicate: attrs.get("predicate").map(|p| p == "true") == Some(true),
                             outputs: Vec::new(),
-                            mode: attrs.get("mode").cloned(),
+                            mode: if group_mode.as_deref() == Some("custom") {
+                                group_mode.clone()
+                            } else {
+                                attrs.get("mode").cloned().or_else(|| group_mode.clone())
+                            },
+                            ordered: attrs.get("ordered").is_none_or(|value| value != "false"),
+                            context: attrs.get("context").cloned(),
+                            context_type: attrs.get("contextType").cloned(),
                             check_ordered_functions: attrs
                                 .get("checkOrderedFunctions")
                                 .map(|p| p == "true")
-                                .unwrap_or(false),
+                                .unwrap_or(false)
+                                || (attrs.get("mode").is_some_and(|mode| mode == "strict")
+                                    && attrs.get("ordered").is_some_and(|order| order == "true")),
                         });
                     }
                     "expression" => {
@@ -155,8 +163,8 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
     cases
 }
 
-fn load_inputs() -> HashMap<String, serde_json::Value> {
-    let dir = Path::new(FIXTURES).join("input");
+fn load_inputs(fixtures: &Path) -> HashMap<String, serde_json::Value> {
+    let dir = fixtures.join("input");
     let mut inputs = HashMap::new();
     for entry in fs::read_dir(&dir).expect("input dir").flatten() {
         let path = entry.path();
@@ -175,13 +183,18 @@ fn load_inputs() -> HashMap<String, serde_json::Value> {
 fn flatten(value: FhirPathValue) -> Vec<FhirPathValue> {
     match value {
         FhirPathValue::Empty => vec![],
-        FhirPathValue::Collection(items) => items,
+        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => items,
         other => vec![other],
     }
 }
 
 /// Compare a single actual value against an expected (type, text) output.
-fn matches_expected(actual: &FhirPathValue, expected_type: &str, expected: &str) -> bool {
+fn matches_expected(
+    actual: &FhirPathValue,
+    expected_type: &str,
+    expected: &str,
+    model: FhirModel,
+) -> bool {
     // Some suite groups (LowBoundary/HighBoundary/Precision) omit the type
     // attribute — infer it from the expected text.
     if expected_type.is_empty() {
@@ -197,33 +210,43 @@ fn matches_expected(actual: &FhirPathValue, expected_type: &str, expected: &str)
             }
         } else if expected.contains('\'') {
             "Quantity"
+        } else if expected.parse::<i64>().is_ok() {
+            "integer"
         } else if expected.parse::<f64>().is_ok() {
             "decimal"
         } else {
             "string"
         };
-        return matches_expected(actual, inferred, expected);
+        return matches_expected(actual, inferred, expected, model);
     }
     match expected_type {
-        "boolean" => matches!(
-            (actual, expected),
-            (FhirPathValue::Boolean(true), "true") | (FhirPathValue::Boolean(false), "false")
-        ),
+        "boolean" => match actual {
+            FhirPathValue::Boolean(value) | FhirPathValue::TypedBoolean { value, .. } => {
+                expected.parse::<bool>() == Ok(*value)
+            }
+            _ => false,
+        },
         "integer" => match actual {
-            FhirPathValue::Integer(i) | FhirPathValue::Long(i) => expected.parse::<i64>() == Ok(*i),
-            FhirPathValue::Number(n) if n.fract() == Decimal::ZERO => {
+            FhirPathValue::Integer(i) => expected.parse::<i64>() == Ok(*i),
+            FhirPathValue::Long(i) if model == FhirModel::R4 => expected.parse::<i64>() == Ok(*i),
+            FhirPathValue::Number(n) if model == FhirModel::R4 && n.fract() == Decimal::ZERO => {
                 expected.parse::<i64>().ok() == n.to_i64()
             }
             _ => false,
         },
+        "long" | "integer64" => {
+            matches!(actual, FhirPathValue::Long(value) if expected.parse::<i64>() == Ok(*value))
+        }
         "decimal" => {
-            let expected_dec = match Decimal::from_str_exact(expected) {
+            let expected_dec = match Decimal::from_str_exact(expected)
+                .or_else(|_| Decimal::from_scientific(expected))
+            {
                 Ok(d) => d,
                 Err(_) => return false,
             };
             match actual {
                 FhirPathValue::Number(n) => n == &expected_dec,
-                FhirPathValue::Integer(i) | FhirPathValue::Long(i) => {
+                FhirPathValue::Integer(i) | FhirPathValue::Long(i) if model == FhirModel::R4 => {
                     Decimal::from(*i) == expected_dec
                 }
                 _ => false,
@@ -240,7 +263,8 @@ fn matches_expected(actual: &FhirPathValue, expected_type: &str, expected: &str)
                 FhirPathValue::Date(s)
                 | FhirPathValue::DateTime(s)
                 | FhirPathValue::Time(s)
-                | FhirPathValue::String(s) => s.as_str(),
+                | FhirPathValue::TypedDateTime { value: s, .. } => s.as_str(),
+                FhirPathValue::String(s) if model == FhirModel::R4 => s.as_str(),
                 _ => return false,
             };
             let actual_norm = actual_str.trim_start_matches('@').trim_start_matches('T');
@@ -275,7 +299,29 @@ fn run_case(
     parser: &FhirPathParser,
     evaluator: &FhirPathEvaluator,
     inputs: &HashMap<String, serde_json::Value>,
+    model: FhirModel,
 ) -> (Outcome, String) {
+    if case.group == "testConformsTo" && case.invalid.is_none() {
+        return (
+            Outcome::OutsideProfile,
+            "requires an installed profile validation host".into(),
+        );
+    }
+    let outside = match case.mode.as_deref() {
+        Some("custom") => Some("document and custom functions outside FHIRPath 3.0.0"),
+        Some("cda") => Some("CDA model"),
+        Some("tx") => Some("draft terminology client API"),
+        Some("semantic") if case.invalid.as_deref() == Some("semantic") => {
+            Some("requires optional static type checking against declared contextType")
+        }
+        _ => None,
+    };
+    if model == FhirModel::R5 {
+        if let Some(reason) = outside {
+            return (Outcome::OutsideProfile, reason.into());
+        }
+    }
+
     let input_stem = case
         .inputfile
         .trim_end_matches(".xml")
@@ -295,7 +341,9 @@ fn run_case(
     let parsed = match parser.parse(&case.expression) {
         Ok(p) => p,
         Err(e) => {
-            return if case.invalid.is_some() {
+            return if case.invalid.as_deref().is_some_and(|invalid| {
+                model == FhirModel::R4 || matches!(invalid, "syntax" | "true")
+            }) {
                 (Outcome::Pass, "expected invalid: parse error".into())
             } else {
                 (Outcome::ParseError, e.to_string())
@@ -304,13 +352,38 @@ fn run_case(
     };
 
     let mut context = EvaluationContext::new(resource.clone());
+    context.model = model;
     context.strict_mode =
         case.mode.as_deref() == Some("strict") || case.invalid.as_deref() == Some("semantic");
     context.check_ordered_functions = case.check_ordered_functions;
+    if let Some(focus_expression) = &case.context {
+        let focus = parser
+            .parse(focus_expression)
+            .and_then(|ast| evaluator.evaluate_nodes(&ast, &context));
+        match focus {
+            Ok(value) if !value.is_empty() => context = context.with_initial_focus(value),
+            Ok(_) => {
+                return (
+                    Outcome::EvalError,
+                    format!("Fixture focus {focus_expression} was empty"),
+                )
+            }
+            Err(error) => {
+                return (
+                    Outcome::EvalError,
+                    format!("Invalid fixture focus {focus_expression}: {error}"),
+                )
+            }
+        }
+    }
     let result = match evaluator.evaluate(&parsed, &context) {
         Ok(r) => r,
         Err(e) => {
-            return if case.invalid.is_some() {
+            return if case
+                .invalid
+                .as_deref()
+                .is_some_and(|invalid| model == FhirModel::R4 || invalid != "syntax")
+            {
                 (Outcome::Pass, "expected invalid: eval error".into())
             } else {
                 (Outcome::EvalError, e.to_string())
@@ -319,6 +392,15 @@ fn run_case(
     };
 
     if case.invalid.is_some() {
+        if model == FhirModel::R5 {
+            return (
+                Outcome::WrongAnswer,
+                format!(
+                    "expected {} error, got {result:?}",
+                    case.invalid.as_deref().unwrap()
+                ),
+            );
+        }
         // Expected an error but evaluation succeeded. Many engines evaluate
         // "semantically invalid" expressions to empty; treat empty as a
         // tolerated error-equivalent, anything else as a wrong answer.
@@ -366,120 +448,165 @@ fn run_case(
         );
     }
 
-    for (value, (expected_type, expected)) in actual.iter().zip(&case.outputs) {
-        if !matches_expected(value, expected_type, expected) {
+    let mut used = vec![false; actual.len()];
+    for (index, (expected_type, expected)) in case.outputs.iter().enumerate() {
+        let candidate = if case.ordered {
+            matches_expected(&actual[index], expected_type, expected, model).then_some(index)
+        } else {
+            actual.iter().enumerate().position(|(index, value)| {
+                !used[index] && matches_expected(value, expected_type, expected, model)
+            })
+        };
+        let Some(index) = candidate else {
             return (
                 Outcome::WrongAnswer,
-                format!("expected {expected_type} {expected:?}, got {value:?}"),
+                format!("expected {expected_type} {expected:?}, got {actual:?}"),
             );
-        }
+        };
+        used[index] = true;
     }
 
     (Outcome::Pass, String::new())
 }
 
-#[test]
-fn hl7_fhirpath_conformance_suite() {
-    let xml = fs::read_to_string(Path::new(FIXTURES).join("tests-fhir-r4.xml"))
-        .expect("vendored suite present");
+fn run_suite(
+    filename: &str,
+    fixtures: &Path,
+    model: FhirModel,
+    out_env: &str,
+    out_default: &str,
+    expected_case_count: usize,
+) -> Vec<(String, &'static str, String)> {
+    let xml = fs::read_to_string(fixtures.join(filename)).expect("vendored suite present");
     let cases = parse_suite(&xml);
-    assert!(cases.len() > 900, "suite should contain ~937 cases");
+    assert_eq!(cases.len(), expected_case_count, "pinned suite changed");
 
-    let inputs = load_inputs();
+    let inputs = load_inputs(fixtures);
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
-
     let mut tallies: HashMap<&'static str, usize> = HashMap::new();
-    let mut wrong_answers: Vec<(String, String)> = Vec::new();
-    let mut failures_by_group: HashMap<String, usize> = HashMap::new();
+    let mut failures = Vec::new();
     let mut details = Vec::new();
 
     for case in &cases {
-        let (outcome, detail) = run_case(case, &parser, &evaluator, &inputs);
+        let (outcome, detail) = run_case(case, &parser, &evaluator, &inputs, model);
         let key = match outcome {
             Outcome::Pass => "pass",
             Outcome::WrongAnswer => "wrong_answer",
             Outcome::ParseError => "parse_error",
             Outcome::EvalError => "eval_error",
             Outcome::Skipped => "skipped",
+            Outcome::OutsideProfile => "outside_profile",
         };
         *tallies.entry(key).or_default() += 1;
         if outcome != Outcome::Pass {
-            *failures_by_group.entry(case.group.clone()).or_default() += 1;
             details.push(serde_json::json!({
                 "group": case.group,
                 "name": case.name,
                 "expression": case.expression,
+                "context": case.context,
+                "context_type": case.context_type,
                 "outcome": key,
                 "detail": detail,
             }));
         }
-        if outcome == Outcome::WrongAnswer {
-            wrong_answers.push((format!("{}::{}", case.group, case.name), detail));
+        if !matches!(outcome, Outcome::Pass | Outcome::OutsideProfile) {
+            failures.push((format!("{}::{}", case.group, case.name), key, detail));
         }
     }
 
     let total = cases.len();
-    let pass = tallies.get("pass").copied().unwrap_or(0);
+    let count = |key| tallies.get(key).copied().unwrap_or(0);
+    let pass = count("pass");
     let summary = serde_json::json!({
-        "suite": "tests-fhir-r4.xml",
+        "suite": filename,
+        "upstream_revision": (model == FhirModel::R5).then_some(R5_SOURCE),
         "total": total,
         "pass": pass,
         "pass_rate": format!("{:.1}%", 100.0 * pass as f64 / total as f64),
-        "wrong_answer": tallies.get("wrong_answer").copied().unwrap_or(0),
-        "parse_error": tallies.get("parse_error").copied().unwrap_or(0),
-        "eval_error": tallies.get("eval_error").copied().unwrap_or(0),
-        "skipped": tallies.get("skipped").copied().unwrap_or(0),
+        "wrong_answer": count("wrong_answer"),
+        "parse_error": count("parse_error"),
+        "eval_error": count("eval_error"),
+        "skipped": count("skipped"),
+        "outside_profile": count("outside_profile"),
         "failures": details,
     });
-
-    let out_path = std::env::var("HL7_CONFORMANCE_OUT")
+    let out_path = std::env::var(out_env)
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/hl7_fhirpath_conformance.json")
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../target")
+                .join(out_default)
         });
+    if let Some(parent) = out_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        fs::create_dir_all(parent).expect("create report directory");
+    }
     fs::write(
         &out_path,
-        serde_json::to_string_pretty(&summary).expect("serialize"),
+        serde_json::to_string_pretty(&summary).expect("serialize report"),
     )
     .expect("write summary JSON");
+    println!("{filename}: {pass}/{total} pass, {} wrong answers, {} parse errors, {} evaluation errors, {} skipped, {} outside profile (report {})",
+        count("wrong_answer"), count("parse_error"), count("eval_error"), count("skipped"), count("outside_profile"), out_path.display());
+    failures
+}
 
-    let mut report = String::new();
-    let _ = writeln!(
-        report,
-        "HL7 FHIRPath conformance: {pass}/{total} pass ({:.1}%), {} wrong, {} parse-err, {} eval-err, {} skipped — details: {}",
-        100.0 * pass as f64 / total as f64,
-        tallies.get("wrong_answer").copied().unwrap_or(0),
-        tallies.get("parse_error").copied().unwrap_or(0),
-        tallies.get("eval_error").copied().unwrap_or(0),
-        tallies.get("skipped").copied().unwrap_or(0),
-        out_path.display(),
+#[test]
+fn hl7_fhirpath_conformance_suite() {
+    let failures = run_suite(
+        "tests-fhir-r4.xml",
+        Path::new(FIXTURES),
+        FhirModel::R4,
+        "HL7_CONFORMANCE_OUT",
+        "hl7_fhirpath_conformance.json",
+        935,
     );
-    println!("{report}");
+    check_baseline(&failures, R4_DIFFERENCES);
+}
 
-    // Gate: no NEW wrong answers.
-    let new_wrong: Vec<_> = wrong_answers
-        .iter()
-        .filter(|(id, _)| !KNOWN_WRONG_ANSWERS.contains(&id.as_str()))
+#[test]
+fn published_fhirpath_r5_suite() {
+    let failures = run_suite(
+        "tests-fhir-r5.xml",
+        Path::new(R5_FIXTURES),
+        FhirModel::R5,
+        "HL7_R5_CONFORMANCE_OUT",
+        "hl7_fhirpath_r5_conformance.json",
+        1381,
+    );
+    check_baseline(&failures, R5_DIFFERENCES);
+}
+
+fn check_baseline(failures: &[(String, &'static str, String)], baseline: &str) {
+    let known: HashMap<_, _> = baseline
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| {
+            let mut fields = line.splitn(3, '\t');
+            let id = fields.next().unwrap();
+            let outcome = fields.next().expect("baseline outcome");
+            let reason = fields.next().expect("baseline reason");
+            assert!(
+                !reason.trim().is_empty(),
+                "missing baseline reason for {id}"
+            );
+            (id, outcome)
+        })
         .collect();
-    assert!(
-        new_wrong.is_empty(),
-        "{} new wrong answer(s) vs baseline:\n{}",
-        new_wrong.len(),
-        new_wrong
-            .iter()
-            .map(|(id, d)| format!("  {id}: {d}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-
-    // Gate: baseline is shrink-only; flag stale entries so the list gets cleaned up.
-    let stale: Vec<_> = KNOWN_WRONG_ANSWERS
+    let new: Vec<_> = failures
         .iter()
-        .filter(|id| !wrong_answers.iter().any(|(w, _)| w == *id))
+        .filter(|(id, outcome, _)| known.get(id.as_str()) != Some(outcome))
+        .collect();
+    assert!(new.is_empty(), "new conformance differences: {new:#?}");
+    let stale: Vec<_> = known
+        .keys()
+        .filter(|id| !failures.iter().any(|(failure, _, _)| failure == **id))
         .collect();
     assert!(
         stale.is_empty(),
-        "stale KNOWN_WRONG_ANSWERS entries (now passing — remove them): {stale:?}"
+        "stale conformance baseline entries: {stale:?}"
     );
 }

@@ -472,3 +472,10 @@ mod tests {
         }
     }
 }
+
+mod magnitude;
+pub(crate) use magnitude::extreme_numeric_equivalent;
+mod model;
+mod node;
+pub use model::FhirModel;
+pub use node::*;

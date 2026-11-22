@@ -1,0 +1,9 @@
+# Case ID	Outcome	Reason
+testIif::testIif6	wrong_answer	Published STU 3 iif permits singleton Boolean conversion; the XML marks the old expectation contested.
+testSort::testSort8	eval_error	Prototype descending selector uses unary minus on a string; STU 3 uses a trailing desc qualifier.
+testSort::testSort10	eval_error	Prototype descending selector uses unary minus on strings; STU 3 uses trailing desc qualifiers.
+testPlus::testPlusDate19	wrong_answer	R4 snapshot truncates fractional seconds; published arithmetic and the R5 suite add 100 milliseconds.
+testType::testType22	eval_error	System.Patient does not resolve to a type; published is requires an error for an unresolved type.
+LowBoundary::LowBoundaryDateTimeMillisecond1	wrong_answer	Published System.DateTime boundary preserves the absence of a timezone.
+HighBoundary::HighBoundaryDateTimeMillisecond1	wrong_answer	Published System.DateTime hour boundary ends at 08:59:59.999 without an injected timezone.
+HighBoundary::HighBoundaryDateTimeMillisecond3	wrong_answer	Published System.DateTime hour boundary ends at 08:59:59.999 without an injected timezone.

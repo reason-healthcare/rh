@@ -110,30 +110,30 @@ fn test_date_time_comparisons() {
     let evaluator = FhirPathEvaluator::new();
     let context = create_test_context();
 
-    // Date string comparisons (lexicographical)
-    let expr = parser.parse("birthDate < '2000-01-01'").unwrap();
+    // Date comparisons
+    let expr = parser.parse("birthDate < @2000-01-01").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
-    let expr = parser.parse("birthDate > '1980-01-01'").unwrap();
+    let expr = parser.parse("birthDate > @1980-01-01").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
-    // DateTime string comparisons
+    // DateTime comparisons
     let expr = parser
-        .parse("deceasedDateTime > '2023-01-01T00:00:00Z'")
+        .parse("deceasedDateTime > @2023-01-01T00:00:00Z")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     let expr = parser
-        .parse("deceasedDateTime < '2024-01-01T00:00:00Z'")
+        .parse("deceasedDateTime < @2024-01-01T00:00:00Z")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 
     // Date equality
-    let expr = parser.parse("birthDate = '1990-05-15'").unwrap();
+    let expr = parser.parse("birthDate = @1990-05-15").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(true)));
 }

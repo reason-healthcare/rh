@@ -1,30 +1,20 @@
-# FHIRPath R5 Testlab Runner
+# FHIRPath R5 CLI testlab
 
-This directory contains a dev-only runner for `tests-fhir-r5.xml`. It is not
-part of the `rh` CLI. The runner shells out to `rh fhirpath eval` for each XML
-test and writes a fresh report.
+The runner exercises `rh fhirpath eval` against the pinned R5 XML suite and its
+FHIR JSON inputs. It passes the selected model, starting focus, and strict
+and ordering settings to the CLI. The Rust conformance harness checks typed
+values, expected error phase, and fixture applicability. [Pinned fixtures](../tests/fixtures/hl7_fhirpath_r5/README.md) · [Conformance results](../CONFORMANCE.md)
 
 ```bash
-# Run the full suite and write Markdown
-python3 crates/rh-fhirpath/testlab/run_r5_testlab.py \
-  --report target/fhirpath-r5-testlab-report.md
+just test-fhirpath-r5-testlab
 
-# Run selected tests by name
 python3 crates/rh-fhirpath/testlab/run_r5_testlab.py \
-  --name testLiteralTrue --name testPolymorphismB
+  --name isEffectOnLogic1Base --name testNoValueExists
 
-# JSON report for scripting
 python3 crates/rh-fhirpath/testlab/run_r5_testlab.py \
-  --report target/fhirpath-r5-testlab-report.json \
-  --report-format json
-
+  --report target/fhirpath-r5-testlab.json --report-format json
 ```
 
-Rules:
-
-- Tests with `invalid=...` expect `rh fhirpath eval` to fail. Any `<output>`
-  values on those tests are ignored.
-- Unsupported syntax/functions are classified as `not_implemented`.
-- Missing JSON input fixtures are classified as `skipped`.
-- The report includes rationale for skipped and not implemented cases so
-  expected gaps are visible without relying on the historical JSON report.
+`--suite` and repeatable `--input-dir` select another suite and its fixtures.
+`--rh` accepts a prebuilt CLI. The report includes case-level results and
+reasons for unavailable inputs and functions.

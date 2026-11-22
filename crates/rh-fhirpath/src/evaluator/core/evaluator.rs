@@ -12,15 +12,8 @@ use crate::evaluator::{
     types::{operations::TypeEvaluator, FhirPathValue},
 };
 use rust_decimal::Decimal;
-
-fn is_empty_sort_key(value: &FhirPathValue) -> bool {
-    matches!(value, FhirPathValue::Empty)
-        || matches!(
-            value,
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty()
-        )
-}
+use serde_json::Value;
+use std::{borrow::Cow, cmp::Ordering, rc::Rc};
 
 /// FHIRPath expression evaluator
 pub struct FhirPathEvaluator {
@@ -42,8 +35,23 @@ impl FhirPathEvaluator {
         expression: &FhirPathExpression,
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
-        let result = self.evaluate_expression(&expression.root, context)?;
+        let result = self.evaluate_nodes(expression, context)?;
         Ok(strip_fhir_primitive(result))
+    }
+
+    /// Evaluate while preserving logical FHIR node types and source paths.
+    /// Use this when the output will become the starting focus for another expression.
+    pub fn evaluate_nodes(
+        &self,
+        expression: &FhirPathExpression,
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        let mut context = Cow::Borrowed(context);
+        if context.initial_focus.is_none() {
+            let initial_focus = context.current_focus();
+            context.to_mut().initial_focus = Some(Rc::new(initial_focus));
+        }
+        self.evaluate_expression(&expression.root, &context)
     }
 
     /// Evaluate an expression against a context
@@ -53,36 +61,30 @@ impl FhirPathEvaluator {
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
         match expression {
-            Expression::Term(term) => self.evaluate_term(term, context),
-            Expression::Invocation { left, invocation } => {
-                let left_result = self.evaluate_expression(left, context)?;
-                // FhirPrimitive carries _fieldName extension data only needed by
-                // extension().  For all other invocations, strip to the inner value
-                // so the rest of the evaluator doesn't need to handle the wrapper.
-                let is_extension_call = matches!(
-                    invocation,
-                    Invocation::Function { name, .. } if name == "extension"
-                );
-                let effective_left = if is_extension_call {
-                    left_result
-                } else {
-                    strip_fhir_primitive(left_result)
-                };
-                self.evaluate_invocation(&effective_left, invocation, context)
+            Expression::Term(Term::Invocation(Invocation::Function { name, .. }))
+                if name == "defineVariable" =>
+            {
+                self.evaluate_chain(expression, &mut Cow::Borrowed(context))
             }
-            Expression::Indexer { left, index } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let index_result = self.evaluate_expression(index, context)?;
-                CollectionEvaluator::evaluate_indexer(&left_result, &index_result)
+            Expression::Term(term) => self.evaluate_term(term, context),
+            Expression::SortKey { .. } => Err(FhirPathError::syntax_error(
+                1,
+                0,
+                "Sort directions are only valid in sort() selectors",
+            )),
+            Expression::Invocation { .. }
+            | Expression::Indexer { .. }
+            | Expression::Type { .. } => {
+                self.evaluate_chain(expression, &mut Cow::Borrowed(context))
             }
             Expression::Union { left, right } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 CollectionEvaluator::evaluate_union(&left_result, &right_result)
             }
             Expression::And { left, right } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_and(&left_result, &right_result)
             }
             Expression::Or {
@@ -90,13 +92,13 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_or(&left_result, operator, &right_result)
             }
             Expression::Implies { left, right } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_implies(&left_result, &right_result)
             }
             Expression::Equality {
@@ -104,8 +106,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_equality(&left_result, operator, &right_result)
             }
             Expression::Inequality {
@@ -113,8 +115,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_inequality(&left_result, operator, &right_result)
             }
             Expression::Membership {
@@ -122,8 +124,8 @@ impl FhirPathEvaluator {
                 operator,
                 right,
             } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                let right_result = strip_fhir_primitive(self.evaluate_expression(right, context)?);
+                let left_result = self.evaluate_expression(left, context)?;
+                let right_result = self.evaluate_expression(right, context)?;
                 ComparisonEvaluator::evaluate_membership(&left_result, operator, &right_result)
             }
             Expression::Additive {
@@ -149,15 +151,137 @@ impl FhirPathEvaluator {
                     strip_fhir_primitive(self.evaluate_expression(operand, context)?);
                 ArithmeticEvaluator::evaluate_polarity(operator, &operand_result)
             }
+        }
+    }
+
+    // Each expression starts with its enclosing variables. Only a receiver
+    // chain carries the bindings attached to its intermediate collections.
+    fn evaluate_chain(
+        &self,
+        expression: &Expression,
+        context: &mut Cow<'_, EvaluationContext>,
+    ) -> FhirPathResult<FhirPathValue> {
+        match expression {
+            Expression::Invocation { left, invocation } => {
+                let target = self.evaluate_chain(left, context)?;
+                if context.strict_mode && target.is_empty() {
+                    if let Invocation::Member(member) = invocation {
+                        if let Some(ty) = declared_cast_type(left) {
+                            let ty = ty.strip_prefix("FHIR.").unwrap_or(&ty);
+                            if context.model.is_type(ty)
+                                && context.model.field_type(ty, member).is_none()
+                                && context
+                                    .model
+                                    .field_type(ty, &format!("{member}[x]"))
+                                    .is_none()
+                            {
+                                return Err(FhirPathError::type_error(format!(
+                                    "Unknown member '{member}' of FHIR.{ty}"
+                                )));
+                            }
+                        }
+                    }
+                }
+                if let Invocation::Function { name, parameters } = invocation {
+                    if name == "defineVariable" {
+                        return self.evaluate_define_variable(target, parameters, context);
+                    }
+                }
+                self.evaluate_invocation(&target, invocation, context)
+            }
+            Expression::Indexer { left, index } => {
+                let target = self.evaluate_chain(left, context)?;
+                let index = strip_fhir_primitive(self.evaluate_expression(index, context)?);
+                CollectionEvaluator::evaluate_indexer(&target, &index)
+            }
             Expression::Type {
                 left,
                 operator,
                 type_specifier,
             } => {
-                let left_result = strip_fhir_primitive(self.evaluate_expression(left, context)?);
-                TypeEvaluator::evaluate_type_operation(&left_result, operator, type_specifier)
+                TypeEvaluator::validate_type(
+                    context.model,
+                    &type_specifier.qualified_name.join("."),
+                )?;
+                let target = self.evaluate_chain(left, context)?;
+                TypeEvaluator::evaluate_type_operation(&target, operator, type_specifier)
             }
+            Expression::Term(Term::Invocation(Invocation::Function { name, parameters }))
+                if name == "defineVariable" =>
+            {
+                self.evaluate_define_variable(context.current_focus(), parameters, context)
+            }
+            Expression::Term(Term::Parenthesized(expression)) => {
+                self.evaluate_chain(expression, context)
+            }
+            _ => self.evaluate_expression(expression, context),
         }
+    }
+
+    fn resolve_external_variable(
+        &self,
+        name: &str,
+        context: &EvaluationContext,
+    ) -> FhirPathResult<Option<FhirPathValue>> {
+        use crate::evaluator::metadata;
+        if let Some(value) = context
+            .variables
+            .get(name)
+            .or_else(|| context.constants.get(name))
+        {
+            return Ok(Some(value.clone()));
+        }
+        match name {
+            "context" => Ok(Some(
+                context
+                    .initial_focus
+                    .as_deref()
+                    .cloned()
+                    .unwrap_or_else(|| metadata::root_or_current_node(context)),
+            )),
+            "resource" => Ok(Some(metadata::resource_for_focus(context))),
+            "rootResource" => Ok(Some(metadata::root_node(context))),
+            _ => crate::extensions::ExtensionRegistry::new().resolve_variable(name, context),
+        }
+    }
+
+    fn evaluate_define_variable(
+        &self,
+        target: FhirPathValue,
+        parameters: &[Expression],
+        context: &mut Cow<'_, EvaluationContext>,
+    ) -> FhirPathResult<FhirPathValue> {
+        let [name, projection @ ..] = parameters else {
+            return Err(FhirPathError::FunctionError {
+                message: "defineVariable() requires a name and an optional projection".into(),
+            });
+        };
+        if projection.len() > 1 {
+            return Err(FhirPathError::FunctionError {
+                message: "defineVariable() requires a name and an optional projection".into(),
+            });
+        }
+        let name = strip_fhir_primitive(self.evaluate_expression(name, context)?);
+        let name = name
+            .singleton("defineVariable() name")?
+            .and_then(FhirPathValue::as_str)
+            .ok_or_else(|| FhirPathError::TypeError {
+                message: "defineVariable() name must be a String".into(),
+            })?;
+        if self.resolve_external_variable(name, context)?.is_some() {
+            return Err(FhirPathError::EvaluationError {
+                message: format!("Environment variable %{name} already defined"),
+            });
+        }
+        let value = match projection.first() {
+            Some(projection) => {
+                let projection_context = context.with_invocation_focus(target.clone());
+                self.evaluate_expression(projection, &projection_context)?
+            }
+            None => target.clone(),
+        };
+        context.to_mut().variables.insert(name.into(), value);
+        Ok(target)
     }
 
     /// Evaluate a term
@@ -169,33 +293,147 @@ impl FhirPathEvaluator {
         match term {
             Term::Literal(literal) => self.evaluate_literal(literal),
             Term::Invocation(invocation) => {
-                let current_value = FhirPathValue::from_json(&context.current);
-                self.evaluate_invocation(&current_value, invocation, context)
+                self.evaluate_invocation(&context.current_focus(), invocation, context)
             }
-            Term::ExternalConstant(name) => {
-                if let Some(value) = context.constants.get(name) {
-                    Ok(value.clone())
-                } else {
-                    match name.as_str() {
-                        "context" => Ok(FhirPathValue::from_json(&context.current)),
-                        "resource" => Ok(FhirPathValue::from_json(&context.root)),
-                        _ => {
-                            // Try extension variables
-                            let extension_registry = crate::extensions::ExtensionRegistry::new();
-                            match extension_registry.resolve_variable(name, context)? {
-                                Some(value) => Ok(value),
-                                None => Ok(FhirPathValue::Empty),
-                            }
-                        }
-                    }
-                }
-            }
+            Term::ExternalConstant(name) => self
+                .resolve_external_variable(name, context)?
+                .ok_or_else(|| {
+                    FhirPathError::evaluation_error(format!(
+                        "Undefined environment variable: %{name}"
+                    ))
+                }),
             Term::Parenthesized(expr) => self.evaluate_expression(expr, context),
+            Term::InstanceSelector {
+                type_specifier,
+                elements,
+            } => self.evaluate_instance_selector(type_specifier, elements, context),
         }
+    }
+
+    fn evaluate_instance_selector(
+        &self,
+        type_specifier: &TypeSpecifier,
+        elements: &[(String, Expression)],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        use crate::evaluator::metadata::FhirNode;
+
+        let focus = context.current_focus();
+        focus.singleton("Instance selector input")?;
+        if focus.is_empty() && context.this_value.is_some() {
+            return Ok(FhirPathValue::Empty);
+        }
+
+        let type_name = match type_specifier.qualified_name.as_slice() {
+            [name] => name,
+            [namespace, name] if namespace == "FHIR" => name,
+            _ => {
+                return Err(FhirPathError::type_error(format!(
+                    "Unknown constructor type {type_specifier}"
+                )))
+            }
+        };
+        let model = context.model;
+        if !model.is_type(type_name) {
+            return Err(FhirPathError::type_error(format!(
+                "Unknown constructor type {type_specifier}"
+            )));
+        }
+
+        let is_primitive = type_name.starts_with(|c: char| c.is_ascii_lowercase());
+        let mut fields = serde_json::Map::new();
+        let mut assigned = std::collections::HashSet::new();
+        for (name, expression) in elements {
+            if !assigned.insert(name) {
+                return Err(FhirPathError::type_error(format!(
+                    "Duplicate constructor field {type_specifier}.{name}"
+                )));
+            }
+            let value = self.evaluate_expression(expression, context)?;
+            let direct_type = model.field_type(type_name, name);
+            let choice = model.field_type(type_name, &format!("{name}[x]")).is_some();
+            if value.is_empty() && (direct_type.is_some() || choice) {
+                continue;
+            }
+
+            let key = if direct_type.is_none() && choice {
+                let item = value
+                    .singleton("Choice constructor element")?
+                    .ok_or_else(|| {
+                        FhirPathError::type_error(
+                            "Cannot infer constructor choice from an empty value",
+                        )
+                    })?;
+                let item_type = constructor_value_type(item).ok_or_else(|| {
+                    FhirPathError::type_error(format!(
+                        "Cannot infer the type of {type_specifier}.{name}"
+                    ))
+                })?;
+                model
+                    .choice_key(type_name, name, item_type)
+                    .ok_or_else(|| {
+                        FhirPathError::type_error(format!(
+                            "{item_type} cannot populate {type_specifier}.{name}"
+                        ))
+                    })?
+            } else {
+                name.clone()
+            };
+            let field_type = model.field_type(type_name, &key).ok_or_else(|| {
+                FhirPathError::type_error(format!(
+                    "Unknown constructor field {type_specifier}.{name}"
+                ))
+            })?;
+            if fields.contains_key(&key) {
+                return Err(FhirPathError::type_error(format!(
+                    "Duplicate constructor field {type_specifier}.{key}"
+                )));
+            }
+
+            let built = if model.field_is_repeating(type_name, &key) {
+                let items = value
+                    .items()
+                    .iter()
+                    .map(|item| constructor_json(item, field_type, model))
+                    .collect::<FhirPathResult<Vec<_>>>()?;
+                Value::Array(items)
+            } else {
+                let Some(item) = value.singleton("Constructor element")? else {
+                    continue;
+                };
+                constructor_json(item, field_type, model)?
+            };
+            fields.insert(key, built);
+        }
+
+        let node = if is_primitive {
+            let value = fields.remove("value").unwrap_or(Value::Null);
+            let metadata = (!fields.is_empty()).then_some(Value::Object(fields));
+            FhirNode::primitive(type_name, &value, metadata, model)
+        } else {
+            if model.is_subtype(type_name, "Resource") {
+                fields.insert("resourceType".into(), Value::String(type_name.clone()));
+            }
+            FhirNode::detached(&Value::Object(fields), type_name, model)
+        };
+        Ok(FhirPathValue::Node(Box::new(node)))
     }
 
     /// Evaluate a literal value
     fn evaluate_literal(&self, literal: &Literal) -> FhirPathResult<FhirPathValue> {
+        if let Literal::Date(value) | Literal::DateTime(value) | Literal::Time(value) = literal {
+            use crate::evaluator::operations::temporal::parse_temporal;
+            let temporal = if matches!(literal, Literal::Time(_)) && !value.starts_with('T') {
+                parse_temporal(&format!("T{value}"))
+            } else {
+                parse_temporal(value)
+            };
+            if temporal.is_none_or(|parts| parts.year == Some(0)) {
+                return Err(FhirPathError::evaluation_error(format!(
+                    "Invalid temporal literal @{value}"
+                )));
+            }
+        }
         match literal {
             Literal::Boolean(b) => Ok(FhirPathValue::Boolean(*b)),
             Literal::String(s) => Ok(FhirPathValue::String(s.clone())),
@@ -232,39 +470,34 @@ impl FhirPathEvaluator {
                 match name.as_str() {
                     "where" => self.evaluate_where_function(target, parameters, context),
                     "select" => self.evaluate_select_function(target, parameters, context),
-                    "repeat" => self.evaluate_repeat_function(target, parameters, context),
+                    "repeat" | "repeatAll" => {
+                        self.evaluate_repeat_function(target, name, parameters, context)
+                    }
                     "ofType" => self.evaluate_of_type_function(target, parameters, context),
                     "is" => self.evaluate_is_function(target, parameters, context),
                     "as" => self.evaluate_as_function(target, parameters, context),
                     "trace" => self.evaluate_trace_function(target, parameters, context),
                     "aggregate" => self.evaluate_aggregate_function(target, parameters, context),
                     "iif" => self.evaluate_iif_lazy(target, parameters, context),
-                    "sort" if !parameters.is_empty() => {
-                        self.evaluate_sort_by_expression(target, parameters, context)
-                    }
+                    "coalesce" => self.evaluate_coalesce(target, parameters, context),
+                    "sort" => self.evaluate_sort_by_expression(target, parameters, context),
                     "exists" if !parameters.is_empty() => {
                         self.evaluate_exists_with_criterion(target, parameters, context)
                     }
                     "all" if !parameters.is_empty() => {
                         self.evaluate_all_with_criterion(target, parameters, context)
                     }
-                    "first" | "last" | "tail" => {
-                        let check = context.check_ordered_functions;
-                        let param_values: Result<Vec<_>, _> = parameters
+                    "first" | "last" | "tail" | "skip" | "take" => {
+                        let parameter_values = parameters
                             .iter()
-                            .map(|p| self.evaluate_expression(p, context))
-                            .collect();
-                        let param_values = param_values?;
-                        self.evaluate_ordered_collection_fn(target, name, &param_values, check)
-                    }
-                    "skip" => {
-                        let check = context.check_ordered_functions;
-                        let param_values: Result<Vec<_>, _> = parameters
-                            .iter()
-                            .map(|p| self.evaluate_expression(p, context))
-                            .collect();
-                        let param_values = param_values?;
-                        self.evaluate_ordered_collection_fn(target, name, &param_values, check)
+                            .map(|parameter| self.evaluate_expression(parameter, context))
+                            .collect::<FhirPathResult<Vec<_>>>()?;
+                        self.evaluate_ordered_collection_fn(
+                            target,
+                            name,
+                            &parameter_values,
+                            context.check_ordered_functions,
+                        )
                     }
                     _ => {
                         // Regular functions: evaluate parameters first
@@ -273,18 +506,67 @@ impl FhirPathEvaluator {
                             .map(|p| self.evaluate_expression(p, context))
                             .collect();
                         let param_values = param_values?;
-                        self.evaluate_function_call(target, name, &param_values)
+                        use crate::extensions::fhir::host;
+                        if host::handles(name) {
+                            return host::invoke(name, target, &param_values, context);
+                        }
+                        if name == "toString" && param_values.is_empty() {
+                            if let [FhirPathValue::Node(node)] = target.items() {
+                                if let Some(text) = node.extreme_numeric_string() {
+                                    return Ok(FhirPathValue::String(text));
+                                }
+                            }
+                        }
+                        // Collection operations preserve source identity. Scalar functions
+                        // consume the implicit system value of a FHIR primitive.
+                        if matches!(
+                            name.as_str(),
+                            "not"
+                                | "type"
+                                | "lowBoundary"
+                                | "highBoundary"
+                                | "precision"
+                                | "comparable"
+                                | "min"
+                                | "max"
+                                | "single"
+                                | "tail"
+                                | "first"
+                                | "last"
+                                | "take"
+                                | "skip"
+                                | "reverse"
+                                | "union"
+                                | "combine"
+                                | "intersect"
+                                | "exclude"
+                                | "distinct"
+                                | "count"
+                                | "empty"
+                                | "exists"
+                                | "isDistinct"
+                                | "subsetOf"
+                                | "supersetOf"
+                        ) {
+                            self.evaluate_function_call(target, name, &param_values)
+                        } else {
+                            let params: Vec<_> =
+                                param_values.into_iter().map(strip_fhir_primitive).collect();
+                            self.evaluate_function_call(
+                                &strip_fhir_primitive(target.clone()),
+                                name,
+                                &params,
+                            )
+                        }
                     }
                 }
             }
-            Invocation::This => {
-                // Return the stored $this value, or fall back to context current
-                if let Some(this_value) = &context.this_value {
-                    Ok(this_value.clone())
-                } else {
-                    Ok(FhirPathValue::Object(context.current.clone()))
-                }
-            }
+            Invocation::This => Ok(context
+                .this_value
+                .as_ref()
+                .or(context.initial_focus.as_deref())
+                .cloned()
+                .unwrap_or_else(|| context.current_focus())),
             Invocation::Index => {
                 if let Some(idx) = context.index_value {
                     Ok(FhirPathValue::Integer(idx))
@@ -311,6 +593,12 @@ impl FhirPathEvaluator {
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
         match target {
+            FhirPathValue::Node(node) => node.member(member, context.strict_mode),
+            FhirPathValue::TypedObject { value, fhir_type } if context.model.is_type(fhir_type) => {
+                crate::evaluator::metadata::FhirNode::detached(value, fhir_type, context.model)
+                    .member(member, context.strict_mode)
+            }
+
             FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
                 // Extract resource type for metadata lookup
                 let resource_type = obj
@@ -457,45 +745,28 @@ impl FhirPathEvaluator {
         params: &[FhirPathValue],
         check_ordered: bool,
     ) -> FhirPathResult<FhirPathValue> {
-        use crate::evaluator::operations::collection::CollectionEvaluator;
-
-        // Normalize UnorderedCollection → Collection for order-sensitive ops,
-        // but error if check_ordered is enabled and target is unordered.
-        let normalized = match target {
-            FhirPathValue::UnorderedCollection(_) if check_ordered => {
-                return Err(FhirPathError::EvaluationError {
-                    message: format!(
-                        "Cannot apply order-dependent function '{}' to unordered collection",
-                        name
-                    ),
-                });
-            }
-            FhirPathValue::UnorderedCollection(items) => FhirPathValue::Collection(items.clone()),
-            other => other.clone(),
-        };
-
+        if check_ordered && target.is_unordered() {
+            return Err(FhirPathError::EvaluationError {
+                message: format!(
+                    "Cannot apply order-dependent function '{name}' to unordered collection"
+                ),
+            });
+        }
         match name {
-            "first" => CollectionEvaluator::first(&normalized, check_ordered),
-            "last" => CollectionEvaluator::last(&normalized, check_ordered),
-            "tail" => CollectionEvaluator::tail(&normalized, check_ordered),
-            "skip" => {
-                let count = match params.first() {
-                    Some(FhirPathValue::Integer(n)) => *n,
-                    Some(_) => {
-                        return Err(FhirPathError::InvalidOperation {
-                            message: "skip() count parameter must be an integer".to_string(),
-                        })
+            "first" if params.is_empty() => CollectionEvaluator::first(target, check_ordered),
+            "last" if params.is_empty() => CollectionEvaluator::last(target, check_ordered),
+            "tail" if params.is_empty() => CollectionEvaluator::tail(target, check_ordered),
+            "skip" | "take" => {
+                match CollectionEvaluator::subsetting_count(params, &format!("{name}()"))? {
+                    None => Ok(FhirPathValue::Empty),
+                    Some(count) if name == "skip" => {
+                        CollectionEvaluator::skip(target, count, check_ordered)
                     }
-                    None => {
-                        return Err(FhirPathError::InvalidOperation {
-                            message: "skip() requires exactly one parameter (count)".to_string(),
-                        })
-                    }
-                };
-                CollectionEvaluator::skip(&normalized, count, check_ordered)
+                    Some(count) => CollectionEvaluator::take(target, count),
+                }
             }
             _ => Err(FhirPathError::FunctionError {
-                message: format!("Unknown order-dependent function: {name}"),
+                message: format!("{name}() takes no arguments"),
             }),
         }
     }
@@ -529,46 +800,15 @@ impl FhirPathEvaluator {
             });
         }
 
-        let criteria_expr = &parameters[0];
-
-        match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                let mut filtered_items = Vec::new();
-
-                for (idx, item) in items.iter().enumerate() {
-                    // Create new context with current item as $this and $index
-                    let item_context = context.with_this_and_index(item.clone(), idx as i64);
-
-                    // Evaluate the criteria expression in the item context
-                    let criteria_result = self.evaluate_expression(criteria_expr, &item_context)?;
-
-                    // If criteria evaluates to true, include the item
-                    if criteria_result.is_truthy() {
-                        filtered_items.push(item.clone());
-                    }
-                }
-
-                if filtered_items.is_empty() {
-                    Ok(FhirPathValue::Empty)
-                } else if filtered_items.len() == 1 {
-                    Ok(filtered_items.into_iter().next().unwrap())
-                } else {
-                    Ok(FhirPathValue::Collection(filtered_items))
-                }
-            }
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            _ => {
-                // For single values, treat as single-item collection
-                let item_context = context.with_this_value(target.clone());
-
-                let criteria_result = self.evaluate_expression(criteria_expr, &item_context)?;
-                if criteria_result.is_truthy() {
-                    Ok(target.clone())
-                } else {
-                    Ok(FhirPathValue::Empty)
-                }
+        let mut filtered = Vec::new();
+        for (index, item) in target.items().iter().enumerate() {
+            let item_context = context.with_this_and_index(item.clone(), index as i64);
+            let criterion = self.evaluate_expression(&parameters[0], &item_context)?;
+            if criterion.singleton_boolean("where() criterion")? == Some(true) {
+                filtered.push(item.clone());
             }
         }
+        Ok(FhirPathValue::from_items(filtered))
     }
 
     /// iif(criterion, true-result[, otherwise-result]) with lazy evaluation.
@@ -585,61 +825,13 @@ impl FhirPathEvaluator {
             });
         }
 
-        // iif() on a multi-element collection is an error per FHIRPath spec.
-        // Single-element collections are unwrapped; empty collections become Empty.
-        // However, non-collection values (objects, booleans, etc.) are fine.
-        if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = target
-        {
-            if items.len() > 1 {
-                return Err(FhirPathError::EvaluationError {
-                    message: "iif() can only be called on a singleton or empty collection"
-                        .to_string(),
-                });
-            }
-        }
-
-        // Set the receiver as the evaluation focus (both $this and current).
-        // This matches FHIRPath semantics: x.iif(criterion, t, f) evaluates
-        // criterion/t/f with x as the focus. When iif has no explicit receiver
-        // the target is the root context object, so focus = root (correct).
-        let iif_ctx = if context.index_value.is_some() {
-            context.with_this_value(target.clone())
-        } else {
-            context.with_this_and_index(target.clone(), 0)
-        };
-        let criterion_val = self.evaluate_expression(&parameters[0], &iif_ctx)?;
-
-        let effective = match &criterion_val {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                items[0].clone()
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                FhirPathValue::Empty
-            }
-            FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => {
-                return Err(FhirPathError::EvaluationError {
-                    message:
-                        "iif() criterion must be a single Boolean; got a multi-item collection"
-                            .to_string(),
-                });
-            }
-            other => other.clone(),
-        };
-
-        let is_truthy = match effective {
-            FhirPathValue::Boolean(b) => b,
-            FhirPathValue::TypedBoolean { value, .. } => value,
-            FhirPathValue::Empty => false,
-            other => {
-                return Err(FhirPathError::TypeError {
-                    message: format!("iif() criterion must be Boolean, got {other:?}"),
-                });
-            }
-        };
+        let focus = target
+            .singleton("iif() input")?
+            .cloned()
+            .unwrap_or(FhirPathValue::Empty);
+        let iif_ctx = context.with_this_value(focus);
+        let criterion = self.evaluate_expression(&parameters[0], &iif_ctx)?;
+        let is_truthy = criterion.singleton_boolean("iif() criterion")? == Some(true);
 
         // Lazy: only evaluate the selected branch.
         if is_truthy {
@@ -651,87 +843,93 @@ impl FhirPathEvaluator {
         }
     }
 
-    /// sort(key-expression...) — sort by one or more key expressions.
-    /// A key expression wrapped in unary `-` means sort DESCENDING by the inner
-    /// expression (rather than actually negating the value). This allows
-    /// `sort(-$this)` for descending numeric sorts and `sort(-family)` for
-    /// descending string sorts without raising a type error.
+    fn evaluate_coalesce(
+        &self,
+        target: &FhirPathValue,
+        parameters: &[Expression],
+        context: &EvaluationContext,
+    ) -> FhirPathResult<FhirPathValue> {
+        if parameters.is_empty() {
+            return Err(FhirPathError::FunctionError {
+                message: "coalesce() requires at least one argument".into(),
+            });
+        }
+        let context = context.with_invocation_focus(target.clone());
+        for parameter in parameters {
+            let result = self.evaluate_expression(parameter, &context)?;
+            if !result.items().is_empty() {
+                return Ok(result);
+            }
+        }
+        Ok(FhirPathValue::Empty)
+    }
+
+    /// Sort stably using singleton keys. Evaluate later keys only for ties.
     fn evaluate_sort_by_expression(
         &self,
         target: &FhirPathValue,
         parameters: &[Expression],
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
-        // Order-sensitive: error on UnorderedCollection when check_ordered_functions
-        if matches!(target, FhirPathValue::UnorderedCollection(_))
-            && context.check_ordered_functions
-        {
-            return Err(FhirPathError::EvaluationError {
-                message: "Cannot apply order-dependent function to unordered collection"
-                    .to_string(),
-            });
-        }
-
-        let items: Vec<FhirPathValue> = match target {
-            FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(v) | FhirPathValue::UnorderedCollection(v) => v.clone(),
-            other => return Ok(other.clone()),
-        };
-
-        // For each key expression, determine direction and the inner expression.
-        let key_specs: Vec<(bool, &Expression)> = parameters
+        let items = target.items();
+        let key_specs: Vec<_> = parameters
             .iter()
-            .map(|p| match p {
-                Expression::Invocation {
-                    left,
-                    invocation: Invocation::Member(direction),
-                } if direction == "asc" => (false, left.as_ref()),
-                Expression::Invocation {
-                    left,
-                    invocation: Invocation::Member(direction),
-                } if direction == "desc" => (true, left.as_ref()),
-                Expression::Polarity {
-                    operator: PolarityOperator::Minus,
-                    operand,
-                } => (true, operand.as_ref()),
-                other => (false, other),
+            .map(|parameter| match parameter {
+                Expression::SortKey { key, descending } => (key.as_ref(), *descending),
+                parameter => (parameter, false),
             })
             .collect();
 
-        // Build (item, key_tuple) pairs
-        let mut keyed: Vec<(FhirPathValue, Vec<(bool, FhirPathValue)>)> = Vec::new();
-        for (idx, item) in items.iter().enumerate() {
-            let item_ctx = context.with_this_and_index(item.clone(), idx as i64);
-            let mut keys = Vec::new();
-            for (descending, expr) in &key_specs {
-                let key = self.evaluate_expression(expr, &item_ctx)?;
-                keys.push((*descending, key));
-            }
-            keyed.push((item.clone(), keys));
-        }
+        let evaluate_key = |item: &FhirPathValue, expression: &Expression| {
+            let item_context = context.with_unindexed_focus(item.clone());
+            let result = self.evaluate_expression(expression, &item_context)?;
+            Ok::<_, FhirPathError>(
+                result
+                    .singleton("sort() key")?
+                    .cloned()
+                    .unwrap_or(FhirPathValue::Empty),
+            )
+        };
 
-        keyed.sort_by(|(_, ka), (_, kb)| {
-            for ((desc, a), (_, b)) in ka.iter().zip(kb.iter()) {
-                let ord =
-                    crate::evaluator::functions::collection_functions::compare_for_sort_pub(a, b);
-                if ord != std::cmp::Ordering::Equal {
-                    if is_empty_sort_key(a) || is_empty_sort_key(b) {
-                        return ord;
-                    }
-                    return if *desc { ord.reverse() } else { ord };
+        let mut keys = items
+            .iter()
+            .map(|item| {
+                let key = if let Some((expression, _)) = key_specs.first() {
+                    evaluate_key(item, expression)?
+                } else {
+                    item.clone()
+                };
+                Ok(vec![key])
+            })
+            .collect::<FhirPathResult<Vec<_>>>()?;
+
+        let mut indices: Vec<usize> = (0..items.len()).collect();
+        let mut scratch = indices.clone();
+        CollectionEvaluator::sort_indices_by(&mut indices, &mut scratch, &mut |a, b| {
+            for key_index in 0..key_specs.len().max(1) {
+                if key_index >= keys[a].len() {
+                    keys[a].push(evaluate_key(&items[a], key_specs[key_index].0)?);
+                }
+                if key_index >= keys[b].len() {
+                    keys[b].push(evaluate_key(&items[b], key_specs[key_index].0)?);
+                }
+                let order = CollectionEvaluator::compare_sort_keys(
+                    &keys[a][key_index],
+                    &keys[b][key_index],
+                )?;
+                if order != Ordering::Equal {
+                    let descending = key_specs.get(key_index).is_some_and(|key| key.1);
+                    return Ok(if descending { order.reverse() } else { order });
                 }
             }
-            std::cmp::Ordering::Equal
-        });
-
-        let sorted: Vec<FhirPathValue> = keyed.into_iter().map(|(item, _)| item).collect();
-        if sorted.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else if sorted.len() == 1 {
-            Ok(sorted.into_iter().next().unwrap())
-        } else {
-            Ok(FhirPathValue::Collection(sorted))
-        }
+            Ok(Ordering::Equal)
+        })?;
+        Ok(FhirPathValue::from_items(
+            indices
+                .into_iter()
+                .map(|index| items[index].clone())
+                .collect(),
+        ))
     }
 
     /// exists(criterion) — returns true if any element satisfies the criterion.
@@ -746,18 +944,10 @@ impl FhirPathEvaluator {
                 message: "exists() accepts at most one parameter (criterion)".to_string(),
             });
         }
-        let criterion = &parameters[0];
-        let items: Vec<&FhirPathValue> = match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.iter().collect()
-            }
-            FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(false)),
-            v => vec![v],
-        };
-        for (idx, item) in items.iter().enumerate() {
-            let item_ctx = context.with_this_and_index((*item).clone(), idx as i64);
-            let result = self.evaluate_expression(criterion, &item_ctx)?;
-            if result.is_truthy() {
+        for (index, item) in target.items().iter().enumerate() {
+            let item_context = context.with_this_and_index(item.clone(), index as i64);
+            let result = self.evaluate_expression(&parameters[0], &item_context)?;
+            if result.singleton_boolean("exists() criterion")? == Some(true) {
                 return Ok(FhirPathValue::Boolean(true));
             }
         }
@@ -776,18 +966,10 @@ impl FhirPathEvaluator {
                 message: "all() requires exactly one parameter (criterion)".to_string(),
             });
         }
-        let criterion = &parameters[0];
-        let items: Vec<&FhirPathValue> = match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                items.iter().collect()
-            }
-            FhirPathValue::Empty => return Ok(FhirPathValue::Boolean(true)),
-            v => vec![v],
-        };
-        for (idx, item) in items.iter().enumerate() {
-            let item_ctx = context.with_this_and_index((*item).clone(), idx as i64);
-            let result = self.evaluate_expression(criterion, &item_ctx)?;
-            if !result.is_truthy() {
+        for (index, item) in target.items().iter().enumerate() {
+            let item_context = context.with_this_and_index(item.clone(), index as i64);
+            let result = self.evaluate_expression(&parameters[0], &item_context)?;
+            if result.singleton_boolean("all() criterion")? != Some(true) {
                 return Ok(FhirPathValue::Boolean(false));
             }
         }
@@ -807,46 +989,13 @@ impl FhirPathEvaluator {
             });
         }
 
-        let projection_expr = &parameters[0];
-
-        match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                let mut selected_items = Vec::new();
-
-                for (idx, item) in items.iter().enumerate() {
-                    let item_context = context.with_this_and_index(item.clone(), idx as i64);
-
-                    let projection_result =
-                        self.evaluate_expression(projection_expr, &item_context)?;
-
-                    match projection_result {
-                        FhirPathValue::Collection(mut items)
-                        | FhirPathValue::UnorderedCollection(mut items) => {
-                            selected_items.append(&mut items);
-                        }
-                        FhirPathValue::Empty => {}
-                        value => {
-                            selected_items.push(value);
-                        }
-                    }
-                }
-
-                if selected_items.is_empty() {
-                    Ok(FhirPathValue::Empty)
-                } else if selected_items.len() == 1 {
-                    Ok(selected_items.into_iter().next().unwrap())
-                } else {
-                    Ok(FhirPathValue::Collection(selected_items))
-                }
-            }
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            _ => {
-                // For single values, treat as single-item collection
-                let item_context = context.with_this_value(target.clone());
-
-                self.evaluate_expression(projection_expr, &item_context)
-            }
+        let mut selected = Vec::new();
+        for (index, item) in target.items().iter().enumerate() {
+            let item_context = context.with_this_and_index(item.clone(), index as i64);
+            let result = self.evaluate_expression(&parameters[0], &item_context)?;
+            selected.extend(result.into_items());
         }
+        Ok(FhirPathValue::from_items(selected))
     }
 
     /// Evaluate trace function that logs a collection with a name and returns input unchanged
@@ -864,57 +1013,16 @@ impl FhirPathEvaluator {
             });
         }
 
-        // Evaluate the name parameter
-        let name_result = self.evaluate_expression(&parameters[0], context)?;
-        let name = match name_result {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::FunctionError {
-                    message: "trace() name parameter must evaluate to a string".to_string(),
-                })
-            }
-        };
+        let name = self.evaluate_expression(&parameters[0], context)?;
+        let name = name
+            .singleton("trace() name")?
+            .and_then(|value| value.system_value().as_str())
+            .ok_or_else(|| FhirPathError::FunctionError {
+                message: "trace() name parameter must evaluate to a string".into(),
+            })?;
 
-        // If projection parameter is provided, evaluate it on the target
-        // Otherwise, log the target itself
         let value_to_log = if parameters.len() == 2 {
-            let projection_expr = &parameters[1];
-
-            match target {
-                FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                    let mut projected_items = Vec::new();
-
-                    for (idx, item) in items.iter().enumerate() {
-                        let item_context = context.with_this_and_index(item.clone(), idx as i64);
-                        let projection_result =
-                            self.evaluate_expression(projection_expr, &item_context)?;
-
-                        match projection_result {
-                            FhirPathValue::Collection(mut items)
-                            | FhirPathValue::UnorderedCollection(mut items) => {
-                                projected_items.append(&mut items);
-                            }
-                            FhirPathValue::Empty => {}
-                            value => {
-                                projected_items.push(value);
-                            }
-                        }
-                    }
-
-                    if projected_items.is_empty() {
-                        FhirPathValue::Empty
-                    } else if projected_items.len() == 1 {
-                        projected_items.into_iter().next().unwrap()
-                    } else {
-                        FhirPathValue::Collection(projected_items)
-                    }
-                }
-                FhirPathValue::Empty => FhirPathValue::Empty,
-                _ => {
-                    let item_context = context.with_this_value(target.clone());
-                    self.evaluate_expression(projection_expr, &item_context)?
-                }
-            }
+            self.evaluate_select_function(target, &parameters[1..], context)?
         } else {
             target.clone()
         };
@@ -923,99 +1031,54 @@ impl FhirPathEvaluator {
             eprintln!("[TRACE:{name}] {value_to_log:?}");
         }
 
-        context.add_trace_log(name, format!("{value_to_log:?}"));
+        context.add_trace_log(name.to_owned(), format!("{value_to_log:?}"));
 
         // Return the original input unchanged
         Ok(target.clone())
     }
 
-    /// Evaluate repeat function that recursively applies a projection expression
-    /// until no new items are found (transitive closure)
+    /// Project each generation, returning only the projected items.
     fn evaluate_repeat_function(
         &self,
         target: &FhirPathValue,
+        name: &str,
         parameters: &[Expression],
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
-        if parameters.len() != 1 {
+        let [projection] = parameters else {
             return Err(FhirPathError::FunctionError {
-                message: "repeat() function requires exactly one parameter".to_string(),
+                message: format!("{name}() function requires exactly one parameter"),
             });
-        }
-
-        let projection_expr = &parameters[0];
-        let mut all_results = Vec::new();
-        let mut current_collection = vec![];
-
-        // Initialize the current collection with the target
-        match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                current_collection.extend(items.clone());
-            }
-            FhirPathValue::Empty => {
-                return Ok(FhirPathValue::Empty);
-            }
-            value => {
-                current_collection.push(value.clone());
-            }
-        }
-
-        // Per FHIRPath spec, repeat() returns only the projected items (not the
-        // initial input). We keep the initial collection in `current_collection`
-        // to start projecting, but `all_results` starts empty.
-        let mut seen: Vec<FhirPathValue> = current_collection.clone();
-
-        loop {
-            let mut next_collection = Vec::new();
-
-            // Apply the projection expression to each item in the current collection
-            for (idx, item) in current_collection.iter().enumerate() {
-                let item_context = context.with_this_and_index(item.clone(), idx as i64);
-
-                // Evaluate the projection expression in the item context
-                let projection_result = self.evaluate_expression(projection_expr, &item_context)?;
-
-                // Collect new items from the projection result
-                match projection_result {
-                    FhirPathValue::Collection(items)
-                    | FhirPathValue::UnorderedCollection(items) => {
-                        for new_item in items {
-                            if !seen
-                                .iter()
-                                .any(|e| FhirPathValue::equals_static(e, &new_item))
-                            {
-                                seen.push(new_item.clone());
-                                all_results.push(new_item.clone());
-                                next_collection.push(new_item.clone());
-                            }
-                        }
-                    }
-                    FhirPathValue::Empty => {}
-                    value => {
-                        if !seen.iter().any(|e| FhirPathValue::equals_static(e, &value)) {
-                            seen.push(value.clone());
-                            all_results.push(value.clone());
-                            next_collection.push(value.clone());
-                        }
-                    }
+        };
+        let allow_duplicates = name == "repeatAll";
+        let mut result = Vec::new();
+        let mut pending: std::collections::VecDeque<_> = target
+            .items()
+            .iter()
+            .cloned()
+            .map(|item| (item, 0))
+            .collect();
+        while let Some((item, depth)) = pending.pop_front() {
+            let item_context = context.with_unindexed_focus(item);
+            let projected = self.evaluate_expression(projection, &item_context)?;
+            for value in projected.into_items() {
+                if !allow_duplicates
+                    && result
+                        .iter()
+                        .any(|item| FhirPathValue::equals_static(item, &value))
+                {
+                    continue;
                 }
+                if depth >= 1_000 || result.len() >= 100_000 {
+                    return Err(FhirPathError::EvaluationError {
+                        message: format!("{name}() exceeded its recursive projection limit"),
+                    });
+                }
+                pending.push_back((value.clone(), depth + 1));
+                result.push(value);
             }
-
-            // If no new items were found, we're done
-            if next_collection.is_empty() {
-                break;
-            }
-
-            // Continue with the new collection
-            current_collection = next_collection;
         }
-
-        // Return the results as a collection (repeat always returns a collection)
-        if all_results.is_empty() {
-            Ok(FhirPathValue::Empty)
-        } else {
-            Ok(FhirPathValue::Collection(all_results))
-        }
+        Ok(FhirPathValue::from_items(result))
     }
 
     /// Evaluate ofType function that filters collections by type specifier
@@ -1033,6 +1096,7 @@ impl FhirPathEvaluator {
         }
 
         let type_name = self.resolve_type_argument(&parameters[0], context, "ofType")?;
+        TypeEvaluator::validate_type(context.model, &type_name)?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
@@ -1052,6 +1116,7 @@ impl FhirPathEvaluator {
             });
         }
         let type_name = self.resolve_type_argument(&parameters[0], context, "is")?;
+        TypeEvaluator::validate_type(context.model, &type_name)?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
@@ -1071,6 +1136,7 @@ impl FhirPathEvaluator {
             });
         }
         let type_name = self.resolve_type_argument(&parameters[0], context, "as")?;
+        TypeEvaluator::validate_type(context.model, &type_name)?;
         let type_specifier = TypeSpecifier {
             qualified_name: vec![type_name],
         };
@@ -1134,6 +1200,58 @@ impl FhirPathEvaluator {
     }
 }
 
+fn constructor_value_type(value: &FhirPathValue) -> Option<&str> {
+    match value {
+        FhirPathValue::Node(node) if node.is_system_projection() => {
+            constructor_value_type(&node.inner)
+        }
+        FhirPathValue::Node(node) => Some(&node.fhir_type),
+        FhirPathValue::TypedObject { fhir_type, .. } => Some(fhir_type),
+        FhirPathValue::Object(value) => value.get("resourceType").and_then(Value::as_str),
+        FhirPathValue::String(_) | FhirPathValue::TypedString { .. } => Some("string"),
+        FhirPathValue::Boolean(_) | FhirPathValue::TypedBoolean { .. } => Some("boolean"),
+        FhirPathValue::Integer(_) => Some("integer"),
+        FhirPathValue::Long(_) => Some("integer64"),
+        FhirPathValue::Number(_) => Some("decimal"),
+        FhirPathValue::Date(_) => Some("date"),
+        FhirPathValue::DateTime(_) | FhirPathValue::TypedDateTime { .. } => Some("dateTime"),
+        FhirPathValue::Time(_) => Some("time"),
+        FhirPathValue::Quantity { .. } => Some("Quantity"),
+        _ => None,
+    }
+}
+
+fn constructor_json(
+    item: &FhirPathValue,
+    expected_type: &str,
+    model: crate::evaluator::metadata::FhirModel,
+) -> FhirPathResult<Value> {
+    let json = item.to_json();
+    let accepted = match expected_type {
+        "integer64" if json.is_i64() => return Ok(Value::String(json.to_string())),
+        "integer64" => json
+            .as_str()
+            .is_some_and(|value| value.parse::<i64>().is_ok()),
+        "boolean" => json.is_boolean(),
+        "integer" => json.as_i64().is_some_and(|i| i32::try_from(i).is_ok()),
+        "positiveInt" => json
+            .as_i64()
+            .is_some_and(|i| (1..=i64::from(i32::MAX)).contains(&i)),
+        "unsignedInt" => json
+            .as_i64()
+            .is_some_and(|i| (0..=i64::from(i32::MAX)).contains(&i)),
+        "decimal" => json.is_number(),
+        name if name.starts_with(|c: char| c.is_ascii_lowercase()) => json.is_string(),
+        name => constructor_value_type(item).is_some_and(|actual| model.is_subtype(actual, name)),
+    };
+    if !accepted {
+        return Err(FhirPathError::type_error(format!(
+            "Cannot populate {expected_type} with {item:?}"
+        )));
+    }
+    Ok(json)
+}
+
 impl Default for FhirPathEvaluator {
     fn default() -> Self {
         Self::new()
@@ -1151,6 +1269,30 @@ fn extract_qualified_type_name(expr: &Expression) -> Option<String> {
     let mut parts = Vec::new();
     collect_member_chain(expr, &mut parts)?;
     Some(parts.join("."))
+}
+
+/// The result type of an explicit cast remains known when the cast has no matches.
+fn declared_cast_type(expression: &Expression) -> Option<String> {
+    match expression {
+        Expression::Term(Term::Parenthesized(inner)) | Expression::Indexer { left: inner, .. } => {
+            declared_cast_type(inner)
+        }
+        Expression::Type {
+            operator: TypeOperator::As,
+            type_specifier,
+            ..
+        } => Some(type_specifier.qualified_name.join(".")),
+        Expression::Invocation {
+            invocation: Invocation::Function { name, parameters },
+            ..
+        }
+        | Expression::Term(Term::Invocation(Invocation::Function { name, parameters }))
+            if matches!(name.as_str(), "as" | "ofType") =>
+        {
+            extract_qualified_type_name(parameters.first()?)
+        }
+        _ => None,
+    }
 }
 
 fn collect_member_chain(expr: &Expression, out: &mut Vec<String>) -> Option<()> {
@@ -1177,6 +1319,7 @@ fn collect_member_chain(expr: &Expression, out: &mut Vec<String>) -> Option<()> 
 /// Makes FhirPrimitive transparent in all operations except `extension()`.
 fn strip_fhir_primitive(value: FhirPathValue) -> FhirPathValue {
     match value {
+        FhirPathValue::Node(node) => node.inner,
         FhirPathValue::FhirPrimitive { inner, .. } => *inner,
         FhirPathValue::Collection(items) => {
             FhirPathValue::Collection(items.into_iter().map(strip_fhir_primitive).collect())

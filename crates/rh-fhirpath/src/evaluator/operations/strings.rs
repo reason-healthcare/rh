@@ -1,6 +1,19 @@
 use crate::error::FhirPathError;
 use crate::evaluator::types::FhirPathValue;
 
+fn string_value<'a>(
+    value: &'a FhirPathValue,
+    operation: &str,
+) -> Result<Option<&'a str>, FhirPathError> {
+    value
+        .singleton(operation)?
+        .map(|item| {
+            item.as_str()
+                .ok_or_else(|| FhirPathError::type_error(format!("{operation} requires a String")))
+        })
+        .transpose()
+}
+
 /// Evaluator for string manipulation functions in FHIRPath expressions
 pub struct StringEvaluator;
 
@@ -9,19 +22,9 @@ fn regex_pattern_with_flags(
     flags: Option<&FhirPathValue>,
 ) -> Result<String, FhirPathError> {
     let flags_str = match flags {
+        Some(flags) => string_value(flags, "Regex flags")?.unwrap_or_default(),
         None => "",
-        Some(FhirPathValue::String(s)) => s,
-        Some(FhirPathValue::Empty) => return Ok(format!("(?s){pattern}")),
-        Some(FhirPathValue::Collection(items)) if items.is_empty() => {
-            return Ok(format!("(?s){pattern}"))
-        }
-        _ => {
-            return Err(FhirPathError::TypeError {
-                message: "Regex flags parameter must be a String".to_string(),
-            })
-        }
     };
-
     let mut prefix = String::from("(?s");
     for flag in flags_str.chars() {
         match flag {
@@ -40,35 +43,12 @@ fn regex_pattern_with_flags(
 }
 
 impl StringEvaluator {
-    /// Propagate FHIRPath empty collections: empty.anything() = empty.
-    fn is_empty(v: &FhirPathValue) -> bool {
-        match v {
-            FhirPathValue::Empty => true,
-            FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => c.is_empty(),
-            _ => false,
-        }
-    }
-
     /// Get the length of a string
     /// FHIRPath: String.length() -> Integer
     pub fn length(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
-        match target {
-            FhirPathValue::String(s) => Ok(FhirPathValue::Integer(s.chars().count() as i64)),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(FhirPathValue::Empty)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::length(&items[0])
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: "length() can only be called on String values".to_string(),
-            }),
-        }
+        Ok(string_value(target, "length()")?
+            .map(|s| FhirPathValue::Integer(s.chars().count() as i64))
+            .unwrap_or(FhirPathValue::Empty))
     }
 
     /// Extract a substring from a string. Per FHIRPath §6.7, an out-of-range
@@ -80,67 +60,39 @@ impl StringEvaluator {
         start: &FhirPathValue,
         length: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "substring()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "substring() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        if Self::is_empty(start) {
+        let Some(start) = start.singleton("substring() start")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        let start_signed = match start {
-            FhirPathValue::Integer(i) => *i,
-            FhirPathValue::Long(i) => *i,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "substring() start parameter must be an Integer".to_string(),
-                })
-            }
         };
-
-        // Negative starts and starts past the end of the string both yield
-        // the empty collection per the FHIRPath spec.
-        let char_len = string.chars().count();
-        if start_signed < 0 || start_signed as usize >= char_len {
+        let (FhirPathValue::Integer(start) | FhirPathValue::Long(start)) = start else {
+            return Err(FhirPathError::type_error(
+                "substring() start must be an Integer",
+            ));
+        };
+        let Ok(start) = usize::try_from(*start) else {
+            return Ok(FhirPathValue::Empty);
+        };
+        if start >= string.chars().count() {
             return Ok(FhirPathValue::Empty);
         }
-        let start_index = start_signed as usize;
-
-        let result = match length {
-            Some(len_val) => {
-                if Self::is_empty(len_val) {
-                    return Ok(FhirPathValue::String(
-                        string.chars().skip(start_index).collect(),
-                    ));
+        let length = match length {
+            Some(value) => match value.singleton("substring() length")? {
+                Some(FhirPathValue::Integer(length) | FhirPathValue::Long(length)) => {
+                    usize::try_from((*length).max(0)).unwrap_or(usize::MAX)
                 }
-                let length_val = match len_val {
-                    FhirPathValue::Integer(i) => *i,
-                    FhirPathValue::Long(i) => *i,
-                    _ => {
-                        return Err(FhirPathError::TypeError {
-                            message: "substring() length parameter must be an Integer".to_string(),
-                        })
-                    }
-                };
-                if length_val <= 0 {
-                    return Ok(FhirPathValue::String(String::new()));
+                None => usize::MAX,
+                _ => {
+                    return Err(FhirPathError::type_error(
+                        "substring() length must be an Integer",
+                    ))
                 }
-                string
-                    .chars()
-                    .skip(start_index)
-                    .take(length_val as usize)
-                    .collect()
-            }
-            None => string.chars().skip(start_index).collect(),
+            },
+            None => usize::MAX,
         };
-
+        let result = string.chars().skip(start).take(length).collect();
         Ok(FhirPathValue::String(result))
     }
 
@@ -150,28 +102,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         prefix: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "startsWith()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(prefix) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "startsWith() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let prefix_str = match prefix {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "startsWith() prefix parameter must be a String".to_string(),
-                })
-            }
+        let Some(prefix_str) = string_value(prefix, "startsWith() prefix parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         Ok(FhirPathValue::Boolean(string.starts_with(prefix_str)))
@@ -183,28 +119,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         suffix: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "endsWith()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(suffix) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "endsWith() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let suffix_str = match suffix {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "endsWith() suffix parameter must be a String".to_string(),
-                })
-            }
+        let Some(suffix_str) = string_value(suffix, "endsWith() suffix parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         Ok(FhirPathValue::Boolean(string.ends_with(suffix_str)))
@@ -217,28 +137,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "indexOf()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(substring) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "indexOf() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let substring_str = match substring {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "indexOf() substring parameter must be a String".to_string(),
-                })
-            }
+        let Some(substring_str) = string_value(substring, "indexOf() substring parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         match string.find(substring_str) {
@@ -256,28 +160,13 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "lastIndexOf()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(substring) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "lastIndexOf() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let substring_str = match substring {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "lastIndexOf() substring parameter must be a String".to_string(),
-                })
-            }
+        let Some(substring_str) = string_value(substring, "lastIndexOf() substring parameter")?
+        else {
+            return Ok(FhirPathValue::Empty);
         };
 
         match string.rfind(substring_str) {
@@ -295,37 +184,17 @@ impl StringEvaluator {
         pattern: &FhirPathValue,
         replacement: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "replace()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "replace() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        if Self::is_empty(pattern) || Self::is_empty(replacement) {
+        let Some(pattern_str) = string_value(pattern, "replace() pattern parameter")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        let pattern_str = match pattern {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "replace() pattern parameter must be a String".to_string(),
-                })
-            }
         };
 
-        let replacement_str = match replacement {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "replace() replacement parameter must be a String".to_string(),
-                })
-            }
+        let Some(replacement_str) = string_value(replacement, "replace() replacement parameter")?
+        else {
+            return Ok(FhirPathValue::Empty);
         };
 
         Ok(FhirPathValue::String(
@@ -344,34 +213,19 @@ impl StringEvaluator {
         substitution: &FhirPathValue,
         flags: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) || Self::is_empty(regex_pattern) || Self::is_empty(substitution) {
+        let Some(string) = string_value(target, "replaceMatches()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "replaceMatches() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let pattern_str = match regex_pattern {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "replaceMatches() regex parameter must be a String".to_string(),
-                })
-            }
+        let Some(pattern_str) = string_value(regex_pattern, "replaceMatches() regex parameter")?
+        else {
+            return Ok(FhirPathValue::Empty);
         };
 
-        let substitution_str = match substitution {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "replaceMatches() substitution parameter must be a String".to_string(),
-                })
-            }
+        let Some(substitution_str) =
+            string_value(substitution, "replaceMatches() substitution parameter")?
+        else {
+            return Ok(FhirPathValue::Empty);
         };
 
         // An empty pattern matches the zero-width position before every
@@ -379,7 +233,7 @@ impl StringEvaluator {
         // and return the input unchanged rather than splicing the
         // substitution between every character.
         if pattern_str.is_empty() {
-            return Ok(FhirPathValue::String(string.clone()));
+            return Ok(FhirPathValue::String(string.to_owned()));
         }
 
         let pattern = regex_pattern_with_flags(pattern_str, flags)?;
@@ -396,67 +250,25 @@ impl StringEvaluator {
     /// Convert a string to uppercase
     /// FHIRPath: String.upper() -> String
     pub fn upper(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
-        match target {
-            FhirPathValue::String(s) => Ok(FhirPathValue::String(s.to_uppercase())),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(FhirPathValue::Empty)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::upper(&items[0])
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: "upper() can only be called on String values".to_string(),
-            }),
-        }
+        Ok(string_value(target, "upper()")?
+            .map(|s| FhirPathValue::String(s.to_uppercase()))
+            .unwrap_or(FhirPathValue::Empty))
     }
 
     /// Convert a string to lowercase
     /// FHIRPath: String.lower() -> String
     pub fn lower(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
-        match target {
-            FhirPathValue::String(s) => Ok(FhirPathValue::String(s.to_lowercase())),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(FhirPathValue::Empty)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::lower(&items[0])
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: "lower() can only be called on String values".to_string(),
-            }),
-        }
+        Ok(string_value(target, "lower()")?
+            .map(|s| FhirPathValue::String(s.to_lowercase()))
+            .unwrap_or(FhirPathValue::Empty))
     }
 
     /// Remove leading and trailing whitespace from a string
     /// FHIRPath: String.trim() -> String
     pub fn trim(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
-        match target {
-            FhirPathValue::String(s) => Ok(FhirPathValue::String(s.trim().to_string())),
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(FhirPathValue::Empty)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::trim(&items[0])
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: "trim() can only be called on String values".to_string(),
-            }),
-        }
+        Ok(string_value(target, "trim()")?
+            .map(|s| FhirPathValue::String(s.trim_matches([' ', '\t', '\r', '\n']).to_owned()))
+            .unwrap_or(FhirPathValue::Empty))
     }
 
     /// Split a string by a delimiter
@@ -465,25 +277,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         delimiter: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "split()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "split() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let delimiter_str = match delimiter {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "split() delimiter parameter must be a String".to_string(),
-                })
-            }
+        let Some(delimiter_str) = string_value(delimiter, "split() delimiter parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         let parts: Vec<FhirPathValue> = string
@@ -500,54 +299,20 @@ impl StringEvaluator {
         target: &FhirPathValue,
         delimiter: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let items = target.items();
+        if items.is_empty() {
             return Ok(FhirPathValue::Empty);
         }
-        let collection = match target {
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => items,
-            FhirPathValue::String(s) => {
-                let delimiter_str = match delimiter {
-                    FhirPathValue::String(s) => s,
-                    _ => {
-                        return Err(FhirPathError::TypeError {
-                            message: "join() delimiter parameter must be a String".to_string(),
-                        })
-                    }
-                };
-                let _ = delimiter_str;
-                return Ok(FhirPathValue::String(s.clone()));
-            }
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "join() can only be called on Collection values".to_string(),
-                })
-            }
-        };
-
-        let delimiter_str = match delimiter {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "join() delimiter parameter must be a String".to_string(),
-                })
-            }
-        };
-
-        let string_parts: Result<Vec<String>, FhirPathError> = collection
+        let delimiter = string_value(delimiter, "join() delimiter")?.unwrap_or_default();
+        let strings: Result<Vec<&str>, _> = items
             .iter()
-            .map(|item| match item {
-                FhirPathValue::String(s) => Ok(s.clone()),
-                _ => Err(FhirPathError::TypeError {
-                    message: "join() can only be called on collections of String values"
-                        .to_string(),
-                }),
+            .map(|item| {
+                item.as_str().ok_or_else(|| {
+                    FhirPathError::type_error("join() requires a collection of Strings")
+                })
             })
             .collect();
-
-        match string_parts {
-            Ok(parts) => Ok(FhirPathValue::String(parts.join(delimiter_str))),
-            Err(e) => Err(e),
-        }
+        Ok(FhirPathValue::String(strings?.join(delimiter)))
     }
 
     /// Check if a string matches a regular expression pattern
@@ -557,28 +322,12 @@ impl StringEvaluator {
         pattern: &FhirPathValue,
         flags: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "matches()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(pattern) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) | FhirPathValue::TypedString { value: s, .. } => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "matches() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let pattern_str = match pattern {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "matches() pattern parameter must be a String".to_string(),
-                })
-            }
+        let Some(pattern_str) = string_value(pattern, "matches() pattern parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         let pattern = regex_pattern_with_flags(pattern_str, flags)?;
@@ -599,32 +348,16 @@ impl StringEvaluator {
         pattern: &FhirPathValue,
         flags: Option<&FhirPathValue>,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "matchesFull()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(pattern) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "matchesFull() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let pattern_str = match pattern {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "matchesFull() pattern parameter must be a String".to_string(),
-                })
-            }
+        let Some(pattern_str) = string_value(pattern, "matchesFull() pattern parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         let flagged_pattern = regex_pattern_with_flags(pattern_str, flags)?;
-        let anchored_pattern = format!("^(?:{flagged_pattern})$");
+        let anchored_pattern = format!(r"\A(?:{flagged_pattern})\z");
 
         // Use regex for proper pattern matching with anchors
         match regex::Regex::new(&anchored_pattern) {
@@ -642,28 +375,12 @@ impl StringEvaluator {
         target: &FhirPathValue,
         substring: &FhirPathValue,
     ) -> Result<FhirPathValue, FhirPathError> {
-        if Self::is_empty(target) {
+        let Some(string) = string_value(target, "contains()")? else {
             return Ok(FhirPathValue::Empty);
-        }
-        if Self::is_empty(substring) {
-            return Ok(FhirPathValue::Empty);
-        }
-        let string = match target {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "contains() can only be called on String values".to_string(),
-                })
-            }
         };
 
-        let substring_str = match substring {
-            FhirPathValue::String(s) => s,
-            _ => {
-                return Err(FhirPathError::TypeError {
-                    message: "contains() substring parameter must be a String".to_string(),
-                })
-            }
+        let Some(substring_str) = string_value(substring, "contains() substring parameter")? else {
+            return Ok(FhirPathValue::Empty);
         };
 
         Ok(FhirPathValue::Boolean(string.contains(substring_str)))
@@ -672,29 +389,15 @@ impl StringEvaluator {
     /// Convert a string to a collection of single-character strings
     /// FHIRPath: String.toChars() -> Collection[String]
     pub fn to_chars(target: &FhirPathValue) -> Result<FhirPathValue, FhirPathError> {
-        match target {
-            FhirPathValue::String(s) => {
-                let chars: Vec<FhirPathValue> = s
-                    .chars()
-                    .map(|c| FhirPathValue::String(c.to_string()))
-                    .collect();
-                Ok(FhirPathValue::Collection(chars))
-            }
-            FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.is_empty() =>
-            {
-                Ok(FhirPathValue::Empty)
-            }
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-                if items.len() == 1 =>
-            {
-                Self::to_chars(&items[0])
-            }
-            _ => Err(FhirPathError::TypeError {
-                message: "toChars() can only be called on String values".to_string(),
-            }),
-        }
+        Ok(string_value(target, "toChars()")?
+            .map(|s| {
+                FhirPathValue::Collection(
+                    s.chars()
+                        .map(|c| FhirPathValue::String(c.to_string()))
+                        .collect(),
+                )
+            })
+            .unwrap_or(FhirPathValue::Empty))
     }
 }
 
