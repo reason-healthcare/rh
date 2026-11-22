@@ -76,32 +76,7 @@ pub(super) fn valid(source: &str) -> bool {
                     else {
                         return false;
                     };
-                    let normalized = value
-                        .trim()
-                        .to_ascii_lowercase()
-                        .replace(['\t', '\n', '\r'], "");
-                    if matches!(key, "href" | "src" | "usemap" | "longdesc")
-                        && (normalized.starts_with("javascript:")
-                            || normalized.starts_with("vbscript:")
-                            || (normalized.starts_with("data:")
-                                && !(key == "src"
-                                    && ["data:image/png;", "data:image/jpeg;", "data:image/gif;"]
-                                        .iter()
-                                        .any(|t| normalized.starts_with(t)))))
-                    {
-                        return false;
-                    }
-                    if key == "style"
-                        && [
-                            "expression(",
-                            "url(",
-                            "@import",
-                            "behavior:",
-                            "-moz-binding",
-                        ]
-                        .iter()
-                        .any(|s| normalized.contains(s))
-                    {
+                    if !valid_attribute_value(key, &value) {
                         return false;
                     }
                 }
@@ -146,4 +121,51 @@ pub(super) fn valid(source: &str) -> bool {
             _ => return false,
         }
     }
+}
+
+fn valid_attribute_value(key: &str, value: &str) -> bool {
+    match key {
+        "href" | "src" | "usemap" | "longdesc" => {
+            let Some((scheme, _)) = value.split_once(':') else {
+                return true;
+            };
+            match normalized_for_matching(scheme).as_str() {
+                "javascript" | "vbscript" => false,
+                "data" => key == "src" && allowed_image_data_url(value),
+                _ => true,
+            }
+        }
+        "style" => {
+            let normalized = normalized_for_matching(value);
+            [
+                "expression(",
+                "url(",
+                "@import",
+                "behavior:",
+                "-moz-binding",
+            ]
+            .iter()
+            .all(|pattern| !normalized.contains(pattern))
+        }
+        _ => true,
+    }
+}
+
+fn normalized_for_matching(value: &str) -> String {
+    value
+        .trim()
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
+        .map(|c| c.to_ascii_lowercase())
+        .collect()
+}
+
+fn allowed_image_data_url(value: &str) -> bool {
+    let Some((header, _)) = value.split_once(';') else {
+        return false;
+    };
+    let header = header.trim_start().replace(['\t', '\n', '\r'], "");
+    ["data:image/png", "data:image/jpeg", "data:image/gif"]
+        .iter()
+        .any(|allowed| header.eq_ignore_ascii_case(allowed))
 }

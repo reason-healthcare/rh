@@ -198,6 +198,42 @@ fn narrative_and_modifier_checks() {
 }
 
 #[test]
+fn narrative_checks_normalize_attribute_whitespace() {
+    for (markup, expected) in [
+        ("<a href='JaVa ScRiPt:'>Link</a>", false),
+        ("<a href='vb&#32;script:'>Link</a>", false),
+        ("<a href='&#127;vbscript:'>Link</a>", false),
+        ("<a href='da&#x9;ta:text/plain,example'>Link</a>", false),
+        (
+            "<img alt='Preview' src='da ta:image/png;base64,AA=='/>",
+            false,
+        ),
+        ("<p style='behavior\t: none'>Text</p>", false),
+        ("<p style='background-image: URL (none)'>Text</p>", false),
+        ("<p style='width: expression ()'>Text</p>", false),
+        ("<a href='/care plan#notes'>Link</a>", true),
+        ("<p style='color : navy; margin: 0 1em'>Text</p>", true),
+        (
+            "<img alt='Preview' src='DaTa:image/png;base64,AA=='/>",
+            true,
+        ),
+    ] {
+        let mut context = EvaluationContext::new(json!({
+            "resourceType": "Patient",
+            "text": {
+                "div": format!("<div xmlns='http://www.w3.org/1999/xhtml'>{markup}</div>")
+            }
+        }));
+        context.model = FhirModel::R5;
+        assert_eq!(
+            eval("text.div.htmlChecks()", &context).unwrap(),
+            V::Boolean(expected),
+            "{markup}"
+        );
+    }
+}
+
+#[test]
 fn scientific_values_preserve_magnitude_without_expanding_the_exponent() {
     let mut c=EvaluationContext::new(serde_json::from_str(r#"{
         "resourceType":"Parameters","parameter":[
