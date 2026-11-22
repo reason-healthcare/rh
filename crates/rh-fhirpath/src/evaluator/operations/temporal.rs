@@ -58,21 +58,14 @@ impl TemporalParts {
 ///
 /// Returns `None` if the string is not recognisable as a temporal value.
 pub fn parse_temporal(s: &str) -> Option<TemporalParts> {
-    let mut parts = TemporalParts::empty();
-    let mut rest = s;
-
-    // Time-only form starts with `T`.
-    if let Some(time_body) = rest.strip_prefix('T') {
-        parse_time(&mut parts, time_body)?;
-        parts.hour?;
-        parts.local_datetime()?;
-        return Some(parts);
+    if s.starts_with('T') {
+        return parse_time_only(s);
     }
 
+    let mut parts = TemporalParts::empty();
     // Date portion: YYYY (-MM (-DD)?)?
-    let (year_str, after_year) = take_digits(rest, 4)?;
+    let (year_str, mut rest) = take_digits(s, 4)?;
     parts.year = Some(year_str.parse().ok()?);
-    rest = after_year;
 
     if let Some(after_dash) = rest.strip_prefix('-') {
         let (month_str, after_month) = take_digits(after_dash, 2)?;
@@ -87,7 +80,7 @@ pub fn parse_temporal(s: &str) -> Option<TemporalParts> {
 
     // Optional T<time>
     if let Some(after_t) = rest.strip_prefix('T') {
-        parse_time(&mut parts, after_t)?;
+        parse_time_body(&mut parts, after_t)?;
     } else if !rest.is_empty() {
         return None;
     }
@@ -99,7 +92,15 @@ pub fn parse_temporal(s: &str) -> Option<TemporalParts> {
     Some(parts)
 }
 
-fn parse_time(parts: &mut TemporalParts, mut body: &str) -> Option<()> {
+pub(crate) fn parse_time_only(text: &str) -> Option<TemporalParts> {
+    let mut parts = TemporalParts::empty();
+    parse_time_body(&mut parts, text.strip_prefix('T').unwrap_or(text))?;
+    parts.hour?;
+    parts.local_datetime()?;
+    Some(parts)
+}
+
+fn parse_time_body(parts: &mut TemporalParts, mut body: &str) -> Option<()> {
     if body.is_empty() {
         return Some(()); // `@2015T` style — no time portion.
     }
@@ -192,8 +193,13 @@ fn compare(a: &TemporalParts, b: &TemporalParts, equivalent: bool) -> Option<Ord
         _ => (a, b),
     };
 
-    if let Some(ord) = compare_date(a, b)? {
-        return Some(ord);
+    let date_ordering = compare_components([
+        (a.year, b.year),
+        (a.month.map(i32::from), b.month.map(i32::from)),
+        (a.day.map(i32::from), b.day.map(i32::from)),
+    ])?;
+    if date_ordering != Ordering::Equal {
+        return Some(date_ordering);
     }
     compare_time(a, b, equivalent)
 }
@@ -213,28 +219,20 @@ pub fn equivalent_parts(a: &TemporalParts, b: &TemporalParts) -> bool {
     compare(a, b, true) == Some(Ordering::Equal)
 }
 
-/// Walk year→month→day. Returns:
-///   `Ok(Some(ord))` — date components settled the order
-///   `Ok(None)`      — date components fully matched (or both absent)
-///   `Err(())`       — precision mismatch on calendar (one Date, one DateTime
-///                     where day differs) — propagate as None to caller.
-fn compare_date(a: &TemporalParts, b: &TemporalParts) -> Option<Option<Ordering>> {
-    macro_rules! step {
-        ($field:ident) => {
-            match (a.$field, b.$field) {
-                (Some(av), Some(bv)) => match av.cmp(&bv) {
-                    Ordering::Equal => {}
-                    other => return Some(Some(other)),
-                },
-                (None, None) => {}
-                _ => return None, // precision mismatch on the date portion
-            }
-        };
+fn compare_components<T: Ord>(
+    components: impl IntoIterator<Item = (Option<T>, Option<T>)>,
+) -> Option<Ordering> {
+    for (left, right) in components {
+        match (left, right) {
+            (Some(left), Some(right)) => match left.cmp(&right) {
+                Ordering::Equal => {}
+                ordering => return Some(ordering),
+            },
+            (None, None) => {}
+            _ => return None,
+        }
     }
-    step!(year);
-    step!(month);
-    step!(day);
-    Some(None)
+    Some(Ordering::Equal)
 }
 
 /// Walk hour→fraction with TZ handling. Called only after date components matched.
@@ -242,21 +240,10 @@ fn compare_time(a: &TemporalParts, b: &TemporalParts, equivalent: bool) -> Optio
     if a.tz_offset_min.is_some() != b.tz_offset_min.is_some() {
         return None;
     }
-    // Naive component-wise walk for time portion.
-    macro_rules! step {
-        ($field:ident) => {
-            match (a.$field, b.$field) {
-                (Some(av), Some(bv)) => match av.cmp(&bv) {
-                    Ordering::Equal => {}
-                    other => return Some(other),
-                },
-                (None, None) => {}
-                _ => return None,
-            }
-        };
+    let hour_minute_ordering = compare_components([(a.hour, b.hour), (a.minute, b.minute)])?;
+    if hour_minute_ordering != Ordering::Equal {
+        return Some(hour_minute_ordering);
     }
-    step!(hour);
-    step!(minute);
     if equivalent {
         if let (Some(a_sec), Some(a_frac), Some(b_sec), Some(b_frac)) =
             (a.second, a.fraction_ns, b.second, b.fraction_ns)
@@ -269,17 +256,19 @@ fn compare_time(a: &TemporalParts, b: &TemporalParts, equivalent: bool) -> Optio
             return Some(left.round_dp(digits).cmp(&right.round_dp(digits)));
         }
     }
-    step!(second);
-    Some(a.fraction_ns.unwrap_or(0).cmp(&b.fraction_ns.unwrap_or(0)))
+    let second_ordering = compare_components([(a.second, b.second)])?;
+    Some(second_ordering.then_with(|| a.fraction_ns.unwrap_or(0).cmp(&b.fraction_ns.unwrap_or(0))))
+}
+
+fn format_fraction(nanos: u32, digits: usize) -> String {
+    format!("{:0digits$}", nanos / 10_u32.pow((9 - digits) as u32))
 }
 
 impl TemporalParts {
     pub(crate) fn fraction_text(self) -> Option<String> {
-        let nanos = self.fraction_ns?;
-        let digits = self.fraction_digits.min(9);
-        Some(format!(
-            "{:0digits$}",
-            nanos / 10_u32.pow((9 - digits) as u32)
+        Some(format_fraction(
+            self.fraction_ns?,
+            self.fraction_digits.min(9),
         ))
     }
 
@@ -360,7 +349,8 @@ pub(super) fn shift_temporal(
         });
     };
 
-    let (count, precision) = convert_shift_precision(count, precision, parts.precision())
+    let source_precision = parts.precision();
+    let (count, precision) = convert_shift_precision(count, precision, source_precision.clone())
         .ok_or_else(temporal_overflow)?;
     let date_time = parts.local_datetime().ok_or_else(temporal_overflow)?;
     let shifted = if kind == TemporalKind::Time {
@@ -383,7 +373,7 @@ pub(super) fn shift_temporal(
         return Err(temporal_overflow());
     }
 
-    let date = match parts.precision() {
+    let date = match source_precision {
         Year => shifted.format("%Y").to_string(),
         Month => shifted.format("%Y-%m").to_string(),
         _ => shifted.format("%Y-%m-%d").to_string(),
@@ -391,7 +381,7 @@ pub(super) fn shift_temporal(
     let time = if parts.hour.is_none() {
         String::new()
     } else {
-        let mut time = match parts.precision() {
+        let mut time = match source_precision {
             Hour => shifted.format("%H").to_string(),
             Minute => shifted.format("%H:%M").to_string(),
             _ => shifted.format("%H:%M:%S").to_string(),
@@ -399,10 +389,8 @@ pub(super) fn shift_temporal(
         let nanos = shifted.nanosecond() % 1_000_000_000;
         if parts.fraction_digits != 0 || nanos != 0 {
             let digits = parts.fraction_digits.clamp(3, 9);
-            time.push_str(&format!(
-                ".{:0digits$}",
-                nanos / 10_u32.pow((9 - digits) as u32)
-            ));
+            time.push('.');
+            time.push_str(&format_fraction(nanos, digits));
         }
         time
     };
@@ -521,7 +509,7 @@ fn precision_rank(unit: &DateTimePrecision) -> u8 {
 }
 
 #[derive(PartialEq, Eq)]
-enum TemporalKind {
+pub(super) enum TemporalKind {
     Date,
     DateTime,
     Time,
@@ -537,19 +525,13 @@ impl TemporalKind {
     }
 }
 
-fn temporal_value(value: &FhirPathValue) -> Option<(&str, TemporalKind, TemporalParts)> {
+pub(super) fn temporal_value(value: &FhirPathValue) -> Option<(&str, TemporalKind, TemporalParts)> {
     match value {
         FhirPathValue::Date(text) => Some((text, TemporalKind::Date, parse_temporal(text)?)),
         FhirPathValue::DateTime(text) | FhirPathValue::TypedDateTime { value: text, .. } => {
             Some((text, TemporalKind::DateTime, parse_temporal(text)?))
         }
-        FhirPathValue::Time(text) => {
-            let mut parts = TemporalParts::empty();
-            parse_time(&mut parts, text.strip_prefix('T').unwrap_or(text))?;
-            parts.hour?;
-            parts.local_datetime()?;
-            Some((text, TemporalKind::Time, parts))
-        }
+        FhirPathValue::Time(text) => Some((text, TemporalKind::Time, parse_time_only(text)?)),
         _ => None,
     }
 }

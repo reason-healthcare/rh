@@ -1,7 +1,7 @@
 //! Conversion function registration for FHIRPath
 
 use crate::error::*;
-use crate::evaluator::operations::temporal::parse_temporal;
+use crate::evaluator::operations::temporal::{parse_temporal, parse_time_only};
 use crate::evaluator::operations::units::UnitConverter;
 use crate::evaluator::types::FhirPathValue;
 use regex::Regex;
@@ -354,10 +354,8 @@ fn converts_to_quantity(
 
 /// Parse a partial time in the ISO format used by FHIRPath.
 fn is_valid_time_string(value: &str) -> bool {
-    let raw = value.strip_prefix('T').unwrap_or(value);
-    parse_temporal(&format!("T{raw}")).is_some_and(|parts| {
-        parts.hour.is_some() && parts.tz_offset_min.is_none() && parts.second.is_none_or(|s| s < 60)
-    })
+    parse_time_only(value)
+        .is_some_and(|parts| parts.tz_offset_min.is_none() && parts.second.is_none_or(|s| s < 60))
 }
 
 fn optional_string_param<'a>(

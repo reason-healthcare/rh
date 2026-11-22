@@ -18,19 +18,38 @@ use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPath
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 
-const FIXTURES: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/tests/fixtures/hl7_fhirpath_tests"
-);
+struct Suite {
+    filename: &'static str,
+    fixtures: &'static str,
+    model: FhirModel,
+    upstream_revision: Option<&'static str>,
+    report_env: &'static str,
+    report_filename: &'static str,
+    expected_case_count: usize,
+    baseline: &'static str,
+}
 
-const R5_FIXTURES: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/tests/fixtures/hl7_fhirpath_r5"
-);
-const R5_SOURCE: &str = "469d90ab58663266d5d7ff82ba3587257fd8a4be";
-const R5_DIFFERENCES: &str = include_str!("fixtures/hl7_fhirpath_r5/known-differences.tsv");
+const R4: Suite = Suite {
+    filename: "tests-fhir-r4.xml",
+    fixtures: "tests/fixtures/hl7_fhirpath_tests",
+    model: FhirModel::R4,
+    upstream_revision: None,
+    report_env: "HL7_CONFORMANCE_OUT",
+    report_filename: "hl7_fhirpath_conformance.json",
+    expected_case_count: 935,
+    baseline: include_str!("fixtures/hl7_fhirpath_tests/known-differences.tsv"),
+};
 
-const R4_DIFFERENCES: &str = include_str!("fixtures/hl7_fhirpath_tests/known-differences.tsv");
+const R5: Suite = Suite {
+    filename: "tests-fhir-r5.xml",
+    fixtures: "tests/fixtures/hl7_fhirpath_r5",
+    model: FhirModel::R5,
+    upstream_revision: Some("469d90ab58663266d5d7ff82ba3587257fd8a4be"),
+    report_env: "HL7_R5_CONFORMANCE_OUT",
+    report_filename: "hl7_fhirpath_r5_conformance.json",
+    expected_case_count: 1381,
+    baseline: include_str!("fixtures/hl7_fhirpath_r5/known-differences.tsv"),
+};
 
 #[derive(Debug, Clone)]
 struct TestCase {
@@ -48,7 +67,7 @@ struct TestCase {
     context_type: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 enum Outcome {
     Pass,
     WrongAnswer,
@@ -56,6 +75,19 @@ enum Outcome {
     EvalError,
     Skipped,
     OutsideProfile,
+}
+
+impl Outcome {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Pass => "pass",
+            Self::WrongAnswer => "wrong_answer",
+            Self::ParseError => "parse_error",
+            Self::EvalError => "eval_error",
+            Self::Skipped => "skipped",
+            Self::OutsideProfile => "outside_profile",
+        }
+    }
 }
 
 fn parse_suite(xml: &str) -> Vec<TestCase> {
@@ -91,7 +123,7 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                             inputfile: attrs.get("inputfile").cloned().unwrap_or_default(),
                             expression: String::new(),
                             invalid: attrs.get("invalid").cloned(),
-                            predicate: attrs.get("predicate").map(|p| p == "true") == Some(true),
+                            predicate: attrs.get("predicate").is_some_and(|p| p == "true"),
                             outputs: Vec::new(),
                             mode: if group_mode.as_deref() == Some("custom") {
                                 group_mode.clone()
@@ -103,8 +135,7 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                             context_type: attrs.get("contextType").cloned(),
                             check_ordered_functions: attrs
                                 .get("checkOrderedFunctions")
-                                .map(|p| p == "true")
-                                .unwrap_or(false)
+                                .is_some_and(|p| p == "true")
                                 || (attrs.get("mode").is_some_and(|mode| mode == "strict")
                                     && attrs.get("ordered").is_some_and(|order| order == "true")),
                         });
@@ -135,7 +166,6 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
                 let escaped = format!("&{entity};");
                 text_buf.push_str(&unescape(&escaped).expect("unescape entity reference"));
             }
-            Event::Text(_) => {}
             Event::End(e) => match e.name().as_ref() {
                 "expression" => {
                     if let Some(case) = current.as_mut() {
@@ -179,12 +209,11 @@ fn load_inputs(fixtures: &Path) -> HashMap<String, serde_json::Value> {
     inputs
 }
 
-/// Flatten an evaluation result into an ordered list of scalar values.
-fn flatten(value: FhirPathValue) -> Vec<FhirPathValue> {
+fn result_values(value: &FhirPathValue) -> &[FhirPathValue] {
     match value {
-        FhirPathValue::Empty => vec![],
+        FhirPathValue::Empty => &[],
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => items,
-        other => vec![other],
+        other => std::slice::from_ref(other),
     }
 }
 
@@ -294,20 +323,14 @@ fn matches_expected(
     }
 }
 
-fn run_case(
-    case: &TestCase,
-    parser: &FhirPathParser,
-    evaluator: &FhirPathEvaluator,
-    inputs: &HashMap<String, serde_json::Value>,
-    model: FhirModel,
-) -> (Outcome, String) {
+fn outside_profile_reason(case: &TestCase, model: FhirModel) -> Option<&'static str> {
     if case.group == "testConformsTo" && case.invalid.is_none() {
-        return (
-            Outcome::OutsideProfile,
-            "requires an installed profile validation host".into(),
-        );
+        return Some("requires an installed profile validation host");
     }
-    let outside = match case.mode.as_deref() {
+    if model != FhirModel::R5 {
+        return None;
+    }
+    match case.mode.as_deref() {
         Some("custom") => Some("document and custom functions outside FHIRPath 3.0.0"),
         Some("cda") => Some("CDA model"),
         Some("tx") => Some("draft terminology client API"),
@@ -315,11 +338,18 @@ fn run_case(
             Some("requires optional static type checking against declared contextType")
         }
         _ => None,
-    };
-    if model == FhirModel::R5 {
-        if let Some(reason) = outside {
-            return (Outcome::OutsideProfile, reason.into());
-        }
+    }
+}
+
+fn run_case(
+    case: &TestCase,
+    parser: &FhirPathParser,
+    evaluator: &FhirPathEvaluator,
+    inputs: &HashMap<String, serde_json::Value>,
+    model: FhirModel,
+) -> (Outcome, String) {
+    if let Some(reason) = outside_profile_reason(case, model) {
+        return (Outcome::OutsideProfile, reason.into());
     }
 
     let input_stem = case
@@ -391,14 +421,11 @@ fn run_case(
         }
     };
 
-    if case.invalid.is_some() {
+    if let Some(invalid) = &case.invalid {
         if model == FhirModel::R5 {
             return (
                 Outcome::WrongAnswer,
-                format!(
-                    "expected {} error, got {result:?}",
-                    case.invalid.as_deref().unwrap()
-                ),
+                format!("expected {invalid} error, got {result:?}"),
             );
         }
         // Expected an error but evaluation succeeded. Many engines evaluate
@@ -416,15 +443,17 @@ fn run_case(
         };
     }
 
-    let actual = flatten(result);
+    compare_outputs(case, result_values(&result), model)
+}
 
+fn compare_outputs(
+    case: &TestCase,
+    actual: &[FhirPathValue],
+    model: FhirModel,
+) -> (Outcome, String) {
     if case.predicate {
         let exists = !actual.is_empty();
-        let expected = case
-            .outputs
-            .first()
-            .map(|(_, v)| v == "true")
-            .unwrap_or(false);
+        let expected = case.outputs.first().is_some_and(|(_, v)| v == "true");
         return if exists == expected {
             (Outcome::Pass, String::new())
         } else {
@@ -469,74 +498,73 @@ fn run_case(
     (Outcome::Pass, String::new())
 }
 
-fn run_suite(
-    filename: &str,
-    fixtures: &Path,
-    model: FhirModel,
-    out_env: &str,
-    out_default: &str,
-    expected_case_count: usize,
-) -> Vec<(String, &'static str, String)> {
+fn run_suite(suite: &Suite) {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let fixtures = manifest_dir.join(suite.fixtures);
+    let filename = suite.filename;
     let xml = fs::read_to_string(fixtures.join(filename)).expect("vendored suite present");
     let cases = parse_suite(&xml);
-    assert_eq!(cases.len(), expected_case_count, "pinned suite changed");
+    assert_eq!(
+        cases.len(),
+        suite.expected_case_count,
+        "pinned suite changed"
+    );
 
-    let inputs = load_inputs(fixtures);
+    let inputs = load_inputs(&fixtures);
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
-    let mut tallies: HashMap<&'static str, usize> = HashMap::new();
-    let mut failures = Vec::new();
-    let mut details = Vec::new();
+    let mut tallies = HashMap::<Outcome, usize>::new();
+    let mut differences = Vec::new();
 
     for case in &cases {
-        let (outcome, detail) = run_case(case, &parser, &evaluator, &inputs, model);
-        let key = match outcome {
-            Outcome::Pass => "pass",
-            Outcome::WrongAnswer => "wrong_answer",
-            Outcome::ParseError => "parse_error",
-            Outcome::EvalError => "eval_error",
-            Outcome::Skipped => "skipped",
-            Outcome::OutsideProfile => "outside_profile",
-        };
-        *tallies.entry(key).or_default() += 1;
+        let (outcome, detail) = run_case(case, &parser, &evaluator, &inputs, suite.model);
+        *tallies.entry(outcome).or_default() += 1;
         if outcome != Outcome::Pass {
-            details.push(serde_json::json!({
+            differences.push((case, outcome, detail));
+        }
+    }
+
+    let details: Vec<_> = differences
+        .iter()
+        .map(|(case, outcome, detail)| {
+            serde_json::json!({
                 "group": case.group,
                 "name": case.name,
                 "expression": case.expression,
                 "context": case.context,
                 "context_type": case.context_type,
-                "outcome": key,
+                "outcome": outcome.label(),
                 "detail": detail,
-            }));
-        }
-        if !matches!(outcome, Outcome::Pass | Outcome::OutsideProfile) {
-            failures.push((format!("{}::{}", case.group, case.name), key, detail));
-        }
-    }
-
+            })
+        })
+        .collect();
     let total = cases.len();
-    let count = |key| tallies.get(key).copied().unwrap_or(0);
-    let pass = count("pass");
+    let count = |outcome| tallies.get(&outcome).copied().unwrap_or(0);
+    let pass = count(Outcome::Pass);
+    let wrong_answer = count(Outcome::WrongAnswer);
+    let parse_error = count(Outcome::ParseError);
+    let eval_error = count(Outcome::EvalError);
+    let skipped = count(Outcome::Skipped);
+    let outside_profile = count(Outcome::OutsideProfile);
     let summary = serde_json::json!({
         "suite": filename,
-        "upstream_revision": (model == FhirModel::R5).then_some(R5_SOURCE),
+        "upstream_revision": suite.upstream_revision,
         "total": total,
         "pass": pass,
         "pass_rate": format!("{:.1}%", 100.0 * pass as f64 / total as f64),
-        "wrong_answer": count("wrong_answer"),
-        "parse_error": count("parse_error"),
-        "eval_error": count("eval_error"),
-        "skipped": count("skipped"),
-        "outside_profile": count("outside_profile"),
+        "wrong_answer": wrong_answer,
+        "parse_error": parse_error,
+        "eval_error": eval_error,
+        "skipped": skipped,
+        "outside_profile": outside_profile,
         "failures": details,
     });
-    let out_path = std::env::var(out_env)
+    let out_path = std::env::var(suite.report_env)
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
-            Path::new(env!("CARGO_MANIFEST_DIR"))
+            manifest_dir
                 .join("../../target")
-                .join(out_default)
+                .join(suite.report_filename)
         });
     if let Some(parent) = out_path
         .parent()
@@ -549,38 +577,37 @@ fn run_suite(
         serde_json::to_string_pretty(&summary).expect("serialize report"),
     )
     .expect("write summary JSON");
-    println!("{filename}: {pass}/{total} pass, {} wrong answers, {} parse errors, {} evaluation errors, {} skipped, {} outside profile (report {})",
-        count("wrong_answer"), count("parse_error"), count("eval_error"), count("skipped"), count("outside_profile"), out_path.display());
-    failures
+    println!(
+        "{filename}: {pass}/{total} pass, {wrong_answer} wrong answers, {parse_error} parse errors, \
+         {eval_error} evaluation errors, {skipped} skipped, {outside_profile} outside profile (report {})",
+        out_path.display()
+    );
+
+    let failures: Vec<_> = differences
+        .iter()
+        .filter(|(_, outcome, _)| *outcome != Outcome::OutsideProfile)
+        .map(|(case, outcome, detail)| {
+            (
+                format!("{}::{}", case.group, case.name),
+                outcome.label(),
+                detail.as_str(),
+            )
+        })
+        .collect();
+    check_baseline(&failures, suite.baseline);
 }
 
 #[test]
 fn hl7_fhirpath_conformance_suite() {
-    let failures = run_suite(
-        "tests-fhir-r4.xml",
-        Path::new(FIXTURES),
-        FhirModel::R4,
-        "HL7_CONFORMANCE_OUT",
-        "hl7_fhirpath_conformance.json",
-        935,
-    );
-    check_baseline(&failures, R4_DIFFERENCES);
+    run_suite(&R4);
 }
 
 #[test]
 fn published_fhirpath_r5_suite() {
-    let failures = run_suite(
-        "tests-fhir-r5.xml",
-        Path::new(R5_FIXTURES),
-        FhirModel::R5,
-        "HL7_R5_CONFORMANCE_OUT",
-        "hl7_fhirpath_r5_conformance.json",
-        1381,
-    );
-    check_baseline(&failures, R5_DIFFERENCES);
+    run_suite(&R5);
 }
 
-fn check_baseline(failures: &[(String, &'static str, String)], baseline: &str) {
+fn check_baseline(failures: &[(String, &str, &str)], baseline: &str) {
     let known: HashMap<_, _> = baseline
         .lines()
         .filter(|line| !line.is_empty() && !line.starts_with('#'))

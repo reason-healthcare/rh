@@ -9,7 +9,9 @@ use crate::evaluator::metadata::{
     coding_equivalent, compare_model_quantities, extreme_numeric_equivalent, FhirNode,
 };
 use crate::evaluator::operations::{
-    temporal::{compare_parts, equals_parts, equivalent_parts, parse_temporal, TemporalParts},
+    temporal::{
+        compare_parts, equals_parts, equivalent_parts, temporal_value, TemporalKind, TemporalParts,
+    },
     units::UnitConverter,
 };
 use crate::evaluator::types::FhirPathValue;
@@ -250,17 +252,11 @@ fn temporal_pair(
     left: &FhirPathValue,
     right: &FhirPathValue,
 ) -> Option<(TemporalParts, TemporalParts)> {
-    use FhirPathValue::*;
-    match (left, right) {
-        (Time(a), Time(b)) => {
-            let a = format!("T{}", a.strip_prefix('T').unwrap_or(a));
-            let b = format!("T{}", b.strip_prefix('T').unwrap_or(b));
-            Some((parse_temporal(&a)?, parse_temporal(&b)?))
-        }
-        (
-            Date(a) | DateTime(a) | TypedDateTime { value: a, .. },
-            Date(b) | DateTime(b) | TypedDateTime { value: b, .. },
-        ) => Some((parse_temporal(a)?, parse_temporal(b)?)),
+    let (_, left_kind, left) = temporal_value(left)?;
+    let (_, right_kind, right) = temporal_value(right)?;
+    use TemporalKind::{Date, DateTime, Time};
+    match (left_kind, right_kind) {
+        (Time, Time) | (Date | DateTime, Date | DateTime) => Some((left, right)),
         _ => None,
     }
 }

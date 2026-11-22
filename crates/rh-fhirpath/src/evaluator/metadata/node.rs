@@ -4,7 +4,7 @@ use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::{EvaluationContext, FhirPathValue as V};
 use rh_hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType as P};
 use rust_decimal::Decimal;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FhirNode {
@@ -76,35 +76,27 @@ pub fn primitive_from_json(ty: &str, raw: &Value) -> V {
     }
 }
 
-impl FhirNode {
-    pub fn root(raw: &Value, model: FhirModel, located: bool) -> V {
-        let Some(name) = raw.get("resourceType").and_then(Value::as_str) else {
-            return V::from_json(raw);
-        };
-        V::Node(Box::new(Self {
-            inner: V::Object(raw.clone()),
-            model,
-            fhir_type: name.to_owned(),
-            raw: raw.clone(),
-            metadata: None,
-            path: located.then(|| name.to_owned()),
-            short_path: located.then(|| name.to_owned()),
-            definition: name.to_owned(),
-            element_path: name.to_owned(),
-            resource_pointer: String::new(),
-            external_root: (!located).then(|| std::sync::Arc::new(raw.clone())),
-            pointer: String::new(),
-        }))
+fn typed_object(raw: &Value, ty: &str) -> V {
+    V::TypedObject {
+        value: raw.clone(),
+        fhir_type: ty.to_owned(),
     }
+}
 
-    pub fn detached(raw: &Value, ty: &str, model: FhirModel) -> Self {
+fn member_keys(fields: &Map<String, Value>) -> impl Iterator<Item = &str> {
+    fields.keys().filter_map(|key| match key.strip_prefix('_') {
+        Some(name) if fields.contains_key(name) => None,
+        Some(name) => Some(name),
+        None => Some(key.as_str()),
+    })
+}
+
+impl FhirNode {
+    fn new(raw: &Value, ty: &str, model: FhirModel, inner: V) -> Self {
         Self {
-            inner: V::TypedObject {
-                value: raw.clone(),
-                fhir_type: ty.to_string(),
-            },
+            inner,
             model,
-            fhir_type: ty.to_string(),
+            fhir_type: ty.to_owned(),
             raw: raw.clone(),
             metadata: None,
             path: None,
@@ -117,13 +109,30 @@ impl FhirNode {
         }
     }
 
+    pub fn root(raw: &Value, model: FhirModel, located: bool) -> V {
+        let Some(name) = raw.get("resourceType").and_then(Value::as_str) else {
+            return V::from_json(raw);
+        };
+        let mut node = Self::new(raw, name, model, V::Object(raw.clone()));
+        if located {
+            node.path = Some(name.to_owned());
+            node.short_path = Some(name.to_owned());
+        } else {
+            node.external_root = Some(std::sync::Arc::new(raw.clone()));
+        }
+        V::Node(Box::new(node))
+    }
+
+    pub fn detached(raw: &Value, ty: &str, model: FhirModel) -> Self {
+        Self::new(raw, ty, model, typed_object(raw, ty))
+    }
+
     /// Construct a FHIR primitive without a source path, including optional id and
     /// extensions, as in the FHIR logical model.
     pub fn primitive(ty: &str, raw: &Value, metadata: Option<Value>, model: FhirModel) -> Self {
         Self {
-            inner: primitive_from_json(ty, raw),
             metadata,
-            ..Self::detached(raw, ty, model)
+            ..Self::new(raw, ty, model, primitive_from_json(ty, raw))
         }
     }
 
@@ -161,17 +170,62 @@ impl FhirNode {
             short_path: self.short_path.as_ref().map(|p| format!("{p}.value")),
             element_path: format!("{}.value", self.element_path),
             definition: format!("{}.value", self.fhir_type),
-            ..self.clone()
+            model: self.model,
+            resource_pointer: self.resource_pointer.clone(),
+            external_root: self.external_root.clone(),
+            pointer: self.pointer.clone(),
         }))
     }
 
-    pub fn member(&self, key: &str, strict: bool) -> FhirPathResult<V> {
-        if self
-            .raw
-            .get("resourceType")
-            .and_then(Value::as_str)
-            .is_some_and(|rt| self.model.is_subtype(rt, key))
+    fn source_fields(&self) -> Option<&Map<String, Value>> {
+        if self.is_primitive() {
+            self.metadata.as_ref()?.as_object()
+        } else {
+            self.raw.as_object()
+        }
+    }
+
+    fn member_value(&self, value: &Value, ty: &str, choice: bool) -> V {
+        if !value.is_object() {
+            return if ty == "string" && !choice {
+                V::from_json(value)
+            } else {
+                primitive_from_json(ty, value)
+            };
+        }
+        if self.model.is_subtype(ty, "Quantity")
+            && value.get("comparator").is_none()
+            && value["system"] == "http://unitsofmeasure.org"
         {
+            match (
+                primitive_from_json("decimal", &value["value"]),
+                value["code"].as_str(),
+            ) {
+                (V::Number(amount), Some(code)) => {
+                    let unit = match code {
+                        "a" => "year",
+                        "mo" => "month",
+                        "d" => "day",
+                        "h" => "hour",
+                        "min" => "minute",
+                        "s" => "second",
+                        _ => code,
+                    };
+                    return V::Quantity {
+                        value: amount,
+                        unit: Some(unit.to_owned()),
+                    };
+                }
+                (V::Empty, Some(_)) if value["value"].is_number() => return V::Empty,
+                _ => (),
+            }
+        }
+        typed_object(value, ty)
+    }
+
+    pub fn member(&self, key: &str, strict: bool) -> FhirPathResult<V> {
+        let owner_type = self.raw["resourceType"].as_str();
+        if owner_type.is_some_and(|ty| self.model.is_subtype(ty, key)) {
             return Ok(V::Node(Box::new(self.clone())));
         }
         if self.is_primitive() && key == "value" {
@@ -189,29 +243,22 @@ impl FhirNode {
                 message: format!("Unknown member '{key}' of FHIR.{}", self.fhir_type),
             });
         }
-        let source = if self.is_primitive() {
-            self.metadata.as_ref()
-        } else {
-            Some(&self.raw)
-        };
-        let Some(map) = source.and_then(Value::as_object) else {
+        let Some(map) = self.source_fields() else {
             return Ok(V::Empty);
         };
         if key.starts_with('_') {
             return Ok(V::Empty);
         }
+        let owner_path = owner_type.unwrap_or(&self.element_path);
         let mut found = Vec::new();
-        for property in map.keys() {
-            let json_key = property.strip_prefix('_').unwrap_or(property);
-            if property.starts_with('_') && map.contains_key(json_key) {
-                continue;
-            }
+        for json_key in member_keys(map) {
             let info = self.model.field(&self.fhir_type, json_key);
             let (logical, declared) = info.unwrap_or((json_key, ""));
             if key != logical && key != json_key {
                 continue;
             }
-            if strict && key == json_key && key != logical {
+            let choice = logical != json_key;
+            if strict && key == json_key && choice {
                 return Err(FhirPathError::EvaluationError {
                     message: format!(
                         "Invalid choice-type access: use '{logical}' instead of '{key}'"
@@ -242,7 +289,7 @@ impl FhirNode {
                 if value.is_null() && meta.is_none_or(Value::is_null) {
                     continue;
                 }
-                let Some(mut ty) = (!declared.is_empty()).then_some(declared) else {
+                let Some(ty) = (!declared.is_empty()).then_some(declared) else {
                     found.push(if self.model.is_type(&self.fhir_type) {
                         V::from_json(value)
                     } else {
@@ -251,51 +298,11 @@ impl FhirNode {
                     continue;
                 };
                 let resource = value.get("resourceType").and_then(Value::as_str);
-                if let Some(name) = resource {
-                    ty = name;
-                }
-                let inner = if value.is_object() {
-                    if resource.is_some() {
-                        V::Object(value.clone())
-                    } else if self.model.is_subtype(ty, "Quantity")
-                        && value.get("comparator").is_none()
-                        && value["system"].as_str() == Some("http://unitsofmeasure.org")
-                    {
-                        match (
-                            primitive_from_json("decimal", &value["value"]),
-                            value["code"].as_str(),
-                        ) {
-                            (V::Number(amount), Some(code)) => V::Quantity {
-                                value: amount,
-                                unit: Some(
-                                    match code {
-                                        "a" => "year",
-                                        "mo" => "month",
-                                        "d" => "day",
-                                        "h" => "hour",
-                                        "min" => "minute",
-                                        "s" => "second",
-                                        _ => code,
-                                    }
-                                    .to_owned(),
-                                ),
-                            },
-                            (V::Empty, Some(_)) if value["value"].is_number() => V::Empty,
-                            _ => V::TypedObject {
-                                value: value.clone(),
-                                fhir_type: ty.to_owned(),
-                            },
-                        }
-                    } else {
-                        V::TypedObject {
-                            value: value.clone(),
-                            fhir_type: ty.to_owned(),
-                        }
-                    }
-                } else if ty == "string" && logical == json_key {
-                    V::from_json(value)
+                let ty = resource.unwrap_or(ty);
+                let inner = if resource.is_some() {
+                    V::Object(value.clone())
                 } else {
-                    primitive_from_json(ty, value)
+                    self.member_value(value, ty, choice)
                 };
                 let pointer = format!(
                     "{}/{json_key}{}",
@@ -306,16 +313,11 @@ impl FhirNode {
                         String::new()
                     }
                 );
-                let element_name = if logical != json_key {
+                let element_name = if choice {
                     format!("{logical}[x]")
                 } else {
                     logical.to_owned()
                 };
-                let owner_path = self
-                    .raw
-                    .get("resourceType")
-                    .and_then(Value::as_str)
-                    .unwrap_or(&self.element_path);
                 found.push(V::Node(Box::new(Self {
                     inner,
                     model: self.model,
@@ -353,18 +355,9 @@ impl FhirNode {
         if self.is_primitive() && self.inner != V::Empty {
             children.push(self.value_child());
         }
-        let source = if self.is_primitive() {
-            self.metadata.as_ref()
-        } else {
-            Some(&self.raw)
-        };
-        if let Some(map) = source.and_then(Value::as_object) {
-            for key in map.keys() {
-                let name = key.strip_prefix('_').unwrap_or(key);
-                if name == "resourceType" || (key.starts_with('_') && map.contains_key(name)) {
-                    continue;
-                }
-                children.extend_from_slice(V::items(&self.member(name, false)?));
+        if let Some(fields) = self.source_fields() {
+            for name in member_keys(fields).filter(|&name| name != "resourceType") {
+                children.extend(self.member(name, false)?.into_items());
             }
         }
         Ok(children)
@@ -473,7 +466,7 @@ pub fn nodes_at_path(context: &EvaluationContext, path: &str) -> FhirPathResult<
         let key = key.strip_suffix("[x]").unwrap_or(key);
         for value in selected {
             if let V::Node(node) = value {
-                next.extend_from_slice(V::items(&node.member(key, false)?));
+                next.extend(node.member(key, false)?.into_items());
             }
         }
         selected = next;

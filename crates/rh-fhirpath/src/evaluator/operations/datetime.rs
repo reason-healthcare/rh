@@ -4,22 +4,17 @@
 //! These functions return current system date/time values and don't require a target value.
 //! Also includes component extraction functions for Date, DateTime, and Time values.
 
+use super::temporal::{parse_temporal, temporal_value, timezone_suffix, TemporalParts};
 use crate::error::*;
-use crate::evaluator::operations::temporal::{parse_temporal, timezone_suffix};
 use crate::evaluator::types::FhirPathValue;
 use chrono::Local;
 use rust_decimal::Decimal;
 
 fn component(
     value: &FhirPathValue,
-    extract: impl FnOnce(crate::evaluator::operations::temporal::TemporalParts) -> Option<i64>,
+    extract: impl FnOnce(TemporalParts) -> Option<i64>,
 ) -> FhirPathResult<FhirPathValue> {
-    let text = match value {
-        FhirPathValue::Date(s)
-        | FhirPathValue::DateTime(s)
-        | FhirPathValue::Time(s)
-        | FhirPathValue::TypedDateTime { value: s, .. } => s,
-        FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
+    match value {
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
             if items.len() == 1 =>
         {
@@ -38,16 +33,9 @@ fn component(
                 ),
             });
         }
-        _ => return Ok(FhirPathValue::Empty),
-    };
-    let normalized;
-    let temporal_text = if matches!(value, FhirPathValue::Time(_)) && !text.starts_with('T') {
-        normalized = format!("T{text}");
-        normalized.as_str()
-    } else {
-        text
-    };
-    let Some(parts) = parse_temporal(temporal_text) else {
+        _ => {}
+    }
+    let Some((_, _, parts)) = temporal_value(value) else {
         return Ok(FhirPathValue::Empty);
     };
     Ok(extract(parts)

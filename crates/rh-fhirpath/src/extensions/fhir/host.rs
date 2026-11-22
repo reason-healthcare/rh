@@ -3,6 +3,7 @@ use crate::error::{FhirPathError, FhirPathResult as Result};
 use crate::evaluator::metadata::{root_node, FhirModel, FhirNode};
 use crate::evaluator::{CollectionEvaluator, EvaluationContext, FhirPathValue as V};
 use serde_json::Value;
+use std::borrow::Cow;
 
 /// Host callbacks return None when a reference, profile, or terminology operation
 /// cannot be resolved. The evaluator applies the selected release's result rules.
@@ -77,6 +78,14 @@ fn unresolved(name: &str, context: &EvaluationContext) -> Result<V> {
     }
 }
 
+fn raw_json(value: &V) -> Cow<'_, Value> {
+    match value {
+        V::Node(node) => Cow::Borrowed(&node.raw),
+        V::Object(raw) | V::TypedObject { value: raw, .. } => Cow::Borrowed(raw),
+        _ => Cow::Owned(value.to_json()),
+    }
+}
+
 fn navigate(value: &V, name: &str, model: FhirModel) -> Result<V> {
     match value {
         V::Node(n) => n.member(name, false),
@@ -105,69 +114,66 @@ fn local_reference(reference: &str, item: &V, context: &EvaluationContext) -> Re
         let container = parent.unwrap_or_else(|| {
             node.map_or_else(|| root.clone(), |n| n.containing_resource(context))
         });
-        for candidate in V::items(&navigate(&container, "contained", context.model)?) {
-            if candidate.to_json()["id"].as_str() == Some(id) {
-                return Ok(Some(candidate.clone()));
-            }
-        }
-        return Ok(None);
+        return Ok(navigate(&container, "contained", context.model)?
+            .into_items()
+            .into_iter()
+            .find(|candidate| raw_json(candidate)["id"].as_str() == Some(id)));
     }
     let raw_root = if let V::Node(n) = &root {
         &n.raw
     } else {
         &context.root
     };
-    if raw_root["resourceType"] == "Bundle" {
-        let (url, version) = reference
-            .split_once("/_history/")
-            .map_or((reference, None), |(url, v)| (url, Some(v)));
-        let (url, canonical_version) = url
-            .split_once('|')
-            .map_or((url, None), |(url, v)| (url, Some(v)));
-        let absolute = node
-            .and_then(FhirNode::entry_index)
-            .and_then(|i| raw_root["entry"][i]["fullUrl"].as_str())
-            .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
-            .filter(|_| !url.contains(':'))
-            .and_then(|s| s.rsplit_once('/')?.0.rsplit_once('/'))
-            .map(|(server, _)| format!("{server}/{url}"));
-        let mut found = None;
-        for entry in V::items(&navigate(&root, "entry", context.model)?) {
-            let resource = navigate(entry, "resource", context.model)?;
-            let V::Node(n) = &resource else { continue };
-            let raw = &n.raw;
-            if version.is_some_and(|v| raw["meta"]["versionId"] != v)
-                || canonical_version.is_some_and(|v| raw["version"] != v)
-            {
-                continue;
-            }
-            let physical = entry.to_json();
-            let full_url = physical["fullUrl"].as_str();
-            let relative = absolute.is_none()
-                && raw["resourceType"]
-                    .as_str()
-                    .zip(raw["id"].as_str())
-                    .is_some_and(|(ty, id)| url == format!("{ty}/{id}"));
-            if full_url == Some(absolute.as_deref().unwrap_or(url))
-                || relative
-                || raw["url"].as_str() == Some(url)
-            {
-                if found.is_some() {
-                    return Ok(None);
-                }
-                found = Some(resource);
-            }
-        }
-        return Ok(found);
+    if raw_root["resourceType"] != "Bundle" {
+        return Ok(None);
     }
-
-    Ok(None)
+    let (url, version) = reference
+        .split_once("/_history/")
+        .map_or((reference, None), |(url, v)| (url, Some(v)));
+    let (url, canonical_version) = url
+        .split_once('|')
+        .map_or((url, None), |(url, v)| (url, Some(v)));
+    let absolute = node
+        .and_then(FhirNode::entry_index)
+        .and_then(|i| raw_root["entry"][i]["fullUrl"].as_str())
+        .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
+        .filter(|_| !url.contains(':'))
+        .and_then(|s| s.rsplit_once('/')?.0.rsplit_once('/'))
+        .map(|(server, _)| format!("{server}/{url}"));
+    let mut found = None;
+    for entry in V::items(&navigate(&root, "entry", context.model)?) {
+        let resource = navigate(entry, "resource", context.model)?;
+        let V::Node(n) = &resource else { continue };
+        let raw = &n.raw;
+        if version.is_some_and(|v| raw["meta"]["versionId"] != v)
+            || canonical_version.is_some_and(|v| raw["version"] != v)
+        {
+            continue;
+        }
+        let physical = raw_json(entry);
+        let full_url = physical["fullUrl"].as_str();
+        let relative = absolute.is_none()
+            && raw["resourceType"]
+                .as_str()
+                .zip(raw["id"].as_str())
+                .is_some_and(|(ty, id)| url == format!("{ty}/{id}"));
+        if full_url == Some(absolute.as_deref().unwrap_or(url))
+            || relative
+            || raw["url"].as_str() == Some(url)
+        {
+            if found.is_some() {
+                return Ok(None);
+            }
+            found = Some(resource);
+        }
+    }
+    Ok(found)
 }
 
 fn children(value: &V) -> Result<Vec<V>> {
     match value {
         V::Node(n) => n.children(),
-        _ => Ok(V::items(&CollectionEvaluator::children(value)?).to_vec()),
+        _ => Ok(CollectionEvaluator::children(value)?.into_items()),
     }
 }
 
@@ -224,15 +230,12 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
             Ok(V::from_items(
                 values
                     .iter()
-                    .filter_map(|v| {
-                        if let V::Node(n) = v {
-                            if short {
-                                n.short_path.clone()
-                            } else {
-                                n.path.clone()
-                            }
+                    .filter_map(|value| {
+                        let V::Node(node) = value else { return None };
+                        if short {
+                            node.short_path.clone()
                         } else {
-                            None
+                            node.path.clone()
                         }
                     })
                     .map(V::String)
@@ -245,60 +248,61 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
             };
             let mut result = Vec::new();
             for v in values {
-                for ext in V::items(&navigate(v, "extension", ctx.model)?) {
-                    if ext.to_json()["url"].as_str() == Some(url) {
-                        result.push(ext.clone());
-                    }
-                }
+                let extensions = navigate(v, "extension", ctx.model)?.into_items();
+                result.extend(
+                    extensions
+                        .into_iter()
+                        .filter(|ext| raw_json(ext)["url"].as_str() == Some(url)),
+                );
             }
             Ok(V::Collection(result))
         }
         "hasValue" | "getValue" => {
-            let value = match values {
-                [V::Node(n)] if n.is_primitive() => n.system_value(),
-                _ => V::Empty,
+            let primitive = match values {
+                [V::Node(node)] if node.is_primitive() => Some(node.as_ref()),
+                _ => None,
             };
             if name == "hasValue" {
-                let has_value =
-                    matches!(values,[V::Node(n)] if n.is_primitive() && !n.raw.is_null());
+                let has_value = primitive.is_some_and(|node| !node.raw.is_null());
                 Ok(if has_value || ctx.model == FhirModel::R4 {
                     V::Boolean(has_value)
                 } else {
                     V::Empty
                 })
             } else {
-                Ok(value)
+                Ok(primitive.map_or(V::Empty, FhirNode::system_value))
             }
         }
         "resolve" => {
             let mut result = Vec::new();
             for value in values {
-                let raw = value.to_json();
+                let raw = raw_json(value);
                 let Some(reference) = raw.as_str().or_else(|| raw["reference"].as_str()) else {
                     continue;
                 };
                 if let Some(resource) = local_reference(reference, value, ctx)? {
                     result.push(resource);
-                } else if let Some(host) = host {
-                    if let Some(raw) = host.resolve(reference)? {
-                        result.push(FhirNode::root(&raw, ctx.model, false));
-                    }
+                    continue;
+                }
+                let Some(host) = host else { continue };
+                if let Some(raw) = host.resolve(reference)? {
+                    result.push(FhirNode::root(&raw, ctx.model, false));
                 }
             }
             Ok(V::from_items(result))
         }
         "elementDefinition" => {
+            let Some(host) = host else {
+                return Ok(V::Empty);
+            };
             let mut result = Vec::new();
             for value in values {
-                if let V::Node(node) = value {
-                    if let Some(host) = host {
-                        if let Some(def) = host.element_definition(&node.definition)? {
-                            result.push(V::TypedObject {
-                                value: def,
-                                fhir_type: "ElementDefinition".into(),
-                            });
-                        }
-                    }
+                let V::Node(node) = value else { continue };
+                if let Some(def) = host.element_definition(&node.definition)? {
+                    result.push(V::TypedObject {
+                        value: def,
+                        fhir_type: "ElementDefinition".into(),
+                    });
                 }
             }
             Ok(V::from_items(result))
@@ -314,7 +318,7 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
                     V::Node(n) => &[&n.element_path, &n.definition],
                     _ => &[],
                 };
-                if host.matches_slice(&value.to_json(), source_paths, url, slice)? == Some(true) {
+                if host.matches_slice(&raw_json(value), source_paths, url, slice)? == Some(true) {
                     result.push(value.clone());
                 }
             }
@@ -332,7 +336,7 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
             }
             for value in values {
                 for ext in V::items(&navigate(value, "modifierExtension", ctx.model)?) {
-                    if !ext.to_json()["url"]
+                    if !raw_json(ext)["url"]
                         .as_str()
                         .is_some_and(|url| allowed.contains(&url))
                     {
@@ -361,18 +365,19 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
             let Some(url) = string_arg(0)? else {
                 return unresolved(name, ctx);
             };
-            let result = match host {
-                Some(h) if name == "conformsTo" => h.conforms_to(
-                    &element.to_json(),
-                    match element {
-                        V::Node(n) => Some(n.fhir_type.as_str()),
-                        V::TypedObject { fhir_type, .. } => Some(fhir_type.as_str()),
-                        _ => None,
-                    },
-                    url,
-                )?,
-                Some(h) => h.member_of(&element.to_json(), url)?,
-                None => None,
+            let Some(host) = host else {
+                return unresolved(name, ctx);
+            };
+            let raw = raw_json(element);
+            let result = if name == "conformsTo" {
+                let declared_type = match element {
+                    V::Node(n) => Some(n.fhir_type.as_str()),
+                    V::TypedObject { fhir_type, .. } => Some(fhir_type.as_str()),
+                    _ => None,
+                };
+                host.conforms_to(&raw, declared_type, url)?
+            } else {
+                host.member_of(&raw, url)?
             };
             match result {
                 Some(b) => Ok(V::Boolean(b)),
@@ -383,7 +388,7 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
             let ([lhs], [rhs]) = (values, V::items(&params[0])) else {
                 return Ok(V::Empty);
             };
-            let (l, r) = (lhs.to_json(), rhs.to_json());
+            let (l, r) = (raw_json(lhs), raw_json(rhs));
             let (parent, child) = if name == "subsumes" {
                 (&l, &r)
             } else {
@@ -398,10 +403,14 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
                     &[]
                 }
             }
+            let (parents, children) = (codings(parent), codings(child));
+            if parents.is_empty() || children.is_empty() {
+                return Ok(V::Empty);
+            }
             let mut unknown = false;
             let mut cross_system_unknown = false;
-            for a in codings(parent) {
-                for b in codings(child) {
+            for a in parents {
+                for b in children {
                     if a["system"].is_string()
                         && a["system"] == b["system"]
                         && a["code"] == b["code"]
@@ -423,8 +432,6 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
                     return Err(error("Unresolved cross-system subsumption"));
                 }
                 unresolved(name, ctx)
-            } else if codings(parent).is_empty() || codings(child).is_empty() {
-                Ok(V::Empty)
             } else {
                 Ok(V::Boolean(false))
             }

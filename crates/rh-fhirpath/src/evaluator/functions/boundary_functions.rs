@@ -3,7 +3,9 @@
 use std::collections::HashMap;
 
 use crate::error::{FhirPathError, FhirPathResult};
-use crate::evaluator::operations::temporal::{parse_temporal, timezone_suffix, TemporalParts};
+use crate::evaluator::operations::temporal::{
+    parse_temporal, parse_time_only, timezone_suffix, TemporalParts,
+};
 use crate::evaluator::types::FhirPathValue;
 use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 
@@ -187,8 +189,7 @@ fn temporal_boundary(text: &str, digits: i64, high: bool, kind: Kind) -> FhirPat
         return Empty;
     }
     match kind {
-        Kind::Time => match parse_temporal(&format!("T{}", text.strip_prefix('T').unwrap_or(text)))
-        {
+        Kind::Time => match parse_time_only(text) {
             Some(parts) => Time(render_time(parts, digits, high)),
             None => Empty,
         },
@@ -248,8 +249,8 @@ fn render_time(parts: TemporalParts, digits: i64, high: bool) -> String {
     }
     if digits > 6 {
         let scale = (digits - 6) as usize;
-        let fraction = parts.fraction_text().unwrap_or_default();
-        let mut fraction = fraction.chars().take(scale).collect::<String>();
+        let mut fraction = parts.fraction_text().unwrap_or_default();
+        fraction.truncate(scale);
         let fill = if high { '9' } else { '0' };
         fraction.extend(std::iter::repeat_n(fill, scale - fraction.len()));
         result.push('.');
