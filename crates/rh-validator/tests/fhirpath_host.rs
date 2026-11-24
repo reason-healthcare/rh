@@ -154,3 +154,36 @@ fn slice_matches_the_source_path_when_names_repeat() {
         );
     }
 }
+
+#[test]
+fn slice_matches_a_qualified_reslice() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    validator.register_profile(&json!({
+        "resourceType":"StructureDefinition","url":"urn:telecom-reslices","name":"TelecomReslices","type":"Patient",
+        "snapshot":{"element":[
+            {"id":"Patient","path":"Patient"},
+            {"id":"Patient.telecom","path":"Patient.telecom","slicing":{"discriminator":[{"type":"value","path":"system"}],"rules":"open"}},
+            {"id":"Patient.telecom:phone","path":"Patient.telecom","sliceName":"phone","slicing":{"discriminator":[{"type":"value","path":"system"},{"type":"value","path":"use"}],"rules":"open"}},
+            {"id":"Patient.telecom:phone.system","path":"Patient.telecom.system","fixedCode":"phone"},
+            {"id":"Patient.telecom:phone/work","path":"Patient.telecom","sliceName":"phone/work"},
+            {"id":"Patient.telecom:phone/work.system","path":"Patient.telecom.system","fixedCode":"phone"},
+            {"id":"Patient.telecom:phone/work.use","path":"Patient.telecom.use","fixedCode":"work"},
+            {"id":"Patient.telecom:email","path":"Patient.telecom","sliceName":"email"},
+            {"id":"Patient.telecom:email.system","path":"Patient.telecom.system","fixedCode":"email"}
+        ]}
+    }));
+    let context = validator.fhirpath_context(json!({"resourceType":"Patient","telecom":[
+        {"system":"phone","use":"work","value":"work-phone"},
+        {"system":"phone","use":"home","value":"home-phone"},
+        {"system":"email","use":"work","value":"work-email"}
+    ]}));
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let expression = parser
+        .parse("telecom.slice('urn:telecom-reslices','phone/work').value")
+        .unwrap();
+    assert_eq!(
+        evaluator.evaluate(&expression, &context).unwrap().to_json(),
+        json!("work-phone")
+    );
+}

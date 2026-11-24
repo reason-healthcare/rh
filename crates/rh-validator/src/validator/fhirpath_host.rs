@@ -87,10 +87,11 @@ impl FhirHost for FhirValidator {
                 if let Some(entries) = vs.compose.and_then(|c| c.include) {
                     systems.extend(entries.into_iter().filter_map(|c| c.system));
                 }
-                if systems.len() != 1 {
+                let mut systems = systems.into_iter();
+                let (Some(system), None) = (systems.next(), systems.next()) else {
                     return Ok(None);
-                }
-                systems.into_iter().next().unwrap()
+                };
+                system
             };
             match self
                 .valueset_loader

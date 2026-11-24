@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use lru::LruCache;
 use rh_foundation::loader::PackageLoader;
 use rh_foundation::snapshot::{SnapshotGenerator, StructureDefinition, StructureDefinitionLoader};
@@ -107,19 +107,18 @@ impl ProfileRegistry {
         }
 
         // Then check statically loaded profiles
-        if !self.profiles.contains_key(lookup_url) {
+        let Some(profile) = self.profiles.get(lookup_url) else {
             return Ok(None);
-        }
+        };
 
         let snapshot = self
             .generator
             .lock()
-            .unwrap()
+            .map_err(|_| anyhow!("Snapshot generator lock is poisoned"))?
             .generate_snapshot(lookup_url)
             .context("Failed to generate snapshot")?;
 
-        let profile = self.profiles.get(lookup_url).unwrap().clone();
-        let mut profile_with_snapshot = profile;
+        let mut profile_with_snapshot = profile.clone();
         profile_with_snapshot.snapshot = Some(std::sync::Arc::unwrap_or_clone(snapshot));
         let profile_with_snapshot = Arc::new(profile_with_snapshot);
 
@@ -157,11 +156,11 @@ impl ProfileRegistry {
     }
 
     pub fn load_profile(&mut self, profile: StructureDefinition) -> Result<()> {
-        self.profiles.insert(profile.url.clone(), profile.clone());
         self.generator
             .get_mut()
-            .unwrap()
-            .load_structure_definition(profile);
+            .map_err(|_| anyhow!("Snapshot generator lock is poisoned"))?
+            .load_structure_definition(profile.clone());
+        self.profiles.insert(profile.url.clone(), profile);
         Ok(())
     }
 
@@ -228,5 +227,36 @@ fn canonical_url_without_version(url: &str) -> &str {
 impl Default for ProfileRegistry {
     fn default() -> Self {
         Self::new(FhirVersion::default(), None).expect("Failed to initialize ProfileRegistry")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn poisoned_generator_reports_failure_without_loading_a_profile() {
+        let profile = |url| {
+            serde_json::from_value(json!({"url":url,"name":"TestPatient","type":"Patient"}))
+                .unwrap()
+        };
+        let mut registry = ProfileRegistry::new(FhirVersion::R4, None).unwrap();
+        registry.load_profile(profile("urn:existing")).unwrap();
+        assert!(std::panic::catch_unwind(|| {
+            let _guard = registry.generator.lock().unwrap();
+            panic!("poison the snapshot generator");
+        })
+        .is_err());
+
+        let error = registry.get_snapshot("urn:existing").unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("Snapshot generator lock is poisoned"));
+        let error = registry.load_profile(profile("urn:rejected")).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("Snapshot generator lock is poisoned"));
+        assert!(!registry.profiles.contains_key("urn:rejected"));
     }
 }
