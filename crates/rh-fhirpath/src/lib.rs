@@ -22,6 +22,7 @@ pub mod ast;
 pub mod error;
 pub mod evaluator;
 pub mod extensions;
+mod json;
 pub mod parser;
 #[cfg(feature = "repl")]
 pub mod repl;

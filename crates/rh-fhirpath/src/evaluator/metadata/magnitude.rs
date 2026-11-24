@@ -2,6 +2,7 @@
 //! Preserve comparisons and string conversion without expanding powers of ten.
 use super::FhirNode;
 use crate::evaluator::FhirPathValue as V;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 
 #[derive(Debug)]
@@ -84,18 +85,18 @@ impl Scientific {
 }
 
 impl FhirNode {
-    fn extreme_numeric(&self) -> Option<(&str, Option<&str>)> {
+    pub(super) fn extreme_numeric(&self) -> Option<(Cow<'_, str>, Option<&str>)> {
         if self.inner != V::Empty {
             return None;
         }
-        if self.fhir_type == "decimal" {
-            return Some((self.raw.as_number()?.as_str(), None));
+        if matches!(self.fhir_type.as_str(), "decimal" | "System.Decimal") {
+            return Some((self.number_text()?, None));
         }
         if self.model.is_subtype(&self.fhir_type, "Quantity")
             && self.raw["system"] == "http://unitsofmeasure.org"
         {
             return Some((
-                self.raw["value"].as_number()?.as_str(),
+                self.field_number_text("value")?,
                 Some(self.raw["code"].as_str()?),
             ));
         }
@@ -105,8 +106,18 @@ impl FhirNode {
     pub(crate) fn extreme_numeric_string(&self) -> Option<String> {
         let (literal, unit) = self.extreme_numeric()?;
         let mut text = match literal.split_once(['e', 'E']) {
-            Some((m, e)) => format!("{m}E{:+}", e.parse::<i64>().ok()?),
-            None => literal.into(),
+            Some((mantissa, exponent)) => {
+                let digits = exponent
+                    .trim_start_matches(['-', '+'])
+                    .trim_start_matches('0');
+                if digits.is_empty() {
+                    format!("{mantissa}E+0")
+                } else {
+                    let sign = if exponent.starts_with('-') { '-' } else { '+' };
+                    format!("{mantissa}E{sign}{digits}")
+                }
+            }
+            None => literal.into_owned(),
         };
         if let Some(unit) = unit {
             text.push_str(&format!(" '{unit}'"));
@@ -118,7 +129,7 @@ impl FhirNode {
 fn numeric(v: &V) -> Option<(Scientific, Option<&str>)> {
     if let V::Node(node) = v {
         if let Some((text, unit)) = node.extreme_numeric() {
-            return Some((Scientific::parse(text)?, unit));
+            return Some((Scientific::parse(&text)?, unit));
         }
         return numeric(&node.inner);
     }

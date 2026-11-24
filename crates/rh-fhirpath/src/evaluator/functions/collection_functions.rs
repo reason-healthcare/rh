@@ -341,7 +341,13 @@ fn fhirpath_type_of(v: &FhirPathValue) -> Option<(String, String)> {
     use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
     Some(match v {
         FhirPathValue::Node(node) if node.is_system_projection() => {
-            return fhirpath_type_of(&node.inner)
+            return Some((
+                "System".to_owned(),
+                node.fhir_type.strip_prefix("System.")?.to_owned(),
+            ))
+        }
+        FhirPathValue::Node(node) if node.is_untyped_object() => {
+            return fhirpath_type_of(&node.inner);
         }
         FhirPathValue::Node(node) => ("FHIR".to_owned(), node.fhir_type.clone()),
         FhirPathValue::TypedObject { fhir_type, .. } => {
@@ -400,6 +406,7 @@ fn fhirpath_base_type_of(v: &FhirPathValue) -> String {
         FhirPathValue::TypedObject { fhir_type, .. } if fhir_type.starts_with("System.") => {
             "System.TypeInfo".into()
         }
+        FhirPathValue::Node(node) if node.is_untyped_object() => fhirpath_base_type_of(&node.inner),
         FhirPathValue::Node(node) => node
             .model
             .base(&node.fhir_type)

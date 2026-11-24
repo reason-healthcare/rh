@@ -21,11 +21,10 @@ pub fn run_repl(data_file: Option<&Path>) -> Result<()> {
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
 
-    let mut data = if let Some(path) = data_file {
-        let content = fs::read_to_string(path)?;
-        serde_json::from_str::<Value>(&content)?
+    let mut context = if let Some(path) = data_file {
+        load_data_file(path)?
     } else {
-        Value::Null
+        EvaluationContext::new(Value::Null)
     };
 
     let history_file = std::env::temp_dir().join("fhirpath_repl_history.txt");
@@ -52,18 +51,19 @@ pub fn run_repl(data_file: Option<&Path>) -> Result<()> {
                         continue;
                     }
                     ".data" => {
-                        if data == Value::Null {
+                        let data = serde_json::to_string_pretty(&context.root_as_json())?;
+                        if data == "null" {
                             println!("No data loaded. Use .load <file> to load FHIR data.");
                         } else {
-                            println!("Data: {}", serde_json::to_string_pretty(&data)?);
+                            println!("Data: {data}");
                         }
                         continue;
                     }
                     cmd if cmd.starts_with(".load ") => {
                         let path = cmd.strip_prefix(".load ").unwrap().trim();
-                        match load_data_file(path) {
-                            Ok(new_data) => {
-                                data = new_data;
+                        match load_data_file(Path::new(path)) {
+                            Ok(new_context) => {
+                                context = new_context;
                                 println!("✅ Loaded data from: {path}");
                             }
                             Err(e) => {
@@ -81,7 +81,7 @@ pub fn run_repl(data_file: Option<&Path>) -> Result<()> {
 
                 match parser.parse(&input) {
                     Ok(ast) => {
-                        let context = EvaluationContext::new(data.clone());
+                        context.clear_trace_logs();
                         match evaluator.evaluate(&ast, &context) {
                             Ok(result) => {
                                 let trace_logs = context.get_trace_logs();
@@ -118,10 +118,9 @@ pub fn run_repl(data_file: Option<&Path>) -> Result<()> {
     Ok(())
 }
 
-fn load_data_file(path: &str) -> Result<Value> {
+fn load_data_file(path: &Path) -> Result<EvaluationContext> {
     let content = fs::read_to_string(path)?;
-    let data = serde_json::from_str::<Value>(&content)?;
-    Ok(data)
+    Ok(EvaluationContext::from_json_str(&content)?)
 }
 
 fn print_help() {

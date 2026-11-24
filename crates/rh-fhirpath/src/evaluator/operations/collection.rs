@@ -3,6 +3,9 @@
 use crate::error::*;
 use crate::evaluator::operations::comparison::ComparisonEvaluator;
 use crate::evaluator::types::FhirPathValue;
+use crate::json::JsonNumbers;
+use crate::FhirModel;
+use serde_json::Value;
 use std::cmp::Ordering;
 
 /// Collection operations handler
@@ -347,7 +350,7 @@ impl CollectionEvaluator {
     ) -> FhirPathResult<Ordering> {
         fn key_is_empty(value: &FhirPathValue) -> bool {
             match value {
-                FhirPathValue::Node(node) => node.raw.is_null(),
+                FhirPathValue::Node(node) => !node.has_raw_value(),
                 value => value.system_value().is_empty(),
             }
         }
@@ -487,20 +490,7 @@ impl CollectionEvaluator {
     pub fn children(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
         match target {
             FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
-                let mut children = Vec::new();
-
-                if let Some(object_map) = obj.as_object() {
-                    for value in object_map.values() {
-                        match FhirPathValue::from_json(value) {
-                            FhirPathValue::Collection(items)
-                            | FhirPathValue::UnorderedCollection(items) => {
-                                children.extend(items);
-                            }
-                            child => children.push(child),
-                        }
-                    }
-                }
-
+                let children = Self::json_children(obj, None, FhirModel::default());
                 if children.is_empty() {
                     Ok(FhirPathValue::Empty)
                 } else {
@@ -533,6 +523,27 @@ impl CollectionEvaluator {
             }
             _ => Ok(FhirPathValue::Empty),
         }
+    }
+
+    pub(crate) fn json_children(
+        object: &Value,
+        numbers: Option<&JsonNumbers>,
+        model: FhirModel,
+    ) -> Vec<FhirPathValue> {
+        let mut children = Vec::new();
+        if let Some(fields) = object.as_object() {
+            for (key, value) in fields {
+                let numbers = numbers.and_then(|numbers| numbers.field(key));
+                match FhirPathValue::from_json_with_numbers(value, numbers, model) {
+                    FhirPathValue::Collection(items)
+                    | FhirPathValue::UnorderedCollection(items) => {
+                        children.extend(items);
+                    }
+                    child => children.push(child),
+                }
+            }
+        }
+        children
     }
 
     /// Returns a collection with all descendant nodes (all children, their children, etc.) of all items in the input collection

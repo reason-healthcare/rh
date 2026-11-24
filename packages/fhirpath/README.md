@@ -11,6 +11,10 @@ const result = evaluateExpression("name.given", {
 });
 ```
 
+Pass resource JSON as a string to preserve decimal precision and scientific notation.
+In JSON mode, `result.data` contains the exact JSON output and `result.value` uses
+JavaScript `Number` for numeric fields.
+
 Exports:
 
 - `@reasonhealth/fhirpath/node` for Node.js.

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{value::RawValue, Value};
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -168,18 +168,15 @@ fn eval_expression(
         e
     })?;
 
-    // Load data if provided
-    let data = if let Some(path) = data_file {
+    let mut context = if let Some(path) = data_file {
         info!("Loading FHIR data from: {}", path.display());
         let content = fs::read_to_string(path)?;
-        serde_json::from_str::<Value>(&content)?
+        EvaluationContext::from_json_str(&content)?
     } else {
         info!("No data file provided, using empty context");
-        Value::Null
+        EvaluationContext::new(Value::Null)
     };
 
-    // Create evaluation context
-    let mut context = EvaluationContext::new(data);
     context.model = options.fhir_version;
     context.strict_mode = options.strict;
     context.check_ordered_functions = options.check_ordered_functions;
@@ -201,41 +198,21 @@ fn eval_expression(
                 eprintln!();
             }
 
+            if ctx.is_json() {
+                return print_envelope(ctx, &Envelope::ok(result.as_json(), "fhirpath eval"));
+            }
+
             match format {
                 "json" => {
-                    let json_value = result.to_json();
-                    if ctx.is_json() {
-                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
-                    } else {
-                        let json = serde_json::to_string_pretty(&json_value)?;
-                        println!("{json}");
-                    }
+                    let json = serde_json::to_string_pretty(&result.as_json())?;
+                    println!("{json}");
                 }
                 "debug" => {
-                    if ctx.is_json() {
-                        let json_value = result.to_json();
-                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
-                    } else {
-                        println!("{result:#?}");
-                    }
-                }
-                "pretty" => {
-                    if ctx.is_json() {
-                        let json_value = result.to_json();
-                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
-                    } else {
-                        println!("✅ Expression: {expression}");
-                        println!("Result: {result:?}");
-                    }
+                    println!("{result:#?}");
                 }
                 _ => {
-                    if ctx.is_json() {
-                        let json_value = result.to_json();
-                        print_envelope(ctx, &Envelope::ok(json_value, "fhirpath eval"))?;
-                    } else {
-                        println!("✅ Expression: {expression}");
-                        println!("Result: {result:?}");
-                    }
+                    println!("✅ Expression: {expression}");
+                    println!("Result: {result:?}");
                 }
             }
         }
@@ -257,18 +234,16 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
     let test_content = fs::read_to_string(test_file)?;
     let test_cases: Vec<TestCase> = serde_json::from_str(&test_content)?;
 
-    // Load data if provided
-    let data = if let Some(path) = data_file {
+    let context = if let Some(path) = data_file {
         info!("Loading FHIR data from: {}", path.display());
         let content = fs::read_to_string(path)?;
-        serde_json::from_str::<Value>(&content)?
+        EvaluationContext::from_json_str(&content)?
     } else {
-        Value::Null
+        EvaluationContext::new(Value::Null)
     };
 
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
-    let context = EvaluationContext::new(data);
 
     let mut passed = 0;
     let mut failed = 0;
@@ -280,25 +255,28 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
         match parser.parse(&test_case.expression) {
             Ok(ast) => match evaluator.evaluate(&ast, &context) {
                 Ok(result) => {
-                    let result_json = result.to_json();
-                    if result_json == test_case.expected {
+                    let expected = EvaluationContext::from_json_str(test_case.expected.get())?;
+                    if result.to_raw_json()?.get()
+                        == serde_json::to_string(&expected.root_as_json())?
+                    {
                         println!("✅ PASS");
                         passed += 1;
                     } else {
                         println!("❌ FAIL");
                         println!(
                             "  Expected: {}",
-                            serde_json::to_string_pretty(&test_case.expected)?
+                            serde_json::to_string_pretty(&expected.root_as_json())?
                         );
                         println!(
                             "  Got:      {}",
-                            serde_json::to_string_pretty(&result_json)?
+                            serde_json::to_string_pretty(&result.as_json())?
                         );
                         failed += 1;
                     }
                 }
                 Err(e) => {
-                    if test_case.expected.is_null() && test_case.should_error.unwrap_or(false) {
+                    if test_case.expected.get() == "null" && test_case.should_error.unwrap_or(false)
+                    {
                         println!("✅ PASS (expected error)");
                         passed += 1;
                     } else {
@@ -334,7 +312,7 @@ async fn run_tests(test_file: &std::path::Path, data_file: Option<&std::path::Pa
 #[derive(serde::Deserialize)]
 struct TestCase {
     expression: String,
-    expected: Value,
+    expected: Box<RawValue>,
     #[serde(default)]
     should_error: Option<bool>,
 }

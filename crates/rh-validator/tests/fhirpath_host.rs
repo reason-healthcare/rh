@@ -91,6 +91,72 @@ fn boolean_primitive_invariant_reports_false() {
 }
 
 #[test]
+fn source_decimals_retain_precision_in_root_and_element_invariants() {
+    let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
+    let profile = "urn:observation-decimal-precision";
+    validator.register_profile(&json!({
+        "resourceType": "StructureDefinition",
+        "url": profile,
+        "name": "ObservationDecimalPrecision",
+        "type": "Observation",
+        "snapshot": { "element": [
+            {
+                "id": "Observation",
+                "path": "Observation",
+                "constraint": [{
+                    "key": "precision-root",
+                    "human": "Observation value must have four decimal places",
+                    "severity": "error",
+                    "expression": "value.value.precision() = 4"
+                }]
+            },
+            {
+                "id": "Observation.value[x].value",
+                "path": "Observation.value[x].value",
+                "type": [{"code": "decimal"}],
+                "constraint": [{
+                    "key": "precision-element",
+                    "human": "The decimal must have four decimal places",
+                    "severity": "error",
+                    "expression": "$this.precision() = 4"
+                }]
+            }
+        ]}
+    }));
+    let parser = FhirPathParser::new();
+    let expression = parser.parse(&format!("conformsTo('{profile}')")).unwrap();
+    let evaluator = FhirPathEvaluator::new();
+    for (source_number, expected_valid) in [("1.2300", true), ("1.23", false)] {
+        let input = format!(
+            r#"{{"resourceType":"Observation","status":"final","code":{{"text":"Test"}},
+                "meta":{{"profile":["{profile}"]}},
+                "valueQuantity":{{"value":{source_number}}}}}"#
+        );
+        let context = validator.fhirpath_context_from_json_str(&input).unwrap();
+        let result = validator.validate_auto_in_context(&context).unwrap();
+        assert_eq!(result.valid, expected_valid, "{:#?}", result.issues);
+        let focused = context.with_current(json!(true));
+        let focused_result = validator.validate_auto_in_context(&focused).unwrap();
+        assert_eq!(focused_result.valid, expected_valid);
+        for key in ["precision-root", "precision-element"] {
+            assert_eq!(
+                result
+                    .issues
+                    .iter()
+                    .any(|issue| issue.message.contains(key)),
+                !expected_valid,
+                "{key}: {:#?}",
+                result.issues
+            );
+        }
+        assert_eq!(
+            evaluator.evaluate(&expression, &context).unwrap(),
+            V::Boolean(expected_valid)
+        );
+    }
+}
+
+#[test]
 fn slice_matches_the_source_path_when_names_repeat() {
     let validator = FhirValidator::new(FhirVersion::R4, None).unwrap();
     let url = "urn:sliced-telecom";

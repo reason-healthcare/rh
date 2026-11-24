@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::hash::{BuildHasher, Hash, Hasher, RandomState};
+use std::sync::Arc;
 
 use crate::ast::*;
 use crate::error::*;
@@ -16,6 +17,7 @@ use crate::evaluator::operations::{
     units::UnitConverter,
 };
 use crate::evaluator::types::FhirPathValue;
+use crate::json::JsonNumbers;
 use rust_decimal::Decimal;
 use serde_json::Value;
 
@@ -66,6 +68,7 @@ impl ComparisonEvaluator {
         let [item] = value.items() else { return None };
         let system = item.system_value();
         let logical = match item {
+            Node(node) if node.raw.is_object() && node.numbers.is_some() => return None,
             Node(node) if node.model.is_subtype(&node.fhir_type, "Quantity") => return None,
             Node(node) if node.raw.is_object() => {
                 if node.model != model
@@ -231,23 +234,9 @@ impl ComparisonEvaluator {
     /// Compare collections as multisets under FHIRPath equivalence.
     pub fn values_equivalent(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         let (left, right) = (left.items(), right.items());
-        if left.len() != right.len() {
-            return false;
-        }
-        if left.len() <= 1 {
-            return left.iter().zip(right).all(|(a, b)| equivalent_item(a, b));
-        }
-
-        // Decimal equivalence can connect one item to several candidates.
-        // Match whole collections without relying on the choice of first match.
-        let mut matches = vec![None; right.len()];
-        for i in 0..left.len() {
-            let mut visited = vec![false; right.len()];
-            if !match_equivalent(i, left, right, &mut matches, &mut visited) {
-                return false;
-            }
-        }
-        true
+        equivalent_items(left.len(), right.len(), |i, j| {
+            equivalent_item(&left[i], &right[j])
+        })
     }
 }
 
@@ -304,6 +293,7 @@ fn equal_item(left: &FhirPathValue, right: &FhirPathValue) -> Option<bool> {
         return ordering.map(|value| value == Ordering::Equal);
     }
     let logical_objects = logical_object_pair(left, right);
+    let (left_numbers, right_numbers) = (node_numbers(left), node_numbers(right));
     let (left, right) = (left.system_value(), right.system_value());
     if matches!(left, Empty) || matches!(right, Empty) {
         return None;
@@ -338,29 +328,105 @@ fn equal_item(left: &FhirPathValue, right: &FhirPathValue) -> Option<bool> {
                     return Some(false);
                 }
             }
-            Some(json_equal(a, b))
+            Some(compare_json(
+                JsonOperand {
+                    value: a,
+                    numbers: left_numbers,
+                },
+                JsonOperand {
+                    value: b,
+                    numbers: right_numbers,
+                },
+                false,
+            ))
         }
         (DateTimePrecision(a), DateTimePrecision(b)) => Some(a == b),
         _ => Some(false),
     }
 }
 
-fn json_equal(left: &Value, right: &Value) -> bool {
-    match (left, right) {
+fn node_numbers(value: &FhirPathValue) -> Option<&Arc<JsonNumbers>> {
+    match value {
+        FhirPathValue::Node(node) => node.numbers.as_ref(),
+        _ => None,
+    }
+}
+
+#[derive(Clone, Copy)]
+struct JsonOperand<'a> {
+    value: &'a Value,
+    numbers: Option<&'a Arc<JsonNumbers>>,
+}
+
+impl<'a> JsonOperand<'a> {
+    fn field(self, key: &str, value: &'a Value) -> Self {
+        Self {
+            value,
+            numbers: self.numbers.and_then(|numbers| numbers.field(key)),
+        }
+    }
+
+    fn index(self, index: usize, value: &'a Value) -> Self {
+        Self {
+            value,
+            numbers: self.numbers.and_then(|numbers| numbers.index(index)),
+        }
+    }
+
+    fn is_number(self) -> bool {
+        self.value.is_number()
+            || self
+                .numbers
+                .is_some_and(|numbers| numbers.number().is_some())
+    }
+
+    fn to_fhirpath(self) -> FhirPathValue {
+        FhirPathValue::from_json_with_numbers(self.value, self.numbers, FhirModel::default())
+    }
+}
+
+fn compare_json(left: JsonOperand<'_>, right: JsonOperand<'_>, equivalent: bool) -> bool {
+    match (left.is_number(), right.is_number()) {
+        (true, true) => {
+            let (a, b) = (left.to_fhirpath(), right.to_fhirpath());
+            return if equivalent {
+                equivalent_item(&a, &b)
+            } else if left.numbers.is_none() && right.numbers.is_none() {
+                decimal(&a) == decimal(&b)
+            } else {
+                equal_item(&a, &b) == Some(true)
+            };
+        }
+        (true, false) | (false, true) => return false,
+        (false, false) => {}
+    }
+    match (left.value, right.value) {
         (Value::Object(a), Value::Object(b)) => {
             a.len() == b.len()
-                && a.iter()
-                    .all(|(k, v)| b.get(k).is_some_and(|b| json_equal(v, b)))
+                && a.iter().all(|(key, a)| {
+                    b.get(key).is_some_and(|b| {
+                        compare_json(left.field(key, a), right.field(key, b), equivalent)
+                    })
+                })
+        }
+        (Value::Array(_), Value::Array(_))
+            if equivalent && left.numbers.is_none() && right.numbers.is_none() =>
+        {
+            ComparisonEvaluator::values_equivalent(&left.to_fhirpath(), &right.to_fhirpath())
+        }
+        (Value::Array(a), Value::Array(b)) if equivalent => {
+            equivalent_items(a.len(), b.len(), |i, j| {
+                compare_json(left.index(i, &a[i]), right.index(j, &b[j]), true)
+            })
         }
         (Value::Array(a), Value::Array(b)) => {
-            a.len() == b.len() && a.iter().zip(b).all(|(a, b)| json_equal(a, b))
+            a.len() == b.len()
+                && a.iter().zip(b).enumerate().all(|(index, (a, b))| {
+                    compare_json(left.index(index, a), right.index(index, b), false)
+                })
         }
-        (Value::Number(_), Value::Number(_)) => {
-            let a = FhirPathValue::from_json(left);
-            let b = FhirPathValue::from_json(right);
-            decimal(&a) == decimal(&b)
-        }
-        _ => left == right,
+        (Value::String(a), Value::String(b)) if equivalent => string_equivalent(a, b),
+        _ => left.value == right.value,
     }
 }
 
@@ -437,6 +503,7 @@ fn equivalent_item(left: &FhirPathValue, right: &FhirPathValue) -> bool {
         return ordering == Some(Ordering::Equal);
     }
     let logical_objects = logical_object_pair(left, right);
+    let (left_numbers, right_numbers) = (node_numbers(left), node_numbers(right));
     let (left, right) = (left.system_value(), right.system_value());
     if let (Some(a), Some(b)) = (left.as_str(), right.as_str()) {
         return string_equivalent(a, b);
@@ -466,7 +533,17 @@ fn equivalent_item(left: &FhirPathValue, right: &FhirPathValue) -> bool {
                     return false;
                 }
             }
-            json_equivalent(a, b)
+            compare_json(
+                JsonOperand {
+                    value: a,
+                    numbers: left_numbers,
+                },
+                JsonOperand {
+                    value: b,
+                    numbers: right_numbers,
+                },
+                true,
+            )
         }
         _ => equal_item(left, right) == Some(true),
     }
@@ -478,7 +555,10 @@ fn logical_object_pair<'a>(
 ) -> Option<(&'a FhirNode, &'a FhirNode)> {
     match (left, right) {
         (FhirPathValue::Node(a), FhirPathValue::Node(b))
-            if a.raw.is_object() && b.raw.is_object() =>
+            if !a.is_untyped_object()
+                && !b.is_untyped_object()
+                && a.raw.is_object()
+                && b.raw.is_object() =>
         {
             Some((a, b))
         }
@@ -539,26 +619,6 @@ fn logical_child_name<'a>(node: &FhirNode, key: &'a str) -> Option<&'a str> {
     )
 }
 
-fn json_equivalent(left: &Value, right: &Value) -> bool {
-    match (left, right) {
-        (Value::Object(a), Value::Object(b)) => {
-            a.len() == b.len()
-                && a.iter()
-                    .all(|(k, v)| b.get(k).is_some_and(|b| json_equivalent(v, b)))
-        }
-        (Value::Array(_), Value::Array(_)) => ComparisonEvaluator::values_equivalent(
-            &FhirPathValue::from_json(left),
-            &FhirPathValue::from_json(right),
-        ),
-        (Value::String(a), Value::String(b)) => string_equivalent(a, b),
-        (Value::Number(_), Value::Number(_)) => equivalent_item(
-            &FhirPathValue::from_json(left),
-            &FhirPathValue::from_json(right),
-        ),
-        _ => left == right,
-    }
-}
-
 fn string_equivalent(left: &str, right: &str) -> bool {
     fn normalize_whitespace(value: &str) -> String {
         value
@@ -569,25 +629,48 @@ fn string_equivalent(left: &str, right: &str) -> bool {
     unicase::eq(&normalize_whitespace(left), &normalize_whitespace(right))
 }
 
+fn equivalent_items(
+    left_len: usize,
+    right_len: usize,
+    compare: impl Fn(usize, usize) -> bool,
+) -> bool {
+    if left_len != right_len {
+        return false;
+    }
+    if left_len <= 1 {
+        return (0..left_len).all(|i| compare(i, i));
+    }
+
+    // Decimal equivalence can connect one item to several candidates.
+    // Match whole collections without relying on the choice of first match.
+    let mut matches = vec![None; right_len];
+    for i in 0..left_len {
+        let mut visited = vec![false; right_len];
+        if !match_equivalent(i, &mut matches, &mut visited, &compare) {
+            return false;
+        }
+    }
+    true
+}
+
 fn match_equivalent(
     index: usize,
-    left: &[FhirPathValue],
-    right: &[FhirPathValue],
     matches: &mut [Option<usize>],
     visited: &mut [bool],
+    compare: &impl Fn(usize, usize) -> bool,
 ) -> bool {
-    for j in 0..right.len() {
-        if matches[j].is_none() && equivalent_item(&left[index], &right[j]) {
-            matches[j] = Some(index);
+    for (j, matched) in matches.iter_mut().enumerate() {
+        if matched.is_none() && compare(index, j) {
+            *matched = Some(index);
             return true;
         }
     }
-    for j in 0..right.len() {
-        if visited[j] || !equivalent_item(&left[index], &right[j]) {
+    for j in 0..matches.len() {
+        if visited[j] || !compare(index, j) {
             continue;
         }
         visited[j] = true;
-        if matches[j].is_some_and(|other| match_equivalent(other, left, right, matches, visited)) {
+        if matches[j].is_some_and(|other| match_equivalent(other, matches, visited, compare)) {
             matches[j] = Some(index);
             return true;
         }

@@ -195,14 +195,17 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: OutputContext) -> R
                     continue;
                 }
 
-                let resource: serde_json::Value = serde_json::from_str(&content)
+                let context = validator
+                    .fhirpath_context_from_json_str(&content)
                     .with_context(|| format!("Failed to parse JSON in {}", path.display()))?;
 
-                let result = validator.validate_auto(&resource).with_context(|| {
-                    format!("Failed to validate FHIR resource in {}", path.display())
-                })?;
+                let result = validator
+                    .validate_auto_in_context(&context)
+                    .with_context(|| {
+                        format!("Failed to validate FHIR resource in {}", path.display())
+                    })?;
 
-                results.push((path.display().to_string(), resource, result));
+                results.push((path.display().to_string(), context.root, result));
             }
 
             if results.is_empty() {
@@ -256,12 +259,14 @@ async fn handle_resource_validation(args: ResourceArgs, ctx: OutputContext) -> R
             return Ok(());
         }
 
-        let resource: serde_json::Value =
-            serde_json::from_str(&content).context("Failed to parse JSON")?;
+        let context = validator
+            .fhirpath_context_from_json_str(&content)
+            .context("Failed to parse JSON")?;
 
         let result = validator
-            .validate_auto(&resource)
+            .validate_auto_in_context(&context)
             .context("Failed to validate FHIR resource")?;
+        let resource = context.root;
 
         if ctx.is_json() {
             let payload = vec![to_validation_result(&resource, &result)];
@@ -318,8 +323,9 @@ async fn handle_batch_validation(args: BatchArgs, ctx: OutputContext) -> Result<
                         continue;
                     }
 
-                    let resource: serde_json::Value =
-                        serde_json::from_str(line).with_context(|| {
+                    let context = validator
+                        .fhirpath_context_from_json_str(line)
+                        .with_context(|| {
                             format!(
                                 "Failed to parse JSON in {} at line {}",
                                 path.display(),
@@ -327,17 +333,20 @@ async fn handle_batch_validation(args: BatchArgs, ctx: OutputContext) -> Result<
                             )
                         })?;
 
-                    let result = validator.validate_auto(&resource).with_context(|| {
-                        format!(
-                            "Failed to validate resource in {} at line {}",
-                            path.display(),
-                            line_num + 1
-                        )
-                    })?;
+                    let result =
+                        validator
+                            .validate_auto_in_context(&context)
+                            .with_context(|| {
+                                format!(
+                                    "Failed to validate resource in {} at line {}",
+                                    path.display(),
+                                    line_num + 1
+                                )
+                            })?;
 
                     results.push((
                         format!("{}:{}", path.display(), line_num + 1),
-                        resource,
+                        context.root,
                         result,
                     ));
                 }
@@ -394,12 +403,13 @@ async fn handle_batch_validation(args: BatchArgs, ctx: OutputContext) -> Result<
             if line.trim().is_empty() {
                 continue;
             }
-            let resource: serde_json::Value = serde_json::from_str(line)
+            let context = validator
+                .fhirpath_context_from_json_str(line)
                 .with_context(|| format!("Failed to parse JSON at line {}", line_num + 1))?;
             let result = validator
-                .validate_auto(&resource)
+                .validate_auto_in_context(&context)
                 .with_context(|| format!("Failed to validate resource at line {}", line_num + 1))?;
-            results.push((line_num, resource, result));
+            results.push((line_num, context.root, result));
         }
 
         if ctx.is_json() {

@@ -39,7 +39,7 @@ impl FhirPathEvaluator {
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
         let result = self.evaluate_nodes(expression, context)?;
-        Ok(strip_fhir_primitive(result))
+        Ok(unwrap_fhir_values(result, true))
     }
 
     /// Evaluate while preserving logical FHIR node types and source paths.
@@ -366,14 +366,27 @@ fn collect_member_chain<'a>(expr: &'a Expression, out: &mut Vec<&'a str>) -> Opt
 }
 
 fn strip_fhir_primitive(value: FhirPathValue) -> FhirPathValue {
+    unwrap_fhir_values(value, false)
+}
+
+fn unwrap_fhir_values(value: FhirPathValue, preserve_numbers: bool) -> FhirPathValue {
     match value {
+        FhirPathValue::Node(node) if preserve_numbers && node.preserves_exact_output() => {
+            FhirPathValue::Node(node)
+        }
         FhirPathValue::Node(node) => node.inner,
         FhirPathValue::FhirPrimitive { inner, .. } => *inner,
-        FhirPathValue::Collection(items) => {
-            FhirPathValue::Collection(items.into_iter().map(strip_fhir_primitive).collect())
-        }
+        FhirPathValue::Collection(items) => FhirPathValue::Collection(
+            items
+                .into_iter()
+                .map(|item| unwrap_fhir_values(item, preserve_numbers))
+                .collect(),
+        ),
         FhirPathValue::UnorderedCollection(items) => FhirPathValue::UnorderedCollection(
-            items.into_iter().map(strip_fhir_primitive).collect(),
+            items
+                .into_iter()
+                .map(|item| unwrap_fhir_values(item, preserve_numbers))
+                .collect(),
         ),
         other => other,
     }

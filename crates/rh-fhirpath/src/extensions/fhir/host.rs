@@ -19,6 +19,16 @@ pub trait FhirHost: std::fmt::Debug + Send + Sync {
     ) -> Result<Option<bool>> {
         Ok(None)
     }
+    /// Validate a logical element, which may retain numbers from JSON source text.
+    /// Hosts that implement only [Self::conforms_to] receive the ordinary JSON projection.
+    fn conforms_to_element(
+        &self,
+        element: &V,
+        declared_type: Option<&str>,
+        profile: &str,
+    ) -> Result<Option<bool>> {
+        self.conforms_to(&raw_json(element), declared_type, profile)
+    }
     fn member_of(&self, _element: &Value, _value_set: &str) -> Result<Option<bool>> {
         Ok(None)
     }
@@ -88,6 +98,15 @@ fn raw_json(value: &V) -> Cow<'_, Value> {
 
 fn navigate(value: &V, name: &str, model: FhirModel) -> Result<V> {
     match value {
+        V::Node(node) if node.is_untyped_object() => {
+            Ok(node.raw.get(name).map_or(V::Empty, |raw| {
+                let numbers = node
+                    .numbers
+                    .as_ref()
+                    .and_then(|numbers| numbers.field(name));
+                V::from_json_with_numbers(raw, numbers, model)
+            }))
+        }
         V::Node(n) => n.member(name, false),
         V::TypedObject { value, fhir_type } => {
             FhirNode::detached(value, fhir_type, model).member(name, false)
@@ -263,14 +282,14 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
                 _ => None,
             };
             if name == "hasValue" {
-                let has_value = primitive.is_some_and(|node| !node.raw.is_null());
+                let has_value = primitive.is_some_and(FhirNode::has_raw_value);
                 Ok(if has_value || ctx.model == FhirModel::R4 {
                     V::Boolean(has_value)
                 } else {
                     V::Empty
                 })
             } else {
-                Ok(primitive.map_or(V::Empty, FhirNode::system_value))
+                Ok(primitive.map_or(V::Empty, FhirNode::primitive_system_value))
             }
         }
         "resolve" => {
@@ -368,16 +387,15 @@ pub(crate) fn invoke(name: &str, target: &V, params: &[V], ctx: &EvaluationConte
             let Some(host) = host else {
                 return unresolved(name, ctx);
             };
-            let raw = raw_json(element);
             let result = if name == "conformsTo" {
                 let declared_type = match element {
-                    V::Node(n) => Some(n.fhir_type.as_str()),
+                    V::Node(n) if !n.is_untyped_object() => Some(n.fhir_type.as_str()),
                     V::TypedObject { fhir_type, .. } => Some(fhir_type.as_str()),
                     _ => None,
                 };
-                host.conforms_to(&raw, declared_type, url)?
+                host.conforms_to_element(element, declared_type, url)?
             } else {
-                host.member_of(&raw, url)?
+                host.member_of(&raw_json(element), url)?
             };
             match result {
                 Some(b) => Ok(V::Boolean(b)),

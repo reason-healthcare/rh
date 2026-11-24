@@ -8,12 +8,13 @@ terminology functions use services supplied by the host. [FHIRPath 3.0.0](https:
 
 ## Typed JSON compatibility
 
-FHIRPath preserves JSON decimal scale and large exponents using the serde_json
-`arbitrary_precision` feature. Cargo unifies this feature with other consumers
-of the same serde_json dependency in a build. Typed deserialization of a nested
-R4 `Extension.valueDecimal` and CQL ELM `Quantity.value` can fail when serde
-buffers the number inside a flattened or tagged field. This compatibility issue
-affects builds that combine those typed parsers with `rh-fhirpath`.
+The raw JSON input path preserves decimal scale and large exponents within
+FHIRPath. Rust callers can pass the original JSON to
+`EvaluationContext::from_json_str` and serialize exact result numbers with
+`FhirPathValue::to_raw_json`. The crate uses serde_json's `raw_value` feature
+for this path. Nested R4 `Extension.valueDecimal` and CQL ELM
+`Quantity.value` retain their typed deserialization behavior when built
+alongside FHIRPath in the CLI. [Exact JSON numbers](README.md#exact-json-numbers)
 
 ## Pinned suites
 
@@ -24,10 +25,11 @@ affects builds that combine those typed parsers with `rh-fhirpath`.
 
 The R5 suite and 20 matching JSON inputs are pinned to FHIR/fhir-test-cases
 revision `469d90ab58663266d5d7ff82ba3587257fd8a4be`. The inputs include
-five JSON equivalents of XML Parameters resources. The native harness retains
-typed values, uses the suite's starting context and model, checks result
-ordering when specified, and distinguishes syntax errors from evaluator errors
-for R5. The R4 harness retains its historical expected-invalid handling.
+five JSON equivalents of XML Parameters resources. The native harness reads
+the original JSON text, retains typed values, uses the starting context and
+model, checks result ordering when specified, and distinguishes syntax errors
+from evaluator errors for R5. The R4 harness retains its historical
+expected-invalid handling.
 [Pinned fixture provenance](tests/fixtures/hl7_fhirpath_r5/README.md) ·
 [HL7 test guidance](https://hl7.org/fhirpath/STU3/en/tests.html)
 
@@ -51,6 +53,7 @@ exercise actual registered profiles and terminology-backed invariants.
 cargo test --locked -p rh-fhirpath --test hl7_conformance -- --nocapture
 cargo test --locked -p rh-validator --test fhirpath_host
 cargo test --locked -p rh-cli --test fhirpath_integration_test
+cargo test --locked -p rh-cli --test fhirpath_json_compatibility
 just test-fhirpath-r5-testlab
 wasm-pack test --node crates/rh-fhirpath --features wasm --lib --locked
 ```

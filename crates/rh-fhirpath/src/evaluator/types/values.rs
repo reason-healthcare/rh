@@ -2,9 +2,15 @@
 
 use crate::ast::DateTimePrecision;
 use crate::error::*;
+use crate::evaluator::metadata::{FhirModel, FhirNode};
+use crate::json::{parse_decimal, JsonData, JsonNumbers, JsonWithNumbers};
 use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
 use rust_decimal::Decimal;
-use serde_json::Value;
+use serde::ser::SerializeMap;
+use serde::{Serialize, Serializer};
+use serde_json::{value::RawValue, Value};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FhirPathValue {
@@ -254,21 +260,10 @@ impl FhirPathValue {
         match value {
             Value::Null => FhirPathValue::Empty,
             Value::Bool(b) => FhirPathValue::Boolean(*b),
-            Value::Number(n) => {
-                if let Some(i) = n.as_i64() {
-                    if i32::try_from(i).is_ok() {
-                        FhirPathValue::Integer(i)
-                    } else {
-                        FhirPathValue::Long(i)
-                    }
-                } else {
-                    let lexical = n.to_string();
-                    Decimal::from_str_exact(&lexical)
-                        .or_else(|_| Decimal::from_scientific(&lexical))
-                        .map(FhirPathValue::Number)
-                        .unwrap_or(FhirPathValue::Empty)
-                }
-            }
+            Value::Number(n) => n.as_i64().map_or_else(
+                || Self::from_number_text(&n.to_string()),
+                Self::from_integer,
+            ),
             Value::String(s) => FhirPathValue::String(s.clone()),
             Value::Array(arr) => {
                 let items: Vec<FhirPathValue> = arr.iter().map(Self::from_json).collect();
@@ -282,7 +277,47 @@ impl FhirPathValue {
         }
     }
 
-    /// Convert FHIRPath value to JSON value (for context)
+    fn from_integer(value: i64) -> Self {
+        if i32::try_from(value).is_ok() {
+            Self::Integer(value)
+        } else {
+            Self::Long(value)
+        }
+    }
+
+    pub(crate) fn from_number_text(text: &str) -> Self {
+        if let Ok(integer) = text.parse() {
+            return Self::from_integer(integer);
+        }
+        parse_decimal(text).map(Self::Number).unwrap_or(Self::Empty)
+    }
+
+    pub(crate) fn from_json_with_numbers(
+        value: &Value,
+        numbers: Option<&Arc<JsonNumbers>>,
+        model: FhirModel,
+    ) -> Self {
+        let Some(numbers) = numbers else {
+            return Self::from_json(value);
+        };
+        if let Some(text) = numbers.number() {
+            return FhirNode::untyped_json(value, numbers, model, Self::from_number_text(text));
+        }
+        if let Value::Array(items) = value {
+            return Self::Collection(
+                items
+                    .iter()
+                    .enumerate()
+                    .map(|(i, item)| Self::from_json_with_numbers(item, numbers.index(i), model))
+                    .collect(),
+            );
+        }
+        FhirNode::untyped_json(value, numbers, model, Self::from_json(value))
+    }
+
+    /// Convert the result to an ordinary JSON value.
+    ///
+    /// Use [Self::as_json] when writing JSON that needs to retain exact numbers.
     pub fn to_json(&self) -> Value {
         match self {
             FhirPathValue::Node(n) => n.raw.clone(),
@@ -318,6 +353,46 @@ impl FhirPathValue {
         }
     }
 
+    /// Return a serializable JSON view that writes exact decimal and scientific number tokens.
+    ///
+    /// Serialize this view directly to JSON text to preserve numeric precision.
+    pub fn as_json(&self) -> impl Serialize + '_ {
+        JsonResult(self)
+    }
+
+    /// Serialize this result as a raw JSON value with exact number tokens.
+    pub fn to_raw_json(&self) -> serde_json::Result<Box<RawValue>> {
+        serde_json::value::to_raw_value(&self.as_json())
+    }
+
+    pub(crate) fn json_data(&self) -> FhirPathResult<JsonData> {
+        match self {
+            Self::Node(node) => Ok(JsonData {
+                value: node.raw.clone(),
+                numbers: node.numbers.clone(),
+            }),
+            Self::Number(value) => Ok(JsonData::number(&value.to_string())?),
+            Self::Quantity { value, unit } => {
+                let mut fields =
+                    BTreeMap::from([("value".to_owned(), JsonData::number(&value.to_string())?)]);
+                if let Some(unit) = unit {
+                    fields.insert(
+                        "unit".to_owned(),
+                        JsonData::from_value(Value::String(unit.clone())),
+                    );
+                }
+                Ok(JsonData::object(fields))
+            }
+            Self::Collection(items) | Self::UnorderedCollection(items) => items
+                .iter()
+                .map(Self::json_data)
+                .collect::<FhirPathResult<Vec<_>>>()
+                .map(JsonData::array),
+            Self::FhirPrimitive { inner, .. } => inner.json_data(),
+            other => Ok(JsonData::from_value(other.to_json())),
+        }
+    }
+
     /// Compare two values for definite ordering (-1, 0, 1).
     pub fn compare_values(&self, other: &Self) -> FhirPathResult<i32> {
         use crate::evaluator::operations::comparison::ComparisonEvaluator;
@@ -334,6 +409,45 @@ impl FhirPathValue {
             .items()
             .iter()
             .any(|item| Self::equals_static(self, item)))
+    }
+}
+
+struct JsonResult<'a>(&'a FhirPathValue);
+
+impl Serialize for JsonResult<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use FhirPathValue::*;
+        match self.0 {
+            Node(node) => JsonWithNumbers {
+                value: &node.raw,
+                numbers: node.numbers.as_deref(),
+            }
+            .serialize(serializer),
+            Number(value) => DecimalJson(*value).serialize(serializer),
+            Quantity { value, unit } => {
+                let mut object = serializer.serialize_map(Some(1 + usize::from(unit.is_some())))?;
+                if let Some(unit) = unit {
+                    object.serialize_entry("unit", unit)?;
+                }
+                object.serialize_entry("value", &DecimalJson(*value))?;
+                object.end()
+            }
+            Collection(items) | UnorderedCollection(items) => {
+                serializer.collect_seq(items.iter().map(JsonResult))
+            }
+            FhirPrimitive { inner, .. } => JsonResult(inner).serialize(serializer),
+            value => value.to_json().serialize(serializer),
+        }
+    }
+}
+
+struct DecimalJson(Decimal);
+
+impl Serialize for DecimalJson {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        RawValue::from_string(self.0.to_string())
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
     }
 }
 

@@ -572,7 +572,18 @@ impl FhirValidator {
     /// A FHIRPath context backed by this validator's registered profiles, value
     /// sets and explicitly configured terminology service.
     pub fn fhirpath_context(&self, resource: Value) -> EvaluationContext {
-        let mut context = EvaluationContext::new(resource);
+        self.with_fhirpath_host(EvaluationContext::new(resource))
+    }
+
+    /// Create a validator-backed FHIRPath context that retains numbers from JSON text.
+    pub fn fhirpath_context_from_json_str(
+        &self,
+        input: &str,
+    ) -> rh_fhirpath::FhirPathResult<EvaluationContext> {
+        Ok(self.with_fhirpath_host(EvaluationContext::from_json_str(input)?))
+    }
+
+    fn with_fhirpath_host(&self, mut context: EvaluationContext) -> EvaluationContext {
         context.host = Some(Arc::new(self.clone()));
         context
     }
@@ -582,9 +593,18 @@ impl FhirValidator {
         resource: &Value,
         profile_url: &str,
     ) -> Result<ValidationResult> {
+        self.validate_with_profile_inner(resource, profile_url, None)
+    }
+
+    fn validate_with_profile_inner(
+        &self,
+        resource: &Value,
+        profile_url: &str,
+        context: Option<&EvaluationContext>,
+    ) -> Result<ValidationResult> {
         let mut result = self.validate(resource)?;
 
-        let profile_result = self.validate_profile_rules(resource, profile_url)?;
+        let profile_result = self.validate_profile_rules(resource, profile_url, context)?;
         result.merge(profile_result);
 
         Ok(result)
@@ -613,10 +633,12 @@ impl FhirValidator {
         &self,
         resource: &Value,
         profile_url: &str,
+        context: Option<&EvaluationContext>,
     ) -> Result<ValidationResult> {
         self.validate_profile_rules_inner(
             resource,
             profile_url,
+            context,
             &mut Vec::new(),
             #[cfg(feature = "perf-timings")]
             None,
@@ -630,13 +652,20 @@ impl FhirValidator {
         profile_url: &str,
         timings: &mut ValidationTimings,
     ) -> Result<ValidationResult> {
-        self.validate_profile_rules_inner(resource, profile_url, &mut Vec::new(), Some(timings))
+        self.validate_profile_rules_inner(
+            resource,
+            profile_url,
+            None,
+            &mut Vec::new(),
+            Some(timings),
+        )
     }
 
     fn validate_profile_rules_inner(
         &self,
         resource: &Value,
         profile_url: &str,
+        context: Option<&EvaluationContext>,
         visited_profiles: &mut Vec<String>,
         #[cfg(feature = "perf-timings")] mut timings: Option<&mut ValidationTimings>,
     ) -> Result<ValidationResult> {
@@ -696,6 +725,7 @@ impl FhirValidator {
             let base_result = self.validate_profile_rules_inner(
                 resource,
                 base_profile_url,
+                context,
                 visited_profiles,
                 #[cfg(feature = "perf-timings")]
                 timings.as_deref_mut(),
@@ -827,7 +857,7 @@ impl FhirValidator {
         #[cfg(feature = "perf-timings")]
         let start = Instant::now();
         for rule in &rules.invariant_rules {
-            let violations = self.validate_invariant(resource, rule)?;
+            let violations = self.validate_invariant(resource, rule, context)?;
 
             for violation in violations {
                 result = result.with_issue(violation);
@@ -835,7 +865,7 @@ impl FhirValidator {
         }
 
         for rule in &self.datatype_invariant_rules(&rules.type_rules) {
-            let violations = self.validate_invariant(resource, rule)?;
+            let violations = self.validate_invariant(resource, rule, context)?;
 
             for violation in violations {
                 result = result.with_issue(violation);
@@ -2136,6 +2166,27 @@ impl FhirValidator {
     /// If no profiles are specified, validates against the base resource profile.
     /// If multiple profiles are specified, validates against all and merges results.
     pub fn validate_auto(&self, resource: &Value) -> Result<ValidationResult> {
+        self.validate_auto_inner(resource, None)
+    }
+
+    /// Validate the root of a validator-backed FHIRPath context with automatic profile detection.
+    /// Use [Self::fhirpath_context_from_json_str] to retain source numbers in invariants.
+    pub fn validate_auto_in_context(
+        &self,
+        context: &EvaluationContext,
+    ) -> Result<ValidationResult> {
+        if context.this_value.is_some() || context.current != context.root {
+            let rooted = context.with_current(context.root.clone());
+            return self.validate_auto_inner(&rooted.root, Some(&rooted));
+        }
+        self.validate_auto_inner(&context.root, Some(context))
+    }
+
+    fn validate_auto_inner(
+        &self,
+        resource: &Value,
+        context: Option<&EvaluationContext>,
+    ) -> Result<ValidationResult> {
         let profile_urls = ProfileRegistry::extract_profile_urls(resource);
 
         if profile_urls.is_empty() {
@@ -2143,7 +2194,7 @@ impl FhirValidator {
             if let Some(resource_type) = resource.get("resourceType").and_then(|v| v.as_str()) {
                 let base_profile_url =
                     format!("http://hl7.org/fhir/StructureDefinition/{resource_type}");
-                return self.validate_with_profile(resource, &base_profile_url);
+                return self.validate_with_profile_inner(resource, &base_profile_url, context);
             } else {
                 // No resourceType - just do basic validation
                 return self.validate(resource);
@@ -2151,7 +2202,7 @@ impl FhirValidator {
         }
 
         // Validate against all specified profiles and merge results
-        let mut result = self.validate_with_profiles(resource, &profile_urls)?;
+        let mut result = self.validate_with_profiles_inner(resource, &profile_urls, context)?;
 
         // Always validate against base resource profile as well.
         // This ensures core required elements are still checked even when
@@ -2162,7 +2213,7 @@ impl FhirValidator {
 
             if !profile_urls.iter().any(|url| url == &base_profile_url) {
                 let base_profile_result =
-                    self.validate_profile_rules(resource, &base_profile_url)?;
+                    self.validate_profile_rules(resource, &base_profile_url, context)?;
                 for mut issue in base_profile_result.issues {
                     if !issue.message.contains("Profile:") {
                         issue.message = format!("[Profile: {base_profile_url}] {}", issue.message);
@@ -2182,10 +2233,19 @@ impl FhirValidator {
         resource: &Value,
         profile_urls: &[String],
     ) -> Result<ValidationResult> {
+        self.validate_with_profiles_inner(resource, profile_urls, None)
+    }
+
+    fn validate_with_profiles_inner(
+        &self,
+        resource: &Value,
+        profile_urls: &[String],
+        context: Option<&EvaluationContext>,
+    ) -> Result<ValidationResult> {
         let mut merged_result = self.validate(resource)?;
 
         for profile_url in profile_urls {
-            let profile_result = self.validate_profile_rules(resource, profile_url)?;
+            let profile_result = self.validate_profile_rules(resource, profile_url, context)?;
 
             // Add all issues from this profile, annotated with which profile they came from
             for mut issue in profile_result.issues {
@@ -6088,6 +6148,7 @@ impl FhirValidator {
         &self,
         resource: &Value,
         rule: &crate::rules::InvariantRule,
+        context: Option<&EvaluationContext>,
     ) -> Result<Vec<ValidationIssue>> {
         let mut issues = Vec::new();
 
@@ -6117,11 +6178,18 @@ impl FhirValidator {
         // Determine if this is a resource-level or element-level invariant
         let parts: Vec<&str> = rule.path.split('.').collect();
         let is_resource_level = parts.len() == 1;
+        let fallback_context;
+        let context = match context {
+            Some(context) => context,
+            None => {
+                fallback_context = self.fhirpath_context(resource.clone());
+                &fallback_context
+            }
+        };
 
         if is_resource_level {
             // Resource-level invariant - evaluate against whole resource
-            let context = self.fhirpath_context(resource.clone());
-            let result = match self.fhirpath_evaluator.evaluate(&expression, &context) {
+            let result = match self.fhirpath_evaluator.evaluate(&expression, context) {
                 Ok(value) => value,
                 Err(e) => {
                     return Ok(vec![ValidationIssue::warning(
@@ -6137,8 +6205,7 @@ impl FhirValidator {
             }
         } else {
             // Element-level invariant - get elements at path and evaluate against each
-            let context = self.fhirpath_context(resource.clone());
-            let elements = rh_fhirpath::evaluator::metadata::nodes_at_path(&context, &rule.path)?;
+            let elements = rh_fhirpath::evaluator::metadata::nodes_at_path(context, &rule.path)?;
 
             // If no elements at path, skip validation (constraint doesn't apply)
             if elements.is_empty() {

@@ -2,9 +2,10 @@
 use super::{typed_value_from_string, FhirModel};
 use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::{EvaluationContext, FhirPathValue as V};
+use crate::json::{number_text, parse_decimal, JsonData, JsonNumbers};
 use rh_hl7_fhir_r4_core::metadata::{FhirFieldType, FhirPrimitiveType as P};
-use rust_decimal::Decimal;
 use serde_json::{Map, Value};
+use std::{borrow::Cow, sync::Arc};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FhirNode {
@@ -12,7 +13,9 @@ pub struct FhirNode {
     pub model: FhirModel,
     pub fhir_type: String,
     pub raw: Value,
+    pub(crate) numbers: Option<Arc<JsonNumbers>>,
     pub metadata: Option<Value>,
+    metadata_numbers: Option<Arc<JsonNumbers>>,
     /// Absolute path within the original resource. Detached nodes have no path.
     pub path: Option<String>,
     pub short_path: Option<String>,
@@ -20,11 +23,24 @@ pub struct FhirNode {
     /// StructureDefinition path relative to the enclosing resource or datatype.
     pub(crate) element_path: String,
     resource_pointer: String,
-    external_root: Option<std::sync::Arc<Value>>,
+    external_root: Option<Arc<JsonData>>,
     pointer: String,
 }
 
 pub fn primitive_from_json(ty: &str, raw: &Value) -> V {
+    primitive_value(ty, raw, None)
+}
+
+fn primitive_value(ty: &str, raw: &Value, numbers: Option<&JsonNumbers>) -> V {
+    if ty == "decimal" {
+        return number_text(raw, numbers)
+            .and_then(|literal| parse_decimal(&literal))
+            .map(V::Number)
+            .unwrap_or(V::Empty);
+    }
+    if let Some(text) = numbers.and_then(JsonNumbers::number) {
+        return V::from_number_text(text);
+    }
     if raw.is_null() {
         return V::Empty;
     }
@@ -33,18 +49,6 @@ pub fn primitive_from_json(ty: &str, raw: &Value) -> V {
             .as_str()
             .and_then(|s| s.parse().ok())
             .map(V::Long)
-            .unwrap_or(V::Empty);
-    }
-    if ty == "decimal" {
-        return raw
-            .as_number()
-            .and_then(|n| {
-                let literal = n.to_string();
-                Decimal::from_str_exact(&literal)
-                    .or_else(|_| Decimal::from_scientific(&literal))
-                    .ok()
-            })
-            .map(V::Number)
             .unwrap_or(V::Empty);
     }
     let primitive = match ty {
@@ -98,7 +102,9 @@ impl FhirNode {
             model,
             fhir_type: ty.to_owned(),
             raw: raw.clone(),
+            numbers: None,
             metadata: None,
+            metadata_numbers: None,
             path: None,
             short_path: None,
             definition: ty.to_owned(),
@@ -110,21 +116,66 @@ impl FhirNode {
     }
 
     pub fn root(raw: &Value, model: FhirModel, located: bool) -> V {
+        Self::root_with_numbers(raw, None, model, located)
+    }
+
+    pub(crate) fn root_with_numbers(
+        raw: &Value,
+        numbers: Option<&Arc<JsonNumbers>>,
+        model: FhirModel,
+        located: bool,
+    ) -> V {
         let Some(name) = raw.get("resourceType").and_then(Value::as_str) else {
-            return V::from_json(raw);
+            return V::from_json_with_numbers(raw, numbers, model);
         };
         let mut node = Self::new(raw, name, model, V::Object(raw.clone()));
+        node.numbers = numbers.cloned();
         if located {
             node.path = Some(name.to_owned());
             node.short_path = Some(name.to_owned());
         } else {
-            node.external_root = Some(std::sync::Arc::new(raw.clone()));
+            node.external_root = Some(Arc::new(JsonData {
+                value: raw.clone(),
+                numbers: numbers.cloned(),
+            }));
         }
         V::Node(Box::new(node))
     }
 
     pub fn detached(raw: &Value, ty: &str, model: FhirModel) -> Self {
         Self::new(raw, ty, model, typed_object(raw, ty))
+    }
+
+    pub(crate) fn detached_json(raw: &JsonData, ty: &str, model: FhirModel) -> Self {
+        Self {
+            numbers: raw.numbers.clone(),
+            ..Self::detached(&raw.value, ty, model)
+        }
+    }
+
+    pub(crate) fn untyped_json(
+        raw: &Value,
+        numbers: &Arc<JsonNumbers>,
+        model: FhirModel,
+        inner: V,
+    ) -> V {
+        let ty = if numbers.number().is_some() {
+            match inner.system_scalar_name() {
+                Some("Integer") => "System.Integer",
+                Some("Long") => "System.Long",
+                _ => "System.Decimal",
+            }
+        } else {
+            ""
+        };
+        V::Node(Box::new(Self {
+            numbers: Some(Arc::clone(numbers)),
+            ..Self::new(raw, ty, model, inner)
+        }))
+    }
+
+    pub(crate) fn is_untyped_object(&self) -> bool {
+        self.fhir_type.is_empty()
     }
 
     /// Construct a FHIR primitive without a source path, including optional id and
@@ -134,6 +185,54 @@ impl FhirNode {
             metadata,
             ..Self::new(raw, ty, model, primitive_from_json(ty, raw))
         }
+    }
+
+    pub(crate) fn primitive_json(
+        ty: &str,
+        raw: &JsonData,
+        metadata: Option<JsonData>,
+        model: FhirModel,
+    ) -> Self {
+        let (metadata, metadata_numbers) =
+            metadata.map_or((None, None), |data| (Some(data.value), data.numbers));
+        Self {
+            numbers: raw.numbers.clone(),
+            metadata,
+            metadata_numbers,
+            ..Self::new(
+                &raw.value,
+                ty,
+                model,
+                primitive_value(ty, &raw.value, raw.numbers.as_deref()),
+            )
+        }
+    }
+
+    pub(crate) fn has_raw_value(&self) -> bool {
+        !self.raw.is_null()
+            || self
+                .numbers
+                .as_deref()
+                .and_then(JsonNumbers::number)
+                .is_some()
+    }
+
+    pub(crate) fn number_text(&self) -> Option<Cow<'_, str>> {
+        number_text(&self.raw, self.numbers.as_deref())
+    }
+
+    pub(crate) fn field_number_text(&self, key: &str) -> Option<Cow<'_, str>> {
+        number_text(self.raw.get(key)?, self.field_numbers(key))
+    }
+
+    fn field_numbers(&self, key: &str) -> Option<&JsonNumbers> {
+        self.numbers.as_ref()?.field(key).map(Arc::as_ref)
+    }
+
+    pub(crate) fn preserves_exact_output(&self) -> bool {
+        self.numbers.is_some()
+            && (matches!(self.inner, V::Object(_) | V::TypedObject { .. })
+                || self.extreme_numeric().is_some())
     }
 
     pub fn is_primitive(&self) -> bool {
@@ -153,19 +252,35 @@ impl FhirNode {
         self.fhir_type.starts_with("System.")
     }
 
+    pub(crate) fn matches_decimal_projection(&self, lower_name: &str) -> bool {
+        self.fhir_type == "System.Decimal" && matches!(lower_name, "any" | "decimal" | "number")
+    }
+
     fn value_child(&self) -> V {
         let inner = self.system_value();
-        let Some(name) = inner.system_scalar_name() else {
+        let extreme_decimal = self.fhir_type == "decimal" && self.extreme_numeric().is_some();
+        let Some(name) = inner
+            .system_scalar_name()
+            .or(extreme_decimal.then_some("Decimal"))
+        else {
             return inner;
         };
-        if self.path.is_none() {
+        if self.path.is_none() && !extreme_decimal {
             return inner;
         }
         V::Node(Box::new(Self {
             fhir_type: format!("System.{name}"),
-            raw: inner.to_json(),
+            raw: if self.fhir_type == "decimal" {
+                self.raw.clone()
+            } else {
+                inner.to_json()
+            },
+            numbers: (self.fhir_type == "decimal")
+                .then(|| self.numbers.clone())
+                .flatten(),
             inner,
             metadata: None,
+            metadata_numbers: None,
             path: self.path.as_ref().map(|p| format!("{p}.value[0]")),
             short_path: self.short_path.as_ref().map(|p| format!("{p}.value")),
             element_path: format!("{}.value", self.element_path),
@@ -177,28 +292,47 @@ impl FhirNode {
         }))
     }
 
-    fn source_fields(&self) -> Option<&Map<String, Value>> {
-        if self.is_primitive() {
-            self.metadata.as_ref()?.as_object()
+    pub(crate) fn primitive_system_value(&self) -> V {
+        if self.fhir_type == "decimal" && self.extreme_numeric().is_some() {
+            self.value_child()
         } else {
-            self.raw.as_object()
+            self.system_value()
         }
     }
 
-    fn member_value(&self, value: &Value, ty: &str, choice: bool) -> V {
+    fn source_fields(&self) -> Option<(&Map<String, Value>, Option<&JsonNumbers>)> {
+        if self.is_primitive() {
+            Some((
+                self.metadata.as_ref()?.as_object()?,
+                self.metadata_numbers.as_deref(),
+            ))
+        } else {
+            Some((self.raw.as_object()?, self.numbers.as_deref()))
+        }
+    }
+
+    fn member_value(
+        &self,
+        value: &Value,
+        ty: &str,
+        choice: bool,
+        numbers: Option<&Arc<JsonNumbers>>,
+    ) -> V {
         if !value.is_object() {
             return if ty == "string" && !choice {
-                V::from_json(value)
+                V::from_json_with_numbers(value, numbers, self.model)
             } else {
-                primitive_from_json(ty, value)
+                primitive_value(ty, value, numbers.map(Arc::as_ref))
             };
         }
         if self.model.is_subtype(ty, "Quantity")
             && value.get("comparator").is_none()
             && value["system"] == "http://unitsofmeasure.org"
         {
+            let amount_numbers = numbers.and_then(|n| n.field("value")).map(Arc::as_ref);
+            let amount = &value["value"];
             match (
-                primitive_from_json("decimal", &value["value"]),
+                primitive_value("decimal", amount, amount_numbers),
                 value["code"].as_str(),
             ) {
                 (V::Number(amount), Some(code)) => {
@@ -216,7 +350,9 @@ impl FhirNode {
                         unit: Some(unit.to_owned()),
                     };
                 }
-                (V::Empty, Some(_)) if value["value"].is_number() => return V::Empty,
+                (V::Empty, Some(_)) if amount.is_number() || amount_numbers.is_some() => {
+                    return V::Empty
+                }
                 _ => (),
             }
         }
@@ -243,7 +379,7 @@ impl FhirNode {
                 message: format!("Unknown member '{key}' of FHIR.{}", self.fhir_type),
             });
         }
-        let Some(map) = self.source_fields() else {
+        let Some((map, source_numbers)) = self.source_fields() else {
             return Ok(V::Empty);
         };
         if key.starts_with('_') {
@@ -266,7 +402,10 @@ impl FhirNode {
                 });
             }
             let raw = map.get(json_key).unwrap_or(&Value::Null);
-            let meta = map.get(&format!("_{json_key}"));
+            let raw_numbers = source_numbers.and_then(|numbers| numbers.field(json_key));
+            let meta_key = format!("_{json_key}");
+            let meta = map.get(&meta_key);
+            let meta_numbers = source_numbers.and_then(|numbers| numbers.field(&meta_key));
             let array = raw.is_array() || meta.is_some_and(Value::is_array);
             let count = if array {
                 raw.as_array()
@@ -281,20 +420,32 @@ impl FhirNode {
                 } else {
                     raw
                 };
+                let numbers = if array {
+                    raw_numbers.and_then(|numbers| numbers.index(i))
+                } else {
+                    raw_numbers
+                };
                 let meta = if array {
                     meta.and_then(|v| v.get(i))
                 } else {
                     meta
                 };
-                if value.is_null() && meta.is_none_or(Value::is_null) {
+                let meta_numbers = if array {
+                    meta_numbers.and_then(|numbers| numbers.index(i))
+                } else {
+                    meta_numbers
+                };
+                if value.is_null() && numbers.is_none() && meta.is_none_or(Value::is_null) {
                     continue;
                 }
                 let Some(ty) = (!declared.is_empty()).then_some(declared) else {
-                    found.push(if self.model.is_type(&self.fhir_type) {
-                        V::from_json(value)
-                    } else {
-                        super::apply_fhir_typing(value, &self.fhir_type, json_key)
-                    });
+                    found.push(
+                        if numbers.is_some() || self.model.is_type(&self.fhir_type) {
+                            V::from_json_with_numbers(value, numbers, self.model)
+                        } else {
+                            super::apply_fhir_typing(value, &self.fhir_type, json_key)
+                        },
+                    );
                     continue;
                 };
                 let resource = value.get("resourceType").and_then(Value::as_str);
@@ -302,7 +453,7 @@ impl FhirNode {
                 let inner = if resource.is_some() {
                     V::Object(value.clone())
                 } else {
-                    self.member_value(value, ty, choice)
+                    self.member_value(value, ty, choice, numbers)
                 };
                 let pointer = format!(
                     "{}/{json_key}{}",
@@ -323,7 +474,9 @@ impl FhirNode {
                     model: self.model,
                     fhir_type: ty.to_owned(),
                     raw: value.clone(),
+                    numbers: numbers.cloned(),
                     metadata: meta.cloned(),
+                    metadata_numbers: meta_numbers.cloned(),
                     path: self.path.as_ref().map(|p| format!("{p}.{logical}[{i}]")),
                     short_path: self.short_path.as_ref().map(|p| {
                         if array {
@@ -351,11 +504,21 @@ impl FhirNode {
     }
 
     pub fn children(&self) -> FhirPathResult<Vec<V>> {
-        let mut children = Vec::new();
-        if self.is_primitive() && self.inner != V::Empty {
-            children.push(self.value_child());
+        if self.is_untyped_object() {
+            return Ok(crate::evaluator::CollectionEvaluator::json_children(
+                &self.raw,
+                self.numbers.as_deref(),
+                self.model,
+            ));
         }
-        if let Some(fields) = self.source_fields() {
+        let mut children = Vec::new();
+        if self.is_primitive() {
+            let value = self.value_child();
+            if !value.is_empty() {
+                children.push(value);
+            }
+        }
+        if let Some((fields, _)) = self.source_fields() {
             for name in member_keys(fields).filter(|&name| name != "resourceType") {
                 children.extend(self.member(name, false)?.into_items());
             }
@@ -370,7 +533,7 @@ impl FhirNode {
 
     pub(crate) fn origin_root(&self, context: &EvaluationContext) -> V {
         if let Some(raw) = &self.external_root {
-            FhirNode::root(raw, self.model, false)
+            FhirNode::root_with_numbers(&raw.value, raw.numbers.as_ref(), self.model, false)
         } else {
             root_node(context)
         }
@@ -412,7 +575,7 @@ fn at_pointer(mut current: V, pointer: &str) -> Option<V> {
 }
 
 pub fn root_node(context: &EvaluationContext) -> V {
-    FhirNode::root(&context.root, context.model, true)
+    FhirNode::root_with_numbers(&context.root, context.root_numbers(), context.model, true)
 }
 pub fn root_or_current_node(context: &EvaluationContext) -> V {
     if context.root == context.current {
@@ -480,13 +643,14 @@ pub(crate) fn compare_model_quantities(a: &V, b: &V) -> Option<Option<std::cmp::
     if let Some(result) = super::magnitude::extreme_numeric_order(a, b) {
         return Some(result);
     }
-    fn quantity(v: &V) -> Option<&Value> {
+    fn quantity(v: &V) -> Option<&FhirNode> {
         match v {
-            V::Node(node) if node.model.is_subtype(&node.fhir_type, "Quantity") => Some(&node.raw),
+            V::Node(node) if node.model.is_subtype(&node.fhir_type, "Quantity") => Some(node),
             _ => None,
         }
     }
-    let (a, b) = (quantity(a)?, quantity(b)?);
+    let (left, right) = (quantity(a)?, quantity(b)?);
+    let (a, b) = (&left.raw, &right.raw);
     if a.get("comparator").is_some() || b.get("comparator").is_some() {
         return Some(None);
     }
@@ -508,8 +672,8 @@ pub(crate) fn compare_model_quantities(a: &V, b: &V) -> Option<Option<std::cmp::
         return Some(None);
     }
     match (
-        primitive_from_json("decimal", &a["value"]),
-        primitive_from_json("decimal", &b["value"]),
+        primitive_value("decimal", &a["value"], left.field_numbers("value")),
+        primitive_value("decimal", &b["value"], right.field_numbers("value")),
     ) {
         (V::Number(a), V::Number(b)) => Some(Some(a.cmp(&b))),
         _ => Some(None),

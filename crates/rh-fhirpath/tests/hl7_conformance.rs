@@ -193,17 +193,14 @@ fn parse_suite(xml: &str) -> Vec<TestCase> {
     cases
 }
 
-fn load_inputs(fixtures: &Path) -> HashMap<String, serde_json::Value> {
+fn load_inputs(fixtures: &Path) -> HashMap<String, String> {
     let dir = fixtures.join("input");
     let mut inputs = HashMap::new();
     for entry in fs::read_dir(&dir).expect("input dir").flatten() {
         let path = entry.path();
         if path.extension().is_some_and(|e| e == "json") {
             let stem = path.file_stem().unwrap().to_string_lossy().to_string();
-            let value: serde_json::Value =
-                serde_json::from_str(&fs::read_to_string(&path).expect("read input"))
-                    .expect("parse input JSON");
-            inputs.insert(stem, value);
+            inputs.insert(stem, fs::read_to_string(&path).expect("read input"));
         }
     }
     inputs
@@ -345,7 +342,7 @@ fn run_case(
     case: &TestCase,
     parser: &FhirPathParser,
     evaluator: &FhirPathEvaluator,
-    inputs: &HashMap<String, serde_json::Value>,
+    inputs: &HashMap<String, String>,
     model: FhirModel,
 ) -> (Outcome, String) {
     if let Some(reason) = outside_profile_reason(case, model) {
@@ -357,9 +354,9 @@ fn run_case(
         .trim_end_matches(".xml")
         .trim_end_matches(".json");
     let resource = if case.inputfile.is_empty() {
-        Some(&serde_json::Value::Null)
+        Some("null")
     } else {
-        inputs.get(input_stem)
+        inputs.get(input_stem).map(String::as_str)
     };
     let Some(resource) = resource else {
         return (
@@ -381,7 +378,8 @@ fn run_case(
         }
     };
 
-    let mut context = EvaluationContext::new(resource.clone());
+    let mut context = EvaluationContext::from_json_str(resource)
+        .unwrap_or_else(|error| panic!("parse input JSON {}: {error}", case.inputfile));
     context.model = model;
     context.strict_mode =
         case.mode.as_deref() == Some("strict") || case.invalid.as_deref() == Some("semantic");

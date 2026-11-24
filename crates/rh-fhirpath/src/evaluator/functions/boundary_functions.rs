@@ -33,15 +33,14 @@ pub fn register_boundary_functions(functions: &mut HashMap<String, FhirPathFunct
 }
 
 fn precision(target: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-    let Some(target) = target
-        .singleton("precision()")?
-        .map(FhirPathValue::system_value)
-    else {
+    let Some(target) = target.singleton("precision()")? else {
         return Ok(Empty);
     };
-    let digits = match target {
+    let digits = match target.system_value() {
         Empty => return Ok(Empty),
-        Number(n) => i64::from(n.scale()),
+        Number(n) => {
+            decimal_lexical_scale(target).map_or_else(|| i64::from(n.scale()), |n| n.max(0))
+        }
         Integer(_) | Long(_) => 0,
         Date(s) | DateTime(s) | Time(s) | TypedDateTime { value: s, .. } => {
             let text = s.strip_suffix(timezone_suffix(s)).unwrap_or(s);
@@ -113,11 +112,9 @@ fn decimal_lexical_scale(target: &FhirPathValue) -> Option<i64> {
     let FhirPathValue::Node(node) = target else {
         return None;
     };
-    let number = node
-        .raw
-        .as_number()
-        .or_else(|| node.raw.get("value")?.as_number())?;
-    let text = number.to_string();
+    let text = node
+        .number_text()
+        .or_else(|| node.field_number_text("value"))?;
     let (mantissa, exponent) = text.split_once(['e', 'E'])?;
     let positions = mantissa
         .split_once('.')

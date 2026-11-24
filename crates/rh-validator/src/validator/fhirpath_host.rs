@@ -1,9 +1,13 @@
 //! Adapter for the validator's profile registry, terminology and slice rules.
 use super::{matches_slice, FhirValidator};
 use crate::valueset::CodeInValueSetResult;
-use rh_fhirpath::{extensions::fhir::host::FhirHost, FhirPathError, FhirPathResult};
+use rh_fhirpath::{
+    extensions::fhir::host::FhirHost, EvaluationContext, FhirPathError, FhirPathResult,
+    FhirPathValue,
+};
 use serde_json::Value;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 fn error(e: impl std::fmt::Display) -> FhirPathError {
     FhirPathError::EvaluationError {
@@ -19,13 +23,14 @@ impl std::fmt::Debug for FhirValidator {
     }
 }
 
-impl FhirHost for FhirValidator {
-    fn conforms_to(
+impl FhirValidator {
+    fn validate_conformance(
         &self,
-        resource: &Value,
+        mut context: EvaluationContext,
         declared: Option<&str>,
         url: &str,
     ) -> FhirPathResult<Option<bool>> {
+        let resource = &context.root;
         let Some(profile) = self.profile_registry.get_snapshot(url).map_err(error)? else {
             return Ok(None);
         };
@@ -46,10 +51,12 @@ impl FhirHost for FhirValidator {
         nested
             .active_conformance_checks
             .push((url.to_owned(), resource.clone()));
+        let nested = Arc::new(nested);
+        context.host = Some(nested.clone());
         let result = if resource.get("resourceType").is_some() {
-            nested.validate_with_profile(resource, url)
+            nested.validate_with_profile_inner(resource, url, Some(&context))
         } else {
-            nested.validate_profile_rules(resource, url)
+            nested.validate_profile_rules(resource, url, Some(&context))
         }
         .map_err(error)?;
         if result.valid {
@@ -61,6 +68,30 @@ impl FhirHost for FhirValidator {
             }
         }
         Ok(Some(result.valid))
+    }
+}
+
+impl FhirHost for FhirValidator {
+    fn conforms_to(
+        &self,
+        resource: &Value,
+        declared: Option<&str>,
+        url: &str,
+    ) -> FhirPathResult<Option<bool>> {
+        self.validate_conformance(EvaluationContext::new(resource.clone()), declared, url)
+    }
+
+    fn conforms_to_element(
+        &self,
+        element: &FhirPathValue,
+        declared: Option<&str>,
+        url: &str,
+    ) -> FhirPathResult<Option<bool>> {
+        self.validate_conformance(
+            EvaluationContext::from_fhirpath_value(element)?,
+            declared,
+            url,
+        )
     }
 
     fn member_of(&self, value: &Value, url: &str) -> FhirPathResult<Option<bool>> {

@@ -71,6 +71,31 @@ let result = evaluator.evaluate(&expr, &context).unwrap();
 
 [See the examples directory](./examples/) for complete, runnable examples with detailed output and explanations.
 
+#### Exact JSON numbers
+
+Use `EvaluationContext::from_json_str` with the original JSON text to preserve
+decimal scale and large scientific exponents. To serialize an exact JSON result,
+evaluate with `evaluate_nodes` and call `to_raw_json` on the result. Its
+`get()` method returns JSON text, including unquoted number tokens.
+
+```rust
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+
+let context = EvaluationContext::from_json_str(
+    r#"{"resourceType":"Parameters","parameter":[{"name":"amount","valueDecimal":1.23456789012345670}]}"#,
+)
+.unwrap();
+let expression = FhirPathParser::new().parse("parameter.first().value").unwrap();
+let result = FhirPathEvaluator::new()
+    .evaluate_nodes(&expression, &context)
+    .unwrap();
+assert_eq!(result.to_raw_json().unwrap().get(), "1.23456789012345670");
+```
+
+`EvaluationContext::new` accepts an existing `serde_json::Value` and uses the
+numbers available in that value. `FhirPathValue::to_json` projects results into
+the numeric representation of `serde_json::Value`.
+
 #### Migrating from 0.3.0
 
 Construct evaluation contexts with `EvaluationContext::new` and configure the

@@ -340,9 +340,13 @@ impl TypeEvaluator {
 
         let (namespace, raw_name, lower_name) = split_type_name(type_name);
         if let FhirPathValue::Node(node) = value {
+            if node.is_untyped_object() {
+                return Self::value_is_type(&node.inner, type_name);
+            }
             if node.is_system_projection() {
                 return Ok(namespace != TypeNamespace::Fhir
-                    && matches_system_type(&node.inner, &lower_name, false)
+                    && (matches_system_type(&node.inner, &lower_name, false)
+                        || node.matches_decimal_projection(&lower_name))
                     && (namespace == TypeNamespace::System
                         || raw_name.starts_with(char::is_uppercase)));
             }
@@ -461,9 +465,13 @@ impl TypeEvaluator {
 
         let (namespace, raw_name, lower_name) = split_type_name(type_name);
         if let FhirPathValue::Node(node) = value {
+            if node.is_untyped_object() {
+                return Self::value_is_exact_type(&node.inner, type_name);
+            }
             if node.is_system_projection() {
                 return Ok(namespace != TypeNamespace::Fhir
-                    && matches_system_type(&node.inner, &lower_name, true)
+                    && (matches_system_type(&node.inner, &lower_name, true)
+                        || node.matches_decimal_projection(&lower_name))
                     && (namespace == TypeNamespace::System
                         || raw_name.starts_with(char::is_uppercase)));
             }

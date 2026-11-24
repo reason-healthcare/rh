@@ -3,8 +3,9 @@ use crate::ast::{Expression, Invocation, Term, TypeOperator};
 use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::metadata::{self, FhirModel, FhirNode};
 use crate::evaluator::FhirPathValue;
-use rust_decimal::Decimal;
+use crate::json::{number_text, parse_decimal, JsonNumbers};
 use serde_json::Value;
+use std::sync::Arc;
 
 pub(super) fn validate_cast_member(
     expression: &Expression,
@@ -60,12 +61,20 @@ pub(super) fn navigate_member(
     strict: bool,
 ) -> FhirPathResult<FhirPathValue> {
     match target {
+        FhirPathValue::Node(node) if node.is_untyped_object() => navigate_json_member(
+            target,
+            &node.raw,
+            node.numbers.as_deref(),
+            member,
+            model,
+            strict,
+        ),
         FhirPathValue::Node(node) => node.member(member, strict),
         FhirPathValue::TypedObject { value, fhir_type } if model.is_type(fhir_type) => {
             FhirNode::detached(value, fhir_type, model).member(member, strict)
         }
         FhirPathValue::Object(object) | FhirPathValue::TypedObject { value: object, .. } => {
-            navigate_json_member(target, object, member, strict)
+            navigate_json_member(target, object, None, member, model, strict)
         }
         FhirPathValue::FhirPrimitive { inner, .. } => navigate_member(inner, member, model, strict),
         FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
@@ -90,7 +99,9 @@ pub(super) fn navigate_member(
 fn navigate_json_member(
     target: &FhirPathValue,
     object: &Value,
+    numbers: Option<&JsonNumbers>,
     member: &str,
+    model: FhirModel,
     strict: bool,
 ) -> FhirPathResult<FhirPathValue> {
     let resource_type = object.get("resourceType").and_then(Value::as_str);
@@ -106,9 +117,10 @@ fn navigate_json_member(
                 )));
             }
         }
-        let result = type_json_member(value, resource_type, member);
+        let field_numbers = numbers.and_then(|numbers| numbers.field(member));
+        let result = type_json_member(value, resource_type, member, field_numbers, model);
         if !matches!(
-            result,
+            result.system_value(),
             FhirPathValue::Object(_) | FhirPathValue::Collection(_)
         ) {
             if let Some(extensions) = object.get(format!("_{member}")).and_then(Value::as_object) {
@@ -135,13 +147,29 @@ fn navigate_json_member(
         Some((key, _)) if strict => Err(FhirPathError::evaluation_error(format!(
             "Invalid choice-type access: use '{member}[x]' instead of '{key}' in strict mode"
         ))),
-        Some((key, value)) => Ok(construct_typed_choice_value(&key[member.len()..], value)
-            .unwrap_or_else(|| type_json_member(value, resource_type, key))),
+        Some((key, value)) => {
+            let field_numbers = numbers.and_then(|numbers| numbers.field(key));
+            Ok(
+                construct_typed_choice_value(&key[member.len()..], value, field_numbers)
+                    .unwrap_or_else(|| {
+                        type_json_member(value, resource_type, key, field_numbers, model)
+                    }),
+            )
+        }
         None => Ok(FhirPathValue::Empty),
     }
 }
 
-fn type_json_member(value: &Value, resource_type: Option<&str>, member: &str) -> FhirPathValue {
+fn type_json_member(
+    value: &Value,
+    resource_type: Option<&str>,
+    member: &str,
+    numbers: Option<&Arc<JsonNumbers>>,
+    model: FhirModel,
+) -> FhirPathValue {
+    if numbers.is_some() {
+        return FhirPathValue::from_json_with_numbers(value, numbers, model);
+    }
     match resource_type {
         Some(resource_type) => metadata::apply_fhir_typing(value, resource_type, member),
         None => FhirPathValue::from_json(value),
@@ -231,18 +259,26 @@ fn choice_type_base<'a>(resource_type: Option<&'a str>, member: &'a str) -> Opti
 /// Returns `Some(typed)` for suffixes that map onto a concrete FhirPathValue
 /// variant and whose JSON shape matches; `None` to let the caller fall back
 /// to metadata-driven typing.
-fn construct_typed_choice_value(suffix: &str, value: &Value) -> Option<FhirPathValue> {
+fn construct_typed_choice_value(
+    suffix: &str,
+    value: &Value,
+    numbers: Option<&Arc<JsonNumbers>>,
+) -> Option<FhirPathValue> {
     match suffix {
         "Quantity" => {
             let obj = value.as_object()?;
-            let num = obj.get("value")?.as_f64()?;
+            let amount_numbers = numbers
+                .and_then(|numbers| numbers.field("value"))
+                .map(Arc::as_ref);
+            let literal = number_text(obj.get("value")?, amount_numbers)?;
+            let amount = parse_decimal(&literal)?;
             let unit = obj
                 .get("unit")
                 .and_then(Value::as_str)
                 .or_else(|| obj.get("code").and_then(Value::as_str))
                 .map(str::to_string);
             Some(FhirPathValue::Quantity {
-                value: Decimal::from_f64_retain(num).unwrap_or(Decimal::ZERO),
+                value: amount,
                 unit,
             })
         }
@@ -257,9 +293,9 @@ fn construct_typed_choice_value(suffix: &str, value: &Value) -> Option<FhirPathV
             fhir_type: rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType::Boolean,
         }),
         "Integer" | "UnsignedInt" | "PositiveInt" => value.as_i64().map(FhirPathValue::Integer),
-        "Decimal" => value
-            .as_f64()
-            .map(|f| FhirPathValue::Number(Decimal::from_f64_retain(f).unwrap_or(Decimal::ZERO))),
+        "Decimal" => {
+            parse_decimal(&number_text(value, numbers.map(Arc::as_ref))?).map(FhirPathValue::Number)
+        }
         "Date" => value.as_str().map(|s| FhirPathValue::Date(s.to_string())),
         "DateTime" | "Instant" => value.as_str().map(|s| FhirPathValue::TypedDateTime {
             value: s.to_string(),

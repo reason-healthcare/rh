@@ -3,7 +3,9 @@ use crate::ast::{Expression, TypeSpecifier};
 use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::metadata::{FhirModel, FhirNode};
 use crate::evaluator::{EvaluationContext, FhirPathValue};
+use crate::json::JsonData;
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 impl FhirPathEvaluator {
     pub(super) fn evaluate_instance_selector(
@@ -30,7 +32,7 @@ impl FhirPathEvaluator {
         })?;
 
         let is_primitive = type_name.starts_with(|c: char| c.is_ascii_lowercase());
-        let mut fields = serde_json::Map::new();
+        let mut fields = BTreeMap::new();
         let mut assigned = std::collections::HashSet::new();
         for (name, expression) in elements {
             if !assigned.insert(name) {
@@ -85,7 +87,7 @@ impl FhirPathEvaluator {
                     .iter()
                     .map(|item| constructor_json(item, field_type, model))
                     .collect::<FhirPathResult<Vec<_>>>()?;
-                Value::Array(items)
+                JsonData::array(items)
             } else {
                 let Some(item) = value.singleton("Constructor element")? else {
                     continue;
@@ -96,14 +98,19 @@ impl FhirPathEvaluator {
         }
 
         let node = if is_primitive {
-            let value = fields.remove("value").unwrap_or(Value::Null);
-            let metadata = (!fields.is_empty()).then_some(Value::Object(fields));
-            FhirNode::primitive(type_name, &value, metadata, model)
+            let value = fields
+                .remove("value")
+                .unwrap_or_else(|| JsonData::from_value(Value::Null));
+            let metadata = (!fields.is_empty()).then(|| JsonData::object(fields));
+            FhirNode::primitive_json(type_name, &value, metadata, model)
         } else {
             if model.is_subtype(type_name, "Resource") {
-                fields.insert("resourceType".into(), Value::String(type_name.clone()));
+                fields.insert(
+                    "resourceType".into(),
+                    JsonData::from_value(Value::String(type_name.clone())),
+                );
             }
-            FhirNode::detached(&Value::Object(fields), type_name, model)
+            FhirNode::detached_json(&JsonData::object(fields), type_name, model)
         };
         Ok(FhirPathValue::Node(Box::new(node)))
     }
@@ -111,6 +118,7 @@ impl FhirPathEvaluator {
 
 fn constructor_value_type(value: &FhirPathValue) -> Option<&str> {
     match value {
+        FhirPathValue::Node(node) if node.fhir_type == "System.Decimal" => Some("decimal"),
         FhirPathValue::Node(node) if node.is_system_projection() => {
             constructor_value_type(&node.inner)
         }
@@ -134,10 +142,13 @@ fn constructor_json(
     item: &FhirPathValue,
     expected_type: &str,
     model: FhirModel,
-) -> FhirPathResult<Value> {
-    let json = item.to_json();
+) -> FhirPathResult<JsonData> {
+    let data = item.json_data()?;
+    let json = &data.value;
     let accepted = match expected_type {
-        "integer64" if json.is_i64() => return Ok(Value::String(json.to_string())),
+        "integer64" if json.is_i64() => {
+            return Ok(JsonData::from_value(Value::String(json.to_string())))
+        }
         "integer64" => json
             .as_str()
             .is_some_and(|value| value.parse::<i64>().is_ok()),
@@ -149,7 +160,9 @@ fn constructor_json(
         "unsignedInt" => json
             .as_i64()
             .is_some_and(|i| (0..=i64::from(i32::MAX)).contains(&i)),
-        "decimal" => json.is_number(),
+        "decimal" => {
+            json.is_number() || data.numbers.as_ref().is_some_and(|n| n.number().is_some())
+        }
         name if name.starts_with(|c: char| c.is_ascii_lowercase()) => json.is_string(),
         name => constructor_value_type(item).is_some_and(|actual| model.is_subtype(actual, name)),
     };
@@ -158,5 +171,5 @@ fn constructor_json(
             "Cannot populate {expected_type} with {item:?}"
         )));
     }
-    Ok(json)
+    Ok(data)
 }

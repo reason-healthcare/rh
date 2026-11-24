@@ -9,6 +9,15 @@ fn eval(expression: &str, context: &EvaluationContext) -> FhirPathResult<V> {
     FhirPathEvaluator::new().evaluate(&FhirPathParser::new().parse(expression)?, context)
 }
 
+fn eval_raw(expression: &str, context: &EvaluationContext) -> Box<serde_json::value::RawValue> {
+    let parsed = FhirPathParser::new().parse(expression).unwrap();
+    FhirPathEvaluator::new()
+        .evaluate_nodes(&parsed, context)
+        .unwrap()
+        .to_raw_json()
+        .unwrap()
+}
+
 #[test]
 fn aligned_primitives_choices_paths_and_inheritance() {
     for model in [FhirModel::R4, FhirModel::R5] {
@@ -245,11 +254,12 @@ fn narrative_checks_normalize_attribute_whitespace() {
 
 #[test]
 fn scientific_values_preserve_magnitude_without_expanding_the_exponent() {
-    let mut c=EvaluationContext::new(serde_json::from_str(r#"{
+    let mut c = EvaluationContext::from_json_str(r#"{
         "resourceType":"Parameters","parameter":[
           {"name":"large","valueQuantity":{"value":1e999999999,"system":"http://unitsofmeasure.org","code":"kg"}},
           {"name":"small","valueDecimal":1e-999999999}
-        ]}"#).unwrap());
+        ]}"#)
+    .unwrap();
     c.model = FhirModel::R5;
     for (expression, result) in [
         ("parameter[0].value > 1 'kg'", V::Boolean(true)),
@@ -258,6 +268,7 @@ fn scientific_values_preserve_magnitude_without_expanding_the_exponent() {
             "parameter[0].value.toString()",
             V::String("1E+999999999 'kg'".into()),
         ),
+        ("parameter[0].value.value.hasValue()", V::Boolean(true)),
         ("parameter[0].value * 2", V::Empty),
         ("parameter[1].value.hasValue()", V::Boolean(true)),
         ("parameter[1].value > 0", V::Boolean(true)),
@@ -269,6 +280,136 @@ fn scientific_values_preserve_magnitude_without_expanding_the_exponent() {
     ] {
         assert_eq!(eval(expression, &c).unwrap(), result, "{expression}");
     }
+    let raw = eval_raw("parameter[1].value", &c);
+    assert_eq!(raw.get(), "1e-999999999");
+    let quantity = eval_raw("parameter[0].value", &c);
+    let fields: std::collections::HashMap<String, Box<serde_json::value::RawValue>> =
+        serde_json::from_str(quantity.get()).unwrap();
+    assert_eq!(fields["value"].get(), "1e999999999");
+    assert_eq!(fields["code"].get(), r#""kg""#);
+    assert_eq!(
+        eval_raw(
+            "Quantity { value: parameter[1].value, unit: 'kg' }.value",
+            &c
+        )
+        .get(),
+        "1e-999999999"
+    );
+}
+
+#[test]
+fn exact_decimal_lexemes_follow_nested_choice_and_primitive_metadata() {
+    let c = EvaluationContext::from_json_str(
+        r#"{
+      "resourceType": "Observation",
+      "component": [
+        {"valueQuantity": {"value": 1.23456789012345670, "unit": "kg"}},
+        {
+          "valueQuantity": {
+            "value": 1.23456789012345671,
+            "_value": {
+              "id": "second",
+              "extension": [{"url": "urn:precision", "valueDecimal": 0.0000000000000000100}]
+            },
+            "unit": "kg"
+          }
+        }
+      ]
+    }"#,
+    )
+    .unwrap();
+    assert_eq!(
+        eval("component[0].value.value < component[1].value.value", &c).unwrap(),
+        V::Boolean(true)
+    );
+    let expression = "component.value.value.where(id = 'second')";
+    assert_eq!(eval_raw(expression, &c).get(), "1.23456789012345671");
+    assert_eq!(
+        eval_raw(
+            "component.value.value.where(id = 'second').extension('urn:precision').value",
+            &c
+        )
+        .get(),
+        "0.0000000000000000100"
+    );
+    assert_eq!(
+        eval_raw("component.value.value.select(getValue())", &c).get(),
+        "[1.23456789012345670,1.23456789012345671]"
+    );
+}
+
+#[test]
+fn constructed_decimal_fields_keep_exact_values() {
+    let c = EvaluationContext::from_json_str("null").unwrap();
+    let expression = "Quantity { value: 1.23456789012345671, unit: 'kg' }.value";
+    assert_eq!(eval_raw(expression, &c).get(), "1.23456789012345671");
+}
+
+#[test]
+fn quantity_boundaries_use_the_source_decimal_exponent() {
+    let c = EvaluationContext::from_json_str(
+        r#"{
+          "resourceType": "Observation",
+          "valueQuantity": {"value": 9.5e2, "system": "http://unitsofmeasure.org", "code": "kg"}
+        }"#,
+    )
+    .unwrap();
+    assert_eq!(eval_raw("value.lowBoundary(0).value", &c).get(), "945");
+    assert_eq!(eval_raw("value.highBoundary(0).value", &c).get(), "955");
+}
+
+#[test]
+fn untyped_json_objects_compare_nested_exact_decimals() {
+    let mut c = EvaluationContext::from_json_str(
+        r#"{
+            "a": {"nested": [[{"_amount": 1.23456789012345671}]]},
+            "b": {"nested": [[{"_amount": 1.23456789012345672}]]},
+            "exact": {"nested": [{"amount": 1.250}]},
+            "huge": {"amount": 1e9999},
+            "hugeEquivalent": {"amount": 10e9998},
+            "absent": {"amount": null}
+        }"#,
+    )
+    .unwrap();
+    assert_eq!(c.root["a"], c.root["b"]);
+    c.add_constant(
+        "ordinary".into(),
+        V::from_json(&json!({"nested": [{"amount": 1.25}]})),
+    );
+    for (expression, expected) in [
+        ("a = b", false),
+        ("a ~ b", false),
+        ("a = a", true),
+        ("a ~ a", true),
+        ("exact = %ordinary", true),
+        ("%ordinary ~ exact", true),
+        ("huge = hugeEquivalent", true),
+        ("huge ~ hugeEquivalent", true),
+        ("huge = absent", false),
+        ("huge ~ absent", false),
+    ] {
+        assert_eq!(
+            eval(expression, &c).unwrap(),
+            V::Boolean(expected),
+            "{expression}"
+        );
+    }
+}
+
+#[test]
+fn repeat_distinguishes_exact_objects_and_deduplicates_ordinary_matches() {
+    let c = EvaluationContext::from_json_str(
+        r#"{
+            "items": [
+                {"nested": {"amount": 1.23456789012345670}},
+                {"nested": {"amount": 1.23456789012345671}},
+                {"nested": {"amount": 1.250}},
+                {"nested": {"amount": 1.25}}
+            ]
+        }"#,
+    )
+    .unwrap();
+    assert_eq!(eval("repeat(items).count()", &c).unwrap(), V::Integer(3));
 }
 
 #[test]

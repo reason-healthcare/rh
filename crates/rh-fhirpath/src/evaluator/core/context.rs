@@ -1,7 +1,9 @@
 //! Evaluation context management for FHIRPath expressions
 
-use crate::evaluator::{metadata::FhirModel, types::FhirPathValue};
+use crate::error::FhirPathResult;
+use crate::evaluator::{metadata, metadata::FhirModel, types::FhirPathValue};
 use crate::extensions::fhir::host::FhirHost;
+use crate::json::{JsonData, JsonNumbers, JsonWithNumbers};
 use serde_json::Value;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -21,6 +23,7 @@ pub struct TraceLog {
 pub struct EvaluationContext {
     /// The root resource being evaluated
     pub root: Value,
+    json_input: Option<Rc<JsonData>>,
     /// Current context (this)
     pub current: Value,
     /// Current FhirPathValue for $this context variable
@@ -58,6 +61,7 @@ impl EvaluationContext {
         Self {
             current: resource.clone(),
             root: resource,
+            json_input: None,
             this_value: None,
             initial_focus: None,
             invocation_focus: None,
@@ -71,6 +75,43 @@ impl EvaluationContext {
             strict_mode: false,
             check_ordered_functions: false,
         }
+    }
+
+    /// Create an evaluation context from JSON text, retaining exact number tokens.
+    ///
+    /// Use this when decimal scale, digits, or scientific exponents matter.
+    /// The public JSON fields expose the ordinary serde_json projection.
+    pub fn from_json_str(input: &str) -> FhirPathResult<Self> {
+        Ok(Self::from_json_data(JsonData::parse(input)?))
+    }
+
+    /// Create a new root context from an evaluated value, retaining its exact JSON numbers.
+    pub fn from_fhirpath_value(value: &FhirPathValue) -> FhirPathResult<Self> {
+        Ok(Self::from_json_data(value.json_data()?))
+    }
+
+    fn from_json_data(data: JsonData) -> Self {
+        if data.numbers.is_none() {
+            return Self::new(data.value);
+        }
+        let mut context = Self::new(data.value.clone());
+        context.json_input = Some(Rc::new(data));
+        context
+    }
+
+    /// Serialize the root resource as JSON with any number tokens retained from the input.
+    pub fn root_as_json(&self) -> impl serde::Serialize + '_ {
+        JsonWithNumbers {
+            value: &self.root,
+            numbers: self.root_numbers().map(Arc::as_ref),
+        }
+    }
+
+    pub(crate) fn root_numbers(&self) -> Option<&Arc<JsonNumbers>> {
+        let input = self.json_input.as_deref()?;
+        (input.value == self.root)
+            .then_some(input.numbers.as_ref())
+            .flatten()
     }
 
     /// Add an external constant
@@ -95,8 +136,11 @@ impl EvaluationContext {
 
     /// Set the initial focus to a different JSON value, keeping the root resource.
     pub fn with_current(&self, current: Value) -> Self {
-        let value =
-            crate::evaluator::metadata::FhirNode::root(&current, self.model, current == self.root);
+        let value = if current == self.root {
+            metadata::root_node(self)
+        } else {
+            metadata::FhirNode::root(&current, self.model, false)
+        };
         let mut context = self.with_initial_focus(value);
         context.current = current;
         context
