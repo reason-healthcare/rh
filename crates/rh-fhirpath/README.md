@@ -71,6 +71,15 @@ let result = evaluator.evaluate(&expr, &context).unwrap();
 
 [See the examples directory](./examples/) for complete, runnable examples with detailed output and explanations.
 
+#### Migrating from 0.3.0
+
+Construct evaluation contexts with `EvaluationContext::new` and configure the
+FHIR model, host, and evaluation flags on the returned context. Update exhaustive
+matches over the public AST and value enums for the new variants, including
+`Expression::SortKey`, `Term::InstanceSelector`, and `FhirPathValue::Node`.
+A new evaluation context initializes `$index` to `0` as specified by STU 3.
+[FHIRPath variables](https://hl7.org/fhirpath/STU3/en/index.html#special-variables)
+
 ### Unit Conversion
 
 [See details about unit support and unit conversion](units.md)
@@ -80,6 +89,8 @@ let result = evaluator.evaluate(&expr, &context).unwrap();
 The evaluator reports invalid argument types and cardinalities through
 `FhirPathError`. Operations such as division by zero, out-of-range arithmetic,
 and comparisons of quantities with incompatible units yield an empty collection.
+The parser reports an error beyond 12 nested delimiters or 64 expression tree
+levels. Evaluating a caller-supplied expression tree applies the same 64-level limit.
 
 See `examples/unit_conversion_example.rs` and `examples/temperature_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
 

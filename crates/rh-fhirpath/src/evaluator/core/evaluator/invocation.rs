@@ -11,10 +11,11 @@ use std::borrow::Cow;
 impl FhirPathEvaluator {
     pub(super) fn evaluate_invocation(
         &self,
-        target: FhirPathValue,
+        target: Option<FhirPathValue>,
         invocation: &Invocation,
         context: &mut Cow<'_, EvaluationContext>,
     ) -> FhirPathResult<FhirPathValue> {
+        let target = target.map_or_else(|| context.current_focus(), Cow::Owned);
         match invocation {
             Invocation::Member(name) => super::navigation::navigate_member(
                 &target,
@@ -23,6 +24,7 @@ impl FhirPathEvaluator {
                 context.strict_mode,
             ),
             Invocation::Function { name, parameters } if name == "defineVariable" => {
+                let target = target.into_owned();
                 self.evaluate_define_variable(target, parameters, context)
             }
             Invocation::Function { name, parameters } => {
@@ -33,7 +35,7 @@ impl FhirPathEvaluator {
                 .as_ref()
                 .or(context.initial_focus.as_deref())
                 .cloned()
-                .unwrap_or_else(|| context.current_focus())),
+                .unwrap_or_else(|| context.current_focus().into_owned())),
             Invocation::Index => Ok(context
                 .index_value
                 .map(FhirPathValue::Integer)
@@ -44,7 +46,7 @@ impl FhirPathEvaluator {
 
     fn evaluate_function(
         &self,
-        target: FhirPathValue,
+        target: Cow<'_, FhirPathValue>,
         name: &str,
         parameters: &[Expression],
         context: &EvaluationContext,
@@ -62,7 +64,7 @@ impl FhirPathEvaluator {
                 self.evaluate_type_function(&target, parameters, context, Some(TypeOperator::As))
             }
             "ofType" => self.evaluate_type_function(&target, parameters, context, None),
-            "trace" => self.evaluate_trace_function(target, parameters, context),
+            "trace" => self.evaluate_trace_function(target.into_owned(), parameters, context),
             "aggregate" => self.evaluate_aggregate_function(&target, parameters, context),
             "iif" => self.evaluate_iif_lazy(&target, parameters, context),
             "coalesce" => self.evaluate_coalesce(&target, parameters, context),
@@ -85,7 +87,7 @@ impl FhirPathEvaluator {
 
     fn invoke_eager_function(
         &self,
-        target: FhirPathValue,
+        target: Cow<'_, FhirPathValue>,
         name: &str,
         parameters: Vec<FhirPathValue>,
         context: &EvaluationContext,
@@ -116,7 +118,17 @@ impl FhirPathEvaluator {
             func(&target, &parameters)
         } else {
             let parameters: Vec<_> = parameters.into_iter().map(strip_fhir_primitive).collect();
-            func(&strip_fhir_primitive(target), &parameters)
+            match target {
+                Cow::Owned(value) => func(&strip_fhir_primitive(value), &parameters),
+                Cow::Borrowed(FhirPathValue::Node(node)) => func(&node.inner, &parameters),
+                Cow::Borrowed(FhirPathValue::FhirPrimitive { inner, .. }) => {
+                    func(inner, &parameters)
+                }
+                Cow::Borrowed(
+                    value @ (FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_)),
+                ) => func(&strip_fhir_primitive(value.clone()), &parameters),
+                Cow::Borrowed(value) => func(value, &parameters),
+            }
         }
     }
 

@@ -49,9 +49,10 @@ impl FhirPathEvaluator {
         expression: &FhirPathExpression,
         context: &EvaluationContext,
     ) -> FhirPathResult<FhirPathValue> {
+        expression.root.check_depth()?;
         let mut context = Cow::Borrowed(context);
         if context.initial_focus.is_none() {
-            let initial_focus = context.current_focus();
+            let initial_focus = context.current_focus().into_owned();
             context.to_mut().initial_focus = Some(Rc::new(initial_focus));
         }
         self.evaluate_expression(&expression.root, &context)
@@ -156,8 +157,6 @@ impl FhirPathEvaluator {
         Ok((left, right))
     }
 
-    // Each expression starts with its enclosing variables. Only a receiver
-    // chain carries the bindings attached to its intermediate collections.
     fn evaluate_chain(
         &self,
         expression: &Expression,
@@ -169,7 +168,7 @@ impl FhirPathEvaluator {
                 if context.strict_mode && target.is_empty() {
                     navigation::validate_cast_member(left, invocation, context.model)?;
                 }
-                self.evaluate_invocation(target, invocation, context)
+                self.evaluate_invocation(Some(target), invocation, context)
             }
             Expression::Indexer { left, index } => {
                 let target = self.evaluate_chain(left, context)?;
@@ -189,8 +188,7 @@ impl FhirPathEvaluator {
                 TypeEvaluator::evaluate_type_operation(&target, operator, type_specifier)
             }
             Expression::Term(Term::Invocation(invocation)) => {
-                let target = context.current_focus();
-                self.evaluate_invocation(target, invocation, context)
+                self.evaluate_invocation(None, invocation, context)
             }
             Expression::Term(Term::Parenthesized(expression)) => {
                 self.evaluate_chain(expression, context)
@@ -272,11 +270,9 @@ impl FhirPathEvaluator {
     ) -> FhirPathResult<FhirPathValue> {
         match term {
             Term::Literal(literal) => self.evaluate_literal(literal),
-            Term::Invocation(invocation) => self.evaluate_invocation(
-                context.current_focus(),
-                invocation,
-                &mut Cow::Borrowed(context),
-            ),
+            Term::Invocation(invocation) => {
+                self.evaluate_invocation(None, invocation, &mut Cow::Borrowed(context))
+            }
             Term::ExternalConstant(name) => self
                 .resolve_external_variable(name, context)?
                 .ok_or_else(|| {

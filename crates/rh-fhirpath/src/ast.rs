@@ -94,6 +94,62 @@ pub enum Expression {
     },
 }
 
+pub(crate) const MAX_EXPRESSION_DEPTH: usize = 64;
+pub(crate) const EXPRESSION_DEPTH_ERROR: &str = "Expression tree exceeds 64 levels";
+
+impl Expression {
+    pub(crate) fn check_depth(&self) -> crate::error::FhirPathResult<()> {
+        let mut pending = vec![(self, 1)];
+        while let Some((expr, depth)) = pending.pop() {
+            if depth > MAX_EXPRESSION_DEPTH {
+                return Err(crate::error::FhirPathError::syntax_error(
+                    1,
+                    0,
+                    EXPRESSION_DEPTH_ERROR,
+                ));
+            }
+            let mut push = |child| pending.push((child, depth + 1));
+            match expr {
+                Self::Invocation { left, .. }
+                | Self::Term(Term::Parenthesized(left))
+                | Self::Type { left, .. }
+                | Self::SortKey { key: left, .. }
+                | Self::Polarity { operand: left, .. } => push(left),
+                Self::Term(Term::InstanceSelector { elements, .. }) => {
+                    for (_, child) in elements {
+                        push(child);
+                    }
+                }
+                Self::Indexer { left, index: right }
+                | Self::Additive { left, right, .. }
+                | Self::Multiplicative { left, right, .. }
+                | Self::Union { left, right }
+                | Self::Inequality { left, right, .. }
+                | Self::Equality { left, right, .. }
+                | Self::Membership { left, right, .. }
+                | Self::And { left, right }
+                | Self::Or { left, right, .. }
+                | Self::Implies { left, right } => {
+                    push(left);
+                    push(right);
+                }
+                Self::Term(Term::Literal(_) | Term::ExternalConstant(_) | Term::Invocation(_)) => {}
+            }
+            if let Self::Term(Term::Invocation(Invocation::Function { parameters, .. }))
+            | Self::Invocation {
+                invocation: Invocation::Function { parameters, .. },
+                ..
+            } = expr
+            {
+                for child in parameters {
+                    push(child);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Term types in FHIRPath
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Term {

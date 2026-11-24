@@ -19,12 +19,14 @@ type Model = HashMap<&'static str, Type>;
 fn load(table: &'static str) -> Model {
     table
         .lines()
-        .map(|line| {
+        .filter_map(|line| {
             let mut cells = line.split('\t');
-            let name = cells.next().unwrap();
-            let parent = cells.next().unwrap();
-            let fields = cells.map(|cell| cell.split_once('=').unwrap()).collect();
-            (name, Type { parent, fields })
+            let name = cells.next()?;
+            let parent = cells.next()?;
+            let fields = cells
+                .map(|cell| cell.split_once('='))
+                .collect::<Option<_>>()?;
+            Some((name, Type { parent, fields }))
         })
         .collect()
 }

@@ -122,7 +122,7 @@ impl FhirPathValue {
     pub(crate) fn from_items(mut items: Vec<Self>) -> Self {
         match items.len() {
             0 => Self::Empty,
-            1 => items.pop().unwrap(),
+            1 => items.pop().unwrap_or(Self::Empty),
             _ => Self::Collection(items),
         }
     }
@@ -338,10 +338,9 @@ impl FhirPathValue {
 }
 
 fn decimal_json(value: Decimal) -> Value {
-    Value::Number(
-        value
-            .to_string()
-            .parse()
-            .expect("Decimal is a valid JSON number"),
-    )
+    value
+        .to_string()
+        .parse()
+        .map(Value::Number)
+        .unwrap_or(Value::Null)
 }

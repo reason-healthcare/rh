@@ -3,6 +3,7 @@
 use crate::evaluator::{metadata::FhirModel, types::FhirPathValue};
 use crate::extensions::fhir::host::FhirHost;
 use serde_json::Value;
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -26,8 +27,6 @@ pub struct EvaluationContext {
     pub this_value: Option<FhirPathValue>,
     /// The starting focus, retained when scoped functions replace $this.
     pub(crate) initial_focus: Option<Rc<FhirPathValue>>,
-    // An unqualified invocation can have an input distinct from the enclosing
-    // scope's $this when evaluating a defineVariable projection.
     pub(crate) invocation_focus: Option<FhirPathValue>,
     /// Running accumulator for `aggregate()` — the `$total` variable.
     pub total_value: Option<FhirPathValue>,
@@ -128,12 +127,15 @@ impl EvaluationContext {
         }
     }
 
-    pub(crate) fn current_focus(&self) -> FhirPathValue {
+    pub(crate) fn current_focus(&self) -> Cow<'_, FhirPathValue> {
         self.invocation_focus
             .as_ref()
             .or(self.this_value.as_ref())
-            .cloned()
-            .unwrap_or_else(|| crate::evaluator::metadata::root_or_current_node(self))
+            .or(self.initial_focus.as_deref())
+            .map_or_else(
+                || Cow::Owned(crate::evaluator::metadata::root_or_current_node(self)),
+                Cow::Borrowed,
+            )
     }
 
     /// Create a new context with `$this` and `$index` set (for select(), where()).
@@ -146,17 +148,23 @@ impl EvaluationContext {
 
     /// Change the focus where the iteration index is undefined.
     pub(crate) fn with_unindexed_focus(&self, this_value: FhirPathValue) -> Self {
-        Self {
-            index_value: None,
-            ..self.with_this_value(this_value)
-        }
+        let mut context = self.clone();
+        context.set_unindexed_focus(this_value);
+        context
+    }
+
+    pub(crate) fn set_unindexed_focus(&mut self, this_value: FhirPathValue) {
+        self.current = this_value.to_json();
+        self.this_value = Some(this_value);
+        self.invocation_focus = None;
+        self.index_value = None;
     }
 
     /// Create a new context with `$this` set but `current` left unchanged.
     pub fn with_this_only(&self, this_value: FhirPathValue) -> Self {
         Self {
             this_value: Some(this_value),
-            invocation_focus: Some(self.current_focus()),
+            invocation_focus: Some(self.current_focus().into_owned()),
             ..self.clone()
         }
     }

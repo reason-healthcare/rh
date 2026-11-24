@@ -50,10 +50,16 @@ fn checked_numeric_operations_and_conversions() {
         ("'42L'.toDecimal()", Number(decimal("42"))),
         ("1.0.toInteger()", Empty),
         ("2.round()", Number(decimal("2"))),
+        ("2.power(3)", Number(decimal("8"))),
+        ("2.power(-1)", Number(decimal("0.5"))),
         ("10.power(1000)", Empty),
         ("1.5.round(2000000000)", Empty),
         ("1L.sqrt()", Number(Decimal::ONE)),
         ("2147483647.1.ceiling()", Empty),
+        ("42L.floor()", Integer(42)),
+        ("2147483648L.floor()", Empty),
+        ("2147483648L.ceiling()", Empty),
+        ("(-2147483649L).truncate()", Empty),
         (
             "0.0000000000000000000000000001.highBoundary(28)",
             Number(decimal("0.0000000000000000000000000002")),
@@ -96,6 +102,26 @@ fn quantity_arithmetic_and_comparison() {
         ("37 'Cel' + 1 'Cel'", Empty),
         ("1 'm/s'.comparable(1 'cm/min')", Boolean(true)),
         ("1 'not-a-supported-unit'.comparable(1 's')", Boolean(false)),
+    ]);
+}
+
+#[test]
+fn laboratory_quantity_units() {
+    expect(&[
+        ("5 'mmol/L' = 5 'mmol/L'", Boolean(true)),
+        ("5 'mmol/L' = 5000 'umol/L'", Boolean(true)),
+        ("5 'mmol/L' > 4 'mmol/L'", Boolean(true)),
+        ("5 'mmol/L' = 5 'U/L'", Empty),
+        ("1 'U/mL' = 1000 'U/L'", Boolean(true)),
+        ("7 'U/L' + 5 'U/L'", quantity("12", "U/L")),
+        ("7 'U/L' - 5 'U/L'", quantity("2", "U/L")),
+        ("7 'U/L' * 5", quantity("35", "U/L")),
+        ("5 * 7 'U/L'", quantity("35", "U/L")),
+        ("10 'U/L' / 5", quantity("2", "U/L")),
+        ("5 '%' ~ 5.0 '%'", Boolean(true)),
+        ("5 '%'.toQuantity('1')", quantity("0.05", "1")),
+        ("1 'm²'.toQuantity('m2')", Empty),
+        ("1 'not-a-supported-unit' + 2 'not-a-supported-unit'", Empty),
     ]);
 }
 
@@ -166,6 +192,22 @@ fn temporal_precision_timezone_and_interval_semantics() {
             Integer(2),
         ),
         ("@T02:10.difference(@T01:50, 'hour')", Integer(-1)),
+        (
+            "@2025-01-01T00:00:00.000.duration(@2025-01-25T20:31:23.647, 'millisecond')",
+            Integer(2_147_483_647),
+        ),
+        (
+            "@2025-01-01T00:00:00.000.duration(@2025-01-25T20:31:23.648, 'millisecond')",
+            Empty,
+        ),
+        (
+            "@2025-01-25T20:31:23.648.difference(@2025-01-01T00:00:00.000, 'millisecond')",
+            Integer(-2_147_483_648),
+        ),
+        (
+            "@2025-01-25T20:31:23.649.difference(@2025-01-01T00:00:00.000, 'millisecond')",
+            Empty,
+        ),
     ]);
     assert!(evaluate("@T01:00 + 1 day").is_err());
     assert!(evaluate("@2024-01-01T00:00:00 + 1 'a'").is_err());

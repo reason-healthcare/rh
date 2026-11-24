@@ -2,8 +2,10 @@ use super::FhirPathEvaluator;
 use crate::ast::Expression;
 use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::operations::collection::CollectionEvaluator;
-use crate::evaluator::{EvaluationContext, FhirPathValue};
+use crate::evaluator::operations::comparison::ComparisonEvaluator;
+use crate::evaluator::{metadata::FhirModel, EvaluationContext, FhirPathValue};
 use std::{borrow::Cow, cmp::Ordering};
+use std::{collections::HashMap, hash::RandomState};
 
 impl FhirPathEvaluator {
     /// Evaluate where function that filters collections based on boolean criteria
@@ -290,7 +292,10 @@ impl FhirPathEvaluator {
                 message: format!("{name}() function requires exactly one parameter"),
             });
         };
-        let allow_duplicates = name == "repeatAll";
+        if target.is_empty() {
+            return Ok(FhirPathValue::Empty);
+        }
+        let mut seen = (name != "repeatAll").then(RepeatSeen::default);
         let mut result = Vec::new();
         let mut pending: std::collections::VecDeque<_> = target
             .items()
@@ -298,14 +303,14 @@ impl FhirPathEvaluator {
             .cloned()
             .map(|item| (item, 0))
             .collect();
+        let mut item_context = context.clone();
         while let Some((item, depth)) = pending.pop_front() {
-            let item_context = context.with_unindexed_focus(item);
+            item_context.set_unindexed_focus(item);
             let projected = self.evaluate_expression(projection, &item_context)?;
             for value in projected.into_items() {
-                if !allow_duplicates
-                    && result
-                        .iter()
-                        .any(|item| FhirPathValue::equals_static(item, &value))
+                if seen
+                    .as_mut()
+                    .is_some_and(|seen| !seen.insert(&result, &value, context.model))
                 {
                     continue;
                 }
@@ -347,5 +352,53 @@ impl FhirPathEvaluator {
             total = self.evaluate_expression(expr, &iter_ctx)?;
         }
         Ok(total)
+    }
+}
+
+#[derive(Default)]
+struct RepeatSeen {
+    hash: RandomState,
+    buckets: HashMap<u64, Vec<usize>>,
+    unindexed: Vec<usize>,
+}
+
+impl RepeatSeen {
+    fn insert(
+        &mut self,
+        result: &[FhirPathValue],
+        value: &FhirPathValue,
+        model: FhirModel,
+    ) -> bool {
+        let Some((system, logical)) =
+            ComparisonEvaluator::equality_fingerprints(value, &self.hash, model)
+        else {
+            if result
+                .iter()
+                .any(|item| FhirPathValue::equals_static(item, value))
+            {
+                return false;
+            }
+            self.unindexed.push(result.len());
+            return true;
+        };
+        if self
+            .unindexed
+            .iter()
+            .chain(
+                [Some(system), logical]
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|key| self.buckets.get(&key))
+                    .flatten(),
+            )
+            .any(|&index| FhirPathValue::equals_static(&result[index], value))
+        {
+            return false;
+        }
+        self.buckets.entry(system).or_default().push(result.len());
+        if let Some(logical) = logical {
+            self.buckets.entry(logical).or_default().push(result.len());
+        }
+        true
     }
 }

@@ -6,6 +6,15 @@ on the Rust context, CLI, or WASM evaluation options for R5. FHIR profile and
 terminology functions use services supplied by the host. [FHIRPath 3.0.0](https://hl7.org/fhirpath/STU3/en/index.html) ·
 [FHIR R4](https://hl7.org/fhir/R4/fhirpath.html) · [FHIR R5](https://hl7.org/fhir/R5/fhirpath.html)
 
+## Typed JSON compatibility
+
+FHIRPath preserves JSON decimal scale and large exponents using the serde_json
+`arbitrary_precision` feature. Cargo unifies this feature with other consumers
+of the same serde_json dependency in a build. Typed deserialization of a nested
+R4 `Extension.valueDecimal` and CQL ELM `Quantity.value` can fail when serde
+buffers the number inside a flattened or tagged field. This compatibility issue
+affects builds that combine those typed parsers with `rh-fhirpath`.
+
 ## Pinned suites
 
 | Suite | Cases | Passed | Documented differences | Outside test profile | Missing fixtures |

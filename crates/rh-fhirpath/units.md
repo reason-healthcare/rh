@@ -7,10 +7,12 @@ products, division, and integer powers of recognized linear units.
 
 | Dimension | Supported unit codes and aliases |
 | --- | --- |
-| Dimensionless | `1` |
+| Dimensionless | `1`, `%` |
 | Mass | `g`, `kg`, `mg`, `ug`, `ng`, `lb`, `[lb_av]`, `lbs`, `lbs.` |
 | Length | `m`, `cm`, `mm`, `km`, `in`, `in_i`, `[in_i]`, `ft`, `[ft_i]` |
 | Volume | `L`, `mL`, `dL`, `uL` and their lowercase aliases |
+| Amount of substance | `mol`, `mmol`, `umol` |
+| Enzyme activity | `U` and compounds such as `U/L` |
 | Pressure | `Pa`, `kPa`, `mm[Hg]`, `bar` |
 | Definite time | `ms`, `s`, `min`, `h`, `d`, `wk`, `mo`, `a` |
 | Calendar time | Millisecond, second, minute, hour, day, week, month, and year, in singular or plural form |
@@ -20,6 +22,7 @@ Explicit conversion uses `toQuantity(unit)`. Comparison returns an empty
 collection when conversion fails. Addition and subtraction apply the
 calendar and UCUM rules for the operation. Convert affine temperatures to
 Kelvin before arithmetic. Dividing by zero returns an empty collection.
+Enzyme activity conversions are limited to quantities based on `U`.
 
 ```fhirpath
 1 'kg' + 500 'g'

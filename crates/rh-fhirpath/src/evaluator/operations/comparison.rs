@@ -2,11 +2,12 @@
 
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::hash::{BuildHasher, Hash, Hasher, RandomState};
 
 use crate::ast::*;
 use crate::error::*;
 use crate::evaluator::metadata::{
-    coding_equivalent, compare_model_quantities, extreme_numeric_equivalent, FhirNode,
+    coding_equivalent, compare_model_quantities, extreme_numeric_equivalent, FhirModel, FhirNode,
 };
 use crate::evaluator::operations::{
     temporal::{
@@ -54,6 +55,42 @@ impl ComparisonEvaluator {
             }
         }
         result
+    }
+
+    pub(crate) fn equality_fingerprints(
+        value: &FhirPathValue,
+        hash: &RandomState,
+        model: FhirModel,
+    ) -> Option<(u64, Option<u64>)> {
+        use FhirPathValue::*;
+        let [item] = value.items() else { return None };
+        let system = item.system_value();
+        let logical = match item {
+            Node(node) if node.model.is_subtype(&node.fhir_type, "Quantity") => return None,
+            Node(node) if node.raw.is_object() => {
+                if node.model != model
+                    || node.is_primitive()
+                    || !matches!(system, Object(_) | TypedObject { .. })
+                {
+                    return None;
+                }
+                Some(logical_object_fingerprint(node, hash))
+            }
+            _ => None,
+        };
+        let system = match system {
+            String(text) | TypedString { value: text, .. } => hash.hash_one((0, text)),
+            Boolean(value) | TypedBoolean { value, .. } => hash.hash_one((1, value)),
+            Integer(_) | Long(_) | Number(_) => hash.hash_one((2, decimal(system))),
+            Object(value) | TypedObject { value, .. } => {
+                let mut state = hash.build_hasher();
+                3.hash(&mut state);
+                hash_json(value, &mut state, 1);
+                state.finish()
+            }
+            _ => return None,
+        };
+        Some((system, logical))
     }
 
     pub fn evaluate_inequality(
@@ -327,6 +364,68 @@ fn json_equal(left: &Value, right: &Value) -> bool {
     }
 }
 
+fn hash_json(value: &Value, state: &mut impl Hasher, depth: usize) {
+    std::mem::discriminant(value).hash(state);
+    match value {
+        Value::Object(fields) if depth > 0 => {
+            let mut fields: Vec<_> = fields.iter().collect();
+            fields.sort_unstable_by_key(|(key, _)| *key);
+            fields.len().hash(state);
+            for (key, value) in fields {
+                key.hash(state);
+                hash_json(value, state, depth - 1);
+            }
+        }
+        Value::Array(items) if depth > 0 => {
+            items.len().hash(state);
+            for item in items {
+                hash_json(item, state, depth - 1);
+            }
+        }
+        Value::Number(_) => decimal(&FhirPathValue::from_json(value)).hash(state),
+        Value::String(value) => value.hash(state),
+        Value::Bool(value) => value.hash(state),
+        _ => {}
+    }
+}
+
+fn logical_object_fingerprint(node: &FhirNode, hash: &RandomState) -> u64 {
+    fn can_have_string_or_boolean(value: &Value) -> bool {
+        let is_string_or_boolean = |v: &Value| v.is_string() || v.is_boolean();
+        is_string_or_boolean(value)
+            || value
+                .as_array()
+                .is_some_and(|items| items.iter().any(is_string_or_boolean))
+    }
+
+    let mut state = hash.build_hasher();
+    4.hash(&mut state);
+    node.fhir_type.hash(&mut state);
+    let names: BTreeSet<_> = node
+        .raw
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(_, value)| can_have_string_or_boolean(value))
+        .filter_map(|(key, _)| logical_child_name(node, key))
+        .filter(|name| logical_child_name(node, name) == Some(name))
+        .collect();
+    for name in names {
+        let Ok(value) = node.member(name, false) else {
+            continue;
+        };
+        if let [item] = value.items() {
+            let item = item.system_value();
+            if let Some(text) = item.as_str() {
+                (name, 0, text).hash(&mut state);
+            } else if let Some(value) = boolean(item) {
+                (name, 1, value).hash(&mut state);
+            }
+        }
+    }
+    state.finish()
+}
+
 fn equivalent_item(left: &FhirPathValue, right: &FhirPathValue) -> bool {
     if let Some(equivalent) = coding_equivalent(left, right) {
         return equivalent;
@@ -396,32 +495,16 @@ fn compare_logical_objects(
         return Some(false);
     }
 
-    fn child_names(node: &FhirNode) -> impl Iterator<Item = &str> {
-        node.raw.as_object().into_iter().flat_map(|object| {
-            object
-                .keys()
-                .map(|key| key.strip_prefix('_').unwrap_or(key))
-                .filter_map(|key| {
-                    if key == "resourceType" {
-                        return None;
-                    }
-                    // Resource type specifiers are not child element names.
-                    if node.raw["resourceType"]
-                        .as_str()
-                        .is_some_and(|resource| node.model.is_subtype(resource, key))
-                    {
-                        return None;
-                    }
-                    Some(
-                        node.model
-                            .field(&node.fhir_type, key)
-                            .map_or(key, |(name, _)| name),
-                    )
-                })
+    let names: BTreeSet<_> = [left, right]
+        .into_iter()
+        .flat_map(|node| {
+            node.raw.as_object().into_iter().flat_map(|object| {
+                object
+                    .keys()
+                    .filter_map(|key| logical_child_name(node, key))
+            })
         })
-    }
-
-    let names: BTreeSet<_> = child_names(left).chain(child_names(right)).collect();
+        .collect();
     let mut result = Some(true);
     for name in names {
         let a = left.member(name, false).ok()?;
@@ -438,6 +521,22 @@ fn compare_logical_objects(
         }
     }
     result
+}
+
+fn logical_child_name<'a>(node: &FhirNode, key: &'a str) -> Option<&'a str> {
+    let key = key.strip_prefix('_').unwrap_or(key);
+    if key == "resourceType"
+        || node.raw["resourceType"]
+            .as_str()
+            .is_some_and(|resource| node.model.is_subtype(resource, key))
+    {
+        return None;
+    }
+    Some(
+        node.model
+            .field(&node.fhir_type, key)
+            .map_or(key, |(name, _)| name),
+    )
 }
 
 fn json_equivalent(left: &Value, right: &Value) -> bool {

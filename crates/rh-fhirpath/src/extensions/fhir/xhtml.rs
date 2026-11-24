@@ -1,7 +1,7 @@
 //! Check the namespace, elements, nesting, attributes and active-content restrictions
 //! of FHIR narrative XHTML without resolving external resources.
 use quick_xml::{events::Event, name::ResolveResult, reader::NsReader};
-use std::{collections::HashMap, sync::LazyLock};
+use std::{collections::HashMap, iter::Peekable, str::Chars, sync::LazyLock};
 
 struct Element {
     attributes: &'static str,
@@ -12,16 +12,16 @@ struct Element {
 static ELEMENTS: LazyLock<HashMap<&str, Element>> = LazyLock::new(|| {
     include_str!("../../evaluator/metadata/xhtml.tsv")
         .lines()
-        .map(|line| {
+        .filter_map(|line| {
             let mut parts = line.split('\t');
-            (
-                parts.next().unwrap(),
+            Some((
+                parts.next()?,
                 Element {
-                    attributes: parts.next().unwrap(),
-                    children: parts.next().unwrap(),
-                    required: parts.next().unwrap(),
+                    attributes: parts.next()?,
+                    children: parts.next()?,
+                    required: parts.next()?,
                 },
-            )
+            ))
         })
         .collect()
 });
@@ -136,7 +136,9 @@ fn valid_attribute_value(key: &str, value: &str) -> bool {
             }
         }
         "style" => {
-            let normalized = normalized_for_matching(value);
+            let Some(normalized) = style_for_matching(value) else {
+                return false;
+            };
             [
                 "expression(",
                 "url(",
@@ -158,6 +160,59 @@ fn normalized_for_matching(value: &str) -> String {
         .filter(|c| !c.is_ascii_whitespace() && !c.is_ascii_control())
         .map(|c| c.to_ascii_lowercase())
         .collect()
+}
+
+fn style_for_matching(value: &str) -> Option<String> {
+    let mut input = value.chars().peekable();
+    let mut decoded = String::with_capacity(value.len());
+    let mut quote = None;
+    while let Some(character) = input.next() {
+        match character {
+            '\\' => decoded.push(escaped_css_character(&mut input)?),
+            '/' if quote.is_none() && input.next_if_eq(&'*').is_some() => {
+                while input.next()? != '*' || input.next_if_eq(&'/').is_none() {}
+            }
+            '"' | '\'' if quote.is_none() => {
+                quote = Some(character);
+                decoded.push(character);
+            }
+            character if quote == Some(character) => {
+                quote = None;
+                decoded.push(character);
+            }
+            '\n' | '\r' | '\x0c' => {
+                quote = None;
+                decoded.push(character);
+            }
+            character => decoded.push(character),
+        }
+    }
+    Some(normalized_for_matching(&decoded))
+}
+
+fn escaped_css_character(input: &mut Peekable<Chars<'_>>) -> Option<char> {
+    let first = input.next()?;
+    if first == '\r' {
+        input.next_if_eq(&'\n');
+    }
+    let Some(mut code_point) = first.to_digit(16) else {
+        return Some(first);
+    };
+    for _ in 1..6 {
+        let Some(digit) = input.peek().and_then(|c| c.to_digit(16)) else {
+            break;
+        };
+        input.next();
+        code_point = code_point * 16 + digit;
+    }
+    if input.next_if(|c| c.is_ascii_whitespace()) == Some('\r') {
+        input.next_if_eq(&'\n');
+    }
+    Some(
+        char::from_u32(code_point)
+            .filter(|&c| c != '\0')
+            .unwrap_or('\u{fffd}'),
+    )
 }
 
 fn allowed_image_data_url(value: &str) -> bool {

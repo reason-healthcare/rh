@@ -61,6 +61,32 @@ fn scoped_focus_keeps_initial_context_and_resets_index() {
 }
 
 #[test]
+fn each_evaluation_prepares_focus_from_the_current_input() {
+    let mut context = EvaluationContext::new(json!({
+        "resourceType": "Patient",
+        "id": "root",
+        "name": [{"family": "First"}]
+    }));
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let parsed = parser
+        .parse("name.select(family & '|' & $this.family & '|' & %context.id & '|' & %resource.id)")
+        .unwrap();
+    for (current, expected) in [
+        (context.root.clone(), "First|First|root|root"),
+        (
+            json!({"resourceType": "Patient", "id": "other", "name": [{"family": "Second"}]}),
+            "Second|Second|other|other",
+        ),
+    ] {
+        context.current = current;
+        let result = evaluator.evaluate(&parsed, &context).unwrap();
+        assert_eq!(result.to_json(), json!(expected));
+    }
+    assert_result("%rootResource.id", &context, json!("root"));
+}
+
+#[test]
 fn lexical_variables_follow_the_receiver_chain() {
     let context = EvaluationContext::new(json!({ "items": [{"value": 2}, {"value": 3}] }));
     assert_result(
@@ -261,6 +287,21 @@ fn coalesce_is_lazy_and_repeat_all_keeps_duplicates() {
     assert_result("tree.repeat(item).value", &context, json!(1));
     assert_result("tree.repeatAll(item).value", &context, json!([1, 1]));
     assert_error("1.repeatAll($this)", &context, "recursive projection limit");
+}
+
+#[test]
+fn repeat_compares_numeric_and_quantity_values_in_either_order() {
+    let context = EvaluationContext::new(json!({}));
+    for expression in [
+        "1.combine(1 '1').combine(2.00).combine(2L).combine(100 'cm').combine(1 'm')",
+        "1 '1'.combine(1).combine(2L).combine(2.00).combine(1 'm').combine(100 'cm')",
+    ] {
+        assert_result(
+            &format!("({expression}).repeat($this).count()"),
+            &context,
+            json!(3),
+        );
+    }
 }
 
 #[test]

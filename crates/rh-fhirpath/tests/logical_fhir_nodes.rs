@@ -211,8 +211,18 @@ fn narrative_checks_normalize_attribute_whitespace() {
         ("<p style='behavior\t: none'>Text</p>", false),
         ("<p style='background-image: URL (none)'>Text</p>", false),
         ("<p style='width: expression ()'>Text</p>", false),
+        ("<p style='behavior/**/: none'>Text</p>", false),
+        (r"<p style='\62 ehavior: none'>Text</p>", false),
         ("<a href='/care plan#notes'>Link</a>", true),
         ("<p style='color : navy; margin: 0 1em'>Text</p>", true),
+        (
+            r"<p style='color: \006e avy; /* note */ margin: 0'>Text</p>",
+            true,
+        ),
+        (
+            r#"<p style='font-family: "/*"; color: navy'>Text</p>"#,
+            true,
+        ),
         (
             "<img alt='Preview' src='DaTa:image/png;base64,AA=='/>",
             true,

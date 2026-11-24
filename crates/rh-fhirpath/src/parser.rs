@@ -7,11 +7,13 @@ use nom::{
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{alpha1, char, digit1, multispace0},
     combinator::{map, map_res, opt, recognize},
-    multi::{many0, separated_list0, separated_list1},
+    multi::{many_m_n, separated_list0, separated_list1},
     sequence::{delimited, preceded},
     IResult, Parser,
 };
 use rust_decimal::Decimal;
+
+const MAX_DELIMITER_NESTING: usize = 12;
 
 /// FHIRPath expression parser
 pub struct FhirPathParser;
@@ -22,7 +24,10 @@ impl FhirPathParser {
         Self
     }
 
-    /// Parse a FHIRPath expression from a string
+    /// Parse a FHIRPath expression from a string.
+    ///
+    /// Expressions may nest delimiters up to 12 levels and AST nodes up to 64 levels.
+    /// Sibling arguments and selector elements do not add to the depth of each other.
     pub fn parse(&self, input: &str) -> FhirPathResult<FhirPathExpression> {
         let stripped = strip_comments(input)?;
         let input = stripped.as_str();
@@ -30,6 +35,7 @@ impl FhirPathParser {
             Ok((remaining, expr)) => {
                 let remaining = remaining.trim();
                 if remaining.is_empty() {
+                    expr.check_depth()?;
                     Ok(FhirPathExpression { root: expr })
                 } else {
                     Err(FhirPathError::SyntaxError {
@@ -38,6 +44,13 @@ impl FhirPathParser {
                         message: format!("Unexpected characters: {remaining}"),
                     })
                 }
+            }
+            Err(nom::Err::Failure(error)) if error.code == nom::error::ErrorKind::TooLarge => {
+                Err(FhirPathError::syntax_error(
+                    1,
+                    input.len() - error.input.len(),
+                    EXPRESSION_DEPTH_ERROR,
+                ))
             }
             Err(e) => Err(FhirPathError::SyntaxError {
                 line: 1,
@@ -59,6 +72,7 @@ impl Default for FhirPathParser {
 fn strip_comments(input: &str) -> FhirPathResult<String> {
     let mut out = String::with_capacity(input.len());
     let mut chars = input.char_indices().peekable();
+    let mut delimiters = Vec::new();
     while let Some((i, c)) = chars.next() {
         match c {
             '\'' | '`' => {
@@ -69,7 +83,7 @@ fn strip_comments(input: &str) -> FhirPathResult<String> {
                     out.push(sc);
                     if escaped {
                         escaped = false;
-                    } else if sc == '\\' && delim == '\'' {
+                    } else if sc == '\\' {
                         escaped = true;
                     } else if sc == delim {
                         break;
@@ -105,6 +119,31 @@ fn strip_comments(input: &str) -> FhirPathResult<String> {
                 }
                 out.push(' ');
             }
+            '(' | '[' | '{' => {
+                if delimiters.len() == MAX_DELIMITER_NESTING {
+                    return Err(FhirPathError::syntax_error(
+                        1,
+                        i,
+                        "Expression delimiter nesting exceeds 12 levels",
+                    ));
+                }
+                delimiters.push(match c {
+                    '(' => ')',
+                    '[' => ']',
+                    _ => '}',
+                });
+                out.push(c);
+            }
+            ')' | ']' | '}' => {
+                if delimiters.pop() != Some(c) {
+                    return Err(FhirPathError::syntax_error(
+                        1,
+                        i,
+                        "Unexpected closing delimiter",
+                    ));
+                }
+                out.push(c);
+            }
             _ => out.push(c),
         }
     }
@@ -119,7 +158,6 @@ where
     delimited(multispace0, inner, multispace0)
 }
 
-// Keyword tokens cannot consume a prefix of a simple identifier.
 fn keyword(word: &'static str) -> impl FnMut(&str) -> IResult<&str, &str> {
     move |input| {
         let (rest, token) = tag(word)(input)?;
@@ -138,6 +176,39 @@ fn keyword(word: &'static str) -> impl FnMut(&str) -> IResult<&str, &str> {
     }
 }
 
+fn depth_failure(input: &str) -> nom::Err<nom::error::Error<&str>> {
+    nom::Err::Failure(nom::error::Error::new(
+        input,
+        nom::error::ErrorKind::TooLarge,
+    ))
+}
+
+fn chain_tail<'a, P, T>(
+    parser: P,
+) -> impl Parser<&'a str, Output = Vec<T>, Error = nom::error::Error<&'a str>>
+where
+    P: Parser<&'a str, Output = T, Error = nom::error::Error<&'a str>>,
+{
+    many_m_n(0, MAX_EXPRESSION_DEPTH, parser)
+}
+
+fn finish_chain<T>(
+    input: &str,
+    first: Expression,
+    rest: impl ExactSizeIterator<Item = T>,
+    combine: impl FnMut(Expression, T) -> Expression,
+) -> IResult<&str, Expression> {
+    if rest.len() == 0 {
+        return Ok((input, first));
+    }
+    if rest.len() >= MAX_EXPRESSION_DEPTH {
+        return Err(depth_failure(input));
+    }
+    let expression = rest.fold(first, combine);
+    expression.check_depth().map_err(|_| depth_failure(input))?;
+    Ok((input, expression))
+}
+
 // Parse expression (top level)
 fn parse_expression(input: &str) -> IResult<&str, Expression> {
     parse_implies_expression(input)
@@ -147,83 +218,73 @@ fn parse_expression(input: &str) -> IResult<&str, Expression> {
 fn parse_implies_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_or_expression(input)?;
     let (input, rest) =
-        many0(preceded(ws(keyword("implies")), parse_or_expression)).parse(input)?;
+        chain_tail(preceded(ws(keyword("implies")), parse_or_expression)).parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter()
-            .fold(first, |acc, expr| Expression::Implies {
-                left: Box::new(acc),
-                right: Box::new(expr),
-            }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, expr| {
+        Expression::Implies {
+            left: Box::new(acc),
+            right: Box::new(expr),
+        }
+    })
 }
 
 // Parse OR/XOR expressions
 fn parse_or_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_and_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((keyword("or"), keyword("xor")))),
         parse_and_expression,
     ))
     .parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, (op, expr)| {
-            let operator = match op {
-                "or" => OrOperator::Or,
-                "xor" => OrOperator::Xor,
-                _ => OrOperator::Or,
-            };
-            Expression::Or {
-                left: Box::new(acc),
-                operator,
-                right: Box::new(expr),
-            }
-        }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, (op, expr)| {
+        let operator = match op {
+            "or" => OrOperator::Or,
+            "xor" => OrOperator::Xor,
+            _ => OrOperator::Or,
+        };
+        Expression::Or {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })
 }
 
 // Parse AND expressions
 fn parse_and_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_membership_expression(input)?;
     let (input, rest) =
-        many0(preceded(ws(keyword("and")), parse_membership_expression)).parse(input)?;
+        chain_tail(preceded(ws(keyword("and")), parse_membership_expression)).parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, expr| Expression::And {
+    finish_chain(input, first, rest.into_iter(), |acc, expr| {
+        Expression::And {
             left: Box::new(acc),
             right: Box::new(expr),
-        }),
-    ))
+        }
+    })
 }
 
-// Parse type expressions between arithmetic and union.
 fn parse_type_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_additive_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((keyword("is"), keyword("as")))),
         parse_type_specifier,
     ))
     .parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, (op, type_spec)| {
-            let operator = match op {
-                "is" => TypeOperator::Is,
-                "as" => TypeOperator::As,
-                _ => TypeOperator::Is,
-            };
-            Expression::Type {
-                left: Box::new(acc),
-                operator,
-                type_specifier: type_spec,
-            }
-        }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, (op, type_spec)| {
+        let operator = match op {
+            "is" => TypeOperator::Is,
+            "as" => TypeOperator::As,
+            _ => TypeOperator::Is,
+        };
+        Expression::Type {
+            left: Box::new(acc),
+            operator,
+            type_specifier: type_spec,
+        }
+    })
 }
 
 // Parse type specifier (qualified name like System.String)
@@ -234,7 +295,7 @@ fn parse_type_specifier(input: &str) -> IResult<&str, TypeSpecifier> {
 
 fn parse_membership_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_equality_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((
             map(keyword("contains"), |_| MembershipOperator::Contains),
             map(keyword("in"), |_| MembershipOperator::In),
@@ -242,20 +303,18 @@ fn parse_membership_expression(input: &str) -> IResult<&str, Expression> {
         parse_equality_expression,
     ))
     .parse(input)?;
-    Ok((
-        input,
-        rest.into_iter()
-            .fold(first, |left, (operator, right)| Expression::Membership {
-                left: Box::new(left),
-                operator,
-                right: Box::new(right),
-            }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |left, (operator, right)| {
+        Expression::Membership {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        }
+    })
 }
 
 fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_inequality_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((
             map(tag("!="), |_| EqualityOperator::NotEqual),
             map(tag("!~"), |_| EqualityOperator::NotEquivalent),
@@ -265,139 +324,137 @@ fn parse_equality_expression(input: &str) -> IResult<&str, Expression> {
         parse_inequality_expression,
     ))
     .parse(input)?;
-    Ok((
-        input,
-        rest.into_iter()
-            .fold(first, |left, (operator, right)| Expression::Equality {
-                left: Box::new(left),
-                operator,
-                right: Box::new(right),
-            }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |left, (operator, right)| {
+        Expression::Equality {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        }
+    })
 }
 
 // Parse inequality expressions (<, <=, >, >=)
 fn parse_inequality_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_union_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((tag("<="), tag(">="), tag("<"), tag(">")))),
         parse_union_expression,
     ))
     .parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, (op, expr)| {
-            let operator = match op {
-                "<" => InequalityOperator::LessThan,
-                "<=" => InequalityOperator::LessThanOrEqual,
-                ">" => InequalityOperator::GreaterThan,
-                ">=" => InequalityOperator::GreaterThanOrEqual,
-                _ => InequalityOperator::LessThan,
-            };
-            Expression::Inequality {
-                left: Box::new(acc),
-                operator,
-                right: Box::new(expr),
-            }
-        }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, (op, expr)| {
+        let operator = match op {
+            "<" => InequalityOperator::LessThan,
+            "<=" => InequalityOperator::LessThanOrEqual,
+            ">" => InequalityOperator::GreaterThan,
+            ">=" => InequalityOperator::GreaterThanOrEqual,
+            _ => InequalityOperator::LessThan,
+        };
+        Expression::Inequality {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })
 }
 
 // Parse additive expressions (+, -, &)
 fn parse_additive_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_multiplicative_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((tag("+"), tag("-"), tag("&")))),
         parse_multiplicative_expression,
     ))
     .parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, (op, expr)| {
-            let operator = match op {
-                "+" => AdditiveOperator::Add,
-                "-" => AdditiveOperator::Subtract,
-                "&" => AdditiveOperator::Concatenate,
-                _ => AdditiveOperator::Add,
-            };
-            Expression::Additive {
-                left: Box::new(acc),
-                operator,
-                right: Box::new(expr),
-            }
-        }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, (op, expr)| {
+        let operator = match op {
+            "+" => AdditiveOperator::Add,
+            "-" => AdditiveOperator::Subtract,
+            "&" => AdditiveOperator::Concatenate,
+            _ => AdditiveOperator::Add,
+        };
+        Expression::Additive {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })
 }
 
 // Parse multiplicative expressions (*, /, div, mod)
 fn parse_multiplicative_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_unary_expression(input)?;
-    let (input, rest) = many0((
+    let (input, rest) = chain_tail((
         ws(alt((keyword("div"), keyword("mod"), tag("*"), tag("/")))),
         parse_unary_expression,
     ))
     .parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, (op, expr)| {
-            let operator = match op {
-                "*" => MultiplicativeOperator::Multiply,
-                "/" => MultiplicativeOperator::Divide,
-                "div" => MultiplicativeOperator::Div,
-                "mod" => MultiplicativeOperator::Mod,
-                _ => MultiplicativeOperator::Multiply,
-            };
-            Expression::Multiplicative {
-                left: Box::new(acc),
-                operator,
-                right: Box::new(expr),
-            }
-        }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, (op, expr)| {
+        let operator = match op {
+            "*" => MultiplicativeOperator::Multiply,
+            "/" => MultiplicativeOperator::Divide,
+            "div" => MultiplicativeOperator::Div,
+            "mod" => MultiplicativeOperator::Mod,
+            _ => MultiplicativeOperator::Multiply,
+        };
+        Expression::Multiplicative {
+            left: Box::new(acc),
+            operator,
+            right: Box::new(expr),
+        }
+    })
 }
 
-// Parse unary + and - above the arithmetic operators.
 fn parse_unary_expression(input: &str) -> IResult<&str, Expression> {
-    alt((
-        parse_minimum_integer,
-        map(preceded(ws(char('-')), parse_unary_expression), |expr| {
-            Expression::Polarity {
-                operator: PolarityOperator::Minus,
-                operand: Box::new(expr),
-            }
-        }),
-        map(preceded(ws(char('+')), parse_unary_expression), |expr| {
-            Expression::Polarity {
-                operator: PolarityOperator::Plus,
-                operand: Box::new(expr),
-            }
-        }),
-        parse_invocation_expression,
-    ))
-    .parse(input)
+    let mut prefixes = Vec::new();
+    let mut rest = input;
+    let (rest, operand) = loop {
+        if let Ok(result) = parse_minimum_integer(rest) {
+            break result;
+        }
+        let operator = ws(alt((
+            map(char('-'), |_| PolarityOperator::Minus),
+            map(char('+'), |_| PolarityOperator::Plus),
+        )))
+        .parse(rest);
+        let Ok((next, operator)) = operator else {
+            break parse_invocation_expression(rest)?;
+        };
+        if prefixes.len() + 1 >= MAX_EXPRESSION_DEPTH {
+            return Err(depth_failure(rest));
+        }
+        prefixes.push(operator);
+        rest = next;
+    };
+    finish_chain(
+        rest,
+        operand,
+        prefixes.into_iter().rev(),
+        |operand, operator| Expression::Polarity {
+            operator,
+            operand: Box::new(operand),
+        },
+    )
 }
 
-// Parse union between type operators and comparisons.
 fn parse_union_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_type_expression(input)?;
-    let (input, rest) = many0(preceded(ws(char('|')), parse_type_expression)).parse(input)?;
+    let (input, rest) = chain_tail(preceded(ws(char('|')), parse_type_expression)).parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, expr| Expression::Union {
+    finish_chain(input, first, rest.into_iter(), |acc, expr| {
+        Expression::Union {
             left: Box::new(acc),
             right: Box::new(expr),
-        }),
-    ))
+        }
+    })
 }
 
 // Parse invocation expressions (member access and indexing)
 fn parse_invocation_expression(input: &str) -> IResult<&str, Expression> {
     let (input, first) = parse_term(input)?;
-    let (input, rest) = many0(alt((
+    let (input, rest) = chain_tail(alt((
         map(preceded(ws(char('.')), parse_invocation), |inv| {
             InvocationOrIndex::Invocation(inv)
         }),
@@ -408,19 +465,16 @@ fn parse_invocation_expression(input: &str) -> IResult<&str, Expression> {
     )))
     .parse(input)?;
 
-    Ok((
-        input,
-        rest.into_iter().fold(first, |acc, item| match item {
-            InvocationOrIndex::Invocation(inv) => Expression::Invocation {
-                left: Box::new(acc),
-                invocation: inv,
-            },
-            InvocationOrIndex::Index(idx) => Expression::Indexer {
-                left: Box::new(acc),
-                index: Box::new(idx),
-            },
-        }),
-    ))
+    finish_chain(input, first, rest.into_iter(), |acc, item| match item {
+        InvocationOrIndex::Invocation(inv) => Expression::Invocation {
+            left: Box::new(acc),
+            invocation: inv,
+        },
+        InvocationOrIndex::Index(idx) => Expression::Indexer {
+            left: Box::new(acc),
+            index: Box::new(idx),
+        },
+    })
 }
 
 #[derive(Debug)]
@@ -650,8 +704,6 @@ fn parse_minimum_integer(input: &str) -> IResult<&str, Expression> {
             )))
         }
     };
-    // A following decimal digit separator, unit, or postfix invocation belongs to
-    // ordinary unary parsing. The negative minimum needs parentheses before a postfix.
     let next = rest.trim_start();
     if next.starts_with(['.', '[', '\''])
         || next.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')

@@ -10,7 +10,6 @@ use FhirPathValue::{Empty, Quantity};
 
 /// Convert between supported UCUM codes and FHIRPath calendar duration names.
 pub struct UnitConverter {
-    // Keep construction through new() and Default.
     _private: (),
 }
 
@@ -84,10 +83,9 @@ fn parse_term(term: &str) -> Option<(&str, i32)> {
     if atom(term).is_some() {
         return Some((term, 1));
     }
-    let last_symbol = term.rfind(|c: char| !c.is_ascii_digit() && c != '-')? + 1;
-    let (symbol, power) = term.split_at(last_symbol);
+    let symbol = term.trim_end_matches(|c: char| c.is_ascii_digit() || c == '-');
+    let power = &term[symbol.len()..];
     let power: i32 = power.parse().ok()?;
-    // This also bounds the cost of exponentiation and excludes i32::MIN.
     (power.abs_diff(0) <= 28 && !is_calendar(symbol)).then_some((symbol, power))
 }
 
@@ -96,13 +94,18 @@ fn atom(code: &str) -> Option<(&'static str, i32, Decimal)> {
         return Some(("s", 1, time.factor(calendar)));
     }
     let (base, power, factor) = match code {
-        "1" => ("1", 1, "1"),
+        "1" => ("1", 0, "1"),
+        "%" => ("1", 0, "0.01"),
         "g" => ("g", 1, "1"),
         "kg" => ("g", 1, "1000"),
         "mg" => ("g", 1, "0.001"),
         "ug" => ("g", 1, "0.000001"),
         "ng" => ("g", 1, "0.000000001"),
         "lb" | "[lb_av]" | "lbs" | "lbs." => ("g", 1, "453.59237"),
+        "mol" => ("mol", 1, "1"),
+        "mmol" => ("mol", 1, "0.001"),
+        "umol" => ("mol", 1, "0.000001"),
+        "U" => ("U", 1, "1"),
         "m" => ("m", 1, "1"),
         "cm" => ("m", 1, "0.01"),
         "mm" => ("m", 1, "0.001"),
@@ -240,8 +243,6 @@ fn scale(value: Decimal, source: Decimal, target: Decimal) -> Option<Decimal> {
     if source == target {
         return Some(value);
     }
-    // Cancel the larger factor before applying it to the value whenever
-    // the resulting factor is exact. For recurring ratios divide last.
     let ratio = source.checked_div(target).filter(|ratio| !ratio.is_zero());
     let result =
         if let Some(ratio) = ratio.filter(|ratio| ratio.checked_mul(target) == Some(source)) {
@@ -545,7 +546,6 @@ fn product_or_quotient(
     if is_affine(left) || is_affine(right) || (calendar_operand && !scalar_operand) {
         return None;
     }
-    // Preserve measurement codes when multiplying or dividing by a scalar.
     if right == "1" || (left == "1" && !divide) {
         let source = if right == "1" { au } else { bu };
         let operand = if right == "1" { left } else { right };
@@ -575,8 +575,6 @@ fn product_or_quotient(
         })
     });
     let (a, b, result_symbols) = if mixed_units {
-        // Normalize aliases so shared dimensions cancel even when original
-        // symbols differ (e.g. cm / m).
         (
             scale(a, a_units.factor, Decimal::ONE)?,
             scale(b, b_units.factor, Decimal::ONE)?,
