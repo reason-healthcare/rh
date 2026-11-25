@@ -1,0 +1,30 @@
+# Case ID	Outcome	Reason
+defineVariable::dvConceptMapExample	wrong_answer	Pinned ConceptMap JSON projects four distinct source/target strings, while the fixture expects a duplicate.
+testLiterals::testLiteralTimeUTC	parse_error	The published Time token excludes timezone offsets, including Z.
+testLiterals::testLiteralTimeTimezoneOffset	parse_error	The published Time token excludes timezone offsets.
+testLiterals::testLiteralUnicodeInvalid	wrong_answer	Published string rules drop the backslash of an unrecognized escape and retain the character sequence.
+testDistinct::testDistinct29	wrong_answer	Published isDistinct treats an empty equality result as distinct.
+testDistinct::testDistinct30	wrong_answer	Published distinct leaves result order unspecified; the fixture requires last-occurrence ordering.
+testDistinct::testDistinct32	wrong_answer	Published distinct leaves result order unspecified; the fixture requires last-occurrence ordering.
+testDistinct::testDistinct33	wrong_answer	Published distinct leaves result order unspecified; the fixture requires last-occurrence ordering.
+testDistinct::testDistinct34	wrong_answer	Published distinct leaves result order unspecified; the fixture requires last-occurrence ordering.
+testDistinct::testDistinct35	wrong_answer	Published distinct leaves result order unspecified; the fixture requires last-occurrence ordering.
+testDistinct::testDistinct36	wrong_answer	Published distinct retains both values when equality is empty.
+testIif::testIif6	wrong_answer	Published STU 3 iif permits singleton Boolean conversion; the XML marks the old expectation contested.
+testSort::testSort8	eval_error	Prototype descending selector uses unary minus on a string; STU 3 uses a trailing desc qualifier.
+testSort::testSort10	eval_error	Prototype descending selector uses unary minus on strings; STU 3 uses trailing desc qualifiers.
+testHasValue::testHasCodingValue2	wrong_answer	Published FHIR R5 hasValue returns empty when a singleton lacks a primitive value; the fixture expects false.
+testLessThan::testLessThan29	wrong_answer	Published comparison supports conversion between calendar years and calendar months.
+testLargeExponents::testNegativeRoundPrecision	eval_error	Published round signals an error for negative precision.
+testLessOrEqual::testLessOrEqual28	wrong_answer	Published calendar conversion units define a year as 365 calendar days for conversion.
+testGreaterThan::testGreaterThan29	wrong_answer	Published comparison supports conversion between calendar years and calendar months.
+testType::testType22	eval_error	System.Patient does not resolve to a type; published is requires an error for an unresolved type.
+testConformsTo::testConformsTo3	wrong_answer	Published FHIR R5 conformsTo returns empty for an unresolved profile.
+LowBoundary::LowBoundaryDateTimeMillisecond1	wrong_answer	Published System.DateTime boundary preserves the absence of a timezone.
+HighBoundary::HighBoundaryDateTimeMillisecond1	wrong_answer	Published System.DateTime hour boundary ends at 08:59:59.999 without an injected timezone.
+HighBoundary::HighBoundaryDateTimeMillisecond3	wrong_answer	Published System.DateTime hour boundary ends at 08:59:59.999 without an injected timezone.
+miscEngineTests::testPrimitiveExtensions	wrong_answer	Published FHIR R5 hasValue returns empty when a singleton lacks a primitive value; the fixture expects false.
+miscEngineTests::testPrimitiveExtensionsElement	wrong_answer	Published FHIR R5 hasValue returns empty when a singleton lacks a primitive value; the fixture expects false.
+primitivesWithoutValue::testNoValueHasValue	wrong_answer	Published FHIR R5 hasValue returns empty when a singleton lacks a primitive value; the fixture expects false.
+HTMLChecks::htmlTest02	wrong_answer	Published FHIR R5 htmlChecks returns empty on String input; the function is defined on XHTML.
+HTMLChecks::htmlTest03	wrong_answer	Published FHIR R5 htmlChecks returns empty on String input; the function is defined on XHTML.

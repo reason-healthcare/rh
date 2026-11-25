@@ -164,12 +164,12 @@ fn test_incompatible_units() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test adding incompatible units should fail
+    // Adding incompatible units yields an empty collection.
     let expr_str = "1.0'kg' + 1.0'm'";
     let expr = parser.parse(expr_str).unwrap();
     let result = evaluator.evaluate(&expr, &context);
 
-    assert!(result.is_err());
+    assert_eq!(result.unwrap(), FhirPathValue::Empty);
 }
 
 #[test]

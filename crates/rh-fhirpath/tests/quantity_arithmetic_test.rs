@@ -174,13 +174,10 @@ mod quantity_tests {
             panic!("Expected Quantity result with unit conversion, got: {result:?}");
         }
 
-        // Incompatible units - should error
+        // Incompatible units yield an empty collection.
         let expr = parser.parse("5'mg' + 3'm'").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(
-            result.is_err(),
-            "Should error when adding incompatible units"
-        );
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
 
         // Dimensionless quantities
         let expr = parser.parse("5'' + 3''").unwrap();
@@ -219,13 +216,10 @@ mod quantity_tests {
             panic!("Expected Quantity result with unit conversion, got: {result:?}");
         }
 
-        // Incompatible units - should error
+        // Incompatible units yield an empty collection.
         let expr = parser.parse("10'kg' - 3'm'").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(
-            result.is_err(),
-            "Should error when subtracting incompatible units"
-        );
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
     }
 
     #[test]
@@ -313,7 +307,7 @@ mod quantity_tests {
         // Division by zero
         let expr = parser.parse("10'mg' / 0").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(result.is_err(), "Should error on division by zero");
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
     }
 
     #[test]
@@ -332,13 +326,10 @@ mod quantity_tests {
             panic!("Expected dimensionless Quantity result, got: {result:?}");
         }
 
-        // Quantity with unit + number should error
+        // An incompatible scalar addition yields an empty collection.
         let expr = parser.parse("5'mg' + 3").unwrap();
         let result = evaluator.evaluate(&expr, &context);
-        assert!(
-            result.is_err(),
-            "Should error when adding number to quantity with units"
-        );
+        assert_eq!(result.unwrap(), FhirPathValue::Empty);
     }
 
     #[test]

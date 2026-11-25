@@ -6,7 +6,7 @@
 //! - Cycle detection and prevention
 //! - Edge cases and empty collections
 
-use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
+use rh_fhirpath::{EvaluationContext, FhirModel, FhirPathEvaluator, FhirPathParser, FhirPathValue};
 use serde_json::json;
 
 fn create_hierarchy_context() -> EvaluationContext {
@@ -81,6 +81,58 @@ fn create_tree_context() -> EvaluationContext {
         ]
     });
     EvaluationContext::new(tree_data)
+}
+
+#[test]
+fn repeat_questionnaire_items_keeps_the_first_equal_node() {
+    let mut items: Vec<_> = (0..256)
+        .map(|index| json!({"linkId": format!("q{index}"), "type": "string"}))
+        .collect();
+    items.push(json!({"linkId": "q0", "type": "string", "text": null}));
+    let mut context = EvaluationContext::new(json!({
+        "resourceType": "Questionnaire",
+        "item": items
+    }));
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    for model in [FhirModel::R4, FhirModel::R5] {
+        context.model = model;
+        for (expression, expected) in [
+            ("Questionnaire.repeat(item).count()", json!(256)),
+            ("Questionnaire.repeatAll(item).count()", json!(257)),
+            (
+                "Questionnaire.repeat(item).where(linkId = 'q0').pathname()",
+                json!("Questionnaire.item[0]"),
+            ),
+        ] {
+            let parsed = parser.parse(expression).unwrap();
+            assert_eq!(
+                evaluator.evaluate(&parsed, &context).unwrap().to_json(),
+                expected,
+                "{expression} ({model:?})"
+            );
+        }
+    }
+}
+
+#[test]
+fn repeat_matches_logical_and_untyped_objects_in_either_order() {
+    let mut context = EvaluationContext::new(json!({
+        "resourceType": "Observation",
+        "component": [{"valueInteger": 1}]
+    }));
+    let parser = FhirPathParser::new();
+    let evaluator = FhirPathEvaluator::new();
+    let node = evaluator
+        .evaluate_nodes(&parser.parse("component.first()").unwrap(), &context)
+        .unwrap();
+    let raw = FhirPathValue::Object(serde_json::from_str(r#"{"valueInteger":1.00}"#).unwrap());
+    let expression = parser.parse("%items.repeat($this).count()").unwrap();
+    for values in [vec![node.clone(), raw.clone()], vec![raw, node]] {
+        context.add_constant("items".to_owned(), FhirPathValue::Collection(values));
+        let result = evaluator.evaluate(&expression, &context).unwrap();
+        assert_eq!(result, FhirPathValue::Integer(1));
+    }
 }
 
 #[test]

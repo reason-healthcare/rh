@@ -57,7 +57,7 @@ fn get_resource_key_function(
     }
 
     match target {
-        FhirPathValue::Object(obj) => {
+        FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
             // Verify this is a FHIR resource (has resourceType)
             if let Some(resource_type) = obj.get("resourceType") {
                 if let Some(resource_type_str) = resource_type.as_str() {
@@ -137,7 +137,7 @@ fn get_reference_key_function(
     };
 
     match target {
-        FhirPathValue::Object(obj) => {
+        FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => {
             // Look for reference field - this should be a Reference element
             if let Some(reference_value) = obj.get("reference") {
                 if let Some(reference_str) = reference_value.as_str() {

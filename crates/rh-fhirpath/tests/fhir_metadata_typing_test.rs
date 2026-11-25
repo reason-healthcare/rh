@@ -103,7 +103,7 @@ fn test_observation_datetime_types() {
 }
 
 #[test]
-fn test_date_comparison_with_string_literals() {
+fn test_date_comparison_with_date_literals() {
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
 
@@ -114,27 +114,27 @@ fn test_date_comparison_with_string_literals() {
 
     let context = EvaluationContext::new(patient_data);
 
-    // Date should be comparable with string literal
-    let expr = parser.parse("Patient.birthDate < '2000-01-01'").unwrap();
+    // Date should be comparable with a Date literal
+    let expr = parser.parse("Patient.birthDate < @2000-01-01").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    let expr = parser.parse("Patient.birthDate > '1980-01-01'").unwrap();
+    let expr = parser.parse("Patient.birthDate > @1980-01-01").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // Date equality with string literal
-    let expr = parser.parse("Patient.birthDate = '1990-05-15'").unwrap();
+    // Date equality with a Date literal
+    let expr = parser.parse("Patient.birthDate = @1990-05-15").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    let expr = parser.parse("Patient.birthDate != '2000-01-01'").unwrap();
+    let expr = parser.parse("Patient.birthDate != @2000-01-01").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 }
 
 #[test]
-fn test_datetime_comparison_with_string_literals() {
+fn test_datetime_comparison_with_datetime_literals() {
     let parser = FhirPathParser::new();
     let evaluator = FhirPathEvaluator::new();
 
@@ -145,22 +145,22 @@ fn test_datetime_comparison_with_string_literals() {
 
     let context = EvaluationContext::new(observation_data);
 
-    // DateTime should be comparable with string literal
+    // DateTime should be comparable with a DateTime literal
     let expr = parser
-        .parse("Observation.effectiveDateTime > '2023-01-01T00:00:00Z'")
+        .parse("Observation.effectiveDateTime > @2023-01-01T00:00:00Z")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
     let expr = parser
-        .parse("Observation.effectiveDateTime < '2024-01-01T00:00:00Z'")
+        .parse("Observation.effectiveDateTime < @2024-01-01T00:00:00Z")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // DateTime equality with string literal
+    // DateTime equality with a DateTime literal
     let expr = parser
-        .parse("Observation.effectiveDateTime = '2023-10-22T14:30:00Z'")
+        .parse("Observation.effectiveDateTime = @2023-10-22T14:30:00Z")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
@@ -388,7 +388,7 @@ fn test_where_clause_with_typed_date_comparison() {
 
     // Filter patients born before 2000
     let expr = parser
-        .parse("Bundle.entry.resource.where(birthDate < '2000-01-01').id")
+        .parse("Bundle.entry.resource.where(birthDate < @2000-01-01).id")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
 

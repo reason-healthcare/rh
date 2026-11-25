@@ -211,10 +211,10 @@ mod datetime_function_arithmetic_tests {
         let context = EvaluationContext::new(json!({}));
 
         // Test with invalid precision units
-        let expr = parser.parse("now() + 5 invalid_units").unwrap();
+        let expr = parser.parse("now() + 5 'invalid_units'").unwrap();
         let result = evaluator.evaluate(&expr, &context);
         assert!(result.is_err());
-        println!("✓ now() + 5 invalid_units correctly produces error");
+        println!("✓ now() + 5 'invalid_units' correctly produces error");
 
         // Test that today() doesn't accept time units
         let expr = parser.parse("today() + 5 hours").unwrap();
@@ -231,26 +231,7 @@ mod datetime_function_arithmetic_tests {
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(json!({}));
 
-        // Test quantity + function (should work the same way)
         let expr = parser.parse("5 days + today()").unwrap();
-        let result = evaluator.evaluate(&expr, &context).unwrap();
-
-        if let FhirPathValue::Date(date_str) = result {
-            // Should be 5 days from today
-            assert_eq!(date_str.len(), 10);
-            println!("✓ 5 days + today() → {date_str}");
-        } else {
-            panic!("Expected Date result, got: {result:?}");
-        }
-
-        let expr = parser.parse("2 hours + now()").unwrap();
-        let result = evaluator.evaluate(&expr, &context).unwrap();
-
-        if let FhirPathValue::DateTime(datetime_str) = result {
-            assert_valid_datetime(&datetime_str);
-            println!("✓ 2 hours + now() → {datetime_str}");
-        } else {
-            panic!("Expected DateTime result, got: {result:?}");
-        }
+        assert!(evaluator.evaluate(&expr, &context).is_err());
     }
 }

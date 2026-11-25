@@ -1,97 +1,65 @@
-//! Math function registration for FHIRPath
+//! Math function registration for FHIRPath.
 
-use crate::error::*;
+use std::collections::HashMap;
+
+use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::operations::math::MathEvaluator;
 use crate::evaluator::types::FhirPathValue;
-use std::collections::HashMap;
 
 use super::FhirPathFunction;
 
-/// Register all math functions
 pub fn register_math_functions(functions: &mut HashMap<String, FhirPathFunction>) {
-    // abs() function
-    functions.insert(
-        "abs".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| MathEvaluator::abs(target)),
-    );
+    type UnaryMath = fn(&FhirPathValue) -> FhirPathResult<FhirPathValue>;
+    let unary: [(&str, UnaryMath); 7] = [
+        ("abs", MathEvaluator::abs),
+        ("ceiling", MathEvaluator::ceiling),
+        ("exp", MathEvaluator::exp),
+        ("floor", MathEvaluator::floor),
+        ("ln", MathEvaluator::ln),
+        ("sqrt", MathEvaluator::sqrt),
+        ("truncate", MathEvaluator::truncate),
+    ];
+    for (name, evaluate) in unary {
+        functions.insert(
+            name.to_owned(),
+            Box::new(move |target, params| {
+                if !params.is_empty() {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: format!("{name}() takes no parameters"),
+                    });
+                }
+                evaluate(target)
+            }),
+        );
+    }
 
-    // ceiling() function
-    functions.insert(
-        "ceiling".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            MathEvaluator::ceiling(target)
-        }),
-    );
+    type BinaryMath = fn(&FhirPathValue, &FhirPathValue) -> FhirPathResult<FhirPathValue>;
+    let binary: [(&str, &str, BinaryMath); 2] = [
+        ("log", "base", MathEvaluator::log),
+        ("power", "exponent", MathEvaluator::power),
+    ];
+    for (name, parameter, evaluate) in binary {
+        functions.insert(
+            name.to_owned(),
+            Box::new(move |target, params| {
+                let [value] = params else {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: format!("{name}() requires one {parameter} parameter"),
+                    });
+                };
+                evaluate(target, value)
+            }),
+        );
+    }
 
-    // exp() function
     functions.insert(
-        "exp".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| MathEvaluator::exp(target)),
-    );
-
-    // floor() function
-    functions.insert(
-        "floor".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| MathEvaluator::floor(target)),
-    );
-
-    // ln() function
-    functions.insert(
-        "ln".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| MathEvaluator::ln(target)),
-    );
-
-    // log() function - requires base parameter
-    functions.insert(
-        "log".to_string(),
-        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
-                return Err(FhirPathError::InvalidOperation {
-                    message: "log() requires exactly one parameter (base)".to_string(),
-                });
-            }
-            MathEvaluator::log(target, &params[0])
-        }),
-    );
-
-    // power() function - requires exponent parameter
-    functions.insert(
-        "power".to_string(),
-        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
-                return Err(FhirPathError::InvalidOperation {
-                    message: "power() requires exactly one parameter (exponent)".to_string(),
-                });
-            }
-            MathEvaluator::power(target, &params[0])
-        }),
-    );
-
-    // round() function - optional precision parameter
-    functions.insert(
-        "round".to_string(),
-        Box::new(
-            |target: &FhirPathValue, params: &[FhirPathValue]| match params.len() {
-                0 => MathEvaluator::round(target, None),
-                1 => MathEvaluator::round(target, Some(&params[0])),
-                _ => Err(FhirPathError::InvalidOperation {
-                    message: "round() accepts at most one parameter (precision)".to_string(),
-                }),
-            },
-        ),
-    );
-
-    // sqrt() function
-    functions.insert(
-        "sqrt".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| MathEvaluator::sqrt(target)),
-    );
-
-    // truncate() function
-    functions.insert(
-        "truncate".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            MathEvaluator::truncate(target)
+        "round".to_owned(),
+        Box::new(|target, params| match params {
+            [] => MathEvaluator::round(target, None),
+            [precision] => MathEvaluator::round(target, Some(precision)),
+            _ => Err(FhirPathError::InvalidOperation {
+                message: "round() accepts one optional precision parameter".to_string(),
+            }),
         }),
     );
 }

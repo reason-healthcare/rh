@@ -25,6 +25,11 @@ pub enum Expression {
         left: Box<Expression>,
         index: Box<Expression>,
     },
+    /// A sort selector with an explicit direction.
+    SortKey {
+        key: Box<Expression>,
+        descending: bool,
+    },
     /// Polarity expression (e.g., -5, +10)
     Polarity {
         operator: PolarityOperator,
@@ -89,6 +94,62 @@ pub enum Expression {
     },
 }
 
+pub(crate) const MAX_EXPRESSION_DEPTH: usize = 64;
+pub(crate) const EXPRESSION_DEPTH_ERROR: &str = "Expression tree exceeds 64 levels";
+
+impl Expression {
+    pub(crate) fn check_depth(&self) -> crate::error::FhirPathResult<()> {
+        let mut pending = vec![(self, 1)];
+        while let Some((expr, depth)) = pending.pop() {
+            if depth > MAX_EXPRESSION_DEPTH {
+                return Err(crate::error::FhirPathError::syntax_error(
+                    1,
+                    0,
+                    EXPRESSION_DEPTH_ERROR,
+                ));
+            }
+            let mut push = |child| pending.push((child, depth + 1));
+            match expr {
+                Self::Invocation { left, .. }
+                | Self::Term(Term::Parenthesized(left))
+                | Self::Type { left, .. }
+                | Self::SortKey { key: left, .. }
+                | Self::Polarity { operand: left, .. } => push(left),
+                Self::Term(Term::InstanceSelector { elements, .. }) => {
+                    for (_, child) in elements {
+                        push(child);
+                    }
+                }
+                Self::Indexer { left, index: right }
+                | Self::Additive { left, right, .. }
+                | Self::Multiplicative { left, right, .. }
+                | Self::Union { left, right }
+                | Self::Inequality { left, right, .. }
+                | Self::Equality { left, right, .. }
+                | Self::Membership { left, right, .. }
+                | Self::And { left, right }
+                | Self::Or { left, right, .. }
+                | Self::Implies { left, right } => {
+                    push(left);
+                    push(right);
+                }
+                Self::Term(Term::Literal(_) | Term::ExternalConstant(_) | Term::Invocation(_)) => {}
+            }
+            if let Self::Term(Term::Invocation(Invocation::Function { parameters, .. }))
+            | Self::Invocation {
+                invocation: Invocation::Function { parameters, .. },
+                ..
+            } = expr
+            {
+                for child in parameters {
+                    push(child);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Term types in FHIRPath
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Term {
@@ -100,6 +161,11 @@ pub enum Term {
     ExternalConstant(String),
     /// Parenthesized expression
     Parenthesized(Box<Expression>),
+    /// A typed instance with named element expressions.
+    InstanceSelector {
+        type_specifier: TypeSpecifier,
+        elements: Vec<(String, Expression)>,
+    },
 }
 
 /// Literal value types
@@ -239,6 +305,9 @@ impl fmt::Display for Expression {
                 write!(f, "{left}.{invocation}")
             }
             Expression::Indexer { left, index } => write!(f, "{left}[{index}]"),
+            Expression::SortKey { key, descending } => {
+                write!(f, "{key} {}", if *descending { "desc" } else { "asc" })
+            }
             Expression::Polarity { operator, operand } => {
                 write!(f, "{operator}{operand}")
             }
@@ -291,6 +360,24 @@ impl fmt::Display for Term {
             Term::Literal(lit) => write!(f, "{lit}"),
             Term::ExternalConstant(name) => write!(f, "%{name}"),
             Term::Parenthesized(expr) => write!(f, "({expr})"),
+            Term::InstanceSelector {
+                type_specifier,
+                elements,
+            } => {
+                write!(f, "{type_specifier} {{")?;
+                if elements.is_empty() {
+                    write!(f, ":")?;
+                }
+                for (index, (name, value)) in elements.iter().enumerate() {
+                    if index == 0 {
+                        write!(f, " ")?;
+                    } else {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{name}: {value}")?;
+                }
+                write!(f, " }}")
+            }
         }
     }
 }

@@ -426,7 +426,7 @@ fn test_filtering_with_date_conditions() {
 
     // Simple date comparison
     let expr = parser
-        .parse("entry.resource.where(resourceType = 'Patient').where(birthDate = '1990-05-15')")
+        .parse("entry.resource.where(resourceType = 'Patient').where(birthDate = @1990-05-15)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {
@@ -437,7 +437,7 @@ fn test_filtering_with_date_conditions() {
 
     // Simple birth date filtering
     let expr = parser
-        .parse("entry.resource.where(resourceType = 'Patient' and birthDate = '1990-05-15')")
+        .parse("entry.resource.where(resourceType = 'Patient' and birthDate = @1990-05-15)")
         .unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
     match result {

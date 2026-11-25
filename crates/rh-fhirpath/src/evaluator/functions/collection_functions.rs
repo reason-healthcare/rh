@@ -2,11 +2,16 @@
 
 use crate::error::*;
 use crate::evaluator::operations::collection::CollectionEvaluator;
+use crate::evaluator::operations::comparison::ComparisonEvaluator;
 use crate::evaluator::types::FhirPathValue;
-use rust_decimal::Decimal;
 use std::collections::HashMap;
 
 use super::FhirPathFunction;
+
+/// Compare sort keys for an infallible caller, treating unavailable ordering as equal.
+pub fn compare_for_sort_pub(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
+    CollectionEvaluator::compare_sort_keys(a, b).unwrap_or(std::cmp::Ordering::Equal)
+}
 
 /// Register basic collection functions (empty, exists, count, etc.)
 pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFunction>) {
@@ -63,44 +68,6 @@ pub fn register_collection_functions(functions: &mut HashMap<String, FhirPathFun
         "descendants".to_string(),
         Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
             CollectionEvaluator::descendants(target)
-        }),
-    );
-
-    // conformsTo(url) — stub implementation.
-    // Returns true if the resource/element conforms to the named profile/structure.
-    // Full validation requires a validator backend; this stub returns true for known
-    // base resource type URLs, false for profile URLs, and an error for unresolvable URLs.
-    functions.insert(
-        "conformsTo".to_string(),
-        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            let url = match params.first() {
-                Some(FhirPathValue::String(s))
-                | Some(FhirPathValue::TypedString { value: s, .. }) => s.clone(),
-                _ => {
-                    return Err(FhirPathError::FunctionError {
-                        message: "conformsTo() requires a URL string parameter".to_string(),
-                    })
-                }
-            };
-            // Check if the URL resolves to a known pattern
-            if !url.starts_with("http://hl7.org/fhir/StructureDefinition/")
-                && !url.starts_with("https://hl7.org/fhir/StructureDefinition/")
-            {
-                return Err(FhirPathError::EvaluationError {
-                    message: format!("conformsTo(): cannot resolve profile URL '{url}'"),
-                });
-            }
-            // Extract the resource/type name from the URL
-            let type_name = url.rsplit('/').next().unwrap_or("");
-            // Check if the target resource type matches (base resource conformance)
-            let matches = match target {
-                FhirPathValue::Object(obj) | FhirPathValue::TypedObject { value: obj, .. } => obj
-                    .get("resourceType")
-                    .and_then(|v| v.as_str())
-                    .is_some_and(|rt| rt.eq_ignore_ascii_case(type_name)),
-                _ => false,
-            };
-            Ok(FhirPathValue::Boolean(matches))
         }),
     );
 }
@@ -182,38 +149,22 @@ pub fn register_subsetting_functions(functions: &mut HashMap<String, FhirPathFun
         }),
     );
 
-    // skip() function - also handled directly by evaluator for ordered checks
     functions.insert(
         "skip".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
-                return Err(FhirPathError::InvalidOperation {
-                    message: "skip() requires exactly one parameter (count)".to_string(),
-                });
-            }
-            match &params[0] {
-                FhirPathValue::Integer(count) => CollectionEvaluator::skip(target, *count, false),
-                _ => Err(FhirPathError::InvalidOperation {
-                    message: "skip() count parameter must be an integer".to_string(),
-                }),
+            match CollectionEvaluator::subsetting_count(params, "skip()")? {
+                Some(count) => CollectionEvaluator::skip(target, count, false),
+                None => Ok(FhirPathValue::Empty),
             }
         }),
     );
 
-    // take() function
     functions.insert(
         "take".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            if params.len() != 1 {
-                return Err(FhirPathError::InvalidOperation {
-                    message: "take() requires exactly one parameter (count)".to_string(),
-                });
-            }
-            match &params[0] {
-                FhirPathValue::Integer(count) => CollectionEvaluator::take(target, *count),
-                _ => Err(FhirPathError::InvalidOperation {
-                    message: "take() count parameter must be an integer".to_string(),
-                }),
+            match CollectionEvaluator::subsetting_count(params, "take()")? {
+                Some(count) => CollectionEvaluator::take(target, count),
+                None => Ok(FhirPathValue::Empty),
             }
         }),
     );
@@ -257,6 +208,10 @@ pub fn register_subsetting_functions(functions: &mut HashMap<String, FhirPathFun
                             .to_string(),
                 });
             }
+            if let Some(preserve_order) = params.get(1) {
+                preserve_order.singleton_boolean("combine() preserveOrder")?;
+            }
+            // Append in both modes. The default permits any order, including this one.
             CollectionEvaluator::combine(target, &params[0])
         }),
     );
@@ -324,118 +279,89 @@ pub fn register_control_flow_functions(functions: &mut HashMap<String, FhirPathF
 }
 
 pub fn register_sort_type_functions(functions: &mut HashMap<String, FhirPathFunction>) {
-    // sort([expression]) — sort a collection, ascending by value or by expression
-    // Argument-less form sorts scalars; $this-expression form sorts by a key.
-    // NOTE: this is the 0- or 1-argument FunctionRef; the special-form variant
-    // with $this expressions is handled via the aggregation dispatch. The
-    // version registered here handles the common 0-argument case.
+    // Key selectors are handled by the expression evaluator.
     functions.insert(
         "sort".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            let items: Vec<FhirPathValue> = match target {
-                FhirPathValue::Empty => return Ok(FhirPathValue::Empty),
-                FhirPathValue::Collection(v) | FhirPathValue::UnorderedCollection(v) => v.clone(),
-                other => return Ok(other.clone()),
-            };
-            let mut sorted = items;
-            sorted.sort_by(compare_for_sort);
-            if sorted.is_empty() {
-                Ok(FhirPathValue::Empty)
-            } else if sorted.len() == 1 {
-                Ok(sorted.into_iter().next().unwrap())
-            } else {
-                Ok(FhirPathValue::Collection(sorted))
+        Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
+            if !params.is_empty() {
+                return Err(FhirPathError::FunctionError {
+                    message: "sort() key selectors require an expression".into(),
+                });
             }
+            let items = target.items();
+            let mut indices: Vec<usize> = (0..items.len()).collect();
+            let mut scratch = indices.clone();
+            CollectionEvaluator::sort_indices_by(&mut indices, &mut scratch, &mut |a, b| {
+                CollectionEvaluator::compare_sort_keys(&items[a], &items[b])
+            })?;
+            Ok(FhirPathValue::from_items(
+                indices
+                    .into_iter()
+                    .map(|index| items[index].clone())
+                    .collect(),
+            ))
         }),
     );
 
-    // type() — returns a TypeSpecifier object with namespace and name fields
-    functions.insert(
-        "type".to_string(),
-        Box::new(|target: &FhirPathValue, _params: &[FhirPathValue]| {
-            if matches!(target, FhirPathValue::Empty)
-                || matches!(target, FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) if items.is_empty())
-            {
-                return Ok(FhirPathValue::Empty);
-            }
-            let (namespace, name) = fhirpath_type_of(target);
-            let base_type = fhirpath_base_type_of(target);
-            Ok(FhirPathValue::Object(serde_json::json!({
-                "namespace": namespace,
-                "name": name,
-                "baseType": base_type
-            })))
-        }),
-    );
+    functions.insert("type".into(), Box::new(reflect_types));
 
-    // comparable(other) — true when both values can be compared via UCUM
-    // For simplicity, we return true when both are quantities and share base unit.
     functions.insert(
         "comparable".to_string(),
         Box::new(|target: &FhirPathValue, params: &[FhirPathValue]| {
-            let other = params.first().unwrap_or(&FhirPathValue::Empty);
-            match are_comparable(target, other) {
-                Some(result) => Ok(FhirPathValue::Boolean(result)),
-                None => Ok(FhirPathValue::Empty),
-            }
+            let [other] = params else {
+                return Err(FhirPathError::FunctionError {
+                    message: "comparable() requires exactly one Quantity".into(),
+                });
+            };
+            Ok(ComparisonEvaluator::quantities_comparable(target, other)
+                .map_or(FhirPathValue::Empty, FhirPathValue::Boolean))
         }),
     );
 }
 
-/// Public alias for use by the evaluator's expression-based sort.
-pub fn compare_for_sort_pub(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
-    compare_for_sort(a, b)
+fn reflect_types(
+    target: &FhirPathValue,
+    params: &[FhirPathValue],
+) -> FhirPathResult<FhirPathValue> {
+    if !params.is_empty() {
+        return Err(FhirPathError::FunctionError {
+            message: "type() takes no arguments".into(),
+        });
+    }
+    let reflected=target.items().iter().filter_map(|item|{
+        let (namespace,name)=fhirpath_type_of(item)?;
+        let info=if namespace=="System" && !matches!(item,FhirPathValue::TypedObject{..}) {"System.SimpleTypeInfo"} else {"System.ClassInfo"};
+        let value=serde_json::json!({"namespace":namespace,"name":name,"baseType":fhirpath_base_type_of(item)});
+        Some(FhirPathValue::TypedObject { value, fhir_type:info.into() })
+    });
+    Ok(FhirPathValue::from_items(reflected.collect()))
 }
 
-fn compare_for_sort(a: &FhirPathValue, b: &FhirPathValue) -> std::cmp::Ordering {
-    use std::cmp::Ordering;
-    use FhirPathValue::*;
-    let a_empty =
-        matches!(a, Empty) || matches!(a, Collection(c) | UnorderedCollection(c) if c.is_empty());
-    let b_empty =
-        matches!(b, Empty) || matches!(b, Collection(c) | UnorderedCollection(c) if c.is_empty());
-    if a_empty && b_empty {
-        return Ordering::Equal;
-    }
-    if a_empty {
-        return Ordering::Less;
-    }
-    if b_empty {
-        return Ordering::Greater;
-    }
-    match (a, b) {
-        (Boolean(x), Boolean(y)) => x.cmp(y),
-        (Boolean(x), TypedBoolean { value: y, .. })
-        | (TypedBoolean { value: x, .. }, Boolean(y))
-        | (TypedBoolean { value: x, .. }, TypedBoolean { value: y, .. }) => x.cmp(y),
-        (Integer(x), Integer(y)) | (Long(x), Long(y)) => x.cmp(y),
-        (Integer(x), Long(y)) | (Long(x), Integer(y)) => x.cmp(y),
-        (Number(x), Number(y)) => x.partial_cmp(y).unwrap_or(Ordering::Equal),
-        (Integer(x), Number(y)) | (Long(x), Number(y)) => {
-            Decimal::from(*x).partial_cmp(y).unwrap_or(Ordering::Equal)
-        }
-        (Number(x), Integer(y)) | (Number(x), Long(y)) => {
-            x.partial_cmp(&Decimal::from(*y)).unwrap_or(Ordering::Equal)
-        }
-        (String(x), String(y))
-        | (Date(x), Date(y))
-        | (DateTime(x), DateTime(y))
-        | (Time(x), Time(y)) => x.cmp(y),
-        (DateTime(x), TypedDateTime { value: y, .. })
-        | (TypedDateTime { value: x, .. }, DateTime(y))
-        | (TypedDateTime { value: x, .. }, TypedDateTime { value: y, .. }) => x.cmp(y),
-        _ => Ordering::Equal,
-    }
-}
-
-fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
+fn fhirpath_type_of(v: &FhirPathValue) -> Option<(String, String)> {
     use rh_hl7_fhir_r4_core::metadata::FhirPrimitiveType;
-    match v {
+    Some(match v {
+        FhirPathValue::Node(node) if node.is_system_projection() => {
+            return Some((
+                "System".to_owned(),
+                node.fhir_type.strip_prefix("System.")?.to_owned(),
+            ))
+        }
+        FhirPathValue::Node(node) if node.is_untyped_object() => {
+            return fhirpath_type_of(&node.inner);
+        }
+        FhirPathValue::Node(node) => ("FHIR".to_owned(), node.fhir_type.clone()),
+        FhirPathValue::TypedObject { fhir_type, .. } => {
+            let (namespace, name) = fhir_type
+                .split_once('.')
+                .filter(|(ns, _)| *ns == "System")
+                .unwrap_or(("FHIR", fhir_type));
+            (namespace.into(), name.into())
+        }
         FhirPathValue::Object(json) => {
             if let Some(rt) = json.get("resourceType").and_then(|r| r.as_str()) {
-                return ("FHIR".to_string(), rt.to_string());
+                return Some(("FHIR".into(), rt.into()));
             }
-            ("FHIR".to_string(), "Any".to_string())
+            return None;
         }
         FhirPathValue::TypedString { fhir_type, .. } => {
             let name = match fhir_type {
@@ -450,7 +376,7 @@ fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
                 FhirPrimitiveType::Base64Binary => "base64Binary",
                 other => {
                     let s = format!("{:?}", other);
-                    return ("FHIR".to_string(), s);
+                    return Some(("FHIR".into(), s));
                 }
             };
             ("FHIR".to_string(), name.to_string())
@@ -465,26 +391,27 @@ fn fhirpath_type_of(v: &FhirPathValue) -> (String, String) {
         }
         other => {
             let name = match other {
-                FhirPathValue::Boolean(_) => "Boolean",
-                FhirPathValue::String(_) => "String",
-                FhirPathValue::Integer(_) | FhirPathValue::Long(_) => "Integer",
-                FhirPathValue::Number(_) => "Decimal",
-                FhirPathValue::Date(_) => "Date",
-                FhirPathValue::DateTime(_) => "DateTime",
-                FhirPathValue::Time(_) => "Time",
-                FhirPathValue::Quantity { .. } => "Quantity",
                 FhirPathValue::Collection(_) | FhirPathValue::UnorderedCollection(_) => {
                     "Collection"
                 }
-                _ => "Any",
+                _ => other.system_scalar_name().unwrap_or("Any"),
             };
             ("System".to_string(), name.to_string())
         }
-    }
+    })
 }
 
 fn fhirpath_base_type_of(v: &FhirPathValue) -> String {
     match v {
+        FhirPathValue::TypedObject { fhir_type, .. } if fhir_type.starts_with("System.") => {
+            "System.TypeInfo".into()
+        }
+        FhirPathValue::Node(node) if node.is_untyped_object() => fhirpath_base_type_of(&node.inner),
+        FhirPathValue::Node(node) => node
+            .model
+            .base(&node.fhir_type)
+            .map(|s| format!("FHIR.{s}"))
+            .unwrap_or_else(|| "System.Any".into()),
         FhirPathValue::Object(json) if json.get("resourceType").is_some() => {
             "FHIR.DomainResource".to_string()
         }
@@ -493,59 +420,5 @@ fn fhirpath_base_type_of(v: &FhirPathValue) -> String {
         | FhirPathValue::TypedDateTime { .. }
         | FhirPathValue::FhirPrimitive { .. } => "FHIR.Element".to_string(),
         _ => "System.Any".to_string(),
-    }
-}
-
-/// UCUM base-unit classification for `comparable()`.
-/// Two quantities are comparable when they share the same dimension.
-fn ucum_dimension(unit: &str) -> Option<&'static str> {
-    match unit {
-        "m" | "cm" | "mm" | "km" | "in" | "ft" | "yd" | "[in_i]" => Some("length"),
-        "kg" | "g" | "mg" | "lb" | "oz" => Some("mass"),
-        "s" | "ms" | "min" | "h" | "d" | "wk" | "mo" | "a" => Some("time"),
-        "L" | "mL" | "dL" => Some("volume"),
-        "Pa" | "kPa" | "mm[Hg]" => Some("pressure"),
-        _ => None,
-    }
-}
-
-fn are_comparable(a: &FhirPathValue, b: &FhirPathValue) -> Option<bool> {
-    fn singleton(value: &FhirPathValue) -> Option<Option<&FhirPathValue>> {
-        match value {
-            FhirPathValue::Empty => Some(None),
-            FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-                if items.len() == 1 {
-                    Some(Some(&items[0]))
-                } else {
-                    Some(None)
-                }
-            }
-            other => Some(Some(other)),
-        }
-    }
-    let a = singleton(a)??;
-    let b = singleton(b)??;
-    match (a, b) {
-        (
-            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
-            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
-        ) => Some(true),
-        (
-            FhirPathValue::Quantity { unit, .. },
-            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
-        )
-        | (
-            FhirPathValue::Integer(_) | FhirPathValue::Long(_) | FhirPathValue::Number(_),
-            FhirPathValue::Quantity { unit, .. },
-        ) => Some(unit.as_deref().is_none_or(|u| u == "1")),
-        (FhirPathValue::Quantity { unit: ua, .. }, FhirPathValue::Quantity { unit: ub, .. }) => {
-            let ua_str = ua.as_deref().unwrap_or("");
-            let ub_str = ub.as_deref().unwrap_or("");
-            match (ucum_dimension(ua_str), ucum_dimension(ub_str)) {
-                (Some(da), Some(db)) => Some(da == db),
-                _ => Some(ua == ub),
-            }
-        }
-        _ => None,
     }
 }

@@ -98,14 +98,10 @@ mod long_conversion_tests {
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(json!({}));
 
-        // Whole number should convert
+        // Whole Decimal values do not convert to Long.
         let expr = parser.parse("42.0.toLong()").unwrap();
         let result = evaluator.evaluate(&expr, &context).unwrap();
-
-        match result {
-            FhirPathValue::Long(val) => assert_eq!(val, 42),
-            _ => panic!("Expected Long(42) from 42.0.toLong(), got {result:?}"),
-        }
+        assert_eq!(result, FhirPathValue::Empty);
 
         // Fractional number should return empty
         let expr = parser.parse("42.5.toLong()").unwrap();

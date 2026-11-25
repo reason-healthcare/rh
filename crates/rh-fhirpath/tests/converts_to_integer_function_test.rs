@@ -57,18 +57,18 @@ fn test_converts_to_integer_with_boolean_values() {
 fn test_converts_to_integer_with_decimal_values() {
     let (parser, evaluator, context) = setup_test_environment();
 
-    // Test whole number decimals (should be convertible)
+    // Whole number Decimal values are outside the conversion.
     let expr = parser.parse("42.0.convertsToInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(true));
+    assert_eq!(result, FhirPathValue::Boolean(false));
 
     let expr = parser.parse("0.0.convertsToInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(true));
+    assert_eq!(result, FhirPathValue::Boolean(false));
 
     let expr = parser.parse("(-123.0).convertsToInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(true));
+    assert_eq!(result, FhirPathValue::Boolean(false));
 
     // Test non-whole decimals (should not be convertible)
     let expr = parser.parse("2.5.convertsToInteger()").unwrap();
@@ -101,10 +101,10 @@ fn test_converts_to_integer_with_string_values() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert_eq!(result, FhirPathValue::Boolean(true));
 
-    // Test strings with whitespace (should be convertible)
+    // Whitespace is outside the integer string format.
     let expr = parser.parse("'  42  '.convertsToInteger()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(result, FhirPathValue::Boolean(true));
+    assert_eq!(result, FhirPathValue::Boolean(false));
 
     // Test invalid strings (should not be convertible)
     let expr = parser.parse("'abc'.convertsToInteger()").unwrap();
@@ -238,7 +238,7 @@ fn test_converts_to_integer_comprehensive() {
         ),
         (
             "testCases.wholeDecimal.convertsToInteger()",
-            FhirPathValue::Boolean(true),
+            FhirPathValue::Boolean(false),
         ),
         (
             "testCases.fractionalDecimal.convertsToInteger()",
@@ -258,7 +258,7 @@ fn test_converts_to_integer_comprehensive() {
         ),
         (
             "testCases.whitespaceString.convertsToInteger()",
-            FhirPathValue::Boolean(true),
+            FhirPathValue::Boolean(false),
         ),
         (
             "testCases.decimalString.convertsToInteger()",
@@ -279,13 +279,13 @@ fn test_converts_to_integer_string_edge_cases() {
 
     // Test various string edge cases
     let string_test_cases = vec![
-        ("'  123  '", true), // Whitespace should be trimmed
-        ("'+123'", true),    // Leading plus sign
-        ("'123abc'", false), // Mixed content
-        ("'abc123'", false), // Mixed content
-        ("'12 34'", false),  // Internal whitespace
-        ("'1.0'", false),    // Decimal in string (not integer)
-        ("'1e10'", false),   // Scientific notation
+        ("'  123  '", false), // Whitespace is outside the integer format.
+        ("'+123'", true),     // Leading plus sign
+        ("'123abc'", false),  // Mixed content
+        ("'abc123'", false),  // Mixed content
+        ("'12 34'", false),   // Internal whitespace
+        ("'1.0'", false),     // Decimal in string (not integer)
+        ("'1e10'", false),    // Scientific notation
     ];
 
     for (string_val, expected) in string_test_cases {

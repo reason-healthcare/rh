@@ -269,32 +269,31 @@ impl RuleCompiler {
 
                     let mut slices = Vec::new();
                     for slice_element in &snapshot_data.element {
-                        if slice_element.path == element.path {
-                            if let Some(slice_name) = &slice_element.slice_name {
-                                let discriminator_constraints = collect_discriminator_constraints(
-                                    &snapshot_data.element,
-                                    element,
-                                    slice_name,
-                                    &discriminators,
-                                );
-                                let target_profiles = collect_profile_constraints(
-                                    &snapshot_data.element,
-                                    element,
-                                    slice_name,
-                                    &discriminators,
-                                );
-                                slices.push(SliceDefinition {
-                                    name: slice_name.clone(),
-                                    min: slice_element.min.unwrap_or(0),
-                                    max: slice_element
-                                        .max
-                                        .clone()
-                                        .unwrap_or_else(|| "*".to_string()),
-                                    discriminator_constraints,
-                                    target_profiles,
-                                });
-                            }
+                        let Some(slice_name) = &slice_element.slice_name else {
+                            continue;
+                        };
+                        if slice_element.path != element.path
+                            || !is_direct_slice(slice_element, element, slice_name)
+                        {
+                            continue;
                         }
+                        let discriminator_constraints = collect_discriminator_constraints(
+                            &snapshot_data.element,
+                            slice_element,
+                            &discriminators,
+                        );
+                        let target_profiles = collect_profile_constraints(
+                            &snapshot_data.element,
+                            slice_element,
+                            &discriminators,
+                        );
+                        slices.push(SliceDefinition {
+                            name: slice_name.clone(),
+                            min: slice_element.min.unwrap_or(0),
+                            max: slice_element.max.clone().unwrap_or_else(|| "*".to_string()),
+                            discriminator_constraints,
+                            target_profiles,
+                        });
                     }
 
                     if !slices.is_empty() {
@@ -527,20 +526,39 @@ fn effective_slice_name(element: &ElementDefinition) -> Option<String> {
     })
 }
 
+fn is_direct_slice(slice: &ElementDefinition, root: &ElementDefinition, name: &str) -> bool {
+    match (slice.id.as_deref(), root.id.as_deref()) {
+        (Some(id), Some(root_id)) => id.rsplit_once([':', '/']).is_some_and(|(parent, name)| {
+            parent == root_id && !name.is_empty() && !name.contains('.')
+        }),
+        _ => name.rsplit_once('/').map(|(parent, _)| parent) == root.slice_name.as_deref(),
+    }
+}
+
+/// Slice children identify their slice in ElementDefinition.id. Only the slice
+/// root normally has a sliceName in a published snapshot.
+fn belongs_to_slice(element: &ElementDefinition, slice: &ElementDefinition) -> bool {
+    match (element.id.as_deref(), slice.id.as_deref()) {
+        (Some(id), Some(slice_id)) => id
+            .strip_prefix(slice_id)
+            .is_some_and(|suffix| suffix.is_empty() || suffix.starts_with('.')),
+        _ => slice.slice_name.is_some() && element.slice_name == slice.slice_name,
+    }
+}
+
 fn collect_discriminator_constraints(
     elements: &[ElementDefinition],
-    slicing_root: &ElementDefinition,
-    slice_name: &str,
+    slice: &ElementDefinition,
     discriminators: &[Discriminator],
 ) -> Vec<DiscriminatorConstraint> {
     let mut constraints = Vec::new();
 
     for element in elements {
-        if element.slice_name.as_deref() != Some(slice_name) {
+        if !belongs_to_slice(element, slice) {
             continue;
         }
 
-        let Some(relative_path) = relative_slice_path(&element.path, &slicing_root.path) else {
+        let Some(relative_path) = relative_slice_path(&element.path, &slice.path) else {
             continue;
         };
 
@@ -563,18 +581,17 @@ fn collect_discriminator_constraints(
 
 fn collect_profile_constraints(
     elements: &[ElementDefinition],
-    slicing_root: &ElementDefinition,
-    slice_name: &str,
+    slice: &ElementDefinition,
     discriminators: &[Discriminator],
 ) -> Vec<String> {
     let mut profiles = Vec::new();
 
     for element in elements {
-        if element.slice_name.as_deref() != Some(slice_name) {
+        if !belongs_to_slice(element, slice) {
             continue;
         }
 
-        let Some(relative_path) = relative_slice_path(&element.path, &slicing_root.path) else {
+        let Some(relative_path) = relative_slice_path(&element.path, &slice.path) else {
             continue;
         };
 

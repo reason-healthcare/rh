@@ -95,13 +95,10 @@ fn test_to_datetime_function() {
         FhirPathValue::DateTime("2023-01-15T10:30:45".to_string())
     );
 
-    // Test Date to DateTime (add midnight time)
+    // Date-to-DateTime conversion preserves date precision.
     let expr = parser.parse("@2023-01-15.toDateTime()").unwrap();
     let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert_eq!(
-        result,
-        FhirPathValue::DateTime("2023-01-15T00:00:00".to_string())
-    );
+    assert_eq!(result, FhirPathValue::DateTime("2023-01-15".to_string()));
 
     // Test String datetime to DateTime
     let expr = parser.parse("'2023-12-25T23:59:59'.toDateTime()").unwrap();

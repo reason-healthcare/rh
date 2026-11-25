@@ -3,9 +3,9 @@
 //! The not() function performs logical negation on boolean values:
 //! - not(true) returns false
 //! - not(false) returns true
-//! - not(()) returns () (empty collection)  
-//! - Multiple items return empty collection
-//! - Non-boolean values return empty collection
+//! - not({}) returns {} (empty collection)
+//! - Multiple items cause a cardinality error
+//! - Non-Boolean singletons evaluate to true, which is then negated
 
 use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
 use serde_json::json;
@@ -57,21 +57,22 @@ fn main() -> anyhow::Result<()> {
     let result = evaluator.evaluate(&expr, &context)?;
     println!("true.not().not() = {result:?}");
 
-    println!("\n=== Error Cases (FHIRPath behavior: return empty) ===");
+    println!("\n=== Singleton Boolean Evaluation ===");
 
-    // Non-boolean values return empty (FHIRPath behavior)
+    // A nonempty, non-Boolean singleton evaluates to true.
     let expr = parser.parse("'hello'.not()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("'hello'.not() = {result:?} (returns empty for non-boolean)");
+    println!("'hello'.not() = {result:?}");
 
     let expr = parser.parse("42.not()")?;
     let result = evaluator.evaluate(&expr, &context)?;
-    println!("42.not() = {result:?} (returns empty for non-boolean)");
+    println!("42.not() = {result:?}");
 
-    // Multiple items return empty
     let expr = parser.parse("(true | false).not()")?;
-    let result = evaluator.evaluate(&expr, &context)?;
-    println!("(true | false).not() = {result:?} (returns empty for multiple items)");
+    let error = evaluator
+        .evaluate(&expr, &context)
+        .expect_err("Multiple items must signal a cardinality error");
+    println!("(true | false).not(): {error}");
 
     Ok(())
 }

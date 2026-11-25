@@ -94,13 +94,10 @@ fn test_quantity_comparison_incompatible_units() {
     let evaluator = FhirPathEvaluator::new();
     let context = EvaluationContext::new(json!({}));
 
-    // Test incompatible units (mass vs length) should error
+    // Incompatible units yield an empty comparison result
     let expr = parser.parse("5 'kg' > 100 'cm'").unwrap();
-    let result = evaluator.evaluate(&expr, &context);
-    assert!(
-        result.is_err(),
-        "Expected error when comparing incompatible units"
-    );
+    let result = evaluator.evaluate(&expr, &context).unwrap();
+    assert!(result.is_empty());
 }
 
 #[test]

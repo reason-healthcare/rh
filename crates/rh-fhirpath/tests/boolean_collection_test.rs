@@ -41,10 +41,9 @@ fn test_all_true_function() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
-    // Test allTrue() on collection with non-boolean values → undefined (Empty) per spec
+    // Test allTrue() rejects a collection with non-Boolean values
     let expr = parser.parse("(true | 1 | true).allTrue()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Empty));
+    assert!(evaluator.evaluate(&expr, &context).is_err());
 
     // Test allTrue() on empty collection
     let expr = parser.parse("{}.allTrue()").unwrap();
@@ -68,10 +67,9 @@ fn test_any_true_function() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
-    // Test anyTrue() on collection with non-boolean values
+    // Test anyTrue() rejects a collection with non-Boolean values
     let expr = parser.parse("(1 | 'test' | false).anyTrue()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(false)));
+    assert!(evaluator.evaluate(&expr, &context).is_err());
 
     // Test anyTrue() on empty collection
     let expr = parser.parse("{}.anyTrue()").unwrap();
@@ -95,10 +93,9 @@ fn test_all_false_function() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
-    // Test allFalse() on collection with non-boolean values
+    // Test allFalse() rejects a collection with non-Boolean values
     let expr = parser.parse("(false | 0 | false).allFalse()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(false)));
+    assert!(evaluator.evaluate(&expr, &context).is_err());
 
     // Test allFalse() on empty collection
     let expr = parser.parse("{}.allFalse()").unwrap();
@@ -122,10 +119,9 @@ fn test_any_false_function() {
     let result = evaluator.evaluate(&expr, &context).unwrap();
     assert!(matches!(result, FhirPathValue::Boolean(false)));
 
-    // Test anyFalse() on collection with non-boolean values
+    // Test anyFalse() rejects a collection with non-Boolean values
     let expr = parser.parse("(1 | 'test' | true).anyFalse()").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    assert!(matches!(result, FhirPathValue::Boolean(false)));
+    assert!(evaluator.evaluate(&expr, &context).is_err());
 
     // Test anyFalse() on empty collection
     let expr = parser.parse("{}.anyFalse()").unwrap();

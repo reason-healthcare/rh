@@ -1,4 +1,4 @@
-use rh_validator::{FhirValidator, FhirVersion, Severity};
+use rh_validator::{FhirValidator, FhirVersion, RuleCompiler, Severity};
 use serde_json::json;
 
 fn setup_validator_with_us_core() -> Option<FhirValidator> {
@@ -15,6 +15,68 @@ fn setup_validator_with_us_core() -> Option<FhirValidator> {
         Some(packages_dir.to_str().unwrap()),
     )
     .ok()
+}
+
+#[test]
+fn same_named_slices_in_sibling_branches_have_separate_constraints() {
+    let path = "Patient.contact.telecom";
+    let mut elements = vec![
+        json!({"id":"Patient","path":"Patient"}),
+        json!({"id":"Patient.contact","path":"Patient.contact","slicing":{"discriminator":[{"type":"value","path":"gender"}],"rules":"open"}}),
+    ];
+    for (gender, system) in [("female", "phone"), ("male", "email")] {
+        let contact_id = format!("Patient.contact:{gender}");
+        let telecom_id = format!("{contact_id}.telecom");
+        elements.extend([
+            json!({"id":contact_id,"path":"Patient.contact","sliceName":gender}),
+            json!({"id":format!("{contact_id}.gender"),"path":"Patient.contact.gender","fixedCode":gender}),
+            json!({"id":telecom_id,"path":path,"slicing":{"discriminator":[{"type":"value","path":"system"}],"rules":"open"}}),
+            json!({"id":format!("{telecom_id}:work"),"path":path,"sliceName":"work"}),
+            json!({"id":format!("{telecom_id}:work.system"),"path":format!("{path}.system"),"sliceName":"work","fixedCode":system}),
+        ]);
+    }
+    let profile = serde_json::from_value(json!({
+        "url":"urn:sibling-telecom-slices","name":"SiblingTelecomSlices","type":"Patient",
+        "snapshot":{"element":elements},
+    }))
+    .unwrap();
+    let compiled = RuleCompiler::new(1).compile(&profile).unwrap();
+    let telecom_rules: Vec<_> = compiled
+        .slicing_rules
+        .iter()
+        .filter(|rule| rule.path == path)
+        .collect();
+    assert_eq!(telecom_rules.len(), 2);
+    for (rule, system) in telecom_rules.into_iter().zip(["phone", "email"]) {
+        assert_eq!(rule.slices.len(), 1);
+        let slice = &rule.slices[0];
+        assert_eq!(slice.name, "work");
+        assert_eq!(slice.discriminator_constraints.len(), 1);
+        assert_eq!(slice.discriminator_constraints[0].value, json!(system));
+    }
+}
+
+#[test]
+fn slice_name_fallback_supports_missing_element_ids() {
+    let profile = serde_json::from_value(json!({
+        "url":"urn:legacy-telecom-slices","name":"LegacyTelecomSlices","type":"Patient",
+        "snapshot":{"element":[
+            {"id":"Patient","path":"Patient"},
+            {"id":"Patient.telecom","path":"Patient.telecom","slicing":{"discriminator":[{"type":"value","path":"system"}],"rules":"open"}},
+            {"path":"Patient.telecom","sliceName":"phone"},
+            {"id":"Patient.telecom:phone.system","path":"Patient.telecom.system","sliceName":"phone","fixedCode":"phone"},
+            {"id":"Patient.telecom:email","path":"Patient.telecom","sliceName":"email"},
+            {"path":"Patient.telecom.system","sliceName":"email","fixedCode":"email"}
+        ]}
+    }))
+    .unwrap();
+    let compiled = RuleCompiler::new(1).compile(&profile).unwrap();
+    let slices = &compiled.slicing_rules[0].slices;
+    assert_eq!(slices.len(), 2);
+    for (slice, system) in slices.iter().zip(["phone", "email"]) {
+        assert_eq!(slice.discriminator_constraints.len(), 1);
+        assert_eq!(slice.discriminator_constraints[0].value, json!(system));
+    }
 }
 
 #[test]

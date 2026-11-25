@@ -1,541 +1,679 @@
-//! Comparison and equality operations for FHIRPath values
+//! Comparison operations shared by operators, sorting, and collection functions.
 
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
+use std::hash::{BuildHasher, Hash, Hasher, RandomState};
+use std::sync::Arc;
 
 use crate::ast::*;
 use crate::error::*;
-use crate::evaluator::operations::temporal::{
-    compare_parts, equals_parts, parse_temporal, TemporalParts,
+use crate::evaluator::metadata::{
+    coding_equivalent, compare_model_quantities, extreme_numeric_equivalent, FhirModel, FhirNode,
+};
+use crate::evaluator::operations::{
+    temporal::{
+        compare_parts, equals_parts, equivalent_parts, temporal_value, TemporalKind, TemporalParts,
+    },
+    units::UnitConverter,
 };
 use crate::evaluator::types::FhirPathValue;
-use rust_decimal::prelude::ToPrimitive;
+use crate::json::JsonNumbers;
 use rust_decimal::Decimal;
+use serde_json::Value;
 
-/// Comparison operations handler
 pub struct ComparisonEvaluator;
 
-/// Extract a temporal-parts view from any temporal-valued FhirPathValue.
-/// Also handles String values that parse as dates/datetimes (e.g. FHIR period
-/// start/end fields accessed without typed metadata).
-fn try_temporal(v: &FhirPathValue) -> Option<TemporalParts> {
-    match v {
-        FhirPathValue::Date(s) | FhirPathValue::DateTime(s) => parse_temporal(s),
-        FhirPathValue::Time(s) => {
-            let normalized;
-            let temporal_text = if s.starts_with('T') {
-                s.as_str()
-            } else {
-                normalized = format!("T{s}");
-                normalized.as_str()
-            };
-            parse_temporal(temporal_text)
-        }
-        FhirPathValue::String(s) => parse_temporal(s),
-        _ => None,
-    }
-}
-
-/// Are two temporal values structurally comparable?
-/// Date vs DateTime is compatible (Date is a coarser-precision DateTime).
-/// Date vs Time and Time vs DateTime are NOT — they carry disjoint components.
-fn temporal_types_compatible(a: &FhirPathValue, b: &FhirPathValue) -> bool {
-    use FhirPathValue::*;
-    matches!(
-        (a, b),
-        (Date(_), Date(_))
-            | (DateTime(_), DateTime(_))
-            | (Time(_), Time(_))
-            | (Date(_), DateTime(_))
-            | (DateTime(_), Date(_))
-    )
-}
-
-fn is_temporal(v: &FhirPathValue) -> bool {
-    matches!(
-        v,
-        FhirPathValue::Date(_) | FhirPathValue::DateTime(_) | FhirPathValue::Time(_)
-    )
-}
-
-fn is_empty_collection(v: &FhirPathValue) -> bool {
-    match v {
-        FhirPathValue::Empty => true,
-        FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => c.is_empty(),
-        _ => false,
-    }
-}
-
-fn collection_len(v: &FhirPathValue) -> Option<usize> {
-    match v {
-        FhirPathValue::Collection(c) | FhirPathValue::UnorderedCollection(c) => Some(c.len()),
-        FhirPathValue::Empty => Some(0),
-        _ => None,
-    }
-}
-
 impl ComparisonEvaluator {
-    /// Evaluate equality operation
     pub fn evaluate_equality(
         left: &FhirPathValue,
         operator: &EqualityOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        // Temporal equality: precision-aware. Cross-type (Date vs Time,
-        // DateTime vs Time) yields false — those values describe disjoint
-        // kinds of clock data and are never equal. Date vs DateTime is
-        // treated as a precision comparison, not a type mismatch.
-        if is_temporal(left) && is_temporal(right) {
-            if !temporal_types_compatible(left, right) {
-                let result = match operator {
-                    EqualityOperator::Equal | EqualityOperator::Equivalent => false,
-                    EqualityOperator::NotEqual | EqualityOperator::NotEquivalent => true,
-                };
-                return Ok(FhirPathValue::Boolean(result));
-            }
-            if let (Some(a), Some(b)) = (try_temporal(left), try_temporal(right)) {
-                match equals_parts(&a, &b) {
-                    None => {
-                        // Precision mismatch. `=`/`!=` follow the spec and
-                        // return empty; `~`/`!~` follow the suite, treating
-                        // mismatched precision as not-equivalent.
-                        return Ok(match operator {
-                            EqualityOperator::Equal | EqualityOperator::NotEqual => {
-                                FhirPathValue::Empty
-                            }
-                            EqualityOperator::Equivalent => FhirPathValue::Boolean(false),
-                            EqualityOperator::NotEquivalent => FhirPathValue::Boolean(true),
-                        });
-                    }
-                    Some(eq) => {
-                        let result = match operator {
-                            EqualityOperator::Equal | EqualityOperator::Equivalent => eq,
-                            EqualityOperator::NotEqual | EqualityOperator::NotEquivalent => !eq,
-                        };
-                        return Ok(FhirPathValue::Boolean(result));
-                    }
-                }
-            }
-        }
-
-        // Per spec §6.5.1: `=` and `!=` propagate empty (unknown) when either
-        // operand is the empty collection; `~` and `!~` do not.
-        if (is_empty_collection(left) || is_empty_collection(right))
-            && matches!(
-                operator,
-                EqualityOperator::Equal | EqualityOperator::NotEqual
-            )
-        {
-            return Ok(FhirPathValue::Empty);
-        }
-
-        // Singleton unwrapping per FHIRPath §6.1: a 1-item collection is
-        // treated as its contained scalar for equality purposes.
-        let mut left_unwrapped: Option<FhirPathValue> = None;
-        let mut right_unwrapped: Option<FhirPathValue> = None;
-        let left = unwrap_singleton(left, &mut left_unwrapped);
-        let right = unwrap_singleton(right, &mut right_unwrapped);
-
-        // Re-check empty after unwrapping (e.g. Collection([Empty]) → Empty)
-        if (is_empty_collection(left) || is_empty_collection(right))
-            && matches!(
-                operator,
-                EqualityOperator::Equal | EqualityOperator::NotEqual
-            )
-        {
-            return Ok(FhirPathValue::Empty);
-        }
-
-        // Quantities: `=`/`!=` use exact comparison (returns Empty for incompatible
-        // units); `~`/`!~` use precision-aware equivalence (returns false/true for
-        // incompatible units).
-        if let (
-            FhirPathValue::Quantity {
-                value: v1,
-                unit: u1,
-            },
-            FhirPathValue::Quantity {
-                value: v2,
-                unit: u2,
-            },
-        ) = (left, right)
-        {
-            use crate::evaluator::operations::units::UnitConverter;
-            let converter = UnitConverter::new();
-            return match operator {
-                EqualityOperator::Equal | EqualityOperator::NotEqual => {
-                    match converter.compare_quantities(*v1, u1, *v2, u2) {
-                        Ok(0) => Ok(FhirPathValue::Boolean(matches!(
-                            operator,
-                            EqualityOperator::Equal
-                        ))),
-                        Ok(_) => Ok(FhirPathValue::Boolean(matches!(
-                            operator,
-                            EqualityOperator::NotEqual
-                        ))),
-                        Err(_) => Ok(FhirPathValue::Empty),
-                    }
-                }
-                EqualityOperator::Equivalent | EqualityOperator::NotEquivalent => {
-                    match (
-                        converter.to_base_unit(v1.to_f64().unwrap_or(0.0), u1),
-                        converter.to_base_unit(v2.to_f64().unwrap_or(0.0), u2),
-                    ) {
-                        (Ok((base_a, _)), Ok((base_b, _))) => {
-                            let equiv = quantity_equivalent(base_a, base_b);
-                            Ok(FhirPathValue::Boolean(
-                                if matches!(operator, EqualityOperator::Equivalent) {
-                                    equiv
-                                } else {
-                                    !equiv
-                                },
-                            ))
-                        }
-                        _ => Ok(FhirPathValue::Boolean(matches!(
-                            operator,
-                            EqualityOperator::NotEquivalent
-                        ))),
-                    }
-                }
-            };
-        }
-
         let result = match operator {
-            EqualityOperator::Equal => FhirPathValue::equals_static(left, right),
-            EqualityOperator::NotEqual => !FhirPathValue::equals_static(left, right),
-            EqualityOperator::Equivalent => Self::values_equivalent(left, right),
-            EqualityOperator::NotEquivalent => !Self::values_equivalent(left, right),
+            EqualityOperator::Equal => Self::equal(left, right),
+            EqualityOperator::NotEqual => Self::equal(left, right).map(|equal| !equal),
+            EqualityOperator::Equivalent => Some(Self::values_equivalent(left, right)),
+            EqualityOperator::NotEquivalent => Some(!Self::values_equivalent(left, right)),
         };
-        Ok(FhirPathValue::Boolean(result))
+        Ok(boolean_value(result))
     }
 
-    /// Evaluate inequality operations (<, <=, >, >=)
+    /// Compare ordered collections. A definite mismatch resolves an earlier unknown.
+    pub(crate) fn equal(left: &FhirPathValue, right: &FhirPathValue) -> Option<bool> {
+        let (left, right) = (left.items(), right.items());
+        if left.is_empty() || right.is_empty() {
+            return None;
+        }
+        if left.len() != right.len() {
+            return Some(false);
+        }
+
+        let mut result = Some(true);
+        for (left, right) in left.iter().zip(right) {
+            match equal_item(left, right) {
+                Some(false) => return Some(false),
+                None => result = None,
+                Some(true) => {}
+            }
+        }
+        result
+    }
+
+    pub(crate) fn equality_fingerprints(
+        value: &FhirPathValue,
+        hash: &RandomState,
+        model: FhirModel,
+    ) -> Option<(u64, Option<u64>)> {
+        use FhirPathValue::*;
+        let [item] = value.items() else { return None };
+        let system = item.system_value();
+        let logical = match item {
+            Node(node) if node.raw.is_object() && node.numbers.is_some() => return None,
+            Node(node) if node.model.is_subtype(&node.fhir_type, "Quantity") => return None,
+            Node(node) if node.raw.is_object() => {
+                if node.model != model
+                    || node.is_primitive()
+                    || !matches!(system, Object(_) | TypedObject { .. })
+                {
+                    return None;
+                }
+                Some(logical_object_fingerprint(node, hash))
+            }
+            _ => None,
+        };
+        let system = match system {
+            String(text) | TypedString { value: text, .. } => hash.hash_one((0, text)),
+            Boolean(value) | TypedBoolean { value, .. } => hash.hash_one((1, value)),
+            Integer(_) | Long(_) | Number(_) => hash.hash_one((2, decimal(system))),
+            Object(value) | TypedObject { value, .. } => {
+                let mut state = hash.build_hasher();
+                3.hash(&mut state);
+                hash_json(value, &mut state, 1);
+                state.finish()
+            }
+            _ => return None,
+        };
+        Some((system, logical))
+    }
+
     pub fn evaluate_inequality(
         left: &FhirPathValue,
         operator: &InequalityOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        if is_empty_collection(left) || is_empty_collection(right) {
-            return Ok(FhirPathValue::Empty);
-        }
-
-        // Precision-aware temporal comparison: a precision mismatch yields
-        // empty per the spec, even though > / < etc. normally return Boolean.
-        if let (Some(a), Some(b)) = (try_temporal(left), try_temporal(right)) {
-            let Some(ord) = compare_parts(&a, &b) else {
-                return Ok(FhirPathValue::Empty);
-            };
-            let result = match operator {
+        Ok(boolean_value(Self::compare_order(left, right)?.map(
+            |ord| match operator {
                 InequalityOperator::LessThan => ord == Ordering::Less,
                 InequalityOperator::LessThanOrEqual => ord != Ordering::Greater,
                 InequalityOperator::GreaterThan => ord == Ordering::Greater,
                 InequalityOperator::GreaterThanOrEqual => ord != Ordering::Less,
-            };
-            return Ok(FhirPathValue::Boolean(result));
-        }
-
-        let comparison = left.compare_values(right)?;
-        let result = match operator {
-            InequalityOperator::LessThan => comparison < 0,
-            InequalityOperator::LessThanOrEqual => comparison <= 0,
-            InequalityOperator::GreaterThan => comparison > 0,
-            InequalityOperator::GreaterThanOrEqual => comparison >= 0,
-        };
-        Ok(FhirPathValue::Boolean(result))
+            },
+        )))
     }
 
-    /// Evaluate membership operations (in, contains)
+    /// Compare singleton values, retaining unknown precision or quantity ordering.
+    pub(crate) fn compare_order(
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> FhirPathResult<Option<Ordering>> {
+        let left = left.singleton("Comparison")?;
+        let right = right.singleton("Comparison")?;
+        let (Some(left), Some(right)) = (left, right) else {
+            return Ok(None);
+        };
+        if let Some(ordering) = compare_model_quantities(left, right) {
+            return Ok(ordering);
+        }
+        let (left, right) = (left.system_value(), right.system_value());
+        if left.items().is_empty() || right.items().is_empty() {
+            return Ok(None);
+        }
+        if let Some((a, b)) = temporal_pair(left, right) {
+            return Ok(compare_parts(&a, &b));
+        }
+        if let Some((a, au, b, bu)) = quantity_pair(left, right) {
+            return Ok(UnitConverter::new()
+                .compare_quantities(a, au, b, bu)
+                .ok()
+                .map(|value| value.cmp(&0)));
+        }
+        if let (Some(a), Some(b)) = (decimal(left), decimal(right)) {
+            return Ok(Some(a.cmp(&b)));
+        }
+        if let (Some(a), Some(b)) = (left.as_str(), right.as_str()) {
+            return Ok(Some(a.cmp(b)));
+        }
+        if let (Some(a), Some(b)) = (boolean(left), boolean(right)) {
+            return Ok(Some(a.cmp(&b)));
+        }
+        Err(FhirPathError::TypeError {
+            message: format!("Cannot compare {left:?} and {right:?}"),
+        })
+    }
+
     pub fn evaluate_membership(
         left: &FhirPathValue,
         operator: &MembershipOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        if matches!(operator, MembershipOperator::In) {
-            if is_empty_collection(left) {
-                return Ok(FhirPathValue::Empty);
-            }
-            if collection_len(left).is_some_and(|len| len > 1) {
-                return Err(FhirPathError::EvaluationError {
-                    message: "Left operand of 'in' cannot contain multiple items".to_string(),
-                });
-            }
-            if is_empty_collection(right) {
-                return Ok(FhirPathValue::Boolean(false));
-            }
-        } else {
-            if is_empty_collection(right) {
-                return Ok(FhirPathValue::Empty);
-            }
-            if collection_len(right).is_some_and(|len| len > 1) {
-                return Err(FhirPathError::EvaluationError {
-                    message: "Right operand of 'contains' cannot contain multiple items"
-                        .to_string(),
-                });
-            }
-            if is_empty_collection(left) {
-                return Ok(FhirPathValue::Boolean(false));
-            }
-        }
-
-        let result = match operator {
-            MembershipOperator::In => left.is_member_of(right)?,
-            MembershipOperator::Contains => right.is_member_of(left)?,
+        let (item, collection, operation) = match operator {
+            MembershipOperator::In => (left, right, "Left operand of 'in'"),
+            MembershipOperator::Contains => (right, left, "Right operand of 'contains'"),
         };
-        Ok(FhirPathValue::Boolean(result))
+        let Some(item) = item.singleton(operation)? else {
+            return Ok(FhirPathValue::Empty);
+        };
+        Ok(FhirPathValue::Boolean(item.is_member_of(collection)?))
     }
 
-    /// Evaluate AND operation with three-valued logic (§6.5):
-    /// false AND anything → false; true AND empty → empty; empty AND empty → empty.
+    pub(crate) fn quantities_comparable(
+        left: &FhirPathValue,
+        right: &FhirPathValue,
+    ) -> Option<bool> {
+        let ([left], [right]) = (left.items(), right.items()) else {
+            return None;
+        };
+        if let Some(ordering) = compare_model_quantities(left, right) {
+            return Some(ordering.is_some());
+        }
+        let (left, right) = (left.system_value(), right.system_value());
+        if let Some((_, left_unit, _, right_unit)) = quantity_pair(left, right) {
+            return Some(UnitConverter::new().are_quantities_comparable(left_unit, right_unit));
+        }
+        decimal(left).zip(decimal(right)).map(|_| true)
+    }
+
     pub fn evaluate_and(
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let lk = bool_three_valued(left);
-        let rk = bool_three_valued(right);
-        let result = match (lk, rk) {
+        let result = match (
+            left.singleton_boolean("Operand of 'and'")?,
+            right.singleton_boolean("Operand of 'and'")?,
+        ) {
             (Some(false), _) | (_, Some(false)) => Some(false),
             (Some(true), Some(true)) => Some(true),
             _ => None,
         };
-        Ok(match result {
-            Some(b) => FhirPathValue::Boolean(b),
-            None => FhirPathValue::Empty,
-        })
+        Ok(boolean_value(result))
     }
 
-    /// Evaluate implies per three-valued logic (§6.5.7):
-    /// | left  | right | result |
-    /// |-------|-------|--------|
-    /// | true  | true  | true   |
-    /// | true  | false | false  |
-    /// | true  | {}    | {}     |
-    /// | false | *     | true   |
-    /// | {}    | true  | true   |
-    /// | {}    | other | {}     |
     pub fn evaluate_implies(
         left: &FhirPathValue,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let lk = bool_three_valued(left);
-        let rk = bool_three_valued(right);
-        let result = match (lk, rk) {
-            (Some(false), _) => Some(true),
-            (Some(true), Some(r)) => Some(r),
-            (Some(true), None) => None,
-            (None, Some(true)) => Some(true),
+        let result = match (
+            left.singleton_boolean("Operand of 'implies'")?,
+            right.singleton_boolean("Operand of 'implies'")?,
+        ) {
+            (Some(false), _) | (_, Some(true)) => Some(true),
+            (Some(true), right) => right,
             (None, _) => None,
         };
-        Ok(match result {
-            Some(b) => FhirPathValue::Boolean(b),
-            None => FhirPathValue::Empty,
-        })
+        Ok(boolean_value(result))
     }
 
-    /// Evaluate or/xor operations per FHIRPath three-valued logic (§6.5):
-    /// * `or`: false or empty → empty; true or anything → true.
-    /// * `xor`: empty operand → empty result (always — XOR has no short-circuit
-    ///   that resolves with an unknown side).
     pub fn evaluate_or(
         left: &FhirPathValue,
         operator: &OrOperator,
         right: &FhirPathValue,
     ) -> FhirPathResult<FhirPathValue> {
-        let left_known = bool_three_valued(left);
-        let right_known = bool_three_valued(right);
+        let left = left.singleton_boolean("Boolean operand")?;
+        let right = right.singleton_boolean("Boolean operand")?;
         let result = match operator {
-            OrOperator::Or => match (left_known, right_known) {
+            OrOperator::Or => match (left, right) {
                 (Some(true), _) | (_, Some(true)) => Some(true),
                 (Some(false), Some(false)) => Some(false),
                 _ => None,
             },
-            OrOperator::Xor => match (left_known, right_known) {
-                (Some(a), Some(b)) => Some(a ^ b),
-                _ => None,
-            },
+            OrOperator::Xor => left.zip(right).map(|(a, b)| a ^ b),
         };
-        Ok(match result {
-            Some(b) => FhirPathValue::Boolean(b),
-            None => FhirPathValue::Empty,
+        Ok(boolean_value(result))
+    }
+
+    /// Compare collections as multisets under FHIRPath equivalence.
+    pub fn values_equivalent(left: &FhirPathValue, right: &FhirPathValue) -> bool {
+        let (left, right) = (left.items(), right.items());
+        equivalent_items(left.len(), right.len(), |i, j| {
+            equivalent_item(&left[i], &right[j])
         })
     }
+}
 
-    /// Check if two values are equivalent (more lenient than equal). Per
-    /// FHIRPath §6.1.5: strings ignore case and collapse runs of whitespace;
-    /// decimals match at the precision of the less-precise input; collections
-    /// match as multisets (order-insensitive); otherwise it's strict equality.
-    pub fn values_equivalent(left: &FhirPathValue, right: &FhirPathValue) -> bool {
-        use FhirPathValue::*;
-        match (left, right) {
-            (String(a), String(b)) => string_equivalent(a, b),
-            (Number(a), Number(b)) => decimal_equivalent(a, b),
-            (Integer(a), Number(b)) | (Long(a), Number(b)) => {
-                decimal_equivalent(&Decimal::from(*a), b)
+fn boolean_value(value: Option<bool>) -> FhirPathValue {
+    value.map_or(FhirPathValue::Empty, FhirPathValue::Boolean)
+}
+
+fn boolean(value: &FhirPathValue) -> Option<bool> {
+    match value {
+        FhirPathValue::Boolean(value) | FhirPathValue::TypedBoolean { value, .. } => Some(*value),
+        _ => None,
+    }
+}
+
+fn decimal(value: &FhirPathValue) -> Option<Decimal> {
+    match value {
+        FhirPathValue::Integer(value) | FhirPathValue::Long(value) => Some(Decimal::from(*value)),
+        FhirPathValue::Number(value) => Some(*value),
+        _ => None,
+    }
+}
+
+fn quantity_pair<'a>(
+    left: &'a FhirPathValue,
+    right: &'a FhirPathValue,
+) -> Option<(Decimal, &'a Option<String>, Decimal, &'a Option<String>)> {
+    use FhirPathValue::Quantity;
+    match (left, right) {
+        (Quantity { value: a, unit: au }, Quantity { value: b, unit: bu }) => {
+            Some((*a, au, *b, bu))
+        }
+        (Quantity { value: a, unit: au }, b) => Some((*a, au, decimal(b)?, &None)),
+        (a, Quantity { value: b, unit: bu }) => Some((decimal(a)?, &None, *b, bu)),
+        _ => None,
+    }
+}
+
+fn temporal_pair(
+    left: &FhirPathValue,
+    right: &FhirPathValue,
+) -> Option<(TemporalParts, TemporalParts)> {
+    let (_, left_kind, left) = temporal_value(left)?;
+    let (_, right_kind, right) = temporal_value(right)?;
+    use TemporalKind::{Date, DateTime, Time};
+    match (left_kind, right_kind) {
+        (Time, Time) | (Date | DateTime, Date | DateTime) => Some((left, right)),
+        _ => None,
+    }
+}
+
+fn equal_item(left: &FhirPathValue, right: &FhirPathValue) -> Option<bool> {
+    use FhirPathValue::*;
+    if let Some(ordering) = compare_model_quantities(left, right) {
+        return ordering.map(|value| value == Ordering::Equal);
+    }
+    let logical_objects = logical_object_pair(left, right);
+    let (left_numbers, right_numbers) = (node_numbers(left), node_numbers(right));
+    let (left, right) = (left.system_value(), right.system_value());
+    if matches!(left, Empty) || matches!(right, Empty) {
+        return None;
+    }
+    if let Some((a, b)) = temporal_pair(left, right) {
+        return equals_parts(&a, &b);
+    }
+    if let Some((a, au, b, bu)) = quantity_pair(left, right) {
+        return UnitConverter::new()
+            .compare_quantities(a, au, b, bu)
+            .ok()
+            .map(|ord| ord == 0);
+    }
+    if let (Some(a), Some(b)) = (decimal(left), decimal(right)) {
+        return Some(a == b);
+    }
+    if let (Some(a), Some(b)) = (left.as_str(), right.as_str()) {
+        return Some(a == b);
+    }
+    if let (Some(a), Some(b)) = (boolean(left), boolean(right)) {
+        return Some(a == b);
+    }
+    if let Some((left, right)) = logical_objects {
+        return compare_logical_objects(left, right, ComparisonEvaluator::equal);
+    }
+    match (left, right) {
+        (Object(a) | TypedObject { value: a, .. }, Object(b) | TypedObject { value: b, .. }) => {
+            if let (TypedObject { fhir_type: a, .. }, TypedObject { fhir_type: b, .. }) =
+                (left, right)
+            {
+                if a != b {
+                    return Some(false);
+                }
             }
-            (Number(a), Integer(b)) | (Number(a), Long(b)) => {
-                decimal_equivalent(a, &Decimal::from(*b))
-            }
-            (
-                Quantity {
-                    value: va,
-                    unit: ua,
+            Some(compare_json(
+                JsonOperand {
+                    value: a,
+                    numbers: left_numbers,
                 },
-                Quantity {
-                    value: vb,
-                    unit: ub,
+                JsonOperand {
+                    value: b,
+                    numbers: right_numbers,
                 },
-            ) => {
-                // Use the unit converter so cross-unit equivalence works, then
-                // apply the FHIRPath §6.5 precision rule: compare at the
-                // significant-digit precision of the less-precise value.
-                use crate::evaluator::operations::units::UnitConverter;
-                let converter = UnitConverter::new();
-                let va_f64 = va.to_f64().unwrap_or(0.0);
-                let vb_f64 = vb.to_f64().unwrap_or(0.0);
-                let Ok((base_a, _)) = converter.to_base_unit(va_f64, ua) else {
-                    return false;
-                };
-                let Ok((base_b, _)) = converter.to_base_unit(vb_f64, ub) else {
-                    return false;
-                };
-                quantity_equivalent(base_a, base_b)
+                false,
+            ))
+        }
+        (DateTimePrecision(a), DateTimePrecision(b)) => Some(a == b),
+        _ => Some(false),
+    }
+}
+
+fn node_numbers(value: &FhirPathValue) -> Option<&Arc<JsonNumbers>> {
+    match value {
+        FhirPathValue::Node(node) => node.numbers.as_ref(),
+        _ => None,
+    }
+}
+
+#[derive(Clone, Copy)]
+struct JsonOperand<'a> {
+    value: &'a Value,
+    numbers: Option<&'a Arc<JsonNumbers>>,
+}
+
+impl<'a> JsonOperand<'a> {
+    fn field(self, key: &str, value: &'a Value) -> Self {
+        Self {
+            value,
+            numbers: self.numbers.and_then(|numbers| numbers.field(key)),
+        }
+    }
+
+    fn index(self, index: usize, value: &'a Value) -> Self {
+        Self {
+            value,
+            numbers: self.numbers.and_then(|numbers| numbers.index(index)),
+        }
+    }
+
+    fn is_number(self) -> bool {
+        self.value.is_number()
+            || self
+                .numbers
+                .is_some_and(|numbers| numbers.number().is_some())
+    }
+
+    fn to_fhirpath(self) -> FhirPathValue {
+        FhirPathValue::from_json_with_numbers(self.value, self.numbers, FhirModel::default())
+    }
+}
+
+fn compare_json(left: JsonOperand<'_>, right: JsonOperand<'_>, equivalent: bool) -> bool {
+    match (left.is_number(), right.is_number()) {
+        (true, true) => {
+            let (a, b) = (left.to_fhirpath(), right.to_fhirpath());
+            return if equivalent {
+                equivalent_item(&a, &b)
+            } else if left.numbers.is_none() && right.numbers.is_none() {
+                decimal(&a) == decimal(&b)
+            } else {
+                equal_item(&a, &b) == Some(true)
+            };
+        }
+        (true, false) | (false, true) => return false,
+        (false, false) => {}
+    }
+    match (left.value, right.value) {
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter().all(|(key, a)| {
+                    b.get(key).is_some_and(|b| {
+                        compare_json(left.field(key, a), right.field(key, b), equivalent)
+                    })
+                })
+        }
+        (Value::Array(_), Value::Array(_))
+            if equivalent && left.numbers.is_none() && right.numbers.is_none() =>
+        {
+            ComparisonEvaluator::values_equivalent(&left.to_fhirpath(), &right.to_fhirpath())
+        }
+        (Value::Array(a), Value::Array(b)) if equivalent => {
+            equivalent_items(a.len(), b.len(), |i, j| {
+                compare_json(left.index(i, &a[i]), right.index(j, &b[j]), true)
+            })
+        }
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len()
+                && a.iter().zip(b).enumerate().all(|(index, (a, b))| {
+                    compare_json(left.index(index, a), right.index(index, b), false)
+                })
+        }
+        (Value::String(a), Value::String(b)) if equivalent => string_equivalent(a, b),
+        _ => left.value == right.value,
+    }
+}
+
+fn hash_json(value: &Value, state: &mut impl Hasher, depth: usize) {
+    std::mem::discriminant(value).hash(state);
+    match value {
+        Value::Object(fields) if depth > 0 => {
+            let mut fields: Vec<_> = fields.iter().collect();
+            fields.sort_unstable_by_key(|(key, _)| *key);
+            fields.len().hash(state);
+            for (key, value) in fields {
+                key.hash(state);
+                hash_json(value, state, depth - 1);
             }
-            (Collection(a), Collection(b))
-            | (Collection(a), UnorderedCollection(b))
-            | (UnorderedCollection(a), Collection(b))
-            | (UnorderedCollection(a), UnorderedCollection(b)) => {
-                if a.len() != b.len() {
+        }
+        Value::Array(items) if depth > 0 => {
+            items.len().hash(state);
+            for item in items {
+                hash_json(item, state, depth - 1);
+            }
+        }
+        Value::Number(_) => decimal(&FhirPathValue::from_json(value)).hash(state),
+        Value::String(value) => value.hash(state),
+        Value::Bool(value) => value.hash(state),
+        _ => {}
+    }
+}
+
+fn logical_object_fingerprint(node: &FhirNode, hash: &RandomState) -> u64 {
+    fn can_have_string_or_boolean(value: &Value) -> bool {
+        let is_string_or_boolean = |v: &Value| v.is_string() || v.is_boolean();
+        is_string_or_boolean(value)
+            || value
+                .as_array()
+                .is_some_and(|items| items.iter().any(is_string_or_boolean))
+    }
+
+    let mut state = hash.build_hasher();
+    4.hash(&mut state);
+    node.fhir_type.hash(&mut state);
+    let names: BTreeSet<_> = node
+        .raw
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(_, value)| can_have_string_or_boolean(value))
+        .filter_map(|(key, _)| logical_child_name(node, key))
+        .filter(|name| logical_child_name(node, name) == Some(name))
+        .collect();
+    for name in names {
+        let Ok(value) = node.member(name, false) else {
+            continue;
+        };
+        if let [item] = value.items() {
+            let item = item.system_value();
+            if let Some(text) = item.as_str() {
+                (name, 0, text).hash(&mut state);
+            } else if let Some(value) = boolean(item) {
+                (name, 1, value).hash(&mut state);
+            }
+        }
+    }
+    state.finish()
+}
+
+fn equivalent_item(left: &FhirPathValue, right: &FhirPathValue) -> bool {
+    if let Some(equivalent) = coding_equivalent(left, right) {
+        return equivalent;
+    }
+    if let Some(equivalent) = extreme_numeric_equivalent(left, right) {
+        return equivalent;
+    }
+    if let Some(ordering) = compare_model_quantities(left, right) {
+        return ordering == Some(Ordering::Equal);
+    }
+    let logical_objects = logical_object_pair(left, right);
+    let (left_numbers, right_numbers) = (node_numbers(left), node_numbers(right));
+    let (left, right) = (left.system_value(), right.system_value());
+    if let (Some(a), Some(b)) = (left.as_str(), right.as_str()) {
+        return string_equivalent(a, b);
+    }
+    if let (Some(a), Some(b)) = (decimal(left), decimal(right)) {
+        let precision = a.normalize().scale().min(b.normalize().scale());
+        return a.round_dp(precision) == b.round_dp(precision);
+    }
+    if let Some((a, au, b, bu)) = quantity_pair(left, right) {
+        return UnitConverter::new().equivalent_quantities(a, au, b, bu);
+    }
+    if let Some((a, b)) = temporal_pair(left, right) {
+        return equivalent_parts(&a, &b);
+    }
+    if let Some((left, right)) = logical_objects {
+        return compare_logical_objects(left, right, |left, right| {
+            Some(ComparisonEvaluator::values_equivalent(left, right))
+        }) == Some(true);
+    }
+    use FhirPathValue::{Object, TypedObject};
+    match (left, right) {
+        (Object(a) | TypedObject { value: a, .. }, Object(b) | TypedObject { value: b, .. }) => {
+            if let (TypedObject { fhir_type: a, .. }, TypedObject { fhir_type: b, .. }) =
+                (left, right)
+            {
+                if a != b {
                     return false;
                 }
-                let mut matched = vec![false; b.len()];
-                for x in a {
-                    let mut found = false;
-                    for (j, y) in b.iter().enumerate() {
-                        if !matched[j] && Self::values_equivalent(x, y) {
-                            matched[j] = true;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if !found {
-                        return false;
-                    }
-                }
-                true
             }
-            _ => FhirPathValue::equals_static(left, right),
+            compare_json(
+                JsonOperand {
+                    value: a,
+                    numbers: left_numbers,
+                },
+                JsonOperand {
+                    value: b,
+                    numbers: right_numbers,
+                },
+                true,
+            )
         }
+        _ => equal_item(left, right) == Some(true),
     }
 }
 
-/// Whitespace-collapsing case-insensitive string equivalence per FHIRPath
-/// §6.1.5. Sequences of whitespace (Unicode space, tab, CR, LF) collapse to
-/// a single space, leading/trailing whitespace is trimmed, and the comparison
-/// is ASCII case-insensitive.
-fn string_equivalent(a: &str, b: &str) -> bool {
-    let na = normalize_for_equivalence(a);
-    let nb = normalize_for_equivalence(b);
-    na == nb
-}
-
-fn normalize_for_equivalence(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut prev_ws = true; // leading whitespace gets trimmed via this guard
-    for c in s.chars() {
-        if c.is_whitespace() {
-            if !prev_ws {
-                out.push(' ');
-                prev_ws = true;
-            }
-        } else {
-            out.extend(c.to_lowercase());
-            prev_ws = false;
-        }
-    }
-    if out.ends_with(' ') {
-        out.pop();
-    }
-    out
-}
-
-/// Decimal equivalence: round both operands to the smaller fractional-digit
-/// precision and compare. `1.2 / 1.8 ~ 0.67` succeeds because 0.666… rounded
-/// to two digits equals 0.67.  With `Decimal`, scale() gives the number of
-/// fractional digits (preserving trailing zeros).
-fn decimal_equivalent(a: &Decimal, b: &Decimal) -> bool {
-    if a == b {
-        return true;
-    }
-    let prec = a.scale().min(b.scale());
-    if prec == 0 {
-        return a == b;
-    }
-    a.round_dp(prec) == b.round_dp(prec)
-}
-
-/// Quantity equivalence: compare base values at the precision of the less
-/// precise input. Per FHIRPath §6.5.5, trailing zeros after the decimal point
-/// are significant, but for inter-unit equivalence the common approach is to
-/// round to the smaller number of significant figures.
-fn quantity_equivalent(a: f64, b: f64) -> bool {
-    if (a - b).abs() < f64::EPSILON {
-        return true;
-    }
-    let prec = significant_figures(a).min(significant_figures(b));
-    if prec == 0 {
-        return (a - b).abs() < 1.0;
-    }
-    let scale = 10f64.powi(prec - 1 - a.abs().log10().floor() as i32);
-    (a * scale).round() == (b * scale).round()
-}
-
-/// Count significant figures in a floating-point value.
-fn significant_figures(n: f64) -> i32 {
-    if n == 0.0 {
-        return 1;
-    }
-    let s = format!("{}", n.abs());
-    // Strip leading zeros and decimal point to count significant digits.
-    let digits: String = s
-        .chars()
-        .filter(|c| c.is_ascii_digit())
-        .collect::<String>()
-        .trim_start_matches('0')
-        .to_string();
-    digits.len().max(1) as i32
-}
-
-/// If `v` is a single-item collection, write its content into `buf` and return
-/// a reference to `buf`; otherwise return `v` unchanged. This implements the
-/// FHIRPath singleton-equivalence rule for equality operators.
-fn unwrap_singleton<'a>(
-    v: &'a FhirPathValue,
-    buf: &'a mut Option<FhirPathValue>,
-) -> &'a FhirPathValue {
-    if let FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) = v {
-        if items.len() == 1 {
-            *buf = Some(items[0].clone());
-            return buf.as_ref().unwrap();
-        }
-    }
-    v
-}
-
-/// Coerce a value to a known boolean for three-valued logic. Returns `None`
-/// for the empty collection (which represents "unknown" per the FHIRPath
-/// spec) and `Some(b)` for a concrete Boolean.
-fn bool_three_valued(v: &FhirPathValue) -> Option<bool> {
-    match v {
-        FhirPathValue::Boolean(b) => Some(*b),
-        FhirPathValue::Empty => None,
-        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-            if items.is_empty() =>
+fn logical_object_pair<'a>(
+    left: &'a FhirPathValue,
+    right: &'a FhirPathValue,
+) -> Option<(&'a FhirNode, &'a FhirNode)> {
+    match (left, right) {
+        (FhirPathValue::Node(a), FhirPathValue::Node(b))
+            if !a.is_untyped_object()
+                && !b.is_untyped_object()
+                && a.raw.is_object()
+                && b.raw.is_object() =>
         {
-            None
+            Some((a, b))
         }
-        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items)
-            if items.len() == 1 =>
-        {
-            bool_three_valued(&items[0])
-        }
-        _ => Some(v.to_boolean()),
+        _ => None,
     }
+}
+
+fn compare_logical_objects(
+    left: &FhirNode,
+    right: &FhirNode,
+    compare: impl Fn(&FhirPathValue, &FhirPathValue) -> Option<bool>,
+) -> Option<bool> {
+    if left.fhir_type != right.fhir_type {
+        return Some(false);
+    }
+
+    let names: BTreeSet<_> = [left, right]
+        .into_iter()
+        .flat_map(|node| {
+            node.raw.as_object().into_iter().flat_map(|object| {
+                object
+                    .keys()
+                    .filter_map(|key| logical_child_name(node, key))
+            })
+        })
+        .collect();
+    let mut result = Some(true);
+    for name in names {
+        let a = left.member(name, false).ok()?;
+        let b = right.member(name, false).ok()?;
+        match (a.is_empty(), b.is_empty()) {
+            (true, true) => continue,
+            (true, false) | (false, true) => return Some(false),
+            _ => {}
+        }
+        match compare(&a, &b) {
+            Some(false) => return Some(false),
+            None => result = None,
+            Some(true) => {}
+        }
+    }
+    result
+}
+
+fn logical_child_name<'a>(node: &FhirNode, key: &'a str) -> Option<&'a str> {
+    let key = key.strip_prefix('_').unwrap_or(key);
+    if key == "resourceType"
+        || node.raw["resourceType"]
+            .as_str()
+            .is_some_and(|resource| node.model.is_subtype(resource, key))
+    {
+        return None;
+    }
+    Some(
+        node.model
+            .field(&node.fhir_type, key)
+            .map_or(key, |(name, _)| name),
+    )
+}
+
+fn string_equivalent(left: &str, right: &str) -> bool {
+    fn normalize_whitespace(value: &str) -> String {
+        value
+            .chars()
+            .map(|c| if c.is_whitespace() { ' ' } else { c })
+            .collect()
+    }
+    unicase::eq(&normalize_whitespace(left), &normalize_whitespace(right))
+}
+
+fn equivalent_items(
+    left_len: usize,
+    right_len: usize,
+    compare: impl Fn(usize, usize) -> bool,
+) -> bool {
+    if left_len != right_len {
+        return false;
+    }
+    if left_len <= 1 {
+        return (0..left_len).all(|i| compare(i, i));
+    }
+
+    // Decimal equivalence can connect one item to several candidates.
+    // Match whole collections without relying on the choice of first match.
+    let mut matches = vec![None; right_len];
+    for i in 0..left_len {
+        let mut visited = vec![false; right_len];
+        if !match_equivalent(i, &mut matches, &mut visited, &compare) {
+            return false;
+        }
+    }
+    true
+}
+
+fn match_equivalent(
+    index: usize,
+    matches: &mut [Option<usize>],
+    visited: &mut [bool],
+    compare: &impl Fn(usize, usize) -> bool,
+) -> bool {
+    for (j, matched) in matches.iter_mut().enumerate() {
+        if matched.is_none() && compare(index, j) {
+            *matched = Some(index);
+            return true;
+        }
+    }
+    for j in 0..matches.len() {
+        if visited[j] || !compare(index, j) {
+            continue;
+        }
+        visited[j] = true;
+        if matches[j].is_some_and(|other| match_equivalent(other, matches, visited, compare)) {
+            matches[j] = Some(index);
+            return true;
+        }
+    }
+    false
 }

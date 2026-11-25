@@ -205,17 +205,9 @@ fn test_to_quantity_edge_cases() {
         _ => panic!("Expected Quantity, got: {result:?}"),
     }
 
-    // Test invalid unit parameter (non-string)
+    // A unit parameter must be a String.
     let expr = parser.parse("42.toQuantity(123)").unwrap();
-    let result = evaluator.evaluate(&expr, &context).unwrap();
-    match result {
-        FhirPathValue::Quantity { value, unit } => {
-            assert_eq!(value, Decimal::from_str_exact("42.0").unwrap());
-            // FHIRPath spec: toQuantity defaults to UCUM unit "1".
-            assert_eq!(unit.as_deref(), Some("1")); // Invalid unit parameter ignored
-        }
-        _ => panic!("Expected Quantity, got: {result:?}"),
-    }
+    assert!(evaluator.evaluate(&expr, &context).is_err());
 }
 
 #[test]

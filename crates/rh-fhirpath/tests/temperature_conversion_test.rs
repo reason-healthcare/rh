@@ -92,5 +92,5 @@ fn test_temperature_incompatible_units() {
     // Test incompatible units (temperature + mass)
     let expr = parser.parse("37.0'Cel' + 5.0'kg'").unwrap();
     let result = evaluator.evaluate(&expr, &context);
-    assert!(result.is_err());
+    assert_eq!(result.unwrap(), FhirPathValue::Empty);
 }

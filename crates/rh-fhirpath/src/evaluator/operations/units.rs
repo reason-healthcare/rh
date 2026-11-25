@@ -1,769 +1,624 @@
-//! Unit conversion and handling for UCUM units
-//!
-//! This module provides unit conversion between compatible UCUM units using a custom
-//! conversion system with predefined conversion factors for medical and scientific units.
+//! Checked decimal conversion for the supported subset of UCUM and calendar units.
 
-use crate::error::*;
+use crate::error::{FhirPathError, FhirPathResult};
 use crate::evaluator::types::FhirPathValue;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
-use rust_decimal::Decimal;
-use std::collections::HashMap;
+use rust_decimal::{Decimal, MathematicalOps};
+use std::collections::BTreeMap;
 
-/// Unit converter for UCUM codes
+use FhirPathValue::{Empty, Quantity};
+
+/// Convert between supported UCUM codes and FHIRPath calendar duration names.
 pub struct UnitConverter {
-    /// Mapping of UCUM codes to their conversion factors and unit information
-    unit_mappings: HashMap<String, UnitMapping>,
+    _private: (),
 }
 
-#[derive(Debug, Clone)]
-struct UnitMapping {
-    /// The physical quantity type (mass, length, etc.)
-    quantity_type: QuantityType,
-    /// Base unit for this quantity type
-    base_unit: String,
-    /// Conversion factor to base unit
-    to_base_factor: f64,
-    /// Conversion factor from base unit
-    from_base_factor: f64,
+type Dimensions = BTreeMap<String, i32>;
+
+struct UnitExpression {
+    dimensions: Dimensions,
+    symbols: Dimensions,
+    factor: Decimal,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[allow(dead_code)] // Some variants planned for future use
-enum QuantityType {
-    Mass,
-    Length,
-    Volume,
-    Temperature,
-    Pressure,
-    Time,
-    Dimensionless,
-    Unsupported,
+impl UnitExpression {
+    fn parse(code: &str) -> Option<Self> {
+        let mut expression = Self {
+            dimensions: Dimensions::new(),
+            symbols: Dimensions::new(),
+            factor: Decimal::ONE,
+        };
+        if atom(code).is_some() {
+            expression.insert(code, 1)?;
+            return Some(expression);
+        }
+        let (numerator, denominator) = code.split_once('/').unwrap_or((code, ""));
+        if !numerator.is_empty() {
+            for term in numerator.split('.') {
+                let (symbol, power) = parse_term(term)?;
+                expression.insert(symbol, power)?;
+            }
+        }
+        if code.contains('/') {
+            for term in denominator.split('.') {
+                let (symbol, power) = parse_term(term)?;
+                expression.insert(symbol, -power)?;
+            }
+        } else if numerator.is_empty() {
+            return None;
+        }
+        Some(expression)
+    }
+
+    fn insert(&mut self, symbol: &str, power: i32) -> Option<()> {
+        let (base, base_power, factor) = atom(symbol)?;
+        self.factor = self
+            .factor
+            .checked_mul(factor.checked_powi(i64::from(power))?)?;
+        if self.factor.is_zero() {
+            return None;
+        }
+        if symbol != "1" {
+            merge_power(&mut self.symbols, symbol, power)?;
+            merge_power(&mut self.dimensions, base, power.checked_mul(base_power)?)?;
+        }
+        Some(())
+    }
+}
+
+fn merge_power(map: &mut Dimensions, symbol: &str, power: i32) -> Option<()> {
+    let power = map.get(symbol).copied().unwrap_or(0).checked_add(power)?;
+    if power == 0 {
+        map.remove(symbol);
+    } else {
+        map.insert(symbol.to_owned(), power);
+    }
+    Some(())
+}
+
+fn parse_term(term: &str) -> Option<(&str, i32)> {
+    if is_calendar(term) {
+        return None;
+    }
+    if atom(term).is_some() {
+        return Some((term, 1));
+    }
+    let symbol = term.trim_end_matches(|c: char| c.is_ascii_digit() || c == '-');
+    let power = &term[symbol.len()..];
+    let power: i32 = power.parse().ok()?;
+    (power.abs_diff(0) <= 28 && !is_calendar(symbol)).then_some((symbol, power))
+}
+
+fn atom(code: &str) -> Option<(&'static str, i32, Decimal)> {
+    if let Some((time, calendar)) = time_unit(code) {
+        return Some(("s", 1, time.factor(calendar)));
+    }
+    let (base, power, factor) = match code {
+        "1" => ("1", 0, "1"),
+        "%" => ("1", 0, "0.01"),
+        "g" => ("g", 1, "1"),
+        "kg" => ("g", 1, "1000"),
+        "mg" => ("g", 1, "0.001"),
+        "ug" => ("g", 1, "0.000001"),
+        "ng" => ("g", 1, "0.000000001"),
+        "lb" | "[lb_av]" | "lbs" | "lbs." => ("g", 1, "453.59237"),
+        "mol" => ("mol", 1, "1"),
+        "mmol" => ("mol", 1, "0.001"),
+        "umol" => ("mol", 1, "0.000001"),
+        "U" => ("U", 1, "1"),
+        "m" => ("m", 1, "1"),
+        "cm" => ("m", 1, "0.01"),
+        "mm" => ("m", 1, "0.001"),
+        "km" => ("m", 1, "1000"),
+        "in" | "in_i" | "[in_i]" => ("m", 1, "0.0254"),
+        "ft" | "[ft_i]" => ("m", 1, "0.3048"),
+        "L" | "l" => ("m", 3, "0.001"),
+        "mL" | "ml" => ("m", 3, "0.000001"),
+        "dL" | "dl" => ("m", 3, "0.0001"),
+        "uL" | "ul" => ("m", 3, "0.000000001"),
+        "Pa" => ("Pa", 1, "1"),
+        "kPa" => ("Pa", 1, "1000"),
+        "mm[Hg]" => ("Pa", 1, "133.322"),
+        "bar" => ("Pa", 1, "100000"),
+        "K" => ("K", 1, "1"),
+        _ => return None,
+    };
+    Some((
+        base,
+        power,
+        Decimal::from_str_exact(factor).expect("constant decimal factor"),
+    ))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum TimeUnit {
+    Millisecond,
+    Second,
+    Minute,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year,
+}
+
+impl TimeUnit {
+    fn factor(self, calendar: bool) -> Decimal {
+        use TimeUnit::*;
+        match (self, calendar) {
+            (Millisecond, _) => Decimal::new(1, 3),
+            (Second, _) => Decimal::ONE,
+            (Minute, _) => Decimal::from(60),
+            (Hour, _) => Decimal::from(3600),
+            (Day, _) => Decimal::from(86_400),
+            (Week, _) => Decimal::from(604_800),
+            (Month, true) => Decimal::from(2_592_000),
+            (Year, true) => Decimal::from(31_536_000),
+            (Month, false) => Decimal::from(2_629_800),
+            (Year, false) => Decimal::from(31_557_600),
+        }
+    }
+
+    fn calendar_code(self) -> &'static str {
+        match self {
+            Self::Millisecond => "millisecond",
+            Self::Second => "second",
+            Self::Minute => "minute",
+            Self::Hour => "hour",
+            Self::Day => "day",
+            Self::Week => "week",
+            Self::Month => "month",
+            Self::Year => "year",
+        }
+    }
+
+    fn convert(self, value: Decimal, target: Self, calendar: bool) -> Option<Decimal> {
+        match (self, target, calendar) {
+            (Self::Year, Self::Month, true) => value.checked_mul(Decimal::from(12)),
+            (Self::Month, Self::Year, true) => value.checked_div(Decimal::from(12)),
+            _ => scale(value, self.factor(calendar), target.factor(calendar)),
+        }
+    }
+}
+
+fn time_unit(code: &str) -> Option<(TimeUnit, bool)> {
+    use TimeUnit::*;
+    Some(match code {
+        "ms" => (Millisecond, false),
+        "s" => (Second, false),
+        "min" => (Minute, false),
+        "h" => (Hour, false),
+        "d" => (Day, false),
+        "wk" => (Week, false),
+        "mo" => (Month, false),
+        "a" => (Year, false),
+        "millisecond" | "milliseconds" => (Millisecond, true),
+        "second" | "seconds" => (Second, true),
+        "minute" | "minutes" => (Minute, true),
+        "hour" | "hours" => (Hour, true),
+        "day" | "days" => (Day, true),
+        "week" | "weeks" => (Week, true),
+        "month" | "months" => (Month, true),
+        "year" | "years" => (Year, true),
+        _ => return None,
+    })
+}
+
+fn is_affine(code: &str) -> bool {
+    matches!(code, "Cel" | "[degF]")
+}
+
+fn is_temperature(code: &str) -> bool {
+    code == "K" || is_affine(code)
+}
+
+fn to_celsius(value: Decimal, code: &str) -> Option<Decimal> {
+    match code {
+        "Cel" => Some(value),
+        "K" => value.checked_sub(Decimal::new(27315, 2)),
+        "[degF]" => value
+            .checked_sub(Decimal::from(32))?
+            .checked_mul(Decimal::from(5))?
+            .checked_div(Decimal::from(9)),
+        _ => None,
+    }
+}
+
+fn from_celsius(value: Decimal, code: &str) -> Option<Decimal> {
+    match code {
+        "Cel" => Some(value),
+        "K" => value.checked_add(Decimal::new(27315, 2)),
+        "[degF]" => value
+            .checked_mul(Decimal::new(18, 1))?
+            .checked_add(Decimal::from(32)),
+        _ => None,
+    }
+}
+
+fn is_calendar(code: &str) -> bool {
+    time_unit(code).is_some_and(|(_, calendar)| calendar)
+}
+
+fn scale(value: Decimal, source: Decimal, target: Decimal) -> Option<Decimal> {
+    if source == target {
+        return Some(value);
+    }
+    let ratio = source.checked_div(target).filter(|ratio| !ratio.is_zero());
+    let result =
+        if let Some(ratio) = ratio.filter(|ratio| ratio.checked_mul(target) == Some(source)) {
+            value.checked_mul(ratio)
+        } else {
+            value
+                .checked_mul(source)
+                .and_then(|scaled| scaled.checked_div(target))
+                .or_else(|| ratio.and_then(|ratio| value.checked_mul(ratio)))
+        };
+    result.filter(|result| !result.is_zero() || value.is_zero())
+}
+
+fn convert(value: Decimal, source: &str, target: &str) -> Option<Decimal> {
+    if let (Some((from, calendar)), Some((to, _))) = (time_unit(source), time_unit(target)) {
+        return from.convert(value, to, calendar);
+    }
+    if is_temperature(source) && is_temperature(target) {
+        return if source == target {
+            Some(value)
+        } else {
+            from_celsius(to_celsius(value, source)?, target)
+        };
+    }
+    if is_calendar(source) || is_calendar(target) {
+        return None;
+    }
+    let source = UnitExpression::parse(source)?;
+    let target = UnitExpression::parse(target)?;
+    if source.dimensions != target.dimensions {
+        return None;
+    }
+    scale(value, source.factor, target.factor)
+}
+
+fn incompatible(operation: &str, left: &str, right: &str) -> FhirPathError {
+    FhirPathError::EvaluationError {
+        message: format!("Cannot {operation} quantities with units '{left}' and '{right}'"),
+    }
+}
+
+fn quantity(value: Option<Decimal>, unit: Option<String>) -> FhirPathValue {
+    value.map_or(Empty, |value| Quantity { value, unit })
 }
 
 impl UnitConverter {
-    /// Create a new unit converter with UCUM mappings
     pub fn new() -> Self {
-        let mut unit_mappings = HashMap::new();
-
-        // Dimensionless UCUM default unit.
-        unit_mappings.insert(
-            "1".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Dimensionless,
-                base_unit: "1".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-
-        // Mass units (base: gram)
-        unit_mappings.insert(
-            "g".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Mass,
-                base_unit: "g".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "kg".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Mass,
-                base_unit: "g".to_string(),
-                to_base_factor: 1000.0,
-                from_base_factor: 0.001,
-            },
-        );
-        unit_mappings.insert(
-            "mg".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Mass,
-                base_unit: "g".to_string(),
-                to_base_factor: 0.001,
-                from_base_factor: 1000.0,
-            },
-        );
-        unit_mappings.insert(
-            "ug".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Mass,
-                base_unit: "g".to_string(),
-                to_base_factor: 0.000001,
-                from_base_factor: 1000000.0,
-            },
-        );
-        unit_mappings.insert(
-            "lb".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Mass,
-                base_unit: "g".to_string(),
-                to_base_factor: 453.592,
-                from_base_factor: 1.0 / 453.592,
-            },
-        );
-        // UCUM avoirdupois pound and common display aliases
-        for alias in ["[lb_av]", "lbs", "lbs."] {
-            unit_mappings.insert(
-                alias.to_string(),
-                UnitMapping {
-                    quantity_type: QuantityType::Mass,
-                    base_unit: "g".to_string(),
-                    to_base_factor: 453.592,
-                    from_base_factor: 1.0 / 453.592,
-                },
-            );
-        }
-
-        // Length units (base: meter)
-        unit_mappings.insert(
-            "m".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "cm".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 0.01,
-                from_base_factor: 100.0,
-            },
-        );
-        unit_mappings.insert(
-            "mm".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 0.001,
-                from_base_factor: 1000.0,
-            },
-        );
-        unit_mappings.insert(
-            "km".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 1000.0,
-                from_base_factor: 0.001,
-            },
-        );
-        unit_mappings.insert(
-            "in".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 0.0254,
-                from_base_factor: 1.0 / 0.0254,
-            },
-        );
-        unit_mappings.insert(
-            "[in_i]".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 0.0254,
-                from_base_factor: 1.0 / 0.0254,
-            },
-        );
-        unit_mappings.insert(
-            "ft".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Length,
-                base_unit: "m".to_string(),
-                to_base_factor: 0.3048,
-                from_base_factor: 1.0 / 0.3048,
-            },
-        );
-
-        // Volume units (base: liter)
-        unit_mappings.insert(
-            "L".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Volume,
-                base_unit: "L".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "mL".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Volume,
-                base_unit: "L".to_string(),
-                to_base_factor: 0.001,
-                from_base_factor: 1000.0,
-            },
-        );
-        unit_mappings.insert(
-            "dL".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Volume,
-                base_unit: "L".to_string(),
-                to_base_factor: 0.1,
-                from_base_factor: 10.0,
-            },
-        );
-        unit_mappings.insert(
-            "uL".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Volume,
-                base_unit: "L".to_string(),
-                to_base_factor: 0.000001,
-                from_base_factor: 1000000.0,
-            },
-        );
-
-        // Time units (base: second)
-        unit_mappings.insert(
-            "s".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "min".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 60.0,
-                from_base_factor: 1.0 / 60.0,
-            },
-        );
-        unit_mappings.insert(
-            "h".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 3600.0,
-                from_base_factor: 1.0 / 3600.0,
-            },
-        );
-        unit_mappings.insert(
-            "d".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 86400.0,
-                from_base_factor: 1.0 / 86400.0,
-            },
-        );
-        unit_mappings.insert(
-            "wk".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Time,
-                base_unit: "s".to_string(),
-                to_base_factor: 604800.0, // 7 * 24 * 3600
-                from_base_factor: 1.0 / 604800.0,
-            },
-        );
-        // UCUM 'mo' (mean month = 30.44 days) and 'a' (mean year = 365.25 days)
-        // are intentionally NOT registered here. FHIRPath treats them as
-        // incompatible with the calendar durations 'month'/'year' — comparing
-        // `1 'mo' = 1 month` is undefined (empty) per the HL7 conformance suite.
-
-        // FHIRPath calendar-duration names — same factors as their UCUM
-        // counterparts so `7 days = 1 week`, `7 days = 1 'wk'`, etc. work.
-        let cal_pairs: &[(&str, f64)] = &[
-            ("millisecond", 0.001),
-            ("milliseconds", 0.001),
-            ("second", 1.0),
-            ("seconds", 1.0),
-            ("minute", 60.0),
-            ("minutes", 60.0),
-            ("hour", 3600.0),
-            ("hours", 3600.0),
-            ("day", 86400.0),
-            ("days", 86400.0),
-            ("week", 604800.0),
-            ("weeks", 604800.0),
-            // month/year use UCUM mean values for comparison purposes only.
-            ("month", 2629746.0),
-            ("months", 2629746.0),
-            ("year", 31556952.0),
-            ("years", 31556952.0),
-        ];
-        for (name, factor) in cal_pairs {
-            unit_mappings.insert(
-                name.to_string(),
-                UnitMapping {
-                    quantity_type: QuantityType::Time,
-                    base_unit: "s".to_string(),
-                    to_base_factor: *factor,
-                    from_base_factor: 1.0 / factor,
-                },
-            );
-        }
-
-        // Pressure units (base: Pascal)
-        unit_mappings.insert(
-            "Pa".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Pressure,
-                base_unit: "Pa".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "kPa".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Pressure,
-                base_unit: "Pa".to_string(),
-                to_base_factor: 1000.0,
-                from_base_factor: 0.001,
-            },
-        );
-        unit_mappings.insert(
-            "mm[Hg]".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Pressure,
-                base_unit: "Pa".to_string(),
-                to_base_factor: 133.322,
-                from_base_factor: 1.0 / 133.322,
-            },
-        );
-        unit_mappings.insert(
-            "bar".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Pressure,
-                base_unit: "Pa".to_string(),
-                to_base_factor: 100000.0,
-                from_base_factor: 0.00001,
-            },
-        );
-
-        // Temperature units (base: Celsius)
-        // Note: Temperature conversion requires offset handling, implemented in special methods
-        unit_mappings.insert(
-            "Cel".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Temperature,
-                base_unit: "Cel".to_string(),
-                to_base_factor: 1.0,
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "K".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Temperature,
-                base_unit: "Cel".to_string(),
-                to_base_factor: 1.0, // Same scale as Celsius
-                from_base_factor: 1.0,
-            },
-        );
-        unit_mappings.insert(
-            "[degF]".to_string(),
-            UnitMapping {
-                quantity_type: QuantityType::Temperature,
-                base_unit: "Cel".to_string(),
-                to_base_factor: 5.0 / 9.0, // Fahrenheit scale factor
-                from_base_factor: 9.0 / 5.0,
-            },
-        );
-
-        Self { unit_mappings }
+        Self { _private: () }
     }
 
-    /// Check if two units are compatible for arithmetic operations
-    pub fn are_units_compatible(&self, unit1: &Option<String>, unit2: &Option<String>) -> bool {
-        match (unit1, unit2) {
-            (None, None) => true, // Both dimensionless
-            (None, Some(u)) | (Some(u), None) => u == "1",
-            (Some(u1), Some(u2)) => {
-                if u1 == u2 {
-                    return true; // Same units
-                }
-                if let (Some((base1, power1)), Some((base2, power2))) =
-                    (parse_simple_power_unit(u1), parse_simple_power_unit(u2))
-                {
-                    return power1 == power2
-                        && self.are_units_compatible(&Some(base1), &Some(base2));
-                }
-                // Check if they're the same quantity type
-                if let (Some(mapping1), Some(mapping2)) =
-                    (self.unit_mappings.get(u1), self.unit_mappings.get(u2))
-                {
-                    mapping1.quantity_type == mapping2.quantity_type
-                } else {
-                    false
-                }
+    /// Whether the converter can explicitly convert between the two units.
+    pub fn are_units_compatible(&self, left: &Option<String>, right: &Option<String>) -> bool {
+        convert(Decimal::ZERO, code(left), code(right)).is_some()
+    }
+
+    /// Whether implicit equality or ordering can compare the two units.
+    pub fn are_quantities_comparable(&self, left: &Option<String>, right: &Option<String>) -> bool {
+        if let (Some((l, lc)), Some((r, rc))) = (time_unit(code(left)), time_unit(code(right))) {
+            if lc != rc && (l >= TimeUnit::Month || r >= TimeUnit::Month) {
+                return false;
             }
         }
+        self.are_units_compatible(left, right)
     }
 
-    /// Convert a quantity value to a compatible target unit.
     pub fn convert_quantity(
         &self,
         value: Decimal,
         unit: &Option<String>,
         target_unit: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
-        if !self.are_units_compatible(unit, target_unit) {
-            return Err(FhirPathError::EvaluationError {
-                message: format!("Cannot convert quantity from {unit:?} to {target_unit:?}"),
-            });
-        }
-
-        let source_unit = unit.clone().or_else(|| Some("1".to_string()));
-        let target_unit = target_unit.clone().or_else(|| Some("1".to_string()));
-        if source_unit == target_unit {
-            return Ok(FhirPathValue::Quantity {
-                value,
-                unit: target_unit,
-            });
-        }
-
-        let value_f64 = value.to_f64().unwrap_or(0.0);
-        let (base_value, base_unit) = self.to_base_unit(value_f64, &source_unit)?;
-        let result = self.convert_from_base_unit(base_value, &base_unit, &target_unit)?;
-
-        Ok(FhirPathValue::Quantity {
-            value: Decimal::from_f64(result).unwrap_or(Decimal::ZERO),
-            unit: target_unit.clone(),
-        })
+        let source = code(unit);
+        let target = code(target_unit);
+        Ok(quantity(
+            convert(value, source, target),
+            Some(target.to_owned()),
+        ))
     }
 
-    /// Convert a quantity to a standard base unit for the quantity type
+    /// Compatibility interface for callers that work with floating point quantities.
     pub fn to_base_unit(
         &self,
         value: f64,
         unit: &Option<String>,
     ) -> FhirPathResult<(f64, Option<String>)> {
-        match unit {
-            None => Ok((value, None)), // Dimensionless
-            Some(unit_str) => {
-                if let Some((base_unit, power)) = parse_simple_power_unit(unit_str) {
-                    let Some(mapping) = self.unit_mappings.get(&base_unit) else {
-                        return Ok((value, unit.clone()));
-                    };
-                    let factor = mapping.to_base_factor.powi(power);
-                    let base_value = value * factor;
-                    return Ok((base_value, Some(format!("{}{}", mapping.base_unit, power))));
-                }
-                if let Some(mapping) = self.unit_mappings.get(unit_str) {
-                    // Special handling for temperature units (require offset conversion)
-                    if mapping.quantity_type == QuantityType::Temperature {
-                        let base_value = self.temperature_to_celsius(value, unit_str)?;
-                        Ok((base_value, Some(mapping.base_unit.clone())))
-                    } else {
-                        let base_value = value * mapping.to_base_factor;
-                        Ok((base_value, Some(mapping.base_unit.clone())))
-                    }
-                } else {
-                    // Unknown unit, return as-is
-                    Ok((value, unit.clone()))
-                }
-            }
-        }
+        let Some(original) = unit else {
+            return Ok((value, None));
+        };
+        let base = if is_temperature(original) {
+            "Cel".to_owned()
+        } else {
+            render_units(
+                &UnitExpression::parse(original)
+                    .ok_or_else(|| incompatible("convert", original, "base"))?
+                    .dimensions,
+            )
+        };
+        let value = self.convert_from_base_unit(value, unit, &Some(base.clone()))?;
+        Ok((value, Some(base)))
     }
 
-    /// Convert a quantity from base unit to a target unit
     pub fn convert_from_base_unit(
         &self,
-        base_value: f64,
-        base_unit: &Option<String>,
+        value: f64,
+        unit: &Option<String>,
         target_unit: &Option<String>,
     ) -> FhirPathResult<f64> {
-        match (base_unit, target_unit) {
-            (None, None) => Ok(base_value), // Both dimensionless
-            (Some(_), None) => Err(FhirPathError::EvaluationError {
-                message: "Cannot convert from unit to dimensionless".to_string(),
-            }),
-            (None, Some(_)) => Err(FhirPathError::EvaluationError {
-                message: "Cannot convert from dimensionless to unit".to_string(),
-            }),
-            (Some(base), Some(target)) => {
-                if base == target {
-                    return Ok(base_value);
-                }
-                if let (Some((base_base, base_power)), Some((target_base, target_power))) = (
-                    parse_simple_power_unit(base),
-                    parse_simple_power_unit(target),
-                ) {
-                    if base_power == target_power {
-                        let Some(base_mapping) = self.unit_mappings.get(&base_base) else {
-                            return Err(FhirPathError::EvaluationError {
-                                message: format!("Unknown base unit: {base_base}"),
-                            });
-                        };
-                        let Some(target_mapping) = self.unit_mappings.get(&target_base) else {
-                            return Err(FhirPathError::EvaluationError {
-                                message: format!("Unknown target unit: {target_base}"),
-                            });
-                        };
-                        if base_mapping.base_unit == target_mapping.base_unit {
-                            return Ok(
-                                base_value * target_mapping.from_base_factor.powi(target_power)
-                            );
-                        }
-                    }
-                }
-                if let Some(target_mapping) = self.unit_mappings.get(target) {
-                    if target_mapping.base_unit == *base {
-                        // Special handling for temperature units
-                        if target_mapping.quantity_type == QuantityType::Temperature {
-                            self.celsius_to_temperature(base_value, target)
-                        } else {
-                            Ok(base_value * target_mapping.from_base_factor)
-                        }
-                    } else {
-                        Err(FhirPathError::EvaluationError {
-                            message: format!(
-                                "Cannot convert between incompatible units: {base} and {target}"
-                            ),
-                        })
-                    }
-                } else {
-                    Err(FhirPathError::EvaluationError {
-                        message: format!("Unknown target unit: {target}"),
-                    })
-                }
-            }
-        }
+        let source = code(unit);
+        let target = code(target_unit);
+        Decimal::from_f64(value)
+            .and_then(|value| convert(value, source, target))
+            .and_then(|value| value.to_f64())
+            .ok_or_else(|| incompatible("convert", source, target))
     }
 
-    /// Convert temperature value to Celsius (base unit for temperature)
-    fn temperature_to_celsius(&self, value: f64, unit: &str) -> FhirPathResult<f64> {
-        match unit {
-            "Cel" => Ok(value),
-            "K" => Ok(value - 273.15),
-            "[degF]" => Ok((value - 32.0) * 5.0 / 9.0),
-            _ => Err(FhirPathError::EvaluationError {
-                message: format!("Unknown temperature unit: {unit}"),
-            }),
-        }
-    }
-
-    /// Convert Celsius temperature to target temperature unit
-    fn celsius_to_temperature(&self, celsius_value: f64, target_unit: &str) -> FhirPathResult<f64> {
-        match target_unit {
-            "Cel" => Ok(celsius_value),
-            "K" => Ok(celsius_value + 273.15),
-            "[degF]" => Ok(celsius_value * 9.0 / 5.0 + 32.0),
-            _ => Err(FhirPathError::EvaluationError {
-                message: format!("Unknown temperature unit: {target_unit}"),
-            }),
-        }
-    }
-
-    /// Add two quantities with automatic unit conversion
     pub fn add_quantities(
         &self,
-        left_value: Decimal,
-        left_unit: &Option<String>,
-        right_value: Decimal,
-        right_unit: &Option<String>,
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
-        if !self.are_units_compatible(left_unit, right_unit) {
-            return Err(FhirPathError::EvaluationError {
-                message: format!(
-                    "Cannot add quantities with incompatible units: {left_unit:?} and {right_unit:?}"
-                ),
-            });
-        }
-
-        // Convert both to base units (using f64 for unit conversion math)
-        let left_f64 = left_value.to_f64().unwrap_or(0.0);
-        let right_f64 = right_value.to_f64().unwrap_or(0.0);
-        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
-        let (right_base, _right_base_unit) = self.to_base_unit(right_f64, right_unit)?;
-
-        // Add the base values
-        let result_base = left_base + right_base;
-
-        // Convert back to the left operand's unit (maintain left operand unit for result)
-        let result_unit = self.most_granular_unit(left_unit, right_unit);
-        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, &result_unit)?;
-
-        Ok(FhirPathValue::Quantity {
-            value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
-            unit: result_unit,
-        })
+        Ok(self.add_or_subtract(a, au, b, bu, Decimal::checked_add))
     }
 
-    /// Subtract two quantities with automatic unit conversion
     pub fn subtract_quantities(
         &self,
-        left_value: Decimal,
-        left_unit: &Option<String>,
-        right_value: Decimal,
-        right_unit: &Option<String>,
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
-        if !self.are_units_compatible(left_unit, right_unit) {
-            return Err(FhirPathError::EvaluationError {
-                message: format!(
-                    "Cannot subtract quantities with incompatible units: {left_unit:?} and {right_unit:?}"
-                ),
-            });
-        }
-
-        let left_f64 = left_value.to_f64().unwrap_or(0.0);
-        let right_f64 = right_value.to_f64().unwrap_or(0.0);
-        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
-        let (right_base, _) = self.to_base_unit(right_f64, right_unit)?;
-
-        let result_base = left_base - right_base;
-
-        let result_unit = self.most_granular_unit(left_unit, right_unit);
-        let result_f64 = self.convert_from_base_unit(result_base, &left_base_unit, &result_unit)?;
-
-        Ok(FhirPathValue::Quantity {
-            value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
-            unit: result_unit,
-        })
+        Ok(self.add_or_subtract(a, au, b, bu, Decimal::checked_sub))
     }
 
-    fn most_granular_unit(
+    fn add_or_subtract(
         &self,
-        left_unit: &Option<String>,
-        right_unit: &Option<String>,
-    ) -> Option<String> {
-        match (left_unit, right_unit) {
-            (Some(left), Some(right)) => {
-                match (self.unit_mappings.get(left), self.unit_mappings.get(right)) {
-                    (Some(left_mapping), Some(right_mapping))
-                        if left_mapping.quantity_type == right_mapping.quantity_type =>
-                    {
-                        if left_mapping.to_base_factor <= right_mapping.to_base_factor {
-                            Some(left.clone())
-                        } else {
-                            Some(right.clone())
-                        }
-                    }
-                    _ => Some(left.clone()),
-                }
-            }
-            (Some(unit), None) | (None, Some(unit)) => Some(unit.clone()),
-            (None, None) => None,
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
+        op: fn(Decimal, Decimal) -> Option<Decimal>,
+    ) -> FhirPathValue {
+        let left = code(au);
+        let right = code(bu);
+        if is_affine(left) || is_affine(right) {
+            return Empty;
         }
+        let result_unit = if let (Some((l, lc)), Some((r, rc))) =
+            (time_unit(left), time_unit(right))
+        {
+            if (l >= TimeUnit::Month || r >= TimeUnit::Month) && (lc || rc) && (l != r || lc != rc)
+            {
+                return Empty;
+            }
+            if lc || rc {
+                l.min(r).calendar_code()
+            } else if l <= r {
+                left
+            } else {
+                right
+            }
+        } else {
+            let Some(chosen) = granularity(left, right, false) else {
+                return Empty;
+            };
+            chosen
+        };
+        let values = convert(a, left, result_unit).zip(convert(b, right, result_unit));
+        quantity(
+            values.and_then(|(a, b)| op(a, b)),
+            (au.is_some() || bu.is_some()).then(|| result_unit.to_owned()),
+        )
     }
 
-    /// Multiply a quantity by a scalar
     pub fn multiply_by_scalar(
         &self,
         value: Decimal,
         unit: &Option<String>,
         scalar: Decimal,
     ) -> FhirPathValue {
-        FhirPathValue::Quantity {
-            value: value * scalar,
-            unit: unit.clone(),
-        }
+        self.multiply_quantities(value, unit, scalar, &None)
+            .unwrap_or(Empty)
     }
 
-    pub fn multiply_quantities(
-        &self,
-        left_value: Decimal,
-        left_unit: &Option<String>,
-        right_value: Decimal,
-        right_unit: &Option<String>,
-    ) -> FhirPathResult<FhirPathValue> {
-        let left_f64 = left_value.to_f64().unwrap_or(0.0);
-        let right_f64 = right_value.to_f64().unwrap_or(0.0);
-        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
-        let (right_base, right_base_unit) = self.to_base_unit(right_f64, right_unit)?;
-
-        let result_f64 = left_base * right_base;
-        let unit = compose_product_unit(&left_base_unit, &right_base_unit);
-        Ok(FhirPathValue::Quantity {
-            value: Decimal::from_f64_retain(result_f64).unwrap_or(Decimal::ZERO),
-            unit,
-        })
-    }
-
-    /// Divide a quantity by a scalar
     pub fn divide_by_scalar(
         &self,
         value: Decimal,
         unit: &Option<String>,
         scalar: Decimal,
     ) -> FhirPathResult<FhirPathValue> {
-        if scalar == Decimal::ZERO {
-            return Err(FhirPathError::EvaluationError {
-                message: "Division by zero".to_string(),
-            });
-        }
-
-        Ok(FhirPathValue::Quantity {
-            value: value / scalar,
-            unit: unit.clone(),
-        })
+        self.divide_quantities(value, unit, scalar, &None)
     }
 
-    /// Compare two quantities with unit conversion
-    /// Returns -1 if left < right, 0 if equal, 1 if left > right
-    pub fn compare_quantities(
+    pub fn multiply_quantities(
         &self,
-        left_value: Decimal,
-        left_unit: &Option<String>,
-        right_value: Decimal,
-        right_unit: &Option<String>,
-    ) -> FhirPathResult<i32> {
-        if !self.are_units_compatible(left_unit, right_unit) {
-            return Err(FhirPathError::EvaluationError {
-                message: format!(
-                    "Cannot compare quantities with incompatible units: {left_unit:?} and {right_unit:?}"
-                ),
-            });
-        }
-
-        let left_f64 = left_value.to_f64().unwrap_or(0.0);
-        let right_f64 = right_value.to_f64().unwrap_or(0.0);
-        let (left_base, _) = self.to_base_unit(left_f64, left_unit)?;
-        let (right_base, _) = self.to_base_unit(right_f64, right_unit)?;
-
-        if (left_base - right_base).abs() <= 1e-12 {
-            Ok(0)
-        } else if left_base < right_base {
-            Ok(-1)
-        } else if left_base > right_base {
-            Ok(1)
-        } else {
-            Ok(0)
-        }
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
+    ) -> FhirPathResult<FhirPathValue> {
+        Ok(product_or_quotient(a, au, b, bu, false).unwrap_or(Empty))
     }
 
-    /// Divide two quantities (same units result in dimensionless)
     pub fn divide_quantities(
         &self,
-        left_value: Decimal,
-        left_unit: &Option<String>,
-        right_value: Decimal,
-        right_unit: &Option<String>,
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
     ) -> FhirPathResult<FhirPathValue> {
-        if right_value == Decimal::ZERO {
-            return Err(FhirPathError::EvaluationError {
-                message: "Division by zero".to_string(),
-            });
+        Ok(product_or_quotient(a, au, b, bu, true).unwrap_or(Empty))
+    }
+
+    pub fn compare_quantities(
+        &self,
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
+    ) -> FhirPathResult<i32> {
+        let (left, right) = (code(au), code(bu));
+        if !self.are_quantities_comparable(au, bu) {
+            return Err(incompatible("compare", left, right));
         }
+        let (a, b) = comparison_values(a, left, b, right)
+            .or_else(|| {
+                let target = granularity(left, right, false)?;
+                Some((convert(a, left, target)?, convert(b, right, target)?))
+            })
+            .ok_or_else(|| incompatible("compare", left, right))?;
+        Ok(a.cmp(&b) as i32)
+    }
 
-        let left_f64 = left_value.to_f64().unwrap_or(0.0);
-        let right_f64 = right_value.to_f64().unwrap_or(0.0);
-        let (left_base, left_base_unit) = self.to_base_unit(left_f64, left_unit)?;
-        let (right_base, right_base_unit) = self.to_base_unit(right_f64, right_unit)?;
+    pub fn equivalent_quantities(
+        &self,
+        a: Decimal,
+        au: &Option<String>,
+        b: Decimal,
+        bu: &Option<String>,
+    ) -> bool {
+        let Some((a, b)) = comparison_values(a, code(au), b, code(bu)) else {
+            return false;
+        };
+        let precision = a.normalize().scale().min(b.normalize().scale());
+        a.round_dp(precision) == b.round_dp(precision)
+    }
+}
 
-        let result = left_base / right_base;
+fn code(unit: &Option<String>) -> &str {
+    unit.as_deref().unwrap_or("1")
+}
 
-        if self.are_units_compatible(&left_base_unit, &right_base_unit) {
-            return Ok(FhirPathValue::Quantity {
-                value: Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
-                unit: Some("1".to_string()),
-            });
-        }
+fn comparison_values(
+    a: Decimal,
+    left: &str,
+    b: Decimal,
+    right: &str,
+) -> Option<(Decimal, Decimal)> {
+    if is_temperature(left) && is_temperature(right) {
+        return if left == right {
+            Some((a, b))
+        } else {
+            Some((to_celsius(a, left)?, to_celsius(b, right)?))
+        };
+    }
+    let target = granularity(left, right, true)?;
+    Some((convert(a, left, target)?, convert(b, right, target)?))
+}
 
-        Ok(FhirPathValue::Quantity {
-            value: Decimal::from_f64_retain(result).unwrap_or(Decimal::ZERO),
-            unit: compose_quotient_unit(&left_base_unit, &right_base_unit),
+fn granularity<'a>(left: &'a str, right: &'a str, least: bool) -> Option<&'a str> {
+    if let (Some((l, _)), Some((r, _))) = (time_unit(left), time_unit(right)) {
+        return Some(if l == r || (l > r) == least {
+            left
+        } else {
+            right
+        });
+    }
+    let a = UnitExpression::parse(left)?;
+    let b = UnitExpression::parse(right)?;
+    if a.dimensions != b.dimensions {
+        return None;
+    }
+    Some(if a.factor == b.factor || (a.factor > b.factor) == least {
+        left
+    } else {
+        right
+    })
+}
+
+fn product_or_quotient(
+    a: Decimal,
+    au: &Option<String>,
+    b: Decimal,
+    bu: &Option<String>,
+    divide: bool,
+) -> Option<FhirPathValue> {
+    let (left, right) = (code(au), code(bu));
+    let calendar_operand = is_calendar(left) || is_calendar(right);
+    let scalar_operand = left == "1" || right == "1";
+    if is_affine(left) || is_affine(right) || (calendar_operand && !scalar_operand) {
+        return None;
+    }
+    if right == "1" || (left == "1" && !divide) {
+        let source = if right == "1" { au } else { bu };
+        let operand = if right == "1" { left } else { right };
+        UnitExpression::parse(operand)?;
+        return Some(quantity(ratio_arithmetic(a, b, divide), source.clone()));
+    }
+    if calendar_operand {
+        return None; // A reciprocal calendar duration is undefined.
+    }
+    let a_units = UnitExpression::parse(left)?;
+    let b_units = UnitExpression::parse(right)?;
+    let mut a_dimensions = a_units.dimensions.clone();
+    let mut a_symbols = a_units.symbols.clone();
+    let sign = if divide { -1 } else { 1 };
+    for (symbol, power) in &b_units.dimensions {
+        merge_power(&mut a_dimensions, symbol, sign * power)?;
+    }
+    for (symbol, power) in &b_units.symbols {
+        merge_power(&mut a_symbols, symbol, sign * power)?;
+    }
+    let mixed_units = a_units.symbols.keys().any(|left| {
+        b_units.symbols.keys().any(|right| {
+            left != right
+                && atom(left)
+                    .zip(atom(right))
+                    .is_some_and(|((a, _, _), (b, _, _))| a == b)
         })
+    });
+    let (a, b, result_symbols) = if mixed_units {
+        (
+            scale(a, a_units.factor, Decimal::ONE)?,
+            scale(b, b_units.factor, Decimal::ONE)?,
+            a_dimensions,
+        )
+    } else {
+        (a, b, a_symbols)
+    };
+    Some(quantity(
+        ratio_arithmetic(a, b, divide),
+        Some(render_units(&result_symbols)),
+    ))
+}
+
+fn ratio_arithmetic(left: Decimal, right: Decimal, divide: bool) -> Option<Decimal> {
+    if divide {
+        left.checked_div(right)
+            .filter(|result| !result.is_zero() || left.is_zero())
+    } else {
+        left.checked_mul(right)
+            .filter(|result| !result.is_zero() || left.is_zero() || right.is_zero())
+    }
+}
+
+fn render_units(dimensions: &Dimensions) -> String {
+    let mut numerator = Vec::new();
+    let mut denominator = Vec::new();
+    for (symbol, power) in dimensions {
+        let magnitude = power.unsigned_abs();
+        let term = if magnitude == 1 {
+            symbol.clone()
+        } else {
+            format!("{symbol}{magnitude}")
+        };
+        if *power > 0 {
+            numerator.push(term)
+        } else {
+            denominator.push(term)
+        }
+    }
+    match (numerator.is_empty(), denominator.is_empty()) {
+        (true, true) => "1".to_string(),
+        (false, true) => numerator.join("."),
+        (_, false) => format!("{}/{}", numerator.join("."), denominator.join(".")),
     }
 }
 
@@ -773,76 +628,13 @@ impl Default for UnitConverter {
     }
 }
 
-/// Unit evaluator that wraps the UnitConverter for consistency with other evaluators
 pub struct UnitEvaluator;
 
 impl UnitEvaluator {
-    /// Create a new UnitConverter instance
     pub fn new_converter() -> UnitConverter {
         UnitConverter::new()
     }
 }
-
-fn compose_product_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
-    match (left.as_deref(), right.as_deref()) {
-        (None, None) => None,
-        (Some(unit), None) | (None, Some(unit)) => Some(unit.to_string()),
-        (Some(left), Some(right)) => {
-            if let Some(unit) = multiply_simple_units(left, right) {
-                return Some(unit);
-            }
-            if left == right {
-                Some(format!("{left}2"))
-            } else {
-                Some(format!("{left}.{right}"))
-            }
-        }
-    }
-}
-
-fn multiply_simple_units(left: &str, right: &str) -> Option<String> {
-    let (left_base, left_power) = parse_simple_power_unit(left).unwrap_or((left.to_string(), 1));
-    let (right_base, right_power) =
-        parse_simple_power_unit(right).unwrap_or((right.to_string(), 1));
-    if left_base == right_base {
-        let power = left_power + right_power;
-        return if power == 1 {
-            Some(left_base)
-        } else {
-            Some(format!("{left_base}{power}"))
-        };
-    }
-    None
-}
-
-fn parse_simple_power_unit(unit: &str) -> Option<(String, i32)> {
-    let digits_start = unit
-        .char_indices()
-        .find_map(|(idx, ch)| ch.is_ascii_digit().then_some(idx))?;
-    if digits_start == 0 {
-        return None;
-    }
-    let (base, power) = unit.split_at(digits_start);
-    if base.is_empty() || power.is_empty() || !power.chars().all(|ch| ch.is_ascii_digit()) {
-        return None;
-    }
-    let power = power.parse::<i32>().ok()?;
-    if power <= 1 {
-        return None;
-    }
-    Some((base.to_string(), power))
-}
-
-fn compose_quotient_unit(left: &Option<String>, right: &Option<String>) -> Option<String> {
-    match (left.as_deref(), right.as_deref()) {
-        (None, None) => Some("1".to_string()),
-        (Some(unit), None) => Some(unit.to_string()),
-        (None, Some(unit)) => Some(format!("1/{unit}")),
-        (Some(left), Some(right)) if left == right => Some("1".to_string()),
-        (Some(left), Some(right)) => Some(format!("{left}/{right}")),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -899,7 +691,7 @@ mod tests {
             Decimal::from_str_exact("1.0").unwrap(),
             &Some("m".to_string()),
         );
-        assert!(result.is_err());
+        assert_eq!(result.unwrap(), Empty);
     }
 
     #[test]
@@ -980,53 +772,29 @@ mod tests {
     }
 
     #[test]
-    fn test_temperature_conversion() {
+    fn test_affine_arithmetic_is_undefined() {
         let converter = UnitConverter::new();
-
-        let result = converter
-            .add_quantities(
-                Decimal::from_str_exact("0.0").unwrap(),
-                &Some("Cel".to_string()),
-                Decimal::from_str_exact("0.0").unwrap(),
-                &Some("K".to_string()),
-            )
-            .unwrap();
-        if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value.to_f64().unwrap() - (-273.15)).abs() < 0.01);
-            assert_eq!(unit, Some("Cel".to_string()));
-        } else {
-            panic!("Expected Quantity result");
-        }
-
-        let result = converter
-            .add_quantities(
-                Decimal::from_str_exact("20.0").unwrap(),
-                &Some("Cel".to_string()),
-                Decimal::from_str_exact("5.0").unwrap(),
-                &Some("Cel".to_string()),
-            )
-            .unwrap();
-        if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value.to_f64().unwrap() - 25.0).abs() < 0.01);
-            assert_eq!(unit, Some("Cel".to_string()));
-        } else {
-            panic!("Expected Quantity result");
-        }
-
-        let result = converter
-            .subtract_quantities(
-                Decimal::from_str_exact("100.0").unwrap(),
-                &Some("Cel".to_string()),
-                Decimal::from_str_exact("0.0").unwrap(),
-                &Some("Cel".to_string()),
-            )
-            .unwrap();
-        if let FhirPathValue::Quantity { value, unit } = result {
-            assert!((value.to_f64().unwrap() - 100.0).abs() < 0.01);
-            assert_eq!(unit, Some("Cel".to_string()));
-        } else {
-            panic!("Expected Quantity result");
-        }
+        let celsius = Some("Cel".to_string());
+        let kelvin = Some("K".to_string());
+        let fahrenheit = Some("[degF]".to_string());
+        assert_eq!(
+            converter
+                .add_quantities(Decimal::ZERO, &celsius, Decimal::ZERO, &kelvin)
+                .unwrap(),
+            Empty
+        );
+        assert_eq!(
+            converter
+                .subtract_quantities(Decimal::from(100), &celsius, Decimal::ZERO, &celsius)
+                .unwrap(),
+            Empty
+        );
+        assert_eq!(
+            converter
+                .multiply_quantities(Decimal::ONE, &fahrenheit, Decimal::from(2), &None)
+                .unwrap(),
+            Empty
+        );
     }
 
     #[test]

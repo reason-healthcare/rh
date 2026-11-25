@@ -1,7 +1,7 @@
 //! DateTime function registration for FHIRPath
 
 use crate::error::*;
-use crate::evaluator::operations::datetime::DateTimeEvaluator;
+use crate::evaluator::operations::{datetime::DateTimeEvaluator, temporal::interval};
 use crate::evaluator::types::FhirPathValue;
 use std::collections::HashMap;
 
@@ -177,4 +177,39 @@ pub fn register_datetime_functions(functions: &mut HashMap<String, FhirPathFunct
             DateTimeEvaluator::time_of(target)
         }),
     );
+    for (name, difference) in [("duration", false), ("difference", true)] {
+        functions.insert(
+            name.to_owned(),
+            Box::new(move |target: &FhirPathValue, params: &[FhirPathValue]| {
+                let [value, precision] = params else {
+                    return Err(FhirPathError::InvalidOperation {
+                        message: format!("{name}() takes a date/time value and a precision"),
+                    });
+                };
+                let (target, value, precision) = (
+                    target.singleton(name)?.map(FhirPathValue::system_value),
+                    value.singleton(name)?.map(FhirPathValue::system_value),
+                    precision.singleton(name)?.map(FhirPathValue::system_value),
+                );
+                match (target, value, precision) {
+                    (None | Some(FhirPathValue::Empty), _, _)
+                    | (_, None | Some(FhirPathValue::Empty), _)
+                    | (_, _, None | Some(FhirPathValue::Empty)) => Ok(FhirPathValue::Empty),
+                    (
+                        Some(target),
+                        Some(value),
+                        Some(
+                            FhirPathValue::String(precision)
+                            | FhirPathValue::TypedString {
+                                value: precision, ..
+                            },
+                        ),
+                    ) => interval(target, value, precision, difference),
+                    _ => Err(FhirPathError::TypeError {
+                        message: format!("{name}() requires a String precision"),
+                    }),
+                }
+            }),
+        );
+    }
 }

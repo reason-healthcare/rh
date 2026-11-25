@@ -4,7 +4,7 @@ A comprehensive Rust implementation of a FHIRPath expression parser and evaluato
 
 ## Background
 
-FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. This crate provides a complete implementation with:
+FHIRPath is a path-based navigation and extraction language for FHIR resources, defined by the HL7 FHIR specification. The crate implements the published FHIRPath 3.0.0 STU 3 language with:
 
 - **Parser**: Converts FHIRPath expressions into an Abstract Syntax Tree (AST) using nom parser combinators
 - **Evaluator**: Comprehensive evaluation of FHIRPath expressions against FHIR resources
@@ -13,15 +13,10 @@ FHIRPath is a path-based navigation and extraction language for FHIR resources, 
 
 ## Current Implementation Status
 
-[See implementation status](implementation.md)
-
-**Conformance**: the official HL7 FHIRPath test suite (937 cases) runs in CI
-via `cargo test -p rh-fhirpath --test hl7_conformance`. Current scored result:
-**99.8%** (933/935), with **1 known wrong answer** due to an R4/R5
-fractional-second datetime arithmetic expectation difference, **0 parse
-errors**, and **0 eval errors**; the other non-pass is one skipped HL7 fixture
-that is not published with the test case bundle. See
-[CONFORMANCE.md](CONFORMANCE.md) and [SPEC_COVERAGE.md](SPEC_COVERAGE.md).
+The native conformance harness runs pinned suites against the R4 and R5 models.
+The results include published specification differences, unavailable host
+capabilities, and decimal representation limits. [Conformance](CONFORMANCE.md) ·
+[Specification coverage](SPEC_COVERAGE.md)
 
 ## Usage
 
@@ -30,6 +25,7 @@ that is not published with the test case bundle. See
 You can use the `rh` cli. For help:
 ```
 rh fhirpath --help
+rh fhirpath eval 'parameter.value.getValue() is System.Long' --fhir-version r5 --data parameters.json
 ```
 
 There is also an interactive REPL:
@@ -75,25 +71,58 @@ let result = evaluator.evaluate(&expr, &context).unwrap();
 
 [See the examples directory](./examples/) for complete, runnable examples with detailed output and explanations.
 
+#### Exact JSON numbers
+
+Use `EvaluationContext::from_json_str` with the original JSON text to preserve
+decimal scale and large scientific exponents. To serialize an exact JSON result,
+evaluate with `evaluate_nodes` and call `to_raw_json` on the result. Its
+`get()` method returns JSON text, including unquoted number tokens.
+
+```rust
+use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser};
+
+let context = EvaluationContext::from_json_str(
+    r#"{"resourceType":"Parameters","parameter":[{"name":"amount","valueDecimal":1.23456789012345670}]}"#,
+)
+.unwrap();
+let expression = FhirPathParser::new().parse("parameter.first().value").unwrap();
+let result = FhirPathEvaluator::new()
+    .evaluate_nodes(&expression, &context)
+    .unwrap();
+assert_eq!(result.to_raw_json().unwrap().get(), "1.23456789012345670");
+```
+
+`EvaluationContext::new` accepts an existing `serde_json::Value` and uses the
+numbers available in that value. `FhirPathValue::to_json` projects results into
+the numeric representation of `serde_json::Value`.
+
+#### Migrating from 0.3.0
+
+Construct evaluation contexts with `EvaluationContext::new` and configure the
+FHIR model, host, and evaluation flags on the returned context. Update exhaustive
+matches over the public AST and value enums for the new variants, including
+`Expression::SortKey`, `Term::InstanceSelector`, and `FhirPathValue::Node`.
+A new evaluation context initializes `$index` to `0` as specified by STU 3.
+[FHIRPath variables](https://hl7.org/fhirpath/STU3/en/index.html#special-variables)
+
 ### Unit Conversion
 
 [See details about unit support and unit conversion](units.md)
 
 ### Error Handling
 
-The system provides clear error messages for:
-- **Incompatible units**: `Cannot add quantities with incompatible units: Some("kg") and Some("m")`
-- **Division by zero**: `Division by zero`
-- **Unknown units**: `Unknown unit: xyz`
-- **Temperature conversion errors**: `Unknown temperature unit: xyz`
-- **Mixed unit types**: `Cannot add quantities with incompatible units: Some("Cel") and Some("kg")`
+The evaluator reports invalid argument types and cardinalities through
+`FhirPathError`. Operations such as division by zero, out-of-range arithmetic,
+and comparisons of quantities with incompatible units yield an empty collection.
+The parser reports an error beyond 12 nested delimiters or 64 expression tree
+levels. Evaluating a caller-supplied expression tree applies the same 64-level limit.
 
 See `examples/unit_conversion_example.rs` and `examples/temperature_conversion_example.rs` for comprehensive examples of all supported conversions and operations.
 
 ## Grammar Support
 
 This implementation is based on the official FHIRPath grammar from:
-https://build.fhir.org/ig/HL7/FHIRPath/fhirpath.g4
+https://hl7.org/fhirpath/STU3/en/grammar.html
 
 The parser is implemented using the `nom` parser combinator library, providing a pure Rust implementation without requiring build-time code generation. The parser supports the complete core FHIRPath syntax including:
 

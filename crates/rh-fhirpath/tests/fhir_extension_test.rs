@@ -6,7 +6,6 @@
 #[cfg(test)]
 mod tests {
     use rh_fhirpath::{EvaluationContext, FhirPathEvaluator, FhirPathParser, FhirPathValue};
-    use rust_decimal::prelude::ToPrimitive;
     use rust_decimal::Decimal;
     use serde_json::json;
 
@@ -149,7 +148,7 @@ mod tests {
             FhirPathValue::Collection(items) => {
                 assert_eq!(items.len(), 1, "Should find exactly one race extension");
                 // Verify it's the correct extension
-                if let FhirPathValue::Object(ext) = &items[0] {
+                if let FhirPathValue::TypedObject { value: ext, .. } = &items[0] {
                     assert_eq!(
                         ext.get("url").unwrap(),
                         &json!("http://hl7.org/fhir/us/core/StructureDefinition/us-core-race")
@@ -163,27 +162,15 @@ mod tests {
     }
 
     #[test]
-    fn test_extension_function_multiple_matches() {
+    fn test_extension_function_does_not_match_a_url_prefix() {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
-        // Test finding extensions with partial URL match (should find US Core extensions)
         let parsed = parser
             .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/')")
             .unwrap();
-        let result = evaluator.evaluate(&parsed, &context).unwrap();
-
-        match result {
-            FhirPathValue::Collection(items) => {
-                assert_eq!(
-                    items.len(),
-                    2,
-                    "Should find both US Core extensions (race and ethnicity)"
-                );
-            }
-            _ => panic!("Should return a collection of extensions"),
-        }
+        assert!(evaluator.evaluate(&parsed, &context).unwrap().is_empty());
     }
 
     #[test]
@@ -216,16 +203,7 @@ mod tests {
         let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race').extension.where(url = 'ombCategory').valueCoding.code").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
-        match result {
-            FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 1, "Should find one race code");
-                assert_eq!(items[0], FhirPathValue::String("2106-3".to_string()));
-            }
-            FhirPathValue::String(code) => {
-                assert_eq!(code, "2106-3");
-            }
-            _ => panic!("Should return race code, got: {result:?}"),
-        }
+        assert_eq!(result.as_str(), Some("2106-3"));
     }
 
     #[test]
@@ -234,14 +212,14 @@ mod tests {
         let evaluator = FhirPathEvaluator::new();
         let context = EvaluationContext::new(sample_patient_with_extensions());
 
-        // Test hasValue() on extension with nested extensions (should return true)
+        // Only FHIR primitives have a system value.
         let parsed = parser.parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/us-core-race')[0].hasValue()").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
         assert_eq!(
             result,
-            FhirPathValue::Boolean(true),
-            "Race extension should have value (nested extensions)"
+            FhirPathValue::Boolean(false),
+            "Extension is a complex datatype"
         );
     }
 
@@ -253,14 +231,14 @@ mod tests {
 
         // Test hasValue() on extension with direct value
         let parsed = parser
-            .parse("extension('http://example.org/custom-extension')[0].hasValue()")
+            .parse("extension('http://example.org/custom-extension')[0].value.hasValue()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
         assert_eq!(
             result,
             FhirPathValue::Boolean(true),
-            "Custom extension should have direct value"
+            "The string child has a primitive value"
         );
     }
 
@@ -399,8 +377,8 @@ mod tests {
 
         assert_eq!(
             result,
-            FhirPathValue::String("custom-value".to_string()),
-            "Extension getValue() should return the valueString"
+            FhirPathValue::Empty,
+            "The Extension itself has no primitive value"
         );
     }
 
@@ -494,14 +472,14 @@ mod tests {
 
         // Test integer extension
         let parsed = parser
-            .parse("extension('http://example.org/integer-ext')[0].getValue()")
+            .parse("extension('http://example.org/integer-ext')[0].value.getValue()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(result, FhirPathValue::Integer(42));
 
         // Test decimal extension
         let parsed = parser
-            .parse("extension('http://example.org/decimal-ext')[0].getValue()")
+            .parse("extension('http://example.org/decimal-ext')[0].value.getValue()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(
@@ -511,14 +489,14 @@ mod tests {
 
         // Test boolean extension
         let parsed = parser
-            .parse("extension('http://example.org/boolean-ext')[0].getValue()")
+            .parse("extension('http://example.org/boolean-ext')[0].value.getValue()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(result, FhirPathValue::Boolean(false));
 
         // Test datetime extension
         let parsed = parser
-            .parse("extension('http://example.org/datetime-ext')[0].getValue()")
+            .parse("extension('http://example.org/datetime-ext')[0].value.getValue()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(
@@ -599,22 +577,16 @@ mod tests {
         let result = evaluator.evaluate(&parsed, &context).unwrap();
         assert_eq!(result, FhirPathValue::Integer(42));
 
-        // Test with valueDecimal
-        let observation_decimal = json!({
-            "resourceType": "Observation",
-            "id": "obs-decimal",
-            "status": "final",
-            "valueDecimal": 98.6
-        });
-        let context = EvaluationContext::new(observation_decimal);
-
-        let parsed = parser.parse("%resource.value").unwrap();
-        let result = evaluator.evaluate(&parsed, &context).unwrap();
-        if let FhirPathValue::Number(n) = result {
-            assert!((n.to_f64().unwrap() - 98.6).abs() < 0.001);
-        } else {
-            panic!("Expected Number value, got: {result:?}");
-        }
+        // Decimal is a permitted Parameters.parameter.value choice.
+        let context = EvaluationContext::new(json!({
+            "resourceType": "Parameters",
+            "parameter": [{"name":"decimal","valueDecimal":98.6}]
+        }));
+        let parsed = parser.parse("parameter.value").unwrap();
+        assert_eq!(
+            evaluator.evaluate(&parsed, &context).unwrap().to_json(),
+            json!(98.6)
+        );
     }
 
     #[test]
@@ -652,7 +624,7 @@ mod tests {
         let parser = FhirPathParser::new();
         let evaluator = FhirPathEvaluator::new();
 
-        // Test with multiple choice type fields (should return the first match)
+        // A malformed instance may carry multiple choices. Both physical nodes remain addressable.
         let observation_multiple = json!({
             "resourceType": "Observation",
             "id": "obs-multiple",
@@ -664,11 +636,10 @@ mod tests {
 
         let parsed = parser.parse("%resource.value").unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
-        // Should return the first match found (order may vary based on JSON object iteration)
-        assert!(matches!(
-            result,
-            FhirPathValue::TypedBoolean { value: true, .. } | FhirPathValue::TypedString { .. }
-        ));
+        assert_eq!(
+            result.to_json(),
+            json!([true, "This should not be returned"])
+        );
 
         // Test accessing field that doesn't follow choice type pattern
         let patient = json!({
@@ -719,7 +690,7 @@ mod tests {
         match result {
             FhirPathValue::Quantity { value, unit } => {
                 assert_eq!(value, Decimal::from_str_exact("150.0").unwrap());
-                assert_eq!(unit.as_deref(), Some("mmHg"));
+                assert_eq!(unit.as_deref(), Some("mm[Hg]"));
             }
             other => panic!("Expected Quantity for valueQuantity, got {other:?}"),
         }
@@ -905,7 +876,7 @@ mod tests {
 
         // Test counting extensions
         let parsed = parser
-            .parse("extension('http://hl7.org/fhir/us/core/StructureDefinition/').count()")
+            .parse("extension.where(url.startsWith('http://hl7.org/fhir/us/core/StructureDefinition/')).count()")
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
@@ -928,16 +899,7 @@ mod tests {
             .unwrap();
         let result = evaluator.evaluate(&parsed, &context).unwrap();
 
-        match result {
-            FhirPathValue::Collection(items) => {
-                assert_eq!(items.len(), 1);
-                assert_eq!(items[0], FhirPathValue::String("custom-value".to_string()));
-            }
-            FhirPathValue::String(value) => {
-                assert_eq!(value, "custom-value");
-            }
-            _ => panic!("Should return extension value, got: {result:?}"),
-        }
+        assert_eq!(result.as_str(), Some("custom-value"));
     }
 
     #[test]

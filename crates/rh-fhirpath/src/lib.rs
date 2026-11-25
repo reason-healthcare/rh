@@ -22,6 +22,7 @@ pub mod ast;
 pub mod error;
 pub mod evaluator;
 pub mod extensions;
+mod json;
 pub mod parser;
 #[cfg(feature = "repl")]
 pub mod repl;
@@ -37,7 +38,22 @@ pub use ast::{
     TypeSpecifier,
 };
 pub use error::{FhirPathError, FhirPathResult};
+pub use evaluator::metadata::FhirModel;
 pub use evaluator::{EvaluationContext, FhirPathEvaluator, FhirPathValue, TraceLog, UnitConverter};
 pub use extensions::ExtensionRegistry;
 pub use parser::FhirPathParser;
 pub use serde_json;
+
+impl std::str::FromStr for FhirModel {
+    type Err = FhirPathError;
+
+    fn from_str(version: &str) -> FhirPathResult<Self> {
+        match version.to_ascii_lowercase().as_str() {
+            "r4" => Ok(Self::R4),
+            "r5" => Ok(Self::R5),
+            _ => Err(FhirPathError::type_error(format!(
+                "Unsupported FHIR version '{version}'. Use r4 or r5."
+            ))),
+        }
+    }
+}

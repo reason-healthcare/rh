@@ -15,30 +15,11 @@ pub fn register_boolean_functions(functions: &mut HashMap<String, FhirPathFuncti
     );
 }
 
-/// Logical NOT function - negates a boolean value
-///
-/// According to FHIRPath specification:
-/// - not(true) -> false
-/// - not(false) -> true
-/// - not({}) -> {} (empty collection)
-/// - If input is a collection with multiple items, returns empty
-/// - If input is not boolean, returns empty
+/// Negate the input under FHIRPath singleton Boolean semantics.
 fn not_function(value: &FhirPathValue) -> FhirPathResult<FhirPathValue> {
-    match value {
-        FhirPathValue::Empty => Ok(FhirPathValue::Empty),
-
-        FhirPathValue::Collection(items) | FhirPathValue::UnorderedCollection(items) => {
-            if items.len() == 1 {
-                not_function(&items[0])
-            } else {
-                Ok(FhirPathValue::Empty)
-            }
-        }
-
-        FhirPathValue::Boolean(b) => Ok(FhirPathValue::Boolean(!b)),
-
-        _ => Ok(FhirPathValue::Boolean(false)),
-    }
+    Ok(value
+        .singleton_boolean("not() input")?
+        .map_or(FhirPathValue::Empty, |value| FhirPathValue::Boolean(!value)))
 }
 
 #[cfg(test)]
@@ -76,8 +57,7 @@ mod tests {
             FhirPathValue::Boolean(true),
             FhirPathValue::Boolean(false),
         ]);
-        let result = not_function(&collection).unwrap();
-        assert_eq!(result, FhirPathValue::Empty);
+        assert!(not_function(&collection).is_err());
     }
 
     #[test]
